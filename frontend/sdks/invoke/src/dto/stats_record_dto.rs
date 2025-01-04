@@ -7,12 +7,24 @@ use tardis::{
 
 /// 事实记录加载请求对象
 /// Load Fact Record Request Object
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsFactRecordLoadReq {
     /// Own paths
     pub own_paths: String,
     /// Create time
     pub ct: DateTime<Utc>,
+    /// Idempotent id
+    /// ps: The idempotent id is used to ensure that the same request is not processed repeatedly
+    /// 幂等id
+    /// ps: 幂等id用于确保同一个请求不会重复处理
+    pub idempotent_id: Option<String>,
+
+    /// ignore updates
+    /// ps: If idempotent_id has a value and the record is hit, this field takes effect to ignore or update, default is true to ignore updates
+    ///
+    /// 忽略更新
+    /// ps: 如果 idempotent_id 有值并且命中纪录,则该字段生效忽略或者进行更新,默认为 true 忽略更新
+    pub ignore_updates: Option<bool>,
     /// Field data
     /// 字段数据
     ///
@@ -27,7 +39,7 @@ pub struct StatsFactRecordLoadReq {
 /// Load Fact Record Request Object
 ///
 /// 事实记录加载请求对象
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct StatsFactRecordsLoadReq {
     /// Primary key
     pub key: String,
@@ -35,6 +47,18 @@ pub struct StatsFactRecordsLoadReq {
     pub own_paths: String,
     /// Create time
     pub ct: DateTime<Utc>,
+    /// Idempotent id
+    /// ps: The idempotent id is used to ensure that the same request is not processed repeatedly
+    /// 幂等id
+    /// ps: 幂等id用于确保同一个请求不会重复处理
+    pub idempotent_id: Option<String>,
+
+    /// ignore updates
+    /// ps: If idempotent_id has a value and the record is hit, this field takes effect to ignore or update, default is true to ignore updates
+    ///
+    /// 忽略更新
+    /// ps: 如果 idempotent_id 有值并且命中纪录,则该字段生效忽略或者进行更新,默认为 true 忽略更新
+    pub ignore_updates: Option<bool>,
     /// Field data
     /// 字段数据
     ///

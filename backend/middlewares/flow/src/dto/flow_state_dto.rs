@@ -7,13 +7,15 @@ use bios_basic::rbum::{
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, field::TrimString},
+    basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
     db::sea_orm::{self, prelude::*, EnumIter},
     serde_json::Value,
     web::poem_openapi,
-    TardisFuns,
+    TardisFuns, TardisFunsInst,
 };
+
+use crate::serv::clients::kv_client::FlowKvClient;
 
 use super::flow_transition_dto::FlowTransitionDetailResp;
 
@@ -224,6 +226,13 @@ impl FlowGuardConf {
             return true;
         }
         false
+    }
+
+    pub async fn get_local_conf(&mut self, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        for role_id in self.guard_by_spec_role_ids.iter_mut() {
+            *role_id = FlowKvClient::get_role_id(role_id, funs, ctx).await?;
+        }
+        Ok(())
     }
 }
 

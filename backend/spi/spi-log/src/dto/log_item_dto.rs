@@ -1,5 +1,5 @@
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind};
-use bios_sdk_invoke::clients::spi_log_client::{StatsItemAddReq, StatsItemDeleteReq};
+use bios_sdk_invoke::dto::stats_record_dto::StatsFactRecordLoadReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -96,6 +96,19 @@ impl From<bios_sdk_invoke::clients::spi_log_client::LogItemAddV2Req> for LogItem
         }
     }
 }
+impl From<LogItemAddV2Req> for StatsFactRecordLoadReq {
+    fn from(value: LogItemAddV2Req) -> Self {
+        StatsFactRecordLoadReq {
+            own_paths: value.own_paths.unwrap_or_default(),
+            ct: value.ts.unwrap_or_default(),
+            idempotent_id: value.idempotent_id,
+            ignore_updates: None,
+            data: value.content,
+            ext: value.ext,
+        }
+    }
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
@@ -155,29 +168,4 @@ pub struct LogConfigReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
     pub ref_field: String,
-}
-
-impl From<LogItemAddV2Req> for StatsItemAddReq {
-    fn from(value: LogItemAddV2Req) -> Self {
-        StatsItemAddReq {
-            idempotent_id: value.idempotent_id,
-            tag: value.tag,
-            content: value.content,
-            ext: value.ext,
-            key: value.key,
-            ts: value.ts,
-            owner: value.owner,
-            own_paths: value.own_paths,
-        }
-    }
-}
-
-impl From<LogItemAddV2Req> for StatsItemDeleteReq {
-    fn from(value: LogItemAddV2Req) -> Self {
-        StatsItemDeleteReq {
-            idempotent_id: value.idempotent_id,
-            tag: value.tag,
-            key: value.key,
-        }
-    }
 }

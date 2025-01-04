@@ -431,7 +431,7 @@ impl FlowInstServ {
 
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
-            // FlowLogServ::add_finish_log(&flow_inst_detail, funs, ctx).await?;
+            FlowLogServ::add_finish_log(&flow_inst_detail, funs, ctx).await?;
             FlowSearchClient::modify_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             FlowSearchClient::async_add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
         }
@@ -656,6 +656,7 @@ impl FlowInstServ {
                         &inst.current_state_kind.unwrap_or_default(),
                         current_state_kind_conf,
                         artifacts,
+                        inst.finish_time.is_some(),
                         ctx,
                     ),
                     current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
@@ -1077,7 +1078,7 @@ impl FlowInstServ {
         let curr_inst = Self::get(&flow_inst_detail.id, funs, ctx).await?;
 
         if next_flow_state.sys_state == FlowSysStateKind::Finish && !curr_inst.main {
-            // FlowLogServ::add_finish_log(&curr_inst, funs, ctx).await?;
+            FlowLogServ::add_finish_log(&curr_inst, funs, ctx).await?;
             FlowSearchClient::modify_business_obj_search(&curr_inst.rel_business_obj_id, &curr_inst.tag, funs, ctx).await?;
         }
 
@@ -1690,6 +1691,9 @@ impl FlowInstServ {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
                 let form_conf = state.kind_conf().unwrap_or_default().form.unwrap_or_default();
                 let mut guard_custom_conf = form_conf.guard_custom_conf.unwrap_or_default();
+                if state.own_paths != flow_inst_detail.own_paths {
+                    guard_custom_conf.get_local_conf(funs, ctx).await?;
+                }
                 if form_conf.guard_by_creator {
                     guard_custom_conf.guard_by_spec_account_ids.push(flow_inst_detail.create_ctx.owner.clone());
                 }
@@ -1783,6 +1787,9 @@ impl FlowInstServ {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
                 let approval_conf = state.kind_conf().unwrap_or_default().approval.unwrap_or_default();
                 let mut guard_custom_conf = approval_conf.guard_custom_conf.unwrap_or_default();
+                if state.own_paths != flow_inst_detail.own_paths {
+                    guard_custom_conf.get_local_conf(funs, ctx).await?;
+                }
                 if approval_conf.guard_by_creator {
                     guard_custom_conf.guard_by_spec_account_ids.push(flow_inst_detail.create_ctx.owner.clone());
                 }
@@ -1864,7 +1871,10 @@ impl FlowInstServ {
                             }
                         }
                         FlowStatusAutoStrategyKind::SpecifyAgent => {
-                            let auto_transfer_when_empty_guard_custom_conf = approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default();
+                            let mut auto_transfer_when_empty_guard_custom_conf = approval_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default();
+                            if state.own_paths != flow_inst_detail.own_paths {
+                                auto_transfer_when_empty_guard_custom_conf.get_local_conf(funs, ctx).await?;
+                            }
                             let guard_accounts = FlowSearchClient::search_guard_accounts(&auto_transfer_when_empty_guard_custom_conf, funs, ctx).await?;
                             modify_req.curr_approval_total = Some(guard_accounts.len());
                             modify_req.curr_operators = Some(guard_accounts);
@@ -1895,7 +1905,7 @@ impl FlowInstServ {
                         &flow_inst_detail.rel_business_obj_id,
                         &flow_inst_detail.id,
                         Some(FlowExternalCallbackOp::Auto),
-                        Some(true),
+                        None,
                         Some("审批通过".to_string()),
                         None,
                         None,
@@ -1926,7 +1936,7 @@ impl FlowInstServ {
                         &flow_inst_detail.rel_business_obj_id,
                         &flow_inst_detail.id,
                         None,
-                        Some(true),
+                        None,
                         Some("审批通过".to_string()),
                         None,
                         None,
@@ -2057,6 +2067,7 @@ impl FlowInstServ {
         state_kind: &FlowStateKind,
         kind_conf: Option<FLowStateKindConf>,
         artifacts: Option<FlowInstArtifacts>,
+        finish: bool,
         ctx: &TardisContext,
     ) -> Option<FLowInstStateConf> {
         if let Some(kind_conf) = kind_conf {
@@ -2090,11 +2101,11 @@ impl FlowInstServ {
                         operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
                         operators.insert(FlowStateOperatorKind::Back, approval.back_btn_name.clone());
-                        if approval.referral {
+                        if approval.referral && !finish {
                             operators.insert(FlowStateOperatorKind::Referral, "".to_string());
                         }
                     }
-                    if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() {
+                    if approval.revoke && ctx.owner == artifacts.prev_non_auto_account_id.unwrap_or_default() && !finish {
                         operators.insert(FlowStateOperatorKind::Revoke, "".to_string());
                     }
                     FLowInstStateConf {
@@ -2372,7 +2383,7 @@ impl FlowInstServ {
 
     // 判断审批条件是否满足
     async fn check_approval_cond(inst: &FlowInstDetailResp, kind: FlowApprovalResultKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        let current_state_kind_conf = FlowStateServ::get_item(
+        let current_state = FlowStateServ::get_item(
             &inst.current_state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
@@ -2385,10 +2396,8 @@ impl FlowInstServ {
             funs,
             ctx,
         )
-        .await?
-        .kind_conf()
-        .unwrap_or_default()
-        .approval;
+        .await?;
+        let current_state_kind_conf = current_state.kind_conf().unwrap_or_default().approval;
         let artifacts = inst.artifacts.clone().unwrap_or_default();
         let approval_total = artifacts.approval_total.unwrap_or_default().get(&inst.current_state_id).cloned().unwrap_or_default();
         let approval_result = artifacts.approval_result.get(&inst.current_state_id).cloned().unwrap_or_default();
@@ -2402,11 +2411,15 @@ impl FlowInstServ {
                 return Ok(true);
             }
             let countersign_conf = current_state_kind_conf.countersign_conf;
+            let mut specified_pass_guard_conf = countersign_conf.specified_pass_guard_conf.clone().unwrap_or_default();
+            if current_state.own_paths != inst.own_paths {
+                specified_pass_guard_conf.get_local_conf(funs, ctx).await?;
+            }
             // 指定人通过，则通过
             if kind == FlowApprovalResultKind::Pass
                 && countersign_conf.specified_pass_guard.unwrap_or(false)
                 && countersign_conf.specified_pass_guard_conf.is_some()
-                && countersign_conf.specified_pass_guard_conf.unwrap().check(ctx)
+                && specified_pass_guard_conf.check(ctx)
             {
                 return Ok(true);
             }
@@ -2414,7 +2427,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Overrule
                 && countersign_conf.specified_overrule_guard.unwrap_or(false)
                 && countersign_conf.specified_overrule_guard_conf.is_some()
-                && countersign_conf.specified_overrule_guard_conf.unwrap().check(ctx)
+                && specified_pass_guard_conf.check(ctx)
             {
                 return Ok(true);
             }

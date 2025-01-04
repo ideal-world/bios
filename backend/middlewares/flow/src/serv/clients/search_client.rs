@@ -15,7 +15,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::debug,
+    log::{debug, error},
     tokio,
     web::{poem_openapi::types::ToJSON, web_resp::TardisPage},
     TardisFuns, TardisFunsInst,
@@ -267,11 +267,15 @@ impl FlowSearchClient {
         let inst_resp = FlowInstServ::get(inst_id, funs, &mock_ctx).await?;
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
+                let inst_id_cp = inst_resp.id.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     let _ = Self::add_or_modify_instance_search(&inst_resp, is_modify, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => error!("Flow search_client {} async_add_or_modify_instance_search error:{:?}", inst_id_cp, e),
+                }
                 Ok(())
             })
         }))
@@ -302,6 +306,7 @@ impl FlowSearchClient {
                 ext: Some(json!({
                     "tag": inst_resp.tag,
                     "current_state_id": inst_resp.current_state_id,
+                    "rel_business_obj_name": name.clone(),
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
@@ -345,6 +350,7 @@ impl FlowSearchClient {
                     "current_state_id": inst_resp.current_state_id,
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
+                    "rel_business_obj_name": name.clone(),
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
                     "finish_time": inst_resp.finish_time,
                     "op_time": inst_resp.update_time,
