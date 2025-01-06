@@ -609,6 +609,9 @@ pub enum FlowTransitionFrontActionInfoRelevanceRelation {
     #[serde(rename = "between")]
     #[oai(rename = "between")]
     Between,
+    #[serde(rename = "is_null_or_empty")]
+    #[oai(rename = "is_null_or_empty")]
+    IsNullOrEmpty,
     #[serde(rename = "is_not_null")]
     #[oai(rename = "is_not_null")]
     IsNotNull,
@@ -618,7 +621,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
     pub fn check_conform(&self, mut left_value: String, right_value: String) -> bool {
         use itertools::Itertools;
 
-        if left_value.is_empty() || left_value == "null" {
+        if (left_value.is_empty() || left_value == "null") && *self != FlowTransitionFrontActionInfoRelevanceRelation::IsNullOrEmpty {
             return false;
         }
         // 单项判断（例如等于，不等于，大于，小于），如果参数是单元素数组，则取出数据，否则说明格式错误直接返回false
@@ -666,6 +669,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 }
                 left_value >= interval[0] && left_value <= interval[1]
             }
+            FlowTransitionFrontActionInfoRelevanceRelation::IsNullOrEmpty => {let s = left_value.as_str().to_string(); s.is_empty() || s == "[]" || s == "{}"},
             FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => !left_value.as_str().to_string().is_empty(),
         }
     }
