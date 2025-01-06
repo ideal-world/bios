@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use crate::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    dto::auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp},
+    dto::auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp}, error::AuthError,
 };
 
 lazy_static! {
@@ -94,7 +94,7 @@ pub async fn decrypt_req(
                     "[Auth] input_keys have four key,and body:{body},input_sm3_digest:{input_sm3_digest},sm3(body):{}",
                     TardisFuns::crypto.digest.sm3(body)?
                 );
-                return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
+                return Err(TardisError::signature_error("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
             }
 
             let data = TardisFuns::crypto
@@ -121,7 +121,7 @@ pub async fn decrypt_req(
                     "[Auth] input_keys have three key,and body:{body},input_sm3_digest:{input_sm3_digest},sm3(body):{}",
                     TardisFuns::crypto.digest.sm3(body)?
                 );
-                return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
+                return Err(TardisError::signature_error("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
             }
 
             let data = TardisFuns::crypto
