@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, web::poem_openapi::types::Type, TardisFuns, TardisFunsInst
 };
 
 use crate::dto::{
@@ -63,12 +62,12 @@ impl FlowLogServ {
             log_content.operand_id = None;
             log_content.operand_kind = None;
         }
-        if start_req.create_vars.is_none() {
+        if start_req.vars.is_none() || start_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
             log_content.old_content = None;
             log_content.new_content = None;
         } else {
-            let new_content = start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let new_content = start_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
             let old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
             if new_content.is_empty() {
                 log_content.old_content = None;
@@ -135,12 +134,12 @@ impl FlowLogServ {
             log_content.operand_id = None;
             log_content.operand_kind = None;
         }
-        if start_req.create_vars.is_none() {
+        if start_req.vars.is_none() || start_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
             log_content.old_content = None;
             log_content.new_content = None;
         } else {
-            let new_content = start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let new_content = start_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
             let old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
             if new_content.is_empty() {
                 log_content.old_content = None;
@@ -273,7 +272,7 @@ impl FlowLogServ {
         if operate_req.operate == FlowStateOperatorKind::Referral {
             log_content.flow_referral = Some(FlowKvClient::get_account_name(&operate_req.operator.clone().unwrap_or_default(), funs, ctx).await?);
         }
-        if operate_req.vars.is_none() {
+        if operate_req.vars.is_none() || operate_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
         } else {
             let new_content = operate_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
@@ -396,7 +395,7 @@ impl FlowLogServ {
         if operate_req.operate == FlowStateOperatorKind::Referral {
             log_content.flow_referral = Some(FlowKvClient::get_account_name(&operate_req.operator.clone().unwrap_or_default(), funs, ctx).await?);
         }
-        if operate_req.vars.is_none() {
+        if operate_req.vars.is_none() || operate_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
         } else {
             let new_content = operate_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
