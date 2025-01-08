@@ -1,3 +1,4 @@
+use bios_sdk_invoke::clients::event_client::asteroid_mq::event_handler::json::Json;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -491,7 +492,7 @@ ORDER BY ts DESC
             let content: String = item.try_get("", "content")?;
             let content = match TardisFuns::json.str_to_json(&content) {
                 Ok(content) => content,
-                Err(_) => json!({"content": content}),
+                Err(_) => JsonValue::String(content),
             };
             Ok(LogItemFindResp {
                 ts: item.try_get("", "ts")?,
@@ -518,11 +519,11 @@ ORDER BY ts DESC
     })
 }
 
-pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn addv2(_: &mut LogItemAddV2Req, funs: &TardisFunsInst, _: &TardisContext, _: &SpiBsInst) -> TardisResult<String> {
     Err(funs.err().bad_request("item", "add", "Add v2 is not supported", "400-spi-log-add-v2-not-supported"))
 }
 
-pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
+pub async fn findv2(_: &mut LogItemFindReq, funs: &TardisFunsInst, _: &TardisContext, _: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
     Err(funs.err().bad_request("item", "find", "Find v2 is not supported", "400-spi-log-find-v2-not-supported"))
 }
 

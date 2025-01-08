@@ -28,7 +28,7 @@ impl SpiLogClient {
         if log_url.is_empty() || spi_owner.is_empty() {
             return Ok(());
         }
-        let spi_ctx = TardisContext { owner: spi_owner, ..ctx.clone() };
+        let spi_ctx = TardisContext { ak: spi_owner, ..ctx.clone() };
         let headers = [("Tardis-Context".to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&spi_ctx)?))];
 
         //add log item
@@ -57,7 +57,7 @@ impl SpiLogClient {
 
         body.insert("ts", ts);
 
-        TardisFuns::web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        // TardisFuns::web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 }

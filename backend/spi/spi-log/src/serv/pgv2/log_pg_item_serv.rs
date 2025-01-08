@@ -37,6 +37,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
 
 pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
     let id = add_req.idempotent_id.clone().unwrap_or(TardisFuns::field.nanoid());
+    add_req.idempotent_id = Some(id.clone());
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
     // 初始化要保存的内容
