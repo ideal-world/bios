@@ -184,6 +184,7 @@ pub struct FlowModelRelTransitionExt {
     pub id: String,
     pub name: String,
     pub from_flow_state_name: String,
+    pub to_flow_state_name: Option<String>,
 }
 
 impl fmt::Display for FlowModelRelTransitionExt {

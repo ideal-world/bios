@@ -145,6 +145,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 if let Some(transition) = transitions.iter().find(|tran| tran.id == rel_transition_id) {
                     ext.name = transition.name.clone();
                     ext.from_flow_state_name = transition.from_flow_state_name.clone();
+                    ext.to_flow_state_name = Some(transition.to_flow_state_name.clone());
                 }
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowModelTransition,
@@ -547,6 +548,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         )
         .await?;
         for rel_version_id in rel_version_ids {
+            FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
             FlowModelVersionServ::delete_item(&rel_version_id, funs, ctx).await?;
         }
 
@@ -1054,6 +1056,24 @@ impl FlowModelServ {
                     rel_model.rel_model_id = "".to_string();
                     rel_model.template = false;
                     rel_model.scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?;
+                    let mut rel_transition = rel_model.rel_transition().unwrap_or_default();
+                    if !rel_transition.id.is_empty() && (rel_transition.id != *"__EDIT__" || rel_transition.id != *"__DETELE__") {
+                        if let Some(rel_main_model_tran) = FlowModelServ::find_one_detail_item(&FlowModelFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                ..Default::default()
+                            },
+                            tags: Some(vec![rel_model.tag.clone()]),
+                            main: Some(true),
+                            ..Default::default()
+                        }, funs, ctx).await?.map(|model|
+                            model.transitions().into_iter()
+                            .find(|tran| tran.from_flow_state_name == rel_transition.from_flow_state_name && Some(tran.to_flow_state_name.clone()) == rel_transition.to_flow_state_name)
+                        ).unwrap_or(None) {
+                            rel_transition.id = rel_main_model_tran.id;
+                            rel_model.rel_transition = Some(json!(rel_transition));
+                        }
+                    } 
                 }
                 Self::add_item(
                     &mut FlowModelAddReq {
@@ -1856,8 +1876,9 @@ impl FlowModelServ {
                             child_delete_transitions.push(
                                 child_model_transitions
                                     .iter()
-                                    .find(|tran| {
-                                        tran.from_flow_state_id == parent_model_transition.from_flow_state_id && tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                    .find(|child_tran| {
+                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id 
+                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
                                     })
                                     .map(|trans| trans.id.clone())
                                     .unwrap_or_default(),
