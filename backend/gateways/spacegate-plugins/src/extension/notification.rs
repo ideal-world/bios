@@ -5,7 +5,7 @@ use tardis::{basic::dto::TardisContext, log as tracing, tokio};
 
 /// Context to call notification api
 ///
-/// Extract it from request extensions, and call [`NotificationContext::notify`] to send notification
+/// Extract it from request extensions, and call [`NotificationContext::report`] to send notification
 #[derive(Debug, Clone)]
 pub struct NotificationContext {
     pub(crate) reach_api: Arc<str>,
@@ -31,7 +31,7 @@ impl NotificationContext {
             own_paths: self.spi_app_id.to_string(),
             ..Default::default()
         };
-        let cool_down = (self.dedup_cache_cool_down.as_secs() as u64).min(1);
+        let cool_down = self.dedup_cache_cool_down.as_secs().min(1);
         tokio::spawn(async move {
             let key = format!("sg:plugin:{}:{}", NotifyPlugin::CODE, dedup_hash);
             let mut conn = cache_client.get_conn().await;
