@@ -6,6 +6,7 @@ mod consts;
 mod extension;
 mod marker;
 mod plugin;
+mod utils;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
 use plugin::{notify, op_redis_publisher};

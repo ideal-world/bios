@@ -26,6 +26,8 @@ pub enum InvokeModuleKind {
     Iam,
     #[oai(rename = "event")]
     Event,
+    #[oai(rename = "reach")]
+    Reach,
 }
 
 impl std::fmt::Display for InvokeModuleKind {
@@ -42,6 +44,7 @@ impl std::fmt::Display for InvokeModuleKind {
             InvokeModuleKind::Schedule => write!(f, "schedule"),
             InvokeModuleKind::Iam => write!(f, "iam"),
             InvokeModuleKind::Event => write!(f, "event"),
+            InvokeModuleKind::Reach => write!(f, "reach"),
         }
     }
 }

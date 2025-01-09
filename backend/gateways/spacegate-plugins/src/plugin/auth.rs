@@ -33,13 +33,12 @@ use std::{
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    cache::AsyncCommands as _,
     config::config_dto::CacheModuleConfig,
     serde_json::{self, json},
     tokio::{sync::RwLock, task::JoinHandle},
     tracing::{self as tracing, instrument, warn},
     url::Url,
-    web::web_resp::TardisResp,
+    web::web_resp::{TardisResp, HEADER_X_TARDIS_ERROR},
     TardisFuns,
 };
 use tardis::{config::config_dto::TardisComponentConfig, web::poem_openapi::types::Type};
@@ -270,7 +269,7 @@ impl AuthPlugin {
         let is_east_west_traffic = req.extensions().get::<IsEastWestTraffic>().map(Deref::deref).unwrap_or(&false);
         if self.auth_config.strict_security_mode && !is_true_mix_req && !is_east_west_traffic {
             tracing::debug!("[SG.Filter.Auth] handle mix request");
-            return Ok(handle_mix_req(&self, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
+            return Ok(handle_mix_req(self, req).await.map_err(PluginError::internal_error::<AuthPlugin>)?);
         }
         req.headers_mut().append(&self.header_is_mix_req, HeaderValue::from_static("false"));
 
@@ -303,12 +302,7 @@ impl AuthPlugin {
             }
             Err(e) => {
                 tracing::info!("[SG.Filter.Auth] auth return error {:?}", e);
-                let err_resp = Response::builder()
-                    .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
-                    .status(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY))
-                    .body(SgBody::full(format!("[SG.Filter.Auth] auth return error:{e}")))
-                    .map_err(PluginError::internal_error::<AuthPlugin>)?;
-                Err(err_resp)
+                Err(tardis_error_into_response(e))
             }
         }
     }
@@ -599,6 +593,20 @@ impl Plugin for AuthPlugin {
             Err(resp) => resp,
         })
     }
+}
+
+pub fn tardis_error_into_response(e: TardisError) -> Response<SgBody> {
+    let status_code = if e.code.len() >= 3 {
+        StatusCode::from_str(&e.code[0..3]).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
+    } else {
+        StatusCode::INTERNAL_SERVER_ERROR
+    };
+    Response::builder()
+        .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
+        .header(HEADER_X_TARDIS_ERROR, &e.code)
+        .status(status_code)
+        .body(SgBody::full(format!("[SG.Filter.Auth] auth return error:{e}")))
+        .expect("invalid response")
 }
 
 #[cfg(test)]
