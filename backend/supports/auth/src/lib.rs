@@ -7,3 +7,4 @@ pub mod auth_initializer;
 pub mod dto;
 pub mod helper;
 pub mod serv;
+mod error;
