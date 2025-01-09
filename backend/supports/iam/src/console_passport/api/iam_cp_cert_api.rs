@@ -3,6 +3,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 use tardis::basic::dto::TardisContext;
+use tardis::db::sqlx::types::uuid::timestamp::context;
 use tardis::log;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
@@ -16,6 +17,7 @@ use crate::basic::dto::iam_cert_dto::{
     IamCertGenericValidateSkReq, IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserNameNewReq,
     IamCertUserPwdModifyReq, IamCertUserPwdRestReq, IamContextFetchReq,
 };
+use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -86,8 +88,25 @@ impl IamCpCertApi {
     #[oai(path = "/login/userpwd", method = "put")]
     async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let funs = iam_constants::get_tardis_inst();
-        let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
-        TardisResp::ok(resp)
+        let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await;
+        if let Err(e) = &resp {
+            log::error!("login_by_user_pwd error: {:?}", e);
+            let mut ctx = TardisContext::default();
+            if let Some(tenant_id) = login_req.0.tenant_id {
+                ctx.own_paths = tenant_id;
+            }
+            try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamAbnormal,
+                None,
+                format!("[{}]账号密码错误登录失败", login_req.0.ak),
+                Some("login_error".to_string()),
+                &ctx,
+            )
+            .await;
+            ctx.execute_task().await?;
+        }
+        TardisResp::ok(resp?)
     }
 
     /// Logout By Token
@@ -205,9 +224,24 @@ impl IamCpCertApi {
     async fn login_or_register_by_oauth2(&self, supplier: Path<String>, login_req: Json<IamCpOAuth2LoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let resp = IamCpCertOAuth2Serv::login_or_register(IamCertOAuth2Supplier::parse(&supplier.0)?, &login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
+        let resp = IamCpCertOAuth2Serv::login_or_register(IamCertOAuth2Supplier::parse(&supplier.0)?, &login_req.0, try_get_real_ip_from_req(request).await?, &funs).await;
+        if let Err(e) = &resp {
+            log::error!("login_or_register_by_oauth2 error: {:?}", e);
+            let mut ctx = TardisContext::default();
+            ctx.own_paths = login_req.0.tenant_id;
+            try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamAbnormal,
+                None,
+                format!("[{}]账号密码错误登录失败", login_req.0.code),
+                Some("login_error".to_string()),
+                &ctx,
+            )
+            .await;
+            ctx.execute_task().await?;
+        }
         funs.commit().await?;
-        TardisResp::ok(resp)
+        TardisResp::ok(resp?)
     }
 
     /// Validate userpwd By Current Account
@@ -316,9 +350,26 @@ impl IamCpCertApi {
     async fn login_by_mail_vocde(&self, login_req: Json<IamCpMailVCodeLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let resp = IamCpCertMailVCodeServ::login_by_mail_vocde(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
+        let resp = IamCpCertMailVCodeServ::login_by_mail_vocde(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await;
+        if let Err(e) = &resp {
+            log::error!("login_by_mail_vocde error: {:?}", e);
+            let mut ctx: TardisContext = TardisContext::default();
+            if let Some(tenant_id) = login_req.0.tenant_id {
+                ctx.own_paths = tenant_id;
+            }
+            try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamAbnormal,
+                None,
+                format!("[{}]:邮箱验证码验证失败", login_req.0.mail),
+                Some("mail_error".to_string()),
+                &ctx,
+            )
+            .await;
+            ctx.execute_task().await?;
+        }
         funs.commit().await?;
-        TardisResp::ok(resp)
+        TardisResp::ok(resp?)
     }
 
     /// exist phone
@@ -379,9 +430,26 @@ impl IamCpCertApi {
     async fn login_by_phone_vocde(&self, login_req: Json<IamCpPhoneVCodeLoginSendVCodeReq>, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let resp = IamCpCertPhoneVCodeServ::login_by_phone_vocde(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
+        let resp = IamCpCertPhoneVCodeServ::login_by_phone_vocde(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await;
+        if let Err(e) = &resp {
+            log::error!("login_by_phone_vocde error: {:?}", e);
+            let mut ctx: TardisContext = TardisContext::default();
+            if let Some(tenant_id) = login_req.0.tenant_id {
+                ctx.own_paths = tenant_id;
+            }
+            try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamAbnormal,
+                None,
+                format!("{}短信验证码验证失败", login_req.0.phone),
+                Some("phone_error".to_string()),
+                &ctx,
+            )
+            .await;
+            ctx.execute_task().await?;
+        }
         funs.commit().await?;
-        TardisResp::ok(resp)
+        TardisResp::ok(resp?)
     }
 }
 
