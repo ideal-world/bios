@@ -31,6 +31,14 @@ impl Default for InvokeConfig {
                 (InvokeModuleKind::Iam.to_string(), "http://127.0.0.1:8080/iam".to_string()),
                 (InvokeModuleKind::Stats.to_string(), "http://127.0.0.1:8080/spi-stats".to_string()),
                 (InvokeModuleKind::Event.to_string(), "http://127.0.0.1:8080/event".to_string()),
+                (InvokeModuleKind::Reach.to_string(), "http://127.0.0.1:8080/reach".to_string()),
+            ]),
+            module_configs: HashMap::from([
+                (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Log.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Search.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Stats.to_string(), InvokeModuleConfig { in_event: false }),
             ]),
             module_configs: HashMap::from([
                 (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false }),

@@ -9,10 +9,12 @@ use spacegate_shell::{
 };
 
 macro_rules! append_value {
-    ($result:expr, $field:expr, $value:expr) => {
-        if let Some(val) = $value {
-            $result.push_str(&format!("{} {};", $field, val));
-        }
+    ($result:ident {$($field:literal: $value:expr ,)*}) => {
+        $(if let Some(val) = $value {
+            $result.push_str($field);
+            $result.push(' ');
+            $result.push_str(val.as_str());
+        })*
     };
 }
 
@@ -56,28 +58,29 @@ pub struct CSPConfig {
 impl CSPConfig {
     fn to_string_header_value(&self) -> String {
         let mut result = format!("default-src {};", self.default_src);
-        append_value!(result, "base-uri", &self.base_uri);
-        append_value!(result, "child-src", &self.child_src);
-        append_value!(result, "connect-src", &self.connect_src);
-        append_value!(result, "font-src", &self.font_src);
-        append_value!(result, "form-action", &self.form_action);
-        append_value!(result, "frame-ancestors", &self.frame_ancestors);
-        append_value!(result, "frame-src", &self.frame_src);
-        append_value!(result, "img-src", &self.img_src);
-        append_value!(result, "manifest-src", &self.manifest_src);
-        append_value!(result, "media-src", &self.media_src);
-        append_value!(result, "object-src", &self.object_src);
-        append_value!(result, "sandbox", &self.sandbox);
-        append_value!(result, "script-src", &self.script_src);
-        append_value!(result, "script-src-attr", &self.script_src_attr);
-        append_value!(result, "script-src-elem", &self.script_src_elem);
-        append_value!(result, "strict-dynamic", &self.strict_dynamic);
-        append_value!(result, "style-src", &self.style_src);
-        append_value!(result, "style-src-attr", &self.style_src_attr);
-        append_value!(result, "style-src-elem", &self.style_src_elem);
-        append_value!(result, "worker-src", &self.worker_src);
-        append_value!(result, "report-to", &self.report_to);
-
+        append_value!(result {
+            "base-uri": &self.base_uri,
+            "child-src": &self.child_src,
+            "connect-src": &self.connect_src,
+            "font-src": &self.font_src,
+            "form-action": &self.form_action,
+            "frame-ancestors": &self.frame_ancestors,
+            "frame-src": &self.frame_src,
+            "img-src": &self.img_src,
+            "manifest-src": &self.manifest_src,
+            "media-src": &self.media_src,
+            "object-src": &self.object_src,
+            "sandbox": &self.sandbox,
+            "script-src": &self.script_src,
+            "script-src-attr": &self.script_src_attr,
+            "script-src-elem": &self.script_src_elem,
+            "strict-dynamic": &self.strict_dynamic,
+            "style-src": &self.style_src,
+            "style-src-attr": &self.style_src_attr,
+            "style-src-elem": &self.style_src_elem,
+            "worker-src": &self.worker_src,
+            "report-to": &self.report_to,
+        });
         result
     }
 }
@@ -130,18 +133,24 @@ pub enum SandBoxValue {
 
 impl fmt::Display for SandBoxValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl SandBoxValue {
+    pub fn as_str(&self) -> &'static str {
         match self {
-            SandBoxValue::None => write!(f, ""),
-            SandBoxValue::AllowForms => write!(f, "allow-forms"),
-            SandBoxValue::AllowModals => write!(f, "allow-modals"),
-            SandBoxValue::AllowOrientationLock => write!(f, "allow-orientation-lock"),
-            SandBoxValue::AllowPointerLock => write!(f, "allow-pointer-lock"),
-            SandBoxValue::AllowPopups => write!(f, "allow-popups"),
-            SandBoxValue::AllowPopupsToEscapeSandbox => write!(f, "allow-popups-to-escape-sandbox"),
-            SandBoxValue::AllowPresentation => write!(f, "allow-presentation"),
-            SandBoxValue::AllowSameOrigin => write!(f, "allow-same-origin"),
-            SandBoxValue::AllowScripts => write!(f, "allow-scripts"),
-            SandBoxValue::AllowTopNavigation => write!(f, "allow-top-navigation"),
+            SandBoxValue::None => "",
+            SandBoxValue::AllowForms => "allow-forms",
+            SandBoxValue::AllowModals => "allow-modals",
+            SandBoxValue::AllowOrientationLock => "allow-orientation-lock",
+            SandBoxValue::AllowPointerLock => "allow-pointer-lock",
+            SandBoxValue::AllowPopups => "allow-popups",
+            SandBoxValue::AllowPopupsToEscapeSandbox => "allow-popups-to-escape-sandbox",
+            SandBoxValue::AllowPresentation => "allow-presentation",
+            SandBoxValue::AllowSameOrigin => "allow-same-origin",
+            SandBoxValue::AllowScripts => "allow-scripts",
+            SandBoxValue::AllowTopNavigation => "allow-top-navigation",
         }
     }
 }

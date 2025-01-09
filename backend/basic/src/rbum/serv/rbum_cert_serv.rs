@@ -842,7 +842,7 @@ impl RbumCertServ {
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
             if Self::cert_is_locked(&rbum_cert.rel_rbum_id, funs).await? {
-                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked", "400-rbum-cert-lock"));
+                return Err(funs.err().error("400-rbum-cert-lock", &Self::get_obj_name(), "valid", "cert is locked", "400-rbum-cert-lock"));
             }
             if !ignore_end_time && rbum_cert.end_time < Utc::now() {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired", "409-rbum-cert-sk-expire"));
