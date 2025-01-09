@@ -40,6 +40,13 @@ impl Default for InvokeConfig {
                 (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false }),
                 (InvokeModuleKind::Stats.to_string(), InvokeModuleConfig { in_event: false }),
             ]),
+            module_configs: HashMap::from([
+                (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Log.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Search.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Stats.to_string(), InvokeModuleConfig { in_event: false }),
+            ]),
         }
     }
 }
