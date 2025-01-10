@@ -20,7 +20,7 @@ pub struct NotificationContext {
 }
 
 impl NotificationContext {
-    pub fn submit_notify(&self, req: ReachMsgSendReq, dedup_hash: u64) {
+    pub fn submit_notify(&self, req: ReachRequest, dedup_hash: u64) {
         if self.reach_api.is_empty() {
             tracing::debug!("reach api is empty, skip sending notification");
             return;
@@ -48,7 +48,15 @@ impl NotificationContext {
             }
 
             let funs = NotifyPlugin::get_funs_inst_by_plugin_code();
-            let response = bios_sdk_invoke::clients::reach_client::ReachClient::send_message(&req.into(), &funs, &ctx).await;
+            let response = match req {
+                ReachRequest::ByScene(req) => {
+                    bios_sdk_invoke::clients::reach_client::ReachClient::send_message(&req.into(), &funs, &ctx).await
+  
+                }
+                ReachRequest::ByTemplate { contact, template_id, replace } => {
+                     bios_sdk_invoke::clients::reach_client::ReachClient::general_send(&contact, &template_id, &replace, &funs, &ctx).await
+                }
+            };
             if let Err(e) = response {
                 tracing::error!(error = ?e, "send notification failed");
             }
@@ -101,7 +109,7 @@ use spacegate_shell::{
 };
 
 use crate::plugin::{
-    notify::{format_template, NotifyPlugin, NotifyPluginConfigTemplates, NotifyPluginConfigTemplatesItem, Report},
+    notify::{format_template, NotifyPlugin, NotifyPluginConfigTemplatesItem, ReachRequest, Report},
     PluginBiosExt,
 };
 
