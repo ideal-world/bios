@@ -48,6 +48,7 @@ impl NotificationContext {
             }
 
             let funs = NotifyPlugin::get_funs_inst_by_plugin_code();
+            tracing::debug!(?req, "submit notify");
             let response = match req {
                 ReachRequest::ByScene(req) => {
                     bios_sdk_invoke::clients::reach_client::ReachClient::send_message(&req.into(), &funs, &ctx).await

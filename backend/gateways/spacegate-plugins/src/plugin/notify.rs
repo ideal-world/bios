@@ -17,6 +17,7 @@ use spacegate_shell::{
 use tardis::{
     regex::{self, Regex},
     serde_json,
+    log as tracing,
 };
 
 use crate::extension::{
@@ -121,7 +122,7 @@ impl Report for RateLimitReport {
     fn get_replacement(&self) -> HashMap<&'static str, String> {
         let mut replace = HashMap::new();
         let count = format!("{}", self.plugin.max_request_number);
-        let time_window = format!("{:.000}s", self.plugin.time_window_ms as f64 / 1000.0);
+        let time_window = format!("{}ms", self.plugin.time_window_ms);
         replace.insert("count", count);
         replace.insert("time_window", time_window);
         replace
@@ -293,12 +294,16 @@ impl Plugin for NotifyPlugin {
         let response = inner.call(req).await;
         let user = req_cert_info.as_ref().or_else(|| response.extensions().get::<CertInfo>()).and_then(|c| c.name.clone());
         if let Some(rate_limit_report) = response.extensions().get::<RateLimitReport>().filter(|r| r.rising_edge) {
+            tracing::debug!(report = ?rate_limit_report, "catch rate limit report");
             context.report(&response, rate_limit_report.with_user_and_ip(user.as_deref(), ip));
         }
-        if let Some(flag) = response.extensions().get::<ContentFilterForbiddenReport>() {
-            context.report(&response, flag.with_user_and_ip(user.as_deref(), ip));
+        if let Some(report) = response.extensions().get::<ContentFilterForbiddenReport>() {
+            tracing::debug!(?report, "catch content filter forbidden report");
+
+            context.report(&response, report.with_user_and_ip(user.as_deref(), ip));
         }
         if let Some(error_code) = response.headers().get(tardis::web::web_resp::HEADER_X_TARDIS_ERROR) {
+            tracing::debug!(?error_code, "catch error code");
             if let Some(error_kind) = KnownError::try_from_header_value(error_code) {
                 match error_kind {
                     KnownError::Tamper => {
