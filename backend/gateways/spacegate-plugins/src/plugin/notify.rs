@@ -25,14 +25,19 @@ use crate::extension::{
     notification::{CertLockReport, ContentFilterForbiddenReport, NotificationContext, ReachMsgSendReq, TamperReport, UnauthorizedOperationReport},
 };
 #[derive(Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(default)]
 pub struct NotifyPluginConfig {
     /// templates for different notification types
     /// - rate_limit: rate limit notification
     ///   - count: number of requests
     ///   - time_window: time window
+    /// 
     /// - tamper: tamper notification
+    /// 
     /// - unauthorized_operation: unauthorized operation notification
+    /// 
     /// - cert_lock: cert lock notification
+    /// 
     /// - content_filter_forbidden: content filter forbidden notification
     ///   - reason: forbidden reason
     templates: HashMap<String, NotifyPluginConfigTemplatesItem>,
@@ -170,9 +175,34 @@ pub struct NotifyPluginConfigTemplates {
     pub unauthorized_operation: NotifyPluginConfigTemplatesItem,
 }
 #[derive(Serialize, Deserialize, schemars::JsonSchema, Default, Debug)]
+#[serde(default)]
 pub struct NotifyPluginConfigTemplatesItem {
-    pub reach: Option<ReachMsgSendReq>,
+    pub reach: Option<ReachRequest>,
     pub audit_log: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, schemars::JsonSchema, Debug, Clone)]
+#[serde(tag = "method", content = "request")]
+pub enum ReachRequest {
+    ByScene(ReachMsgSendReq),
+    ByTemplate {
+        contact: String,
+        template_id: String,
+        replace: HashMap<String, String>,
+    },
+}
+
+impl ReachRequest {
+    pub fn merge_replace<K: Into<String>>(&mut self, replace: impl IntoIterator<Item = (K, String)>) {
+        match self {
+            Self::ByScene(req) => {
+                req.merge_replace(replace);
+            }
+            Self::ByTemplate { replace: old_replace, .. } => {
+                old_replace.extend(replace.into_iter().map(|(k, v)| (k.into(), v)));
+            }
+        }
+    }
 }
 
 schema!(NotifyPlugin, NotifyPluginConfig);
@@ -306,7 +336,6 @@ impl KnownError {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {
