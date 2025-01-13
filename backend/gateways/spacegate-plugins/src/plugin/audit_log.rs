@@ -168,7 +168,7 @@ impl AuditLogPlugin {
             let (resp, content) = self.get_log_content(resp).await.map_err(PluginError::internal_error::<AuditLogPlugin>)?;
 
             if let Some(content) = content {
-                content.send_audit_log(&self.spi_app_id, &self.log_url, &self.tag);
+                content.send_audit_log::<AuditLogPlugin>(&self.spi_app_id, &self.log_url, &self.tag);
             }
 
             Ok(resp)

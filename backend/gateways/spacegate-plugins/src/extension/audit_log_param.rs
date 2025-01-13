@@ -13,8 +13,6 @@ use std::time::Duration;
 use tardis::{basic::dto::TardisContext, TardisFuns, TardisFunsInst};
 use tardis::{log as tracing, tokio};
 
-
-
 use crate::{audit_log::AuditLogPlugin, plugin::PluginBiosExt};
 
 use super::cert_info::{CertInfo, RoleInfo};
@@ -81,16 +79,12 @@ pub struct LogParamContent {
 }
 
 impl LogParamContent {
-    pub fn send_audit_log(self, spi_app_id: &str, log_url: &str, tag: &str) {
-        send_audit_log(spi_app_id, log_url, tag, self)
+    pub fn send_audit_log<P: PluginBiosExt>(self, spi_app_id: &str, log_url: &str, tag: &str) {
+        send_audit_log(spi_app_id, log_url, tag, self,P::get_funs_inst_by_plugin_code());
     }
 }
 
-
-
-fn send_audit_log(spi_app_id: &str, log_url: &str, tag: &str, content: LogParamContent) {
-    let funs = AuditLogPlugin::get_funs_inst_by_plugin_code();
-
+fn send_audit_log(spi_app_id: &str, log_url: &str, tag: &str, content: LogParamContent, funs: TardisFunsInst) {
     let spi_ctx = TardisContext {
         ak: spi_app_id.to_string(),
         own_paths: spi_app_id.to_string(),
@@ -98,7 +92,7 @@ fn send_audit_log(spi_app_id: &str, log_url: &str, tag: &str, content: LogParamC
     };
 
     let tag = tag.to_string();
-    if !log_url.is_empty() && spi_app_id.is_empty() {
+    if !log_url.is_empty() && !spi_app_id.is_empty() {
         tokio::task::spawn(async move {
             match spi_log_client::SpiLogClient::addv2(
                 LogItemAddV2Req {
@@ -124,7 +118,7 @@ fn send_audit_log(spi_app_id: &str, log_url: &str, tag: &str, content: LogParamC
             .await
             {
                 Ok(_) => {
-                    tracing::trace!("[Plugin.AuditLog] add log success")
+                    tracing::debug!("[Plugin.AuditLog] add log success")
                 }
                 Err(e) => {
                     tracing::warn!("[Plugin.AuditLog] failed to add log:{e}")
