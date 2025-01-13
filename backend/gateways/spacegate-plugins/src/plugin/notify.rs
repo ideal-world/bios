@@ -99,6 +99,7 @@ where
     fn get_replacement(&self) -> HashMap<&'static str, String> {
         let mut replace = self.raw.get_replacement();
         let mut formatted_user = self.ip.to_string();
+        // replace . with full-width dot
         if let Some(tamper_user) = self.user {
             formatted_user.push('(');
             formatted_user.push_str(tamper_user);
