@@ -33,7 +33,7 @@ impl NotificationContext {
         };
         let cool_down = self.dedup_cache_cool_down.as_secs().min(1);
         tokio::spawn(async move {
-            let key = format!("sg:plugin:{}:{}", NotifyPlugin::CODE, dedup_hash);
+            let key = format!("sg:plugin:{}:dedup:{}", NotifyPlugin::CODE, dedup_hash);
             let mut conn = cache_client.get_conn().await;
             // check if the key exists
             if let Ok(Some(_)) = conn.get::<'_, _, Option<String>>(&key).await {
@@ -48,6 +48,7 @@ impl NotificationContext {
             }
 
             let funs = NotifyPlugin::get_funs_inst_by_plugin_code();
+            tracing::debug!(?req, "submit notify");
             let response = match req {
                 ReachRequest::ByScene(req) => {
                     bios_sdk_invoke::clients::reach_client::ReachClient::send_message(&req.into(), &funs, &ctx).await
@@ -84,7 +85,7 @@ impl NotificationContext {
         if let Some(extra_info) = extra_info {
             log_param_content.op = extra_info;
         }
-        log_param_content.send_audit_log(&self.spi_app_id, &self.log_api, &self.audit_log_tag);
+        log_param_content.send_audit_log::<NotifyPlugin>(&self.spi_app_id, &self.log_api, &self.audit_log_tag);
     }
 }
 

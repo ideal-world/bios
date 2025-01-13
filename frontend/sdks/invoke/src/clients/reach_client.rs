@@ -43,7 +43,7 @@ impl ReachClient {
     ) -> TardisResult<()> {
         let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        funs.web_client().put_obj_to_str(&format!("{reach_url}/cc/msg/{to}/template/{template_id}"), &replacement, headers.clone()).await?;
+        funs.web_client().put_obj_to_str(&format!("{reach_url}/cc/msg/general/{to}/template/{template_id}"), &replacement, headers.clone()).await?;
         Ok(())
     }
 }

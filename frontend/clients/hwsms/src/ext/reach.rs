@@ -25,8 +25,15 @@ impl SendChannel for crate::SmsClient {
     async fn send(&self, template: GenericTemplate<'_>, content: &ContentReplace, to: &HashSet<&str>) -> TardisResult<()> {
         let content = content.render_final_content::<20>(template.content);
         // content should be a json string array
-        let content_as_json_string_array: Vec<String> =
+        let mut content_as_json_string_array: Vec<String> =
             serde_json::from_str(&content).map_err(|e| TardisError::conflict(&format!("hwsms content should be a json string array: {e}"), "409-reach-bad-template"))?;
+        for s in &mut content_as_json_string_array {
+            if s.contains('.') {
+                // replace . with full-width dot for censorship
+                *s = s.replace('.', "．");
+            }
+            
+        }
         let template_paras = content_as_json_string_array.iter().map(|s| s.as_str()).collect();
         tardis::log::trace!("send sms {content}");
         let sms_content = SmsContent {
