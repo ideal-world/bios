@@ -1,11 +1,11 @@
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::body::Body;
-use spacegate_shell::plugin::Plugin;
 use spacegate_shell::plugin::{
     plugin_meta,
     schemars::{self, JsonSchema},
 };
+use spacegate_shell::plugin::{schema, Plugin, PluginSchemaExt};
 use spacegate_shell::{BoxError, SgResponse, SgResponseExt};
 use std::ops::Deref;
 use std::str::FromStr;
@@ -79,6 +79,7 @@ impl BytesFilter {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct ContentFilterConfig {
     content_length_limit: Option<u32>,
+    forbidden_pq_filter: Vec<BytesFilter>,
     forbidden_content_filter: Vec<BytesFilter>,
 }
 #[derive(Debug, Clone)]
@@ -105,6 +106,17 @@ impl Plugin for ContentFilterPlugin {
                 return Ok(SgResponse::with_code_empty(StatusCode::PAYLOAD_TOO_LARGE));
             }
         }
+        if !self.forbidden_pq_filter.is_empty() {
+            if let Some(pq) = req.uri().path_and_query() {
+                for f in &self.forbidden_pq_filter {
+                    if f.matches(pq.as_str().as_bytes()) {
+                        let mut response = SgResponse::with_code_empty(StatusCode::BAD_REQUEST);
+                        response.extensions_mut().insert(ContentFilterForbiddenReport { forbidden_reason: format!("forbidden rule matched: {f}") });
+                        return Ok(response);
+                    }
+                }
+            }
+        }
         if !self.forbidden_content_filter.is_empty() {
             let (parts, body) = req.into_parts();
             let body = body.dump().await?;
@@ -113,7 +125,7 @@ impl Plugin for ContentFilterPlugin {
                 if filter.matches(bytes) {
                     let mut response = SgResponse::with_code_empty(StatusCode::BAD_REQUEST);
                     response.extensions_mut().insert(ContentFilterForbiddenReport {
-                        forbidden_reason: filter.to_string(),
+                        forbidden_reason: format!("forbidden rule matched: {filter}") ,
                     });
                     return Ok(response);
                 }
@@ -127,4 +139,10 @@ impl Plugin for ContentFilterPlugin {
         let config = serde_json::from_value(plugin_config.spec)?;
         Ok(ContentFilterPlugin(Arc::new(config)))
     }
+
+    fn schema_opt() -> Option<schemars::schema::RootSchema> {
+        Some(ContentFilterPlugin::schema())
+    }
 }
+
+schema!(ContentFilterPlugin, ContentFilterConfig);
