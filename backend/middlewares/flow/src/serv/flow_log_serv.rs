@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, web::poem_openapi::types::Type, TardisFuns, TardisFunsInst
 };
 
 use crate::dto::{
@@ -63,14 +62,21 @@ impl FlowLogServ {
             log_content.operand_id = None;
             log_content.operand_kind = None;
         }
-        if start_req.create_vars.is_none() {
+        if start_req.vars.is_none() || start_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
-            log_content.old_content = "".to_string();
-            log_content.new_content = "".to_string();
+            log_content.old_content = None;
+            log_content.new_content = None;
         } else {
-            log_content.old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
-            log_content.new_content =
-                start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let new_content = start_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
+            if new_content.is_empty() {
+                log_content.old_content = None;
+                log_content.new_content = None;
+            } else {
+                log_content.old_content = Some(old_content);
+                log_content.new_content = Some(new_content);
+            }
+
             log_content.detail = start_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
@@ -128,14 +134,20 @@ impl FlowLogServ {
             log_content.operand_id = None;
             log_content.operand_kind = None;
         }
-        if start_req.create_vars.is_none() {
+        if start_req.vars.is_none() || start_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
-            log_content.old_content = "".to_string();
-            log_content.new_content = "".to_string();
+            log_content.old_content = None;
+            log_content.new_content = None;
         } else {
-            log_content.old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
-            log_content.new_content =
-                start_req.create_vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let new_content = start_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let old_content = create_vars.get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
+            if new_content.is_empty() {
+                log_content.old_content = None;
+                log_content.new_content = None;
+            } else {
+                log_content.old_content = Some(old_content);
+                log_content.new_content = Some(new_content);
+            }
             log_content.detail = start_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
@@ -157,9 +169,9 @@ impl FlowLogServ {
 
     // 添加审批流发起业务日志
     pub async fn add_start_business_log(
-        start_req: &FlowInstStartReq,
+        _start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
-        create_vars: &HashMap<String, Value>,
+        _create_vars: &HashMap<String, Value>,
         flow_model: &FlowModelDetailResp,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -253,18 +265,25 @@ impl FlowLogServ {
             sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
             flow_message: operate_req.output_message.clone(),
             flow_result: Some(operate_req.operate.to_string().to_uppercase()),
-            old_content: "".to_string(),
-            new_content: "".to_string(),
+            old_content: None,
+            new_content: None,
             ..Default::default()
         };
         if operate_req.operate == FlowStateOperatorKind::Referral {
             log_content.flow_referral = Some(FlowKvClient::get_account_name(&operate_req.operator.clone().unwrap_or_default(), funs, ctx).await?);
         }
-        if operate_req.vars.is_none() {
+        if operate_req.vars.is_none() || operate_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
         } else {
-            log_content.old_content = flow_inst_detail.create_vars.clone().unwrap_or_default().get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
-            log_content.new_content = operate_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let new_content = operate_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let old_content = flow_inst_detail.create_vars.clone().unwrap_or_default().get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
+            if new_content.is_empty() {
+                log_content.old_content = None;
+                log_content.new_content = None;
+            } else {
+                log_content.old_content = Some(old_content);
+                log_content.new_content = Some(new_content);
+            }
             log_content.detail = operate_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
@@ -366,8 +385,8 @@ impl FlowLogServ {
             operand_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
             flow_message: operate_req.output_message.clone(),
             flow_result: Some(operate_req.operate.to_string().to_uppercase()),
-            old_content: "".to_string(),
-            new_content: "".to_string(),
+            old_content: None,
+            new_content: None,
             ..Default::default()
         };
         if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
@@ -376,11 +395,18 @@ impl FlowLogServ {
         if operate_req.operate == FlowStateOperatorKind::Referral {
             log_content.flow_referral = Some(FlowKvClient::get_account_name(&operate_req.operator.clone().unwrap_or_default(), funs, ctx).await?);
         }
-        if operate_req.vars.is_none() {
+        if operate_req.vars.is_none() || operate_req.vars.clone().unwrap_or_default().is_empty() {
             log_ext.include_detail = Some(false);
         } else {
-            log_content.old_content = flow_inst_detail.create_vars.clone().unwrap_or_default().get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
-            log_content.new_content = operate_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let new_content = operate_req.vars.clone().unwrap_or_default().get("content").map(|content| content.as_str().unwrap_or("").to_string()).unwrap_or_default();
+            let old_content = flow_inst_detail.create_vars.clone().unwrap_or_default().get("content").map_or("".to_string(), |val| val.as_str().unwrap_or("").to_string());
+            if new_content.is_empty() {
+                log_content.old_content = None;
+                log_content.new_content = None;
+            } else {
+                log_content.old_content = Some(old_content);
+                log_content.new_content = Some(new_content);
+            }
             log_content.detail = operate_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
@@ -450,8 +476,8 @@ impl FlowLogServ {
             name: Some(flow_inst_detail.code.clone()),
             sub_id: Some(flow_inst_detail.id.clone()),
             sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
-            old_content: "".to_string(),
-            new_content: "".to_string(),
+            old_content: None,
+            new_content: None,
             ..Default::default()
         };
         

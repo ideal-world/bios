@@ -1529,6 +1529,35 @@ impl FlowInstServ {
         Ok(())
     }
 
+    pub async fn unsafe_abort_inst(rel_flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let insts = Self::find_detail_items(
+            &FlowInstFilterReq {
+                main: Some(false),
+                flow_version_id: Some(rel_flow_version_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .collect_vec();
+        join_all(
+            insts
+                .iter()
+                .map(|inst| async {
+                    Self::abort(&inst.id, &FlowInstAbortReq {
+                        message: "".to_string()
+                    }, funs, ctx).await
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<_>>>()?;
+        Ok(())
+    }
+
     pub async fn unsafe_modify_state(tag: &str, modify_model_state_ids: Option<Vec<String>>, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let insts = Self::find_detail_items(
             &FlowInstFilterReq {

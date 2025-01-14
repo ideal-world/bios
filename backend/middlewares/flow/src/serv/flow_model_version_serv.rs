@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
@@ -453,168 +452,19 @@ impl FlowModelVersionServ {
         )
         .await?
         .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "delete_state", "flow state is not found", "404-flow-state-not-found"))?;
-        // 获取指向当前节点的动作
+        Self::delete_single_state(flow_version_id, state_id, funs, ctx).await
+    }
+
+    async fn delete_single_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
         // 获取当前节点指向的动作
         let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
-        // 查询同级分支节点数量
-        let parent_state_id = from_trans.first().map(|tran| tran.from_flow_state_id.clone()).unwrap_or_default();
-        let peer_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![parent_state_id.to_string()]), None, funs, ctx).await?.len();
-
-        let mut delete_state_ids = vec![];
-        if state.state_kind == FlowStateKind::Branch {
-            // 假设多个节点指向当前分支节点，则禁止删除该节点
-            if to_trans.len() > 1 {
-                return Err(funs.err().internal_error(
-                    &Self::get_obj_name(),
-                    "delete_state",
-                    &format!("state {state_id} prohibit delete"),
-                    "500-flow-state-prohibit-delete",
-                ));
-            }
-            if peer_num > 1 {
-                // 同级分支节点大于1，则删除当前分支下节点
-                let finish_state_id = Self::find_branch_finish_state_id(flow_version_id, &parent_state_id, funs, ctx).await?;
-                Self::find_state_ids_in_branch(flow_version_id, state_id, &finish_state_id, &mut delete_state_ids, funs, ctx).await?;
-            } else {
-                // 如分支节点等于1，只删除分支节点即可
-                delete_state_ids.push(state_id.to_string());
-            }
-        } else {
-            delete_state_ids.push(state_id.to_string());
-        }
-        for delete_state_id in delete_state_ids.iter().rev() {
-            let delete_state = FlowStateServ::find_one_detail_item(
-                &FlowStateFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(vec![delete_state_id.to_string()]),
-                        with_sub_own_paths: true,
-                        own_paths: Some("".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?
-            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "delete_state", "flow state is not found", "404-flow-state-not-found"))?;
-            Self::delete_single_state(flow_version_id, &delete_state, peer_num, funs, ctx).await?;
-        }
-        Ok(())
-    }
-
-    #[async_recursion]
-    async fn find_state_ids_in_branch(
-        flow_version_id: &str,
-        state_id: &str,
-        finish_state_id: &str,
-        state_ids: &mut Vec<String>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
-        state_ids.push(state_id.to_string());
-        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
-        if to_trans.len() == 1 && to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap() == *finish_state_id {
-            return Ok(());
-        }
-        for to_tran in to_trans {
-            Self::find_state_ids_in_branch(flow_version_id, &to_tran.to_flow_state_id, finish_state_id, state_ids, funs, ctx).await?;
-        }
-        Ok(())
-    }
-
-    async fn find_branch_finish_state_id(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let mut target_state_id = state_id.to_string();
-        let mut branch_num = 0;
-        loop {
-            let mut to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![target_state_id.clone()]), None, funs, ctx).await?;
-            let to_tran_num = to_trans.len();
-            if to_tran_num == 0 {
-                break;
-            }
-            if to_tran_num > 1 {
-                branch_num += to_tran_num - 1;
-            }
-            target_state_id = to_trans.pop().map(|to_tran| to_tran.to_flow_state_id).unwrap();
-            if to_tran_num == 1 {
-                let from_state_num = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![target_state_id.to_string()]), funs, ctx).await?.len();
-                if from_state_num > 1 {
-                    branch_num -= from_state_num - 1;
-                }
-            }
-            if branch_num == 0 {
-                break;
-            }
-        }
-        Ok(target_state_id)
-    }
-
-    async fn delete_single_state(flow_version_id: &str, state: &FlowStateDetailResp, peer_num: usize, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let state_id = &state.id;
-        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
-        // 获取当前节点指向的动作
-        let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
-        // 如果当前删除的节点上下均为分支节点的合并节点，则禁止删除该节点
-        if from_trans.len() > 1 && to_trans.len() > 1 {
-            return Err(funs.err().internal_error(
-                &Self::get_obj_name(),
-                "delete_state",
-                &format!("state {state_id} prohibit delete"),
-                "500-flow-state-prohibit-delete",
-            ));
-        }
         let mut delete_flow_transition_ids = vec![];
         for from_tran in &from_trans {
             delete_flow_transition_ids.push(from_tran.id.clone());
         }
         for to_tran in &to_trans {
             delete_flow_transition_ids.push(to_tran.id.clone());
-        }
-
-        // 若当前分支节点不止一个同级节点，则不需要新增连接动作
-        if !(state.state_kind == FlowStateKind::Branch && peer_num > 1) {
-            if to_trans.len() == 1 {
-                let to_state_id = to_trans.first().map(|tran| tran.to_flow_state_id.clone()).unwrap_or_default();
-                for from_tran in &from_trans {
-                    let guard_by_other_conds = from_tran.guard_by_other_conds();
-                    FlowTransitionServ::add_transitions(
-                        flow_version_id,
-                        &from_tran.from_flow_state_id,
-                        &[FlowTransitionAddReq {
-                            name: Some(from_tran.name.clone().into()),
-                            from_flow_state_id: from_tran.from_flow_state_id.clone(),
-                            to_flow_state_id: to_state_id.clone(),
-                            transfer_by_auto: Some(from_tran.transfer_by_auto),
-                            guard_by_other_conds,
-                            ..Default::default()
-                        }],
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                }
-            } else if from_trans.len() == 1 {
-                let from_tran = from_trans.first().unwrap();
-                let guard_by_other_conds = from_tran.guard_by_other_conds();
-                for to_tran in &to_trans {
-                    FlowTransitionServ::add_transitions(
-                        flow_version_id,
-                        &from_tran.from_flow_state_id,
-                        &[FlowTransitionAddReq {
-                            name: Some(from_tran.name.clone().into()),
-                            from_flow_state_id: from_tran.from_flow_state_id.clone(),
-                            to_flow_state_id: to_tran.to_flow_state_id.clone(),
-                            transfer_by_auto: Some(from_tran.transfer_by_auto),
-                            guard_by_other_conds: guard_by_other_conds.clone(),
-                            ..Default::default()
-                        }],
-                        funs,
-                        ctx,
-                    )
-                    .await?;
-                }
-            }
         }
 
         FlowTransitionServ::delete_transitions(flow_version_id, &delete_flow_transition_ids, funs, ctx).await?;
