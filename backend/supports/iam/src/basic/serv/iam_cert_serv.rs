@@ -594,7 +594,7 @@ impl IamCertServ {
                 ignore_check_sk: false,
                 ext: modify_req.ext.clone(),
                 start_time: modify_req.start_time,
-                end_time: modify_req.start_time,
+                end_time: modify_req.end_time,
                 status: None,
             },
             funs,

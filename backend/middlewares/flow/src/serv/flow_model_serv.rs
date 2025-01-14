@@ -1888,6 +1888,51 @@ impl FlowModelServ {
                     }
                 }
             }
+            if let Some(ref mut modify_states) = &mut modify_version.modify_states {
+                for modify_state in modify_states.iter_mut() {
+                    if let Some(ref mut add_transitions) = &mut modify_state.add_transitions {
+                        for add_transition in add_transitions.iter_mut() {
+                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                    // 引用复制时，置为不可编辑
+                                }
+                            }
+                        }
+                    }
+                    if let Some(ref mut modify_transitions) = &mut modify_state.modify_transitions {
+                        for modify_transition in modify_transitions.iter_mut() {
+                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
+                            modify_transition.id = child_model_transitions
+                                .iter()
+                                .find(|child_tran| {
+                                    child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                        && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                })
+                                .map(|trans| trans.id.clone())
+                                .unwrap_or_default()
+                                .into();
+                        }
+                    }
+                    if let Some(delete_transitions) = &mut modify_state.delete_transitions {
+                        let mut child_delete_transitions = vec![];
+                        for delete_transition_id in delete_transitions.iter_mut() {
+                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
+                            child_delete_transitions.push(
+                                child_model_transitions
+                                    .iter()
+                                    .find(|child_tran| {
+                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id 
+                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                    })
+                                    .map(|trans| trans.id.clone())
+                                    .unwrap_or_default(),
+                            );
+                        }
+                        modify_state.delete_transitions = Some(child_delete_transitions);
+                    }
+                }
+            }
         }
 
         let child_model_clone = child_model.clone();
