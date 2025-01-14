@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
     net::IpAddr,
-    sync::{Arc, OnceLock},
+    sync::{Arc, OnceLock}, time::Duration,
 };
 
 use bios_sdk_invoke::{invoke_config::InvokeConfig, invoke_enumeration::InvokeModuleKind, invoke_initializer};
@@ -15,16 +15,19 @@ use spacegate_shell::{
     BoxError, SgRequest, SgRequestExt, SgResponse,
 };
 use tardis::{
+    log as tracing,
     regex::{self, Regex},
     serde_json,
-    log as tracing,
 };
+use crate::utils::HmsDisplay;
 
 use crate::extension::{
     audit_log_param::AuditLogParam,
     cert_info::CertInfo,
-    notification::{CertLockReport, ContentFilterForbiddenReport, NotificationContext, ReachMsgSendReq, TamperReport, UnauthorizedOperationReport},
+    notification::{AntiReplayReport, CertLockReport, ContentFilterForbiddenReport, NotificationContext, ReachMsgSendReq, TamperReport, UnauthorizedOperationReport},
 };
+
+use super::bios_error_limit::BiosErrorLimitReport;
 #[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct NotifyPluginConfig {
@@ -32,15 +35,24 @@ pub struct NotifyPluginConfig {
     /// - rate_limit: rate limit notification
     ///   - count: number of requests
     ///   - time_window: time window
-    /// 
+    ///
     /// - tamper: tamper notification
-    /// 
+    ///
     /// - unauthorized_operation: unauthorized operation notification
-    /// 
+    ///
     /// - cert_lock: cert lock notification
-    /// 
+    ///
     /// - content_filter_forbidden: content filter forbidden notification
     ///   - reason: forbidden reason
+    ///
+    /// - anti_replay: anti replay notification
+    ///
+    /// - bios_error_limit: bios error limit notification
+    ///  - error_code: error code
+    ///  - count: number of requests    
+    ///  - time_window: time window
+    ///
+    ///
     templates: HashMap<String, NotifyPluginConfigTemplatesItem>,
     log_api: String,
     reach_api: String,
@@ -123,9 +135,9 @@ impl Report for RateLimitReport {
     fn get_replacement(&self) -> HashMap<&'static str, String> {
         let mut replace = HashMap::new();
         let count = format!("{}", self.plugin.max_request_number);
-        let time_window = format!("{}ms", self.plugin.time_window_ms);
+        let time_window = HmsDisplay::new_zh(Duration::from_millis(self.plugin.time_window_ms.into()));
         replace.insert("count", count);
-        replace.insert("time_window", time_window);
+        replace.insert("time_window", format!("{}", time_window));
         replace
     }
     fn key(&self) -> &'static str {
@@ -168,6 +180,29 @@ impl Report for ContentFilterForbiddenReport {
     }
     fn key(&self) -> &'static str {
         "content_filter_forbidden"
+    }
+}
+
+impl Report for AntiReplayReport {
+    fn get_replacement(&self) -> HashMap<&'static str, String> {
+        HashMap::new()
+    }
+    fn key(&self) -> &'static str {
+        "anti_replay"
+    }
+}
+
+impl Report for BiosErrorLimitReport {
+    fn get_replacement(&self) -> HashMap<&'static str, String> {
+        let mut replace = HashMap::new();
+        replace.insert("error_code", self.error_code.clone());
+        replace.insert("count", self.count.to_string());
+        let time_window = HmsDisplay::new_zh(Duration::from_millis(self.time_window_ms.into()));
+        replace.insert("time_window", format!("{}", time_window));
+        replace
+    }
+    fn key(&self) -> &'static str {
+        "bios_error_limit"
     }
 }
 #[derive(Serialize, Deserialize, schemars::JsonSchema, Default, Debug)]
@@ -295,13 +330,24 @@ impl Plugin for NotifyPlugin {
         let response = inner.call(req).await;
         let user = req_cert_info.as_ref().or_else(|| response.extensions().get::<CertInfo>()).and_then(|c| c.name.clone());
         if let Some(rate_limit_report) = response.extensions().get::<RateLimitReport>().filter(|r| r.rising_edge) {
-            tracing::debug!(report = ?rate_limit_report, "catch rate limit report");
-            context.report(&response, rate_limit_report.with_user_and_ip(user.as_deref(), ip));
+            if rate_limit_report.rising_edge {
+                tracing::debug!(report = ?rate_limit_report, "catch rate limit report");
+                context.report(&response, rate_limit_report.with_user_and_ip(user.as_deref(), ip));
+            }
         }
         if let Some(report) = response.extensions().get::<ContentFilterForbiddenReport>() {
             tracing::debug!(?report, "catch content filter forbidden report");
-
             context.report(&response, report.with_user_and_ip(user.as_deref(), ip));
+        }
+        if let Some(report) = response.extensions().get::<AntiReplayReport>() {
+            tracing::debug!(?report, "catch anti replay report");
+            context.report(&response, report.with_user_and_ip(user.as_deref(), ip));
+        }
+        if let Some(report) = response.extensions().get::<BiosErrorLimitReport>() {
+            if report.is_rising_edge {
+                tracing::debug!(?report, "catch bios error limit report");
+                context.report(&response, report.with_user_and_ip(user.as_deref(), ip));
+            }
         }
         if let Some(error_code) = response.headers().get(tardis::web::web_resp::HEADER_X_TARDIS_ERROR) {
             tracing::debug!(?error_code, "catch error code");
@@ -337,7 +383,7 @@ impl KnownError {
         match header_value.to_str().ok()? {
             code if code.starts_with("401-signature-error") => Some(Self::Tamper),
             code if code.starts_with("403-req-permission-denied") || code.starts_with("401-auth-req-unauthorized") => Some(Self::UnauthorizedOperation),
-            code if code.starts_with("400-rbum-cert-lock") => Some(Self::CertLock),
+            code if code.starts_with("400-rbum-cert-lock") || code.starts_with("401-iam-cert-valid_lock") => Some(Self::CertLock),
             _ => None,
         }
     }

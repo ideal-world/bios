@@ -94,7 +94,8 @@ pub struct TamperReport {}
 pub struct UnauthorizedOperationReport {}
 
 pub struct CertLockReport {}
-
+#[derive(Debug, Clone, Copy)]
+pub struct AntiReplayReport {}
 #[derive(Debug, Clone)]
 pub struct ContentFilterForbiddenReport {
     pub(crate) forbidden_reason: String,
