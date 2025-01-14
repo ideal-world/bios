@@ -1,16 +1,22 @@
+use std::hash::DefaultHasher;
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use spacegate_shell::ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
-use spacegate_shell::kernel::extension::PeerAddr;
+use spacegate_shell::kernel::extension::{IsEastWestTraffic, PeerAddr};
 use spacegate_shell::kernel::helper_layers::function::Inner;
-use spacegate_shell::plugin::{schemars, Plugin, PluginError};
-use spacegate_shell::{BoxError, BoxResult, SgBody, SgRequestExt, SgResponseExt};
+use spacegate_shell::plugin::{
+    plugins::east_west_traffic_white_list::{EastWestTrafficWhiteListConfig, EastWestTrafficWhiteListPlugin},
+    schemars, Plugin, PluginError, PluginSchemaExt,
+};
+use spacegate_shell::{BoxError, BoxResult, SgBody, SgRequest, SgRequestExt, SgResponseExt};
 
 use tardis::serde_json;
 use tardis::{basic::result::TardisResult, tokio};
+
+use crate::extension::notification::AntiReplayReport;
 
 spacegate_shell::plugin::schema!(AntiReplayPlugin, AntiReplayPlugin);
 #[derive(Serialize, Deserialize, Clone, schemars::JsonSchema)]
@@ -19,6 +25,9 @@ pub struct AntiReplayPlugin {
     cache_key: String,
     // millisecond
     time: u64,
+
+    skip_paths: Vec<String>,
+    skip_methods: Vec<String>,
 }
 
 impl Default for AntiReplayPlugin {
@@ -26,6 +35,8 @@ impl Default for AntiReplayPlugin {
         Self {
             cache_key: "sg:plugin:anti_replay".into(),
             time: 5000,
+            skip_methods: vec!["header".to_owned()],
+            skip_paths: Vec::new(),
         }
     }
 }
@@ -36,23 +47,37 @@ pub struct AntiReplayDigest {
     client: RedisClient,
 }
 
-fn get_md5(req: &Request<SgBody>) -> TardisResult<String> {
+async fn get_digest(req: Request<SgBody>) -> BoxResult<(Request<SgBody>, u64)> {
     let remote_addr = req.extensions().get::<PeerAddr>().expect("missing peer address").0;
-    let uri = req.uri();
-    let method = req.method();
-
-    let data = format!(
-        "{}{}{}{}",
-        remote_addr,
-        uri,
-        method,
-        req.headers().iter().fold(String::new(), |mut c, (key, value)| {
-            c.push_str(key.as_str());
-            c.push_str(&String::from_utf8_lossy(value.as_bytes()));
-            c
-        }),
-    );
-    tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(data)
+    let (parts, body) = req.into_parts();
+    let uri = &parts.uri;
+    let method = &parts.method;
+    let mut headers = parts
+        .headers
+        .iter()
+        .filter(|(name, _)| name.as_str().eq_ignore_ascii_case("Bios-Token") || name.as_str().eq_ignore_ascii_case("Bios-App") || name.as_str().eq_ignore_ascii_case("Bios-Crypto"))
+        .collect::<Vec<_>>();
+    headers.sort_by(|(name_a, _), (name_b, _)| name_a.as_str().cmp(name_b.as_str()));
+    let body_bytes = if let Some(dumped) = body.get_dumped() {
+        dumped.clone()
+    } else {
+        let body = body.dump().await?;
+        body.get_dumped().expect("dumped").clone()
+    };
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    remote_addr.hash(&mut hasher);
+    uri.hash(&mut hasher);
+    method.hash(&mut hasher);
+    for (k, v) in headers {
+        k.hash(&mut hasher);
+        v.hash(&mut hasher);
+    }
+    body_bytes.hash(&mut hasher);
+    let hash_code = hasher.finish();
+    let body = SgBody::full(body_bytes);
+    let request = SgRequest::from_parts(parts, body);
+    Ok((request, hash_code))
 }
 
 async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: &RedisClient) -> BoxResult<()> {
@@ -89,32 +114,67 @@ impl Plugin for AntiReplayPlugin {
         Ok(config)
     }
     async fn call(&self, req: Request<SgBody>, inner: Inner) -> Result<Response<SgBody>, BoxError> {
-        if let Some(client) = req.get_redis_client_by_gateway_name() {
-            let md5 = get_md5(&req).map_err(PluginError::internal_error::<AntiReplayPlugin>)?;
-            let digest = AntiReplayDigest {
-                md5: Arc::from(md5),
-                client: client.clone(),
-            };
-            if get_status(&digest.md5, &self.cache_key, &client).await? {
-                return Ok(Response::with_code_message(
-                    StatusCode::TOO_MANY_REQUESTS,
-                    "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
-                ));
-            } else {
-                set_status(&digest.md5, &self.cache_key, true, &client).await?;
+        let mut skip = false;
+        if let Some(is_ewt) = req.extensions().get::<IsEastWestTraffic>() {
+            tardis::log::debug!(is_ewt = **is_ewt, "ewt");
+            if **is_ewt {
+                skip = true;
             }
-            let resp = inner.call(req).await;
-            let time = self.time;
-            let cache_key = self.cache_key.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(Duration::from_millis(time)).await;
-                let _ = set_status(&digest.md5, cache_key.as_ref(), false, &digest.client).await;
-            });
-            Ok(resp)
-        } else {
-            let resp = inner.call(req).await;
-            Ok(resp)
         }
+        if !self.skip_methods.is_empty() {
+            let method = req.method();
+            let method = method.as_str();
+            for m in &self.skip_methods {
+                if m.eq_ignore_ascii_case(method) {
+                    skip = true;
+                    break;
+                }
+            }
+        }
+        if !self.skip_paths.is_empty() {
+            let path = req.uri().path();
+            for p in &self.skip_paths {
+                if path.starts_with(p) {
+                    skip = true;
+                    break;
+                }
+            }
+        }
+        if !skip {
+            if let Some(client) = req.get_redis_client_by_gateway_name() {
+                let (req, hash_code) = get_digest(req).await?;
+                tardis::log::debug!(hash_code, "digest result");
+                let md5 = tardis::crypto::crypto_digest::TardisCryptoDigest {}.md5(hash_code.to_be_bytes())?;
+                let digest = AntiReplayDigest {
+                    md5: Arc::from(md5),
+                    client: client.clone(),
+                };
+                if get_status(&digest.md5, &self.cache_key, &client).await? {
+                    let mut response = Response::with_code_message(
+                        StatusCode::TOO_MANY_REQUESTS,
+                        "[SG.Plugin.Anti_Replay] Request denied due to replay attack. Please refresh and resubmit the request.",
+                    );
+                    response.extensions_mut().insert(AntiReplayReport {});
+                    return Ok(response);
+                } else {
+                    set_status(&digest.md5, &self.cache_key, true, &client).await?;
+                }
+                let resp = inner.call(req).await;
+                let time = self.time;
+                let cache_key = self.cache_key.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(time)).await;
+                    let _ = set_status(&digest.md5, cache_key.as_ref(), false, &digest.client).await;
+                });
+                return Ok(resp);
+            }
+        }
+        let resp = inner.call(req).await;
+        Ok(resp)
+    }
+
+    fn schema_opt() -> Option<schemars::schema::RootSchema> {
+        Some(Self::schema())
     }
 }
 
