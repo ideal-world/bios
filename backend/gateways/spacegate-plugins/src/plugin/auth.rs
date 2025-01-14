@@ -293,6 +293,7 @@ impl AuthPlugin {
                     tracing::info!("[SG.Filter.Auth] auth failed:{e}");
                     let err_resp = Response::builder()
                         .header(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"))
+                        .header(HEADER_X_TARDIS_ERROR, &e.code)
                         .status(StatusCode::from_str(&e.code).unwrap_or(StatusCode::BAD_GATEWAY))
                         .body(SgBody::full(json!({"code":format!("{}-gateway-cert-error",e.code),"message":e.message}).to_string()))
                         .map_err(PluginError::internal_error::<AuthPlugin>)?;

@@ -18,7 +18,7 @@ pub fn parse_duration(duration: &str) -> Result<Duration, BoxError> {
         duration = rest;
 
         // Parse unit
-        let (unit, rest) = match duration.find(|c: char| !c.is_alphabetic()  && c != ' ') {
+        let (unit, rest) = match duration.find(|c: char| !c.is_alphabetic() && c != ' ') {
             Some(index) => duration.split_at(index),
             None => (duration, ""),
         };
@@ -29,7 +29,7 @@ pub fn parse_duration(duration: &str) -> Result<Duration, BoxError> {
             "ms" | "millisecond" => Duration::from_millis(number),
             "s" | "second" => Duration::from_secs(number),
             "m" | "min" => Duration::from_secs(number * 60),
-            "h"  | "hour" => Duration::from_secs(number * 60 * 60),
+            "h" | "hour" => Duration::from_secs(number * 60 * 60),
             "d" | "day" => Duration::from_secs(number * 60 * 60 * 24),
             _ => return Err(format!("Invalid unit: {}", unit).into()),
         };
@@ -40,8 +40,78 @@ pub fn parse_duration(duration: &str) -> Result<Duration, BoxError> {
     Ok(total_duration)
 }
 
+pub trait TimeUnitSuit {
+    fn minute(&self, scale: u64) -> &'static str;
+    fn second(&self, scale: u64) -> &'static str;
+    fn hour(&self, scale: u64) -> &'static str;
+}
+
+pub struct ZhHmsTime;
+
+pub struct HmsDisplay<U> {
+    time: Duration,
+    unit: U,
+}
+
+impl HmsDisplay<ZhHmsTime> {
+    pub fn new_zh(time: Duration) -> Self {
+        Self {
+            time,
+            unit: ZhHmsTime,
+        }
+    }
+}
+
+impl TimeUnitSuit for ZhHmsTime {
+    fn hour(&self, _scale: u64) -> &'static str {
+        "小时"
+    }
+
+    fn minute(&self, _scale: u64) -> &'static str {
+        "分钟"
+    }
+
+    fn second(&self, _scale: u64) -> &'static str {
+        "秒"
+    }
+}
+
+
+impl<U: TimeUnitSuit> std::fmt::Display for HmsDisplay<U> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut time = self.time;
+        
+        if time.as_secs() >= 3600 {
+            let hour = time.as_secs() / 3600;
+            time -= Duration::from_secs(hour * 3600);
+            write!(f, "{}{}", hour, self.unit.hour(hour))?;
+        }
+        if time.as_secs() >= 60 {
+            let minute = time.as_secs() / 60;
+            time -= Duration::from_secs(minute * 60);
+            write!(f, "{}{}", minute, self.unit.minute(minute))?;
+        }
+        if time.as_secs() > 0 {
+            write!(f, "{}{}", time.as_secs(), self.unit.second(time.as_secs()))?;
+        }
+        Ok(())
+    }
+}
+
+
 #[cfg(test)]
 mod test {
+    use super::*;
+    #[test]
+    fn test_hms_time_format() {
+        let time = Duration::from_secs(3600 * 2 + 60 * 3 + 5);
+        let display = HmsDisplay {
+            time,
+            unit: ZhHmsTime,
+        };
+        assert_eq!(display.to_string(), "2小时3分钟5秒");
+    }
+
     #[test]
     fn test_duration_parse() {
         use std::time::Duration;
@@ -66,6 +136,5 @@ mod test {
             "1ns1us1ms1s1m1h1d" => Duration::from_nanos(1) + Duration::from_micros(1) + Duration::from_millis(1) + Duration::from_secs(1) + Duration::from_secs(60) + Duration::from_secs(60 * 60) + Duration::from_secs(60 * 60 * 24),
             "1d 1h 1min 1s 1ms 1us 1ns" => Duration::from_secs(60 * 60 * 24) + Duration::from_secs(60 * 60) + Duration::from_secs(60) + Duration::from_secs(1) + Duration::from_millis(1) + Duration::from_micros(1) + Duration::from_nanos(1),
         }
-
     }
 }
