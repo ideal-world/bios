@@ -33,6 +33,8 @@ pub mod flow_client;
 
 #[cfg(feature = "schedule")]
 pub mod schedule_client;
+#[cfg(feature = "reach")]
+pub mod reach_client;
 
 #[macro_export]
 ///

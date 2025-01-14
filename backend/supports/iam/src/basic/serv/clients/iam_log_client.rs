@@ -42,6 +42,7 @@ pub enum LogParamTag {
     IamRole,
     IamRes,
     IamSystem,
+    IamAbnormal,
     SecurityAlarm,
     SecurityVisit,
     Log,
@@ -57,6 +58,7 @@ impl From<LogParamTag> for String {
             LogParamTag::IamRole => "iam_role".to_string(),
             LogParamTag::IamRes => "iam_res".to_string(),
             LogParamTag::IamSystem => "iam_system".to_string(),
+            LogParamTag::IamAbnormal => "iam_abnormal".to_string(),
             LogParamTag::SecurityAlarm => "security_alarm".to_string(),
             LogParamTag::SecurityVisit => "security_visit".to_string(),
             LogParamTag::Log => "log".to_string(),
@@ -315,6 +317,7 @@ impl IamLogClient {
                 }
                 LogParamTag::Log => None,
                 LogParamTag::Token => None,
+                LogParamTag::IamAbnormal => None,
             }
         } else {
             None

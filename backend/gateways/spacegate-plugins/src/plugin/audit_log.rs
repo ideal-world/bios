@@ -1,23 +1,19 @@
 use std::collections::HashMap;
 
 use std::str::FromStr;
-use std::time::Instant;
 
-use bios_sdk_invoke::clients::spi_log_client::{self, LogItemAddV2Req};
 use bios_sdk_invoke::invoke_config::InvokeConfig;
 use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
 use bios_sdk_invoke::invoke_initializer;
 
-use http::uri::Scheme;
 use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::{Request, Response};
-use spacegate_shell::kernel::extension::{EnterTime, PeerAddr, Reflect};
+use spacegate_shell::kernel::extension::Reflect;
 
 use spacegate_shell::kernel::helper_layers::function::Inner;
 use spacegate_shell::plugin::{Plugin, PluginError};
-use spacegate_shell::{BoxError, SgBody};
-use tardis::basic::dto::TardisContext;
+use spacegate_shell::{BoxError, SgBody, SgRequestExt};
 use tardis::log::{debug, trace, warn};
 use tardis::serde_json::{json, Value};
 
@@ -26,8 +22,6 @@ use tardis::{
     basic::result::TardisResult,
     log,
     serde_json::{self},
-    tokio::{self},
-    TardisFuns, TardisFunsInst,
 };
 
 use crate::extension::audit_log_param::{AuditLogParam, LogParamContent};
@@ -71,10 +65,6 @@ impl AuditLogPlugin {
             }
         }
         trace!("[Plugin.AuditLog] exclude log path do not matched: path {}", path);
-
-        let start_time = resp.extensions().get::<EnterTime>().map(|time| time.0);
-        let end_time = Instant::now();
-
         let body_string = if let Some(raw_body) = resp.extensions_mut().remove::<BeforeEncryptBody>().map(|b| b.get()) {
             serde_json::from_str::<Value>(&String::from_utf8_lossy(&raw_body))
         } else {
@@ -123,20 +113,7 @@ impl AuditLogPlugin {
             }
             Err(_) => false,
         };
-        let content = LogParamContent {
-            op: param.request_method,
-            name: resp.extensions().get::<CertInfo>().and_then(|info| info.name.clone()).unwrap_or_default(),
-            user_id: resp.extensions().get::<CertInfo>().map(|info| info.id.clone()),
-            role: resp.extensions().get::<CertInfo>().map(|info| info.roles.clone()).unwrap_or_default(),
-            ip: param.request_ip,
-            path: param.request_path,
-            scheme: param.request_scheme,
-            token: param.request_headers.get(&self.header_token_name).and_then(|v| v.to_str().ok().map(|v| v.to_string())),
-            server_timing: start_time.map(|st| end_time - st),
-            resp_status: resp.status().as_u16().to_string(),
-            success,
-            own_paths: resp.extensions().get::<CertInfo>().and_then(|info| info.own_paths.clone()),
-        };
+        let content = param.merge_audit_log_param_content(&resp, success, &self.header_token_name);
         Ok((resp, Some(content)))
     }
 
@@ -165,14 +142,7 @@ impl AuditLogPlugin {
     }
 
     fn req(&self, mut req: Request<SgBody>) -> Result<Request<SgBody>, Response<SgBody>> {
-        let param = AuditLogParam {
-            request_path: req.uri().path().to_string(),
-            request_method: req.method().to_string(),
-            request_headers: req.headers().clone(),
-            request_scheme: req.uri().scheme().unwrap_or(&Scheme::HTTP).to_string(),
-            request_ip: req.extensions().get::<PeerAddr>().ok_or_else(|| PluginError::internal_error::<AuditLogPlugin>("[Plugin.AuditLog] missing peer addr"))?.0.ip().to_string(),
-        };
-
+        let param = req.extract::<AuditLogParam>();
         if let Some(ident) = req.headers().get(self.head_key_auth_ident.clone()) {
             let ident = ident.to_str().unwrap_or_default().to_string();
             let reflect = req.extensions_mut().get_mut::<Reflect>().expect("missing reflect");
@@ -198,49 +168,7 @@ impl AuditLogPlugin {
             let (resp, content) = self.get_log_content(resp).await.map_err(PluginError::internal_error::<AuditLogPlugin>)?;
 
             if let Some(content) = content {
-                let funs = get_tardis_inst();
-
-                let spi_ctx = TardisContext {
-                    owner: resp.extensions().get::<CertInfo>().map(|info| info.id.clone()).unwrap_or_default(),
-                    roles: resp.extensions().get::<CertInfo>().map(|info| info.roles.clone().into_iter().map(|r| r.id).collect()).unwrap_or_default(),
-                    ..Default::default()
-                };
-
-                let tag = self.tag.clone();
-                if !self.log_url.is_empty() && !self.spi_app_id.is_empty() {
-                    tokio::task::spawn(async move {
-                        match spi_log_client::SpiLogClient::addv2(
-                            LogItemAddV2Req {
-                                tag,
-                                content: TardisFuns::json.obj_to_json(&content).unwrap_or_default(),
-                                kind: None,
-                                ext: Some(content.to_value()),
-                                key: None,
-                                op: Some(content.op),
-                                rel_key: None,
-                                idempotent_id: None,
-                                ts: Some(tardis::chrono::Utc::now()),
-                                owner: content.user_id,
-                                own_paths: None,
-                                msg: None,
-                                owner_name: None,
-                                push: false,
-                                disable: None,
-                            },
-                            &funs,
-                            &spi_ctx,
-                        )
-                        .await
-                        {
-                            Ok(_) => {
-                                log::trace!("[Plugin.AuditLog] add log success")
-                            }
-                            Err(e) => {
-                                log::warn!("[Plugin.AuditLog] failed to add log:{e}")
-                            }
-                        };
-                    });
-                }
+                content.send_audit_log::<AuditLogPlugin>(&self.spi_app_id, &self.log_url, &self.tag);
             }
 
             Ok(resp)
@@ -295,12 +223,8 @@ impl Plugin for AuditLogPlugin {
     }
 }
 
-fn get_tardis_inst() -> TardisFunsInst {
-    TardisFuns::inst(CODE.to_string(), None)
-}
-
 impl LogParamContent {
-    fn to_value(&self) -> Value {
+    pub fn to_value(&self) -> Value {
         json!({
             "name":self.name,
             "id":self.user_id,

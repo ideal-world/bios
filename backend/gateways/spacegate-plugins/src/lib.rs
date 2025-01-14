@@ -1,11 +1,12 @@
 #![warn(clippy::unwrap_used)]
 
-pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, rewrite_ns_b_ip};
+pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, ip_time, rewrite_ns_b_ip, content_filter};
 
 mod consts;
 mod extension;
 mod marker;
 mod plugin;
+mod utils;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
 use plugin::{notify, op_redis_publisher};
@@ -19,4 +20,5 @@ pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<auth::AuthPlugin>();
     repo.register::<op_redis_publisher::RedisPublisherPlugin>();
     repo.register::<notify::NotifyPlugin>();
+    repo.register::<content_filter::ContentFilterPlugin>();
 }

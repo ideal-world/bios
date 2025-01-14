@@ -22,10 +22,12 @@ spacegate-shell = { workspace = true, features = [
   "ext-redis",
   "ext-axum",
   "plugin-east-west-traffic-white-list",
+  "plugin-limit"
 ] }
 
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
   "spi_log",
+  "reach",
 ], default-features = false }
 
 
