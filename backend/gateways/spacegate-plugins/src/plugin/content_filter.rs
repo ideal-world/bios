@@ -95,9 +95,9 @@ impl Default for ContentFilterConfig {
                 Method::GET.to_string(),
                 Method::HEAD.to_string(),
                 Method::DELETE.to_string(),
-                Method::HEAD.to_string(),
                 Method::TRACE.to_string(),
                 Method::CONNECT.to_string(),
+                Method::OPTIONS.to_string(),
             ],
         }
     }

@@ -35,7 +35,7 @@ impl Default for AntiReplayPlugin {
         Self {
             cache_key: "sg:plugin:anti_replay".into(),
             time: 5000,
-            skip_methods: vec!["header".to_owned()],
+            skip_methods: vec!["HEADER".to_owned(), "GET".to_owned(), "CONNECT".to_owned(), "TRACE".to_owned(), "OPTIONS".to_owned()],
             skip_paths: Vec::new(),
         }
     }
