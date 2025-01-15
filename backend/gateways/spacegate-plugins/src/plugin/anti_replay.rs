@@ -2,19 +2,17 @@ use std::hash::DefaultHasher;
 use std::sync::Arc;
 use std::time::Duration;
 
+use http::Method;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::ext_redis::{redis::AsyncCommands, RedisClient};
 use spacegate_shell::hyper::{Request, Response, StatusCode};
 use spacegate_shell::kernel::extension::{IsEastWestTraffic, PeerAddr};
 use spacegate_shell::kernel::helper_layers::function::Inner;
-use spacegate_shell::plugin::{
-    plugins::east_west_traffic_white_list::{EastWestTrafficWhiteListConfig, EastWestTrafficWhiteListPlugin},
-    schemars, Plugin, PluginError, PluginSchemaExt,
-};
+use spacegate_shell::plugin::{schemars, Plugin, PluginSchemaExt};
 use spacegate_shell::{BoxError, BoxResult, SgBody, SgRequest, SgRequestExt, SgResponseExt};
 
 use tardis::serde_json;
-use tardis::{basic::result::TardisResult, tokio};
+use tardis::tokio;
 
 use crate::extension::notification::AntiReplayReport;
 
@@ -35,7 +33,13 @@ impl Default for AntiReplayPlugin {
         Self {
             cache_key: "sg:plugin:anti_replay".into(),
             time: 5000,
-            skip_methods: vec!["HEADER".to_owned(), "GET".to_owned(), "CONNECT".to_owned(), "TRACE".to_owned(), "OPTIONS".to_owned()],
+            skip_methods: vec![
+                Method::GET.to_string(),
+                Method::HEAD.to_string(),
+                Method::TRACE.to_string(),
+                Method::CONNECT.to_string(),
+                Method::OPTIONS.to_string(),
+            ],
             skip_paths: Vec::new(),
         }
     }
