@@ -12,6 +12,7 @@ use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
 
+use crate::rbum;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
@@ -429,7 +430,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             // Encrypt Sk
             if rbum_cert_conf.sk_encrypted {
                 if let Some(sk) = &add_req.sk {
-                    let sk = Self::encrypt_sk(sk, &add_req.ak, rel_rbum_cert_conf_id)?;
+                    let sk = Self::encrypt_sm4_sk(sk, &add_req.ak, rel_rbum_cert_conf_id, &funs)?;
                     add_req.sk = Some(TrimString(sk));
                 }
             }
@@ -456,6 +457,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             id: Set(TardisFuns::field.nanoid()),
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
+            sk_secrecy: Set(Self::encrypt_sm3_sk(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())))?),
             sk_invisible: Set(add_req.sk_invisible.unwrap_or(false)),
             kind: Set(add_req.kind.as_ref().unwrap_or(&"".to_string()).to_string()),
             supplier: Set(add_req.supplier.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -615,7 +617,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                         return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
                     }
                     if let Some(sk) = &modify_req.sk {
-                        let sk = Self::encrypt_sk(sk, modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id)?;
+                        let sk = Self::encrypt_sm4_sk(sk, modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id, &funs)?;
                         modify_req.sk = Some(TrimString(sk));
                     }
                 }
@@ -634,6 +636,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         }
         if let Some(sk) = &modify_req.sk {
             rbum_cert.sk = Set(sk.to_string());
+            rbum_cert.sk_secrecy = Set(Self::encrypt_sm3_sk(sk)?)
         }
         if let Some(sk_invisible) = &modify_req.sk_invisible {
             rbum_cert.sk_invisible = Set(*sk_invisible);
@@ -813,6 +816,7 @@ impl RbumCertServ {
         struct IdAndSkResp {
             pub id: String,
             pub sk: String,
+            pub sk_secrecy: String,
             pub rel_rbum_kind: RbumCertRelKind,
             pub rel_rbum_id: String,
             pub end_time: DateTime<Utc>,
@@ -830,6 +834,7 @@ impl RbumCertServ {
         query
             .column(rbum_cert::Column::Id)
             .column(rbum_cert::Column::Sk)
+            .column(rbum_cert::Column::SkSecrecy)
             .column(rbum_cert::Column::RelRbumKind)
             .column(rbum_cert::Column::RelRbumId)
             .column(rbum_cert::Column::EndTime)
@@ -862,7 +867,7 @@ impl RbumCertServ {
                 .await?
                 .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf", "404-rbum-cert-conf-not-exist"))?;
             let input_sk = if cert_conf_peek_resp.sk_encrypted {
-                Self::encrypt_sk(input_sk, ak, rbum_cert_conf_id)?
+                Self::encrypt_sm4_sk(input_sk, ak, rbum_cert_conf_id, &funs)?
             } else {
                 input_sk.to_string()
             };
@@ -887,8 +892,11 @@ impl RbumCertServ {
                     return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"));
                 }
             } else {
-                rbum_cert.sk
+                rbum_cert.sk.clone()
             };
+            if rbum_cert.sk_secrecy != Self::encrypt_sm3_sk(&rbum_cert.sk)? {
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "密码被篡改", "401-rbum-cert-tamper-valid-error"));
+            }
             if storage_sk == input_sk {
                 Self::after_validate_success(&rbum_cert.rel_rbum_id, funs).await?;
                 Ok((rbum_cert.id, rbum_cert.rel_rbum_kind, rbum_cert.rel_rbum_id))
@@ -943,6 +951,7 @@ impl RbumCertServ {
         struct IdAndSkResp {
             pub id: String,
             pub sk: String,
+            pub sk_secrecy: String,
             pub rel_rbum_id: String,
             pub rel_rbum_cert_conf_id: String,
             pub end_time: DateTime<Utc>,
@@ -962,6 +971,7 @@ impl RbumCertServ {
         query
             .column(rbum_cert::Column::Id)
             .column(rbum_cert::Column::Sk)
+            .column(rbum_cert::Column::SkSecrecy)
             .column(rbum_cert::Column::RelRbumId)
             .column(rbum_cert::Column::EndTime)
             .column(rbum_cert::Column::RelRbumCertConfId)
@@ -1003,10 +1013,13 @@ impl RbumCertServ {
                     .await?
                     .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf", "404-rbum-cert-conf-not-exist"))?;
                 let verify_input_sk = if cert_conf_peek_resp.sk_encrypted {
-                    Self::encrypt_sk(input_sk, ak, rbum_cert.rel_rbum_cert_conf_id.as_str())?
+                    Self::encrypt_sm4_sk(input_sk, ak, rbum_cert.rel_rbum_cert_conf_id.as_str(), &funs)?
                 } else {
                     input_sk.to_string()
                 };
+                if rbum_cert.sk_secrecy != Self::encrypt_sm3_sk(&rbum_cert.sk)? {
+                    return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "密码被篡改", "401-rbum-cert-tamper-valid-error"));
+                }
                 if rbum_cert.sk == verify_input_sk {
                     Self::after_validate_success(&rbum_cert.rel_rbum_id, funs).await?;
                     Ok((rbum_cert.id, rel_rbum_kind.clone(), rbum_cert.rel_rbum_id))
@@ -1113,7 +1126,7 @@ impl RbumCertServ {
             return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "basic sk is expired", "409-rbum-cert-sk-expire"));
         }
         let verify_input_sk = if rbum_basic_cert_info_resp.sk_encrypted {
-            Self::encrypt_sk(input_sk, &rbum_basic_cert_info_resp.ak, &rbum_basic_cert_info_resp.rel_rbum_cert_conf_id)?
+            Self::encrypt_sm4_sk(input_sk, &rbum_basic_cert_info_resp.ak, &rbum_basic_cert_info_resp.rel_rbum_cert_conf_id, &funs)?
         } else {
             input_sk.to_string()
         };
@@ -1197,7 +1210,7 @@ impl RbumCertServ {
                 ));
             }
             if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(new_sk, &rbum_cert.ak, rel_rbum_cert_conf_id)?
+                Self::encrypt_sm4_sk(new_sk, &rbum_cert.ak, rel_rbum_cert_conf_id, &funs)?
             } else {
                 new_sk.to_string()
             }
@@ -1233,7 +1246,7 @@ impl RbumCertServ {
         let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::peek_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
             let original_sk = if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(original_sk, &rbum_cert.ak, &rbum_cert_conf.id)?
+                Self::encrypt_sm4_sk(original_sk, &rbum_cert.ak, &rbum_cert_conf.id, &funs)?
             } else {
                 original_sk.to_string()
             };
@@ -1254,7 +1267,7 @@ impl RbumCertServ {
                 ));
             }
             let new_sk = if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(input_sk, &rbum_cert.ak, &rbum_cert_conf.id)?
+                Self::encrypt_sm4_sk(input_sk, &rbum_cert.ak, &rbum_cert_conf.id, &funs)?
             } else {
                 input_sk.to_string()
             };
@@ -1293,6 +1306,16 @@ impl RbumCertServ {
     /// 加密sk
     fn encrypt_sk(sk: &str, ak: &str, rbum_cert_conf_id: &str) -> TardisResult<String> {
         TardisFuns::crypto.digest.sha512(format!("{sk}-{ak}-{rbum_cert_conf_id}").as_str())
+    }
+
+    fn encrypt_sm4_sk(sk: &str, ak: &str, rbum_cert_conf_id: &str, funs: &TardisFunsInst) -> TardisResult<String> {
+        let sm4_key = funs.rbum_conf_sm4_key();
+        let sm4_vi = funs.rbum_conf_sm4_iv();
+        TardisFuns::crypto.sm4.encrypt_cbc(format!("{sk}-{ak}-{rbum_cert_conf_id}").as_str(), sm4_key, sm4_vi)
+    }
+
+    fn encrypt_sm3_sk(sm4_sk: &str) -> TardisResult<String> {
+        TardisFuns::crypto.digest.sm3(sm4_sk)
     }
 
     /// Processing logic after verification is successful

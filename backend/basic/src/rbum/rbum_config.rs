@@ -72,6 +72,8 @@ pub struct RbumConfig {
     ///
     /// BIOS 上下文的请求头名称
     pub head_key_bios_ctx: String,
+    pub sm4_key: String,
+    pub sm4_iv: String,
 }
 
 impl Default for RbumConfig {
@@ -89,6 +91,8 @@ impl Default for RbumConfig {
             cache_key_cert_err_times_: "rbum:cert:err_times:".to_string(),
             event_domains: HashMap::from([("rbum_".to_string(), "cud".to_string())]),
             head_key_bios_ctx: "Bios-Ctx".to_string(),
+            sm4_key: "1234567890abcdef".to_string(),
+            sm4_iv: "1234567890abcdef".to_string(),
         }
     }
 }
@@ -134,6 +138,8 @@ pub trait RbumConfigApi {
     fn rbum_conf_cache_key_cert_err_times_(&self) -> String;
     fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool;
     fn rbum_head_key_bios_ctx(&self) -> String;
+    fn rbum_conf_sm4_key(&self) -> String;
+    fn rbum_conf_sm4_iv(&self) -> String;
 }
 
 impl RbumConfigApi for TardisFunsInst {
@@ -182,5 +188,13 @@ impl RbumConfigApi for TardisFunsInst {
     }
     fn rbum_head_key_bios_ctx(&self) -> String {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.head_key_bios_ctx.to_string())
+    }
+
+    fn rbum_conf_sm4_key(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.sm4_key.to_string())
+    }
+
+    fn rbum_conf_sm4_iv(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.sm4_iv.to_string())
     }
 }

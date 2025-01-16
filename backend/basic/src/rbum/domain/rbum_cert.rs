@@ -39,6 +39,8 @@ pub struct Model {
     ///
     /// see [`crate::rbum::domain::rbum_cert_conf::Model::sk_rule`]
     pub sk: String,
+
+    pub sk_secrecy: String,
     /// Whether to hide the sk
     ///
     /// 是否隐藏密钥
