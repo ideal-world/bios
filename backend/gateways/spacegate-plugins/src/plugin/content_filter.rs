@@ -111,7 +111,9 @@ impl Plugin for ContentFilterPlugin {
                 for f in &self.forbidden_pq_filter {
                     if f.matches(pq.as_str().as_bytes()) {
                         let mut response = SgResponse::with_code_empty(StatusCode::BAD_REQUEST);
-                        response.extensions_mut().insert(ContentFilterForbiddenReport { forbidden_reason: format!("forbidden rule matched: {f}") });
+                        response.extensions_mut().insert(ContentFilterForbiddenReport {
+                            forbidden_reason: format!("forbidden rule matched: {f}"),
+                        });
                         return Ok(response);
                     }
                 }
@@ -125,7 +127,7 @@ impl Plugin for ContentFilterPlugin {
                 if filter.matches(bytes) {
                     let mut response = SgResponse::with_code_empty(StatusCode::BAD_REQUEST);
                     response.extensions_mut().insert(ContentFilterForbiddenReport {
-                        forbidden_reason: format!("forbidden rule matched: {filter}") ,
+                        forbidden_reason: format!("forbidden rule matched: {filter}"),
                     });
                     return Ok(response);
                 }

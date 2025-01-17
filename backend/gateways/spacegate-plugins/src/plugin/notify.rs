@@ -15,9 +15,9 @@ use spacegate_shell::{
     BoxError, SgRequest, SgRequestExt, SgResponse,
 };
 use tardis::{
+    log as tracing,
     regex::{self, Regex},
     serde_json,
-    log as tracing,
 };
 
 use crate::extension::{
@@ -32,13 +32,13 @@ pub struct NotifyPluginConfig {
     /// - rate_limit: rate limit notification
     ///   - count: number of requests
     ///   - time_window: time window
-    /// 
+    ///
     /// - tamper: tamper notification
-    /// 
+    ///
     /// - unauthorized_operation: unauthorized operation notification
-    /// 
+    ///
     /// - cert_lock: cert lock notification
-    /// 
+    ///
     /// - content_filter_forbidden: content filter forbidden notification
     ///   - reason: forbidden reason
     templates: HashMap<String, NotifyPluginConfigTemplatesItem>,

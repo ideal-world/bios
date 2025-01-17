@@ -17,6 +17,7 @@ use tardis::{
         EntityName, Set,
     },
     futures::future::join_all,
+    log::error,
     serde_json::json,
     tokio,
     web::web_resp::TardisPage,
@@ -556,32 +557,34 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn after_delete_item(flow_model_id: &str, detail: &Option<FlowModelDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if detail.is_some() && detail.as_ref().unwrap().template && detail.as_ref().unwrap().rel_model_id.is_empty() {
-            FlowSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
-            FlowLogClient::add_ctx_task(
-                LogParamTag::DynamicLog,
-                Some(flow_model_id.to_string()),
-                LogParamContent {
-                    subject: Some("工作流模板".to_string()),
-                    name: Some(detail.as_ref().unwrap().name.clone()),
-                    sub_kind: Some("flow_template".to_string()),
-                    ..Default::default()
-                },
-                Some(json!({
-                    "name": detail.as_ref().unwrap().name.to_string(),
-                    "info": detail.as_ref().unwrap().info.clone(),
-                    "rel_template_ids":detail.as_ref().unwrap().rel_template_ids.clone(),
-                    "scope_level": detail.as_ref().unwrap().scope_level.clone(),
-                    "tag": detail.as_ref().unwrap().tag.clone(),
-                })),
-                Some("dynamic_log_tenant_config".to_string()),
-                Some("删除".to_string()),
-                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-                true,
-                ctx,
-                false,
-            )
-            .await?;
+        if let Some(detail) = detail {
+            if detail.template && detail.rel_model_id.is_empty() {
+                FlowSearchClient::async_delete_model_search(flow_model_id.to_string(), funs, ctx).await?;
+                FlowLogClient::add_ctx_task(
+                    LogParamTag::DynamicLog,
+                    Some(flow_model_id.to_string()),
+                    LogParamContent {
+                        subject: Some("工作流模板".to_string()),
+                        name: Some(detail.name.clone()),
+                        sub_kind: Some("flow_template".to_string()),
+                        ..Default::default()
+                    },
+                    Some(json!({
+                        "name": detail.name.to_string(),
+                        "info": detail.info.clone(),
+                        "rel_template_ids":detail.rel_template_ids.clone(),
+                        "scope_level": detail.scope_level.clone(),
+                        "tag": detail.tag.clone(),
+                    })),
+                    Some("dynamic_log_tenant_config".to_string()),
+                    Some("删除".to_string()),
+                    rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                    true,
+                    ctx,
+                    false,
+                )
+                .await?;
+            }
         }
         Ok(())
     }
@@ -1058,22 +1061,31 @@ impl FlowModelServ {
                     rel_model.scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?;
                     let mut rel_transition = rel_model.rel_transition().unwrap_or_default();
                     if !rel_transition.id.is_empty() && (rel_transition.id != *"__EDIT__" || rel_transition.id != *"__DETELE__") {
-                        if let Some(rel_main_model_tran) = FlowModelServ::find_one_detail_item(&FlowModelFilterReq {
-                            basic: RbumBasicFilterReq {
-                                ignore_scope: true,
+                        if let Some(rel_main_model_tran) = FlowModelServ::find_one_detail_item(
+                            &FlowModelFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    ignore_scope: true,
+                                    ..Default::default()
+                                },
+                                tags: Some(vec![rel_model.tag.clone()]),
+                                main: Some(true),
                                 ..Default::default()
                             },
-                            tags: Some(vec![rel_model.tag.clone()]),
-                            main: Some(true),
-                            ..Default::default()
-                        }, funs, ctx).await?.map(|model|
-                            model.transitions().into_iter()
-                            .find(|tran| tran.from_flow_state_name == rel_transition.from_flow_state_name && Some(tran.to_flow_state_name.clone()) == rel_transition.to_flow_state_name)
-                        ).unwrap_or(None) {
+                            funs,
+                            ctx,
+                        )
+                        .await?
+                        .map(|model| {
+                            model.transitions().into_iter().find(|tran| {
+                                tran.from_flow_state_name == rel_transition.from_flow_state_name && Some(tran.to_flow_state_name.clone()) == rel_transition.to_flow_state_name
+                            })
+                        })
+                        .unwrap_or(None)
+                        {
                             rel_transition.id = rel_main_model_tran.id;
                             rel_model.rel_transition = Some(json!(rel_transition));
                         }
-                    } 
+                    }
                 }
                 Self::add_item(
                     &mut FlowModelAddReq {
@@ -1201,23 +1213,17 @@ impl FlowModelServ {
                 ctx,
             )
             .await?;
-            Self::modify_model(&added_model.id, &mut FlowModelModifyReq {
-                rel_model_id: Some(from_model.rel_model_id.clone()),
-                ..Default::default()
-            }, funs, ctx).await?;
-            FlowRelServ::add_simple_rel(
-                &FlowRelKind::FlowModelTemplate,
+            Self::modify_model(
                 &added_model.id,
-                to_template_id,
-                None,
-                None,
-                false,
-                true,
-                None,
+                &mut FlowModelModifyReq {
+                    rel_model_id: Some(from_model.rel_model_id.clone()),
+                    ..Default::default()
+                },
                 funs,
                 ctx,
             )
             .await?;
+            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, &added_model.id, to_template_id, None, None, false, true, None, funs, ctx).await?;
             result.insert(from_model.rel_model_id.clone(), added_model);
         }
         Ok(result)
@@ -1665,7 +1671,7 @@ impl FlowModelServ {
             .map(|model| async move {
                 let funs = flow_constants::get_tardis_inst();
                 let global_ctx: TardisContext = TardisContext::default();
-                if FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, &funs, &global_ctx).await.unwrap().is_empty() {
+                if FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &model.id, None, None, &funs, &global_ctx).await.unwrap_or_default().is_empty() {
                     Some(model)
                 } else {
                     None
@@ -1857,32 +1863,34 @@ impl FlowModelServ {
                     }
                     if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
-                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
-                            modify_transition.id = child_model_transitions
-                                .iter()
-                                .find(|child_tran| {
-                                    child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
-                                        && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                })
-                                .map(|trans| trans.id.clone())
-                                .unwrap_or_default()
-                                .into();
+                            if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()) {
+                                modify_transition.id = child_model_transitions
+                                    .iter()
+                                    .find(|child_tran| {
+                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                    })
+                                    .map(|trans| trans.id.clone())
+                                    .unwrap_or_default()
+                                    .into();
+                            }
                         }
                     }
                     if let Some(delete_transitions) = &mut bind_state.delete_transitions {
                         let mut child_delete_transitions = vec![];
                         for delete_transition_id in delete_transitions.iter_mut() {
-                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
-                            child_delete_transitions.push(
-                                child_model_transitions
-                                    .iter()
-                                    .find(|child_tran| {
-                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id 
-                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                    })
-                                    .map(|trans| trans.id.clone())
-                                    .unwrap_or_default(),
-                            );
+                            if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()) {
+                                child_delete_transitions.push(
+                                    child_model_transitions
+                                        .iter()
+                                        .find(|child_tran| {
+                                            child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                                && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                        })
+                                        .map(|trans| trans.id.clone())
+                                        .unwrap_or_default(),
+                                );
+                            }
                         }
                         bind_state.delete_transitions = Some(child_delete_transitions);
                     }
@@ -1902,32 +1910,34 @@ impl FlowModelServ {
                     }
                     if let Some(ref mut modify_transitions) = &mut modify_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
-                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()).unwrap();
-                            modify_transition.id = child_model_transitions
-                                .iter()
-                                .find(|child_tran| {
-                                    child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
-                                        && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                })
-                                .map(|trans| trans.id.clone())
-                                .unwrap_or_default()
-                                .into();
+                            if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()) {
+                                modify_transition.id = child_model_transitions
+                                    .iter()
+                                    .find(|child_tran| {
+                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                    })
+                                    .map(|trans| trans.id.clone())
+                                    .unwrap_or_default()
+                                    .into();
+                            }
                         }
                     }
                     if let Some(delete_transitions) = &mut modify_state.delete_transitions {
                         let mut child_delete_transitions = vec![];
                         for delete_transition_id in delete_transitions.iter_mut() {
-                            let parent_model_transition = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()).unwrap();
-                            child_delete_transitions.push(
-                                child_model_transitions
-                                    .iter()
-                                    .find(|child_tran| {
-                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id 
-                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                    })
-                                    .map(|trans| trans.id.clone())
-                                    .unwrap_or_default(),
-                            );
+                            if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()) {
+                                child_delete_transitions.push(
+                                    child_model_transitions
+                                        .iter()
+                                        .find(|child_tran| {
+                                            child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                                && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                        })
+                                        .map(|trans| trans.id.clone())
+                                        .unwrap_or_default(),
+                                );
+                            }
                         }
                         modify_state.delete_transitions = Some(child_delete_transitions);
                     }
@@ -1938,11 +1948,15 @@ impl FlowModelServ {
         let child_model_clone = child_model.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
+                let child_model_id = child_model_clone.id.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
-                    let _ = Self::modify_item(&child_model_clone.id, &mut modify_req_clone, &funs, &ctx_clone).await;
+                    let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => error!("Flow Model {} sync_child_model error:{:?}", child_model_clone.id, e),
+                }
                 Ok(())
             })
         }))
@@ -1965,9 +1979,10 @@ impl FlowModelServ {
         let mut modify_states = HashMap::new();
         let transitions = FlowTransitionServ::find_transitions(&model_detail.current_version_id, None, funs, ctx).await?;
         for modify_tran in modify_trans {
-            let tansition = transitions.iter().find(|tran| tran.id == modify_tran.id.to_string()).unwrap();
-            let modify_transitons = modify_states.entry(&tansition.from_flow_state_id).or_insert(vec![]);
-            modify_transitons.push(modify_tran);
+            if let Some(tansition) = transitions.iter().find(|tran| tran.id == modify_tran.id.to_string()) {
+                let modify_transitons = modify_states.entry(&tansition.from_flow_state_id).or_insert(vec![]);
+                modify_transitons.push(modify_tran);
+            }
         }
         FlowModelServ::modify_model(
             flow_model_id,

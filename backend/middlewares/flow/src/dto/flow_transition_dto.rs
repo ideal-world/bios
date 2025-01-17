@@ -197,7 +197,7 @@ pub struct FlowTransitionDetailResp {
 
 impl FlowTransitionDetailResp {
     pub fn guard_by_other_conds(&self) -> Option<Vec<Vec<BasicQueryCondInfo>>> {
-        if self.guard_by_other_conds.is_array() && !&self.guard_by_other_conds.as_array().unwrap().is_empty() {
+        if self.guard_by_other_conds.is_array() && !&self.guard_by_other_conds.as_array().filter(|conds| conds.is_empty()).is_some() {
             Some(TardisFuns::json.json_to_obj(self.guard_by_other_conds.clone()).unwrap_or_default())
         } else {
             None
@@ -205,7 +205,7 @@ impl FlowTransitionDetailResp {
     }
 
     pub fn vars_collect(&self) -> Option<Vec<FlowVarInfo>> {
-        if self.vars_collect.is_array() && !&self.vars_collect.as_array().unwrap().is_empty() {
+        if self.vars_collect.is_array() && !&self.vars_collect.as_array().filter(|conds| conds.is_empty()).is_some() {
             Some(TardisFuns::json.json_to_obj(self.vars_collect.clone()).unwrap_or_default())
         } else {
             None
@@ -213,7 +213,7 @@ impl FlowTransitionDetailResp {
     }
 
     pub fn action_by_post_changes(&self) -> Vec<FlowTransitionPostActionInfo> {
-        if self.action_by_post_changes.is_array() && !&self.action_by_post_changes.as_array().unwrap().is_empty() {
+        if self.action_by_post_changes.is_array() && !&self.action_by_post_changes.as_array().filter(|conds| conds.is_empty()).is_some() {
             TardisFuns::json.json_to_obj(self.action_by_post_changes.clone()).unwrap_or_default()
         } else {
             vec![]
@@ -221,7 +221,7 @@ impl FlowTransitionDetailResp {
     }
 
     pub fn action_by_front_changes(&self) -> Vec<FlowTransitionFrontActionInfo> {
-        if self.action_by_front_changes.is_array() && !&self.action_by_front_changes.as_array().unwrap().is_empty() {
+        if self.action_by_front_changes.is_array() && !&self.action_by_front_changes.as_array().filter(|conds| conds.is_empty()).is_some() {
             TardisFuns::json.json_to_obj(self.action_by_front_changes.clone()).unwrap_or_default()
         } else {
             vec![]
@@ -329,7 +329,7 @@ impl From<FlowTransitionPostActionInfo> for FlowTransitionActionChangeAgg {
                 kind: value.kind,
                 var_change_info: None,
                 state_change_info: Some(FlowTransitionActionByStateChangeInfo {
-                    obj_tag: value.obj_tag.unwrap(),
+                    obj_tag: value.obj_tag.unwrap_or_default(),
                     obj_tag_rel_kind: value.obj_tag_rel_kind,
                     describe: value.describe,
                     obj_current_state_id: value.obj_current_state_id,
@@ -454,7 +454,7 @@ pub struct StateChangeCondition {
 }
 
 /// 筛选条件的配置项
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct StateChangeConditionItem {
     /// 对象Tag。为空时，代表触发的业务对象为当前操作的业务对象。有值时，代表触发的业务对象为当前操作的业务对象的关联对象。
     /// 例：值为req，则代表触发的业务对象为当前操作对象所关联的需求对象。
@@ -470,8 +470,9 @@ pub struct StateChangeConditionItem {
 }
 
 /// 实际规则的条件类型
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Enum)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default, poem_openapi::Enum)]
 pub enum StateChangeConditionOp {
+    #[default]
     And,
     Or,
 }
@@ -669,7 +670,10 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 }
                 left_value >= interval[0] && left_value <= interval[1]
             }
-            FlowTransitionFrontActionInfoRelevanceRelation::IsNullOrEmpty => {let s = left_value.as_str().to_string(); s.is_empty() || s == "[]" || s == "{}"},
+            FlowTransitionFrontActionInfoRelevanceRelation::IsNullOrEmpty => {
+                let s = left_value.as_str().to_string();
+                s.is_empty() || s == "[]" || s == "{}"
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => !left_value.as_str().to_string().is_empty(),
         }
     }

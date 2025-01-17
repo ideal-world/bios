@@ -18,7 +18,7 @@ pub fn parse_duration(duration: &str) -> Result<Duration, BoxError> {
         duration = rest;
 
         // Parse unit
-        let (unit, rest) = match duration.find(|c: char| !c.is_alphabetic()  && c != ' ') {
+        let (unit, rest) = match duration.find(|c: char| !c.is_alphabetic() && c != ' ') {
             Some(index) => duration.split_at(index),
             None => (duration, ""),
         };
@@ -29,7 +29,7 @@ pub fn parse_duration(duration: &str) -> Result<Duration, BoxError> {
             "ms" | "millisecond" => Duration::from_millis(number),
             "s" | "second" => Duration::from_secs(number),
             "m" | "min" => Duration::from_secs(number * 60),
-            "h"  | "hour" => Duration::from_secs(number * 60 * 60),
+            "h" | "hour" => Duration::from_secs(number * 60 * 60),
             "d" | "day" => Duration::from_secs(number * 60 * 60 * 24),
             _ => return Err(format!("Invalid unit: {}", unit).into()),
         };
@@ -66,6 +66,5 @@ mod test {
             "1ns1us1ms1s1m1h1d" => Duration::from_nanos(1) + Duration::from_micros(1) + Duration::from_millis(1) + Duration::from_secs(1) + Duration::from_secs(60) + Duration::from_secs(60 * 60) + Duration::from_secs(60 * 60 * 24),
             "1d 1h 1min 1s 1ms 1us 1ns" => Duration::from_secs(60 * 60 * 24) + Duration::from_secs(60 * 60) + Duration::from_secs(60) + Duration::from_secs(1) + Duration::from_millis(1) + Duration::from_micros(1) + Duration::from_nanos(1),
         }
-
     }
 }

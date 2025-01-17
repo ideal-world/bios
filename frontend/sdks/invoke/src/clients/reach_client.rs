@@ -34,13 +34,7 @@ impl ReachClient {
         funs.web_client().put_obj_to_str(&format!("{reach_url}/ci/message/send"), &req, headers.clone()).await?;
         Ok(())
     }
-    pub async fn general_send(
-        to: &str,
-        template_id: &str,
-        replacement: &HashMap<String, String>,
-        funs: &TardisFunsInst, 
-        ctx: &TardisContext
-    ) -> TardisResult<()> {
+    pub async fn general_send(to: &str, template_id: &str, replacement: &HashMap<String, String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().put_obj_to_str(&format!("{reach_url}/cc/msg/general/{to}/template/{template_id}"), &replacement, headers.clone()).await?;

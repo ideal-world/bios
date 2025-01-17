@@ -437,7 +437,7 @@ impl FlowModelVersionServ {
     }
 
     pub async fn delete_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let state = FlowStateServ::find_one_detail_item(
+        let _state = FlowStateServ::find_one_detail_item(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![state_id.to_string()]),
@@ -495,11 +495,13 @@ impl FlowModelVersionServ {
                     )
                     .await
                     .unwrap_or_default()
-                    .unwrap()
                 })
                 .collect::<Vec<_>>(),
         )
-        .await)
+        .await
+        .into_iter()
+        .flatten()
+        .collect_vec())
     }
 
     pub async fn create_editing_version(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelVersionDetailResp> {

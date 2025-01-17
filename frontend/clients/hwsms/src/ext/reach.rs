@@ -32,7 +32,6 @@ impl SendChannel for crate::SmsClient {
                 // replace . with full-width dot for censorship
                 *s = s.replace('.', "．");
             }
-            
         }
         let template_paras = content_as_json_string_array.iter().map(|s| s.as_str()).collect();
         tardis::log::trace!("send sms {content}");

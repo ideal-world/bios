@@ -268,7 +268,7 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
         )
         .await;
     let req_model_uninit_template_id = req_model_uninit_template_aggs.id.clone();
-    sleep(Duration::from_millis(1000)).await;
+    sleep(Duration::from_millis(5000)).await;
     let model_templates: TardisPage<SearchItemSearchResp> = search_client
         .put(
             "/ci/item/search",
@@ -290,10 +290,10 @@ pub async fn test(flow_client: &mut TestHttpClient, search_client: &mut TestHttp
             },
         )
         .await;
-    // assert_eq!(model_templates.total_size, 3);
-    // assert!(model_templates.records.iter().any(|record| record.key == req_default_model_template_id));
-    // assert!(model_templates.records.iter().any(|record| record.key == req_model_uninit_template_id));
-    // assert!(model_templates.records.iter().any(|record| record.key == req_model_template_id));
+    assert_eq!(model_templates.total_size, 3);
+    assert!(model_templates.records.iter().any(|record| record.key == req_default_model_template_id));
+    assert!(model_templates.records.iter().any(|record| record.key == req_model_uninit_template_id));
+    assert!(model_templates.records.iter().any(|record| record.key == req_model_template_id));
     // template bind model
     let mut rel_model_ids = HashMap::new();
     rel_model_ids.insert("REQ".to_string(), req_model_template_id.clone());

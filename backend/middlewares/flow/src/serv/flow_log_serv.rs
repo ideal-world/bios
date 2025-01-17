@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, web::poem_openapi::types::Type, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, result::TardisResult},
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::dto::{
@@ -182,7 +183,7 @@ impl FlowLogServ {
             "__DELETE__" => "删除审批".to_string(),
             _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
         };
-        let mut log_ext = LogParamExt {
+        let log_ext = LogParamExt {
             scene_kind: Some(vec![String::from(LogParamExtSceneKind::Detail)]),
             new_log: Some(true),
             project_id: rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths),
@@ -480,7 +481,7 @@ impl FlowLogServ {
             new_content: None,
             ..Default::default()
         };
-        
+
         if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
             log_content.sub_id = None;
         }
