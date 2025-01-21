@@ -101,6 +101,35 @@ pub struct LogItemAddV2Req {
     pub msg: Option<String>,
 }
 
+
+impl LogItemAddV2Req {
+    pub fn make_valid(&mut self) {
+        if  self.kind.as_ref().is_some_and(String::is_empty) {
+            self.kind = None
+        }
+        macro_rules! not_empty_or_none {
+            ($obj: ident: $($field: ident,)*) => {
+                $(
+                    if $obj.$field.as_ref().is_some_and(String::is_empty) {
+                        $obj.$field = None
+                    }
+                )*
+            };
+        }
+        not_empty_or_none! {
+            self:
+                kind,
+                key,
+                op,
+                rel_key,
+                idempotent_id,
+                owner,
+                owner_name,
+        }
+    
+    }
+}
+
 impl SpiLogClient {
     #[deprecated]
     pub async fn add_dynamic_log(
@@ -173,7 +202,8 @@ impl SpiLogClient {
         Ok(())
     }
 
-    pub async fn addv2(req: LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn addv2(mut req: LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        req.make_valid();
         #[cfg(feature = "event")]
         if funs.invoke_conf_in_event(InvokeModuleKind::Log) {
             if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {

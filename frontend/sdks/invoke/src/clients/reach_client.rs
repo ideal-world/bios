@@ -40,4 +40,18 @@ impl ReachClient {
         funs.web_client().put_obj_to_str(&format!("{reach_url}/cc/msg/general/{to}/template/{template_id}"), &replacement, headers.clone()).await?;
         Ok(())
     }
+
+    pub async fn send_vcode(to: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().put_str_to_str(&format!("{reach_url}/cc/msg/vcode/{to}/{vcode}"), "", headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn send_pwd(to: &str, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().put_str_to_str(&format!("{reach_url}/cc/msg/pwd/{to}/{pwd}"), "", headers.clone()).await?;
+        Ok(())
+    }
 }

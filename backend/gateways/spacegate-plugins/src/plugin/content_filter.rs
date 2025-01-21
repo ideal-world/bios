@@ -1,4 +1,5 @@
-use http::StatusCode;
+use crate::extension::notification::ContentFilterForbiddenReport;
+use http::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use spacegate_shell::hyper::body::Body;
 use spacegate_shell::plugin::{
@@ -10,10 +11,9 @@ use spacegate_shell::{BoxError, SgResponse, SgResponseExt};
 use std::ops::Deref;
 use std::str::FromStr;
 use std::{fmt::Display, sync::Arc};
+use tardis::log as tracing;
 use tardis::regex::bytes::Regex as BytesRegex;
 use tardis::serde_json;
-
-use crate::extension::notification::ContentFilterForbiddenReport;
 
 #[derive(Debug, Clone)]
 pub enum BytesFilter {
@@ -76,11 +76,31 @@ impl BytesFilter {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(default)]
 pub struct ContentFilterConfig {
     content_length_limit: Option<u32>,
     forbidden_pq_filter: Vec<BytesFilter>,
     forbidden_content_filter: Vec<BytesFilter>,
+    skip_methods: Vec<String>,
+}
+
+impl Default for ContentFilterConfig {
+    fn default() -> Self {
+        Self {
+            content_length_limit: None,
+            forbidden_pq_filter: Vec::new(),
+            forbidden_content_filter: Vec::new(),
+            skip_methods: vec![
+                Method::GET.to_string(),
+                Method::HEAD.to_string(),
+                Method::DELETE.to_string(),
+                Method::TRACE.to_string(),
+                Method::CONNECT.to_string(),
+                Method::OPTIONS.to_string(),
+            ],
+        }
+    }
 }
 #[derive(Debug, Clone)]
 pub struct ContentFilterPlugin(Arc<ContentFilterConfig>);
@@ -100,6 +120,15 @@ impl Plugin for ContentFilterPlugin {
     }
 
     async fn call(&self, mut req: spacegate_shell::SgRequest, inner: spacegate_shell::plugin::Inner) -> Result<SgResponse, BoxError> {
+        let method = req.method().as_str();
+        if !self.skip_methods.is_empty() {
+            for skip_method in &self.skip_methods {
+                if skip_method.eq_ignore_ascii_case(method) {
+                    return Ok(inner.call(req).await);
+                }
+            }
+        }
+
         if let Some(length_limit) = self.content_length_limit {
             let size = req.body().size_hint();
             if size.lower() > length_limit as u64 {
@@ -125,6 +154,7 @@ impl Plugin for ContentFilterPlugin {
             for filter in &self.forbidden_content_filter {
                 let bytes = body.get_dumped().expect("dumped");
                 if filter.matches(bytes) {
+                    tracing::debug!(?filter, "matched");
                     let mut response = SgResponse::with_code_empty(StatusCode::BAD_REQUEST);
                     response.extensions_mut().insert(ContentFilterForbiddenReport {
                         forbidden_reason: format!("forbidden rule matched: {filter}"),
@@ -132,13 +162,17 @@ impl Plugin for ContentFilterPlugin {
                     return Ok(response);
                 }
             }
+            tracing::debug!("no content filter matched");
             req = spacegate_shell::SgRequest::from_parts(parts, body);
         }
         Ok(inner.call(req).await)
     }
 
     fn create(plugin_config: spacegate_shell::model::PluginConfig) -> Result<Self, spacegate_shell::plugin::BoxError> {
-        let config = serde_json::from_value(plugin_config.spec)?;
+        tracing::debug!(?plugin_config, "load content filter config");
+        let config = serde_json::from_value(plugin_config.spec).inspect_err(|e| {
+            tardis::log::warn!(?e, "fail to read plugin config for content filter plugin");
+        })?;
         Ok(ContentFilterPlugin(Arc::new(config)))
     }
 
