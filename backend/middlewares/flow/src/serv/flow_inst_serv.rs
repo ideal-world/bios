@@ -1577,6 +1577,10 @@ impl FlowInstServ {
     }
 
     pub async fn unsafe_modify_state(tag: &str, modify_model_state_ids: Option<Vec<String>>, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..Default::default()
+        };
         let insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 main: Some(true),
@@ -1590,81 +1594,64 @@ impl FlowInstServ {
         .into_iter()
         .filter(|inst| modify_model_state_ids.is_none() || modify_model_state_ids.clone().unwrap_or_default().contains(&inst.current_state_id))
         .collect_vec();
+        let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
+        let mut update_statement = Query::update();
+        update_statement.table(flow_inst::Entity);
+        update_statement.value(flow_inst::Column::CurrentStateId, state_id);
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(inst_ids));
+
+        funs.db().execute(&update_statement).await?;
         join_all(
             insts
                 .iter()
                 .map(|inst| async {
-                    let mock_ctx = TardisContext {
-                        own_paths: inst.own_paths.clone(),
-                        ..ctx.clone()
-                    };
-
-                    let flow_inst = flow_inst::ActiveModel {
-                        id: Set(inst.id.clone()),
-                        current_state_id: Set(state_id.to_string()),
-                        transitions: Set(Some(vec![])),
-                        update_time: Set(Some(Utc::now())),
-                        ..Default::default()
-                    };
-                    let result = funs.db().update_one(flow_inst, &mock_ctx).await;
-
-                    let inst_cp = inst.clone();
-                    let ctx_cp = ctx.clone();
-                    let state_id_cp = state_id.to_string();
-                    tardis::tokio::spawn(async move {
-                        let global_ctx = TardisContext::default();
-                        let funs = flow_constants::get_tardis_inst();
-                        if let (Ok(original_flow_state), Ok(next_flow_state)) = (
-                            FlowStateServ::get_item(
-                                &inst_cp.current_state_id,
-                                &FlowStateFilterReq {
-                                    basic: RbumBasicFilterReq {
-                                        with_sub_own_paths: true,
-                                        ..Default::default()
-                                    },
+                    if let (Ok(original_flow_state), Ok(next_flow_state)) = (
+                        FlowStateServ::get_item(
+                            &inst.current_state_id,
+                            &FlowStateFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    with_sub_own_paths: true,
                                     ..Default::default()
                                 },
-                                &funs,
-                                &global_ctx,
-                            )
-                            .await,
-                            FlowStateServ::get_item(
-                                &state_id_cp,
-                                &FlowStateFilterReq {
-                                    basic: RbumBasicFilterReq {
-                                        with_sub_own_paths: true,
-                                        ..Default::default()
-                                    },
+                                ..Default::default()
+                            },
+                            funs,
+                            &global_ctx,
+                        )
+                        .await,
+                        FlowStateServ::get_item(
+                            state_id,
+                            &FlowStateFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    with_sub_own_paths: true,
                                     ..Default::default()
                                 },
-                                &funs,
-                                &global_ctx,
-                            )
-                            .await,
-                        ) {
-                            let result = FlowExternalServ::do_notify_changes(
-                                &inst_cp.tag,
-                                &inst_cp.id,
-                                &inst_cp.rel_business_obj_id,
-                                next_flow_state.name.clone(),
-                                next_flow_state.sys_state,
-                                original_flow_state.name.clone(),
-                                original_flow_state.sys_state,
-                                "UPDATE".to_string(),
-                                false,
-                                Some(false),
-                                Some(FlowExternalCallbackOp::Auto),
-                                &ctx_cp,
-                                &funs,
-                            )
-                            .await;
-                            match result {
-                                Ok(_) => {}
-                                Err(e) => error!("Flow Instance {} do_notify_changes error:{:?}", inst_cp.id, e),
-                            }
-                        }
-                    });
-                    result
+                                ..Default::default()
+                            },
+                            funs,
+                            &global_ctx,
+                        )
+                        .await,
+                    ) {
+                        FlowExternalServ::do_notify_changes(
+                            &inst.tag,
+                            &inst.id,
+                            &inst.rel_business_obj_id,
+                            next_flow_state.name.clone(),
+                            next_flow_state.sys_state,
+                            original_flow_state.name.clone(),
+                            original_flow_state.sys_state,
+                            "UPDATE".to_string(),
+                            false,
+                            Some(false),
+                            Some(FlowExternalCallbackOp::Auto),
+                            ctx,
+                            funs,
+                        )
+                        .await
+                    } else {
+                        Err(funs.err().not_found("flow_inst", "unsafe_modify_state", "flow state not found", "404-flow-state-not-found"))
+                    }
                 })
                 .collect_vec(),
         )

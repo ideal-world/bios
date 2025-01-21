@@ -120,7 +120,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        let orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         // find rel models
         let rel_main_models = FlowModelServ::find_items(
             &FlowModelFilterReq {
@@ -150,16 +150,14 @@ impl FlowCiModelApi {
         let mut result = HashMap::new();
         for rel_main_model in rel_main_models {
             let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
-            if orginal_models.contains_key(&new_model.tag) {
-                FlowInstServ::batch_update_when_switch_model(
-                    &new_model,
-                    new_model.rel_template_ids.first().cloned(),
-                    req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()),
-                    &funs,
-                    &ctx.0,
-                )
-                .await?;
-            }
+            FlowInstServ::batch_update_when_switch_model(
+                &new_model,
+                new_model.rel_template_ids.first().cloned(),
+                req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
         let rel_non_main_models = FlowModelServ::find_items(
