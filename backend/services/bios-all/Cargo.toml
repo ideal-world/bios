@@ -35,7 +35,7 @@ bios-spi-stats = { version = "0.2.0", path = "../../spi/spi-stats" }
 
 bios-mw-schedule = { version = "0.2.0", path = "../../middlewares/schedule" }
 bios-mw-flow = { version = "0.2.0", path = "../../middlewares/flow" }
-bios-mw-event = { version = "0.2.0", path = "../../middlewares/event" }
+# bios-mw-event = { version = "0.2.0", path = "../../middlewares/event" }
 
 # clients
 bios-client-hwsms = { version = "0.2.0", path = "../../../frontend/clients/hwsms", features = [
