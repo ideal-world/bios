@@ -26,14 +26,14 @@ impl EventConnectApi {
     ///
     /// 连接客户端节点
     #[oai(path = "/", method = "get")]
-    async fn ws_process(&self, node_id: Query<String>, codec: Query<String>, websocket: WebSocket) -> Result<BoxWebSocketUpgraded, tardis::web::poem::Error> {
+    async fn ws_process(&self, node_id: Query<String>, codec: Query<Option<String>>, websocket: WebSocket) -> Result<BoxWebSocketUpgraded, tardis::web::poem::Error> {
         let peer_id = NodeId::from_base64(&node_id).map_err(|e| tardis::web::poem::Error::from_string(e.to_string(), StatusCode::BAD_REQUEST))?;
         let config = EdgeConfig {
             peer_id,
             peer_auth: EdgeAuth::default(),
         };
         let _ctx = self.register_serv.get_ctx(peer_id).await.map_err(|e| tardis::web::poem::Error::from_string(e.to_string(), StatusCode::UNAUTHORIZED))?;
-        let codec = match codec.0.to_lowercase().as_str() {
+        let codec = match codec.0.as_deref().unwrap_or("json").to_lowercase().as_str() {
             "json" => DynCodec::new(codec::Json),
             "bincode" => DynCodec::new(codec::Bincode),
             _ => return Err(tardis::web::poem::Error::from_string("unsupported codec", StatusCode::BAD_REQUEST)),
