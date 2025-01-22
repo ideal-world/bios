@@ -21,6 +21,7 @@ impl EventRegisterApi {
     #[oai(path = "/", method = "put")]
     async fn register(&self, ctx: TardisContextExtractor) -> TardisApiResult<EventRegisterResp> {
         let resp = self.register_serv.register_ctx(&ctx.0).await?;
+        tardis::tracing::debug!(?resp, "register event node");
         TardisResp::ok(resp)
     }
 }

@@ -12,8 +12,8 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
 };
-use bios_sdk_invoke::clients::event_client::SPI_RPC_TOPIC;
-use tardis::tracing;
+use bios_sdk_invoke::{clients::event_client::SPI_RPC_TOPIC, invoke_initializer};
+use tardis::{basic::error::TardisError, tracing};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::reldb_client::TardisActiveModel,
@@ -61,6 +61,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 
 async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<EventConfig>().rbum.clone()).await?;
+    invoke_initializer::init(funs.module_code(), funs.conf::<EventConfig>().invoke.clone())?;
     if let Some(domain_id) = RbumDomainServ::get_rbum_domain_id_by_code(&domain_code, funs).await? {
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code, funs).await?.expect("missing event kind");
         EventInfoManager::set(EventInfo { kind_id, domain_id })?;
@@ -131,7 +132,6 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 
 #[instrument(skip(config, funs, ctx))]
 async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
-    use bios_sdk_invoke::clients::event_client::mq_error;
     tracing::info!(?config, "init mq cluster",);
     let funs = Arc::new(funs);
     let mq_node = init_mq_node(config, funs.clone(), &ctx).await;
@@ -198,4 +198,15 @@ pub async fn init_mq_node(config: &EventConfig, funs: Arc<TardisFunsInst>, ctx: 
         TardisFuns::store().insert_singleton(node.clone());
         node
     }
+}
+
+pub fn mq_node_opt() -> Option<asteroid_mq::prelude::Node> {
+    TardisFuns::store().get_singleton::<asteroid_mq::prelude::Node>()
+}
+pub fn mq_node() -> asteroid_mq::prelude::Node {
+    mq_node_opt().expect("mq node not initialized")
+}
+
+pub fn mq_error(err: asteroid_mq::Error) -> TardisError {
+    TardisError::internal_error(&err.to_string(), "mq-error")
 }

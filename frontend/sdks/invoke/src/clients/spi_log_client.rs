@@ -17,12 +17,12 @@ use tardis::{
 };
 
 #[cfg(feature = "event")]
-use super::event_client::{get_topic, mq_error, EventAttributeExt, SPI_RPC_TOPIC};
+use super::event_client::{mq_error, mq_client_node_opt, EventAttributeExt, SPI_RPC_TOPIC};
 use super::iam_client::IamClient;
 
 #[cfg(feature = "event")]
 pub mod event {
-    use asteroid_mq::prelude::*;
+    use asteroid_mq_sdk::model::{event::EventAttribute, Subject};
 
     impl EventAttribute for super::LogItemAddV2Req {
         const SUBJECT: Subject = Subject::const_new("log/add");
@@ -101,10 +101,9 @@ pub struct LogItemAddV2Req {
     pub msg: Option<String>,
 }
 
-
 impl LogItemAddV2Req {
     pub fn make_valid(&mut self) {
-        if  self.kind.as_ref().is_some_and(String::is_empty) {
+        if self.kind.as_ref().is_some_and(String::is_empty) {
             self.kind = None
         }
         macro_rules! not_empty_or_none {
@@ -126,7 +125,6 @@ impl LogItemAddV2Req {
                 owner,
                 owner_name,
         }
-    
     }
 }
 
@@ -206,8 +204,8 @@ impl SpiLogClient {
         req.make_valid();
         #[cfg(feature = "event")]
         if funs.invoke_conf_in_event(InvokeModuleKind::Log) {
-            if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-                topic.send_event(req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+            if let Some(node) = mq_client_node_opt() {
+                node.send_event(SPI_RPC_TOPIC, req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
                 return Ok(());
             }
         }

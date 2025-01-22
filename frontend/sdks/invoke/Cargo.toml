@@ -24,7 +24,7 @@ spi_search = ["spi_base"]
 spi_stats = ["spi_base"]
 reach = []
 iam = []
-event = ["asteroid-mq"]
+event = ["asteroid-mq-sdk"]
 schedule = []
 macro = ["dep:simple-invoke-client-macro"]
 
@@ -41,6 +41,7 @@ tardis = { workspace = true, features = [
 simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro", optional = true }
 crossbeam = "0.8"
 asteroid-mq = { workspace = true, features = ["cluster-k8s"], optional = true }
+asteroid-mq-sdk = { workspace = true, optional = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro" }
