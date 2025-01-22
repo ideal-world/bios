@@ -1,5 +1,5 @@
 [package]
-name = "event"
+name = "bios-event"
 version.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -11,7 +11,6 @@ readme.workspace = true
 publish.workspace = true
 
 [dependencies]
-serde.workspace = true
 tardis = { workspace = true, features = [
   "web-server",
   "conf-remote",

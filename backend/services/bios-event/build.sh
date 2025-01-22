@@ -35,7 +35,7 @@ fi
 
 # cargo update;
 cargo build $RUST_BUILD_ARG;
-mv ../../../target/$TARGET_DIR/bios-serv-all ./
+mv ../../../target/$TARGET_DIR/bios-event ./
 
 
 ### Docker
