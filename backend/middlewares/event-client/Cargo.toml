@@ -1,0 +1,29 @@
+[package]
+name = "bios-mw-event-client"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[lib]
+name = "bios_mw_event_client"
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+
+tardis = { workspace = true, features = [
+    "reldb-postgres",
+    "web-server",
+    "ws-client",
+] }
+
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
+    "spi_log",
+    "event",
+], default-features = false }

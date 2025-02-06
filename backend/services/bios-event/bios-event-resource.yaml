@@ -1,3 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bios-event
+spec:
+  clusterIP: None
+  selector:
+    app: bios-event
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+    - name: mq
+      port: 9559
+      targetPort: 9559
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-bios-event
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -22,48 +44,26 @@ spec:
             - containerPort: 8080
             - containerPort: 9559
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: bios-event
-spec:
-  clusterIP: None
-  selector:
-    app: bios-event
-  ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
-      nodePort: 30080
-    - name: mq
-      port: 9559
-      targetPort: 9559
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: sa-bios-event
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: cr-bios-event
 rules:
-- apiGroups: [""]
-  resources: ["services", "endpoints", "pods"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["apps"]
-  resources: ["statefulsets"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: rb-bios-event
 subjects:
-- kind: ServiceAccount
-  name: sa-bios-event
-  namespace: default
+  - kind: ServiceAccount
+    name: sa-bios-event
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: cr-bios-event
