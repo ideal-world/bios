@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    str::FromStr as _,
-};
+use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
@@ -779,23 +776,6 @@ impl FlowInstServ {
         if flow_insts.len() != find_req.len() {
             return Err(funs.err().not_found("flow_inst", "find_state_and_next_transitions", "some flow instances not found", "404-flow-inst-not-found"));
         }
-        let flow_model_versions = FlowModelVersionServ::find_detail_items(
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(flow_insts.iter().map(|inst| inst.rel_flow_version_id.to_string()).collect::<HashSet<_>>().into_iter().collect()),
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                specified_state_ids: Some(flow_insts.iter().map(|inst| inst.current_state_id.clone()).collect::<HashSet<_>>().into_iter().collect()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
         let mut rel_flow_version_map = HashMap::new();
         for flow_inst in flow_insts.iter() {
             if !rel_flow_version_map.contains_key(&flow_inst.tag) {
@@ -807,12 +787,11 @@ impl FlowInstServ {
             flow_insts
                 .iter()
                 .map(|flow_inst| async {
-                    if let (Some(req), Some(flow_model_version), Some(rel_flow_versions)) = (
+                    if let (Some(req), Some(rel_flow_versions)) = (
                         find_req.iter().find(|req| req.flow_inst_id == flow_inst.id),
-                        flow_model_versions.iter().find(|version| version.id == flow_inst.rel_flow_version_id),
                         rel_flow_version_map.get(&flow_inst.tag).cloned(),
                     ) {
-                        Self::do_find_next_transitions(flow_inst, flow_model_version, None, &req.vars, rel_flow_versions, false, funs, ctx).await.ok()
+                        Self::do_find_next_transitions(flow_inst, None, &req.vars, rel_flow_versions, false, funs, ctx).await.ok()
                     } else {
                         None
                     }
@@ -852,22 +831,8 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowInstFindNextTransitionResp>> {
-        let flow_model_version = FlowModelVersionServ::get_item(
-            &flow_inst.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
         let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst.tag, funs, ctx).await?;
-        let state_and_next_transitions = Self::do_find_next_transitions(flow_inst, &flow_model_version, None, &next_req.vars, rel_flow_versions, false, funs, ctx).await?;
+        let state_and_next_transitions = Self::do_find_next_transitions(flow_inst, None, &next_req.vars, rel_flow_versions, false, funs, ctx).await?;
         Ok(state_and_next_transitions.next_flow_transitions)
     }
 
@@ -979,7 +944,6 @@ impl FlowInstServ {
         let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
         let next_flow_transition = Self::do_find_next_transitions(
             flow_inst_detail,
-            &flow_model_version,
             Some(transfer_req.flow_transition_id.to_string()),
             &transfer_req.vars,
             rel_flow_versions,
@@ -1167,21 +1131,6 @@ impl FlowInstServ {
             ..ctx.clone()
         };
 
-        let flow_model_version = FlowModelVersionServ::get_item(
-            &flow_inst_detail.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-
         let prev_flow_state = FlowStateServ::get_item(
             prev_flow_state_id,
             &FlowStateFilterReq {
@@ -1209,8 +1158,7 @@ impl FlowInstServ {
         )
         .await?;
         let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
-        let next_flow_transitions =
-            Self::do_find_next_transitions(flow_inst_detail, &flow_model_version, None, &None, rel_flow_versions, false, funs, ctx).await?.next_flow_transitions;
+        let next_flow_transitions = Self::do_find_next_transitions(flow_inst_detail, None, &None, rel_flow_versions, false, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
             prev_flow_state_id: prev_flow_state.id,
@@ -1262,7 +1210,6 @@ impl FlowInstServ {
     /// The kernel function of flow processing
     pub async fn do_find_next_transitions(
         flow_inst: &FlowInstDetailResp,
-        flow_model_version: &FlowModelVersionDetailResp,
         spec_flow_transition_id: Option<String>,
         req_vars: &Option<HashMap<String, Value>>,
         rel_flow_versions: HashMap<String, String>,
@@ -1270,7 +1217,7 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowInstFindStateAndTransitionsResp> {
-        let flow_model_transitions = FlowTransitionServ::find_transitions(&flow_model_version.id, None, funs, ctx).await?;
+        let flow_model_transitions = FlowTransitionServ::find_transitions(&flow_inst.rel_flow_version_id, None, funs, ctx).await?;
 
         let next_transitions = flow_model_transitions
             .iter()
@@ -1668,21 +1615,7 @@ impl FlowInstServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
-        let model_version = FlowModelVersionServ::get_item(
-            &flow_inst_detail.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let transition_ids = Self::do_find_next_transitions(&flow_inst_detail, &model_version, None, &None, HashMap::default(), false, funs, ctx)
+        let transition_ids = Self::do_find_next_transitions(&flow_inst_detail, None, &None, HashMap::default(), false, funs, ctx)
             .await?
             .next_flow_transitions
             .into_iter()

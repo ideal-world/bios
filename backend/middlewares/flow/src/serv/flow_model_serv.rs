@@ -451,6 +451,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if model_detail.template {
             let child_models = Self::find_detail_items(
                 &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     rel_model_ids: Some(vec![flow_model_id.to_string()]),
                     ..Default::default()
                 },
@@ -1562,83 +1567,6 @@ impl FlowModelServ {
             None => Err(funs.err().not_found("flow_model_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
         }
     }
-
-    /// 根据own_paths和rel_template_id获取
-    // pub async fn get_model_id_by_own_paths_and_rel_template_id(tag: &str, rel_template_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    //     let mut own_paths = ctx.own_paths.clone();
-    //     let mut scope_level = rbum_scope_helper::get_scope_level_by_context(ctx)?.to_int();
-
-    //     let mut result = None;
-    //     // Prioritize confirming the existence of mods related to own_paths
-    //     if let Some(rel_model) = Self::find_items(
-    //         &FlowModelFilterReq {
-    //             basic: RbumBasicFilterReq {
-    //                 ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await.unwrap_or_default()),
-    //                 ignore_scope: true,
-    //                 own_paths: Some("".to_string()),
-    //                 with_sub_own_paths: true,
-    //                 ..Default::default()
-    //             },
-    //             ..Default::default()
-    //         },
-    //         None,
-    //         None,
-    //         funs,
-    //         ctx,
-    //     )
-    //     .await?
-    //     .into_iter()
-    //     .find(|rel_model| rel_model.tag.as_str() == tag)
-    //     {
-    //         return Ok(rel_model.id);
-    //     }
-    //     // try get model in tenant path or app path
-    //     while !own_paths.is_empty() {
-    //         result = FlowModelServ::find_one_item(
-    //             &FlowModelFilterReq {
-    //                 basic: RbumBasicFilterReq {
-    //                     own_paths: Some(own_paths.clone()),
-    //                     ignore_scope: true,
-    //                     ..Default::default()
-    //                 },
-    //                 tags: Some(vec![tag.to_string()]),
-    //                 template: Some(rel_template_id.is_some()),
-    //                 rel: FlowRelServ::get_template_rel_filter(rel_template_id.as_deref()),
-    //                 ..Default::default()
-    //             },
-    //             funs,
-    //             ctx,
-    //         )
-    //         .await
-    //         .unwrap_or_default();
-    //         if result.is_some() {
-    //             break;
-    //         } else {
-    //             own_paths = rbum_scope_helper::get_path_item(scope_level, &ctx.own_paths).unwrap_or_default();
-    //             scope_level -= 1;
-    //         }
-    //     }
-    //     if result.is_none() {
-    //         result = FlowModelServ::find_one_item(
-    //             &FlowModelFilterReq {
-    //                 basic: RbumBasicFilterReq {
-    //                     own_paths: Some("".to_string()),
-    //                     ignore_scope: true,
-    //                     ..Default::default()
-    //                 },
-    //                 tags: Some(vec![tag.to_string()]),
-    //                 ..Default::default()
-    //             },
-    //             funs,
-    //             ctx,
-    //         )
-    //         .await?;
-    //     }
-    //     match result {
-    //         Some(model) => Ok(model.id),
-    //         None => Err(funs.err().not_found("flow_model_serv", "get_model_id_by_own_paths", "model not found", "404-flow-model-not-found")),
-    //     }
-    // }
 
     pub async fn find_models_by_rel_template_id(
         tag: String,

@@ -264,8 +264,8 @@ impl
     ) -> TardisResult<Vec<FlowModelVersionDetailResp>> {
         let mut flow_model_versions = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         for flow_model_version in &mut flow_model_versions {
-            let current_version = Self::get_item(&flow_model_version.id, &FlowModelVersionFilterReq { ..Default::default() }, funs, ctx).await?;
-            flow_model_version.states = Some(current_version.states.unwrap_or_default());
+            let flow_states = Self::get_rel_states(&flow_model_version.id, &flow_model_version.init_state_id, filter.specified_state_ids.clone(), funs, ctx).await;
+            flow_model_version.states = Some(TardisFuns::json.obj_to_json(&flow_states)?);
         }
 
         Ok(flow_model_versions)
