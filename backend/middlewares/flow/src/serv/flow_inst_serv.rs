@@ -38,7 +38,7 @@ use crate::{
             FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
         flow_model_dto::{FlowModelAggResp, FlowModelRelTransitionExt},
-        flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
+        flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::{
             FLowStateKindConf, FlowStateCountersignKind, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStatusAutoStrategyKind,
             FlowStatusMultiApprovalKind, FlowSysStateKind,

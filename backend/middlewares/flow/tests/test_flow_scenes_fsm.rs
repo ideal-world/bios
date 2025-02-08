@@ -10,7 +10,7 @@ use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
-use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq};
+use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq};
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq,
     FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
@@ -19,8 +19,7 @@ use bios_mw_flow::dto::flow_model_version_dto::{
     FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
 };
 use bios_mw_flow::dto::flow_state_dto::{
-    FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp,
-    FlowSysStateKind,
+    FLowStateIdAndName, FLowStateKindConf, FlowStateAddReq, FlowStateAggResp, FlowStateForm, FlowStateKind, FlowStateModifyReq, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowStatusAutoStrategyKind, FlowSysStateKind
 };
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
@@ -44,9 +43,6 @@ pub async fn test(
     sysadmin_password: String,
 ) -> TardisResult<()> {
     info!("【test_flow_scenes_fsm】");
-    let iam_data = load_iam_data(iam_client, sysadmin_name, sysadmin_password).await?;
-    let t1_data = &iam_data[0];
-    let t2_data = &iam_data[1];
     let mut ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "u001".to_string(),
@@ -58,7 +54,9 @@ pub async fn test(
 
     flow_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
-
+    let iam_data = load_iam_data(search_client, iam_client, sysadmin_name, sysadmin_password).await?;
+    let t1_data = &iam_data[0];
+    let t2_data = &iam_data[1];
     // 1. enter platform
     // 1-1. check default model
     let mut models: TardisPage<FlowModelSummaryResp> = flow_client.get("/cc/model?tag=REQ&page_number=1&page_size=100").await;
@@ -89,7 +87,7 @@ pub async fn test(
     let processing_state_id = req_states.records[1].id.clone(); // 进行中
     let finish_state_id = req_states.records[2].id.clone(); // 已完成
     let closed_state_id = req_states.records[3].id.clone(); // 已关闭
-                                                            // 2-2. creat flow template
+    // 2-2. creat flow template
     let req_template_id1 = "template_req_1";
     let req_template_id2 = "template_req_2";
     let project_template_id1 = "template_project_1";
@@ -678,6 +676,7 @@ pub async fn test(
         .await;
     let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.edit_version_id)).await;
     let start_state_id = req_approval_flow_version.states()[0].id.clone();
+    let form_autoskip_state_id = TardisFuns::field.nanoid();
     let form_state_id = TardisFuns::field.nanoid();
     let finish_state_id = req_approval_flow_version.states()[1].id.clone();
     let start_transition_id = req_approval_flow_version.states()[0].transitions[0].id.clone();
@@ -685,32 +684,43 @@ pub async fn test(
         .patch(
             &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
             &FlowModelVersionModifyReq {
-                bind_states: Some(vec![FlowModelVersionBindState {
-                    bind_new_state: Some(FlowModelBindNewStateReq {
-                        new_state: FlowStateAddReq {
-                            id: Some(form_state_id.clone().into()),
-                            name: Some("录入".into()),
-                            sys_state: FlowSysStateKind::Progress,
-                            state_kind: Some(FlowStateKind::Form),
-                            tags: Some(vec![req_approval_flow.tag.clone()]),
+                bind_states: Some(vec![
+                    FlowModelVersionBindState {
+                        bind_new_state: Some(FlowModelBindNewStateReq {
+                            new_state: FlowStateAddReq {
+                                id: Some(form_autoskip_state_id.clone().into()),
+                                name: Some("录入节点".into()),
+                                sys_state: FlowSysStateKind::Progress,
+                                state_kind: Some(FlowStateKind::Form),
+                                tags: Some(vec![req_approval_flow.tag.clone()]),
+                                main: Some(false),
+                                kind_conf: Some(FLowStateKindConf {
+                                    form: Some(FlowStateForm {
+                                        submit_btn_name: "提交".to_string(),
+                                        auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
+                                        ..Default::default()
+                                    }),
+                                    approval: None,
+                                }),
+                                ..Default::default()
+                            },
+                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        }),
+                        add_transitions: Some(vec![FlowTransitionAddReq {
+                            name: Some("提交".into()),
+                            from_flow_state_id: form_autoskip_state_id.clone(),
+                            to_flow_state_id: finish_state_id.clone(),
                             ..Default::default()
-                        },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
-                    }),
-                    add_transitions: Some(vec![FlowTransitionAddReq {
-                        name: Some("提交".into()),
-                        from_flow_state_id: form_state_id.clone(),
-                        to_flow_state_id: finish_state_id.clone(),
+                        }]),
                         ..Default::default()
-                    }]),
-                    ..Default::default()
-                }]),
+                    },
+                ]),
                 modify_states: Some(vec![
                     FlowModelVersionModifyState {
                         id: Some(start_state_id.clone()),
                         modify_transitions: Some(vec![FlowTransitionModifyReq {
-                            id: start_transition_id.into(),
-                            to_flow_state_id: Some(form_state_id.clone()),
+                            id: start_transition_id.clone().into(),
+                            to_flow_state_id: Some(form_autoskip_state_id.clone()),
                             ..Default::default()
                         }]),
                         ..Default::default()
@@ -724,6 +734,61 @@ pub async fn test(
                         }),
                         ..Default::default()
                     },
+                ]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.edit_version_id)).await;
+    let form_autoskip_transition_id = &req_approval_flow_version.states().into_iter().find(|state| state.id == form_autoskip_state_id).unwrap().transitions[0].id;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                bind_states: Some(vec![
+                    FlowModelVersionBindState {
+                        bind_new_state: Some(FlowModelBindNewStateReq {
+                            new_state: FlowStateAddReq {
+                                id: Some(form_state_id.clone().into()),
+                                name: Some("录入节点".into()),
+                                sys_state: FlowSysStateKind::Progress,
+                                state_kind: Some(FlowStateKind::Form),
+                                tags: Some(vec![req_approval_flow.tag.clone()]),
+                                main: Some(false),
+                                kind_conf: Some(FLowStateKindConf {
+                                    form: Some(FlowStateForm {
+                                        guard_by_creator: true,
+                                        guard_by_assigned: true,
+                                        submit_btn_name: "提交".to_string(),
+                                        auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
+                                        referral: true,
+                                        ..Default::default()
+                                    }),
+                                    approval: None,
+                                }),
+                                ..Default::default()
+                            },
+                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        }),
+                        add_transitions: Some(vec![FlowTransitionAddReq {
+                            name: Some("提交".into()),
+                            from_flow_state_id: form_state_id.clone(),
+                            to_flow_state_id: finish_state_id.clone(),
+                            ..Default::default()
+                        }]),
+                        ..Default::default()
+                    },
+                ]),
+                modify_states: Some(vec![
+                    FlowModelVersionModifyState {
+                        id: Some(start_state_id.clone()),
+                        modify_transitions: Some(vec![FlowTransitionModifyReq {
+                            id: form_autoskip_transition_id.to_string().into(),
+                            to_flow_state_id: Some(form_state_id.clone()),
+                            ..Default::default()
+                        }]),
+                        ..Default::default()
+                    }
                 ]),
                 ..Default::default()
             },
@@ -773,7 +838,27 @@ pub async fn test(
         .await;
     sleep(Duration::from_millis(5000)).await;
     let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
-    info!("req_inst2: {:?}", req_inst2);
+    assert_eq!(req_inst2.current_state_id, form_state_id);
+    assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 2);
+    assert!(req_inst2.current_state_conf.unwrap().operators.contains_key(&FlowStateOperatorKind::Referral));
+    // 操作转审
+    let operator = &t2_data.accounts[1];
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/inst/{}/operate", req_inst_id2),
+            &FlowInstOperateReq {
+                operate: FlowStateOperatorKind::Referral,
+                operator: Some(operator.clone()),
+                vars: None,
+                all_vars: None,
+                output_message: None,
+                log_text: None,
+            },
+        )
+        .await;
+    let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
+    assert_eq!(req_inst2.current_state_id, form_state_id);
+    assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 0);
     Ok(())
 }
 
@@ -783,7 +868,7 @@ struct IamData {
     app_ids: Vec<String>,
 }
 
-async fn load_iam_data(iam_client: &mut BIOSWebTestClient, sysadmin_name: String, sysadmin_password: String) -> TardisResult<Vec<IamData>> {
+async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOSWebTestClient, sysadmin_name: String, sysadmin_password: String) -> TardisResult<Vec<IamData>> {
     // 1. create iam rbum data
     iam_client.login(&sysadmin_name, &sysadmin_password, None, None, None, true).await?;
 
@@ -845,7 +930,7 @@ async fn load_iam_data(iam_client: &mut BIOSWebTestClient, sysadmin_name: String
         .post(
             "/ct/account",
             &IamAccountAggAddReq {
-                id: Some("u001".into()),
+                id: None,
                 name: "u001".into(),
                 cert_user_name: "user_dp1".into(),
                 cert_password: Some("123456".into()),
@@ -865,17 +950,34 @@ async fn load_iam_data(iam_client: &mut BIOSWebTestClient, sysadmin_name: String
             },
         )
         .await;
+    let _: Void = search_client
+        .put(
+            "/ci/item",
+            &json!({
+                "tag":"iam_account",
+                "kind": "iam_account",
+                "key": t1_account_id,
+                "title": "u001",
+                "content": format!("u001,{:?}", vec!["user_dp1", "devopsxxx1@xx.com"],),
+                "owner":"u001",
+                "own_paths":t1_tenant_id,
+                "create_time":"2022-09-26T23:23:59.000Z",
+                "update_time": "2022-09-27T01:20:20.000Z",
+                "visit_keys":{"apps":[],"tenants":[t1_tenant_id],"roles":[]}
+            }),
+        )
+        .await;
     iam_client.login("admin2", "123456", Some(t2_tenant_id.clone()), None, None, true).await?;
-    let t2_account_id: String = iam_client
+    let t2_account_id1: String = iam_client
         .post(
             "/ct/account",
             &IamAccountAggAddReq {
-                id: Some("u002".into()),
-                name: "u002".into(),
-                cert_user_name: "user_dp2".into(),
+                id: None,
+                name: "u002_1".into(),
+                cert_user_name: "user_dp2_1".into(),
                 cert_password: Some("123456".into()),
                 cert_phone: None,
-                cert_mail: Some("devopsxxx2@xx.com".into()),
+                cert_mail: Some("devopsxxx21@xx.com".into()),
                 role_ids: None,
                 org_node_ids: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
@@ -888,6 +990,105 @@ async fn load_iam_data(iam_client: &mut BIOSWebTestClient, sysadmin_name: String
                 logout_type: None,
                 labor_type: None,
             },
+        )
+        .await;
+    let _: Void = search_client
+        .put(
+            "/ci/item",
+            &json!({
+                "tag":"iam_account",
+                "kind": "iam_account",
+                "key": t2_account_id1,
+                "title": "u002_1",
+                "content": format!("u002_1,{:?}", vec!["user_dp2_1", "devopsxxx21@xx.com"],),
+                "owner":"u002_1",
+                "own_paths":t2_tenant_id,
+                "create_time":"2022-09-26T23:23:59.000Z",
+                "update_time": "2022-09-27T01:20:20.000Z",
+                "visit_keys":{"apps":[],"tenants":[t2_tenant_id],"roles":[]}
+            }),
+        )
+        .await;
+    let t2_account_id2: String = iam_client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: Some("u002_2".into()),
+                name: "u002_2".into(),
+                cert_user_name: "user_dp2_2".into(),
+                cert_password: Some("123456".into()),
+                cert_phone: None,
+                cert_mail: Some("devopsxxx22@xx.com".into()),
+                role_ids: None,
+                org_node_ids: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                icon: None,
+                exts: HashMap::new(),
+                status: None,
+                temporary: None,
+                lock_status: None,
+                logout_type: None,
+                labor_type: None,
+            },
+        )
+        .await;
+    let _: Void = search_client
+        .put(
+            "/ci/item",
+            &json!({
+                "tag":"iam_account",
+                "kind": "iam_account",
+                "key": "u002_2",
+                "title": "u002_2",
+                "content": format!("u002_2,{:?}", vec!["user_dp2_2", "devopsxxx22@xx.com"],),
+                "owner":"u002_2",
+                "own_paths":t2_tenant_id,
+                "create_time":"2022-09-26T23:23:59.000Z",
+                "update_time": "2022-09-27T01:20:20.000Z",
+                "visit_keys":{"apps":[],"tenants":[t2_tenant_id],"roles":[]}
+            }),
+        )
+        .await;
+    let t2_account_id3: String = iam_client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: None,
+                name: "u002_3".into(),
+                cert_user_name: "user_dp2_3".into(),
+                cert_password: Some("123456".into()),
+                cert_phone: None,
+                cert_mail: Some("devopsxxx23@xx.com".into()),
+                role_ids: None,
+                org_node_ids: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                icon: None,
+                exts: HashMap::new(),
+                status: None,
+                temporary: None,
+                lock_status: None,
+                logout_type: None,
+                labor_type: None,
+            },
+        )
+        .await;
+    let _: Void = search_client
+        .put(
+            "/ci/item",
+            &json!({
+                "tag":"iam_account",
+                "kind": "iam_account",
+                "key": t2_account_id3,
+                "title": "u002_3",
+                "content": format!("u002_3,{:?}", vec!["user_dp2_3", "devopsxxx23@xx.com"],),
+                "owner":"u002_3",
+                "own_paths":t2_tenant_id,
+                "create_time":"2022-09-26T23:23:59.000Z",
+                "update_time": "2022-09-27T01:20:20.000Z",
+                "visit_keys":{"apps":[],"tenants":[t2_tenant_id],"roles":[]}
+            }),
         )
         .await;
     // Add App
@@ -915,7 +1116,7 @@ async fn load_iam_data(iam_client: &mut BIOSWebTestClient, sysadmin_name: String
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,
-                admin_ids: Some(vec![t2_account_id.clone()]),
+                admin_ids: Some(vec![t2_account_id1.clone(), t2_account_id2.clone(), t2_account_id3.clone()]),
                 disabled: None,
                 set_cate_id: None,
             },
@@ -929,7 +1130,7 @@ async fn load_iam_data(iam_client: &mut BIOSWebTestClient, sysadmin_name: String
     };
     let t2_data = IamData {
         tenant_id: t2_tenant_id,
-        accounts: vec![t2_account_id],
+        accounts: vec![t2_account_id1, t2_account_id2, t2_account_id3],
         app_ids: vec![app2_id],
     };
     result.push(t1_data);
