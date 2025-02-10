@@ -160,7 +160,7 @@ pub struct FlowModelVersionDetailResp {
 impl FlowModelVersionDetailResp {
     pub fn states(&self) -> Vec<FlowStateAggResp> {
         match &self.states {
-            Some(states) => TardisFuns::json.json_to_obj(states.clone()).unwrap(),
+            Some(states) => TardisFuns::json.json_to_obj(states.clone()).unwrap_or_default(),
             None => vec![],
         }
     }

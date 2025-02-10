@@ -80,7 +80,7 @@ pub struct LogParamContent {
 
 impl LogParamContent {
     pub fn send_audit_log<P: PluginBiosExt>(self, spi_app_id: &str, log_url: &str, tag: &str) {
-        send_audit_log(spi_app_id, log_url, tag, self,P::get_funs_inst_by_plugin_code());
+        send_audit_log(spi_app_id, log_url, tag, self, P::get_funs_inst_by_plugin_code());
     }
 }
 

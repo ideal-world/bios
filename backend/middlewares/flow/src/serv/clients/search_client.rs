@@ -9,29 +9,23 @@ use bios_sdk_invoke::{
     },
 };
 use itertools::Itertools;
-use serde_json::json;
+use serde_json::{json, Value};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log::{debug, error},
     tokio,
     web::{poem_openapi::types::ToJSON, web_resp::TardisPage},
-    TardisFuns, TardisFunsInst,
+    TardisFunsInst,
 };
 
 use crate::{
     dto::{
-        flow_inst_dto::{FlowInstDetailResp, FlowInstFilterReq},
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt},
-        flow_model_version_dto::FlowModelVersionFilterReq,
+        flow_inst_dto::FlowInstDetailResp,
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::FlowGuardConf,
     },
     flow_constants,
-    serv::{
-        flow_inst_serv::FlowInstServ,
-        flow_model_serv::FlowModelServ,
-        flow_model_version_serv::FlowModelVersionServ,
-        flow_rel_serv::{FlowRelKind, FlowRelServ},
-    },
+    serv::{flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ},
 };
 
 const SEARCH_MODEL_TAG: &str = "flow_model";
@@ -40,49 +34,8 @@ const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
-    pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, ext: Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = Self::get_tag_search_map();
-        let rel_version_ids = FlowInstServ::find_detail_items(
-            &FlowInstFilterReq {
-                rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
-                main: Some(false),
-                finish: Some(false),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .into_iter()
-        .map(|inst| inst.rel_flow_version_id)
-        .collect_vec();
-        let mut rel_transition_names = vec![];
-        for rel_version_id in rel_version_ids {
-            if let Some(rel_model_id) = FlowModelVersionServ::find_one_item(
-                &FlowModelVersionFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(vec![rel_version_id]),
-                        with_sub_own_paths: true,
-                        own_paths: Some("".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?
-            .map(|version| version.rel_model_id)
-            {
-                let rel_transition_ext = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &rel_model_id, None, None, funs, ctx)
-                    .await?
-                    .pop()
-                    .map(|rel| TardisFuns::json.str_to_obj::<FlowModelRelTransitionExt>(&rel.ext).unwrap_or_default());
-                if let Some(ext) = rel_transition_ext {
-                    rel_transition_names.push(ext.to_string());
-                }
-            }
-        }
         if let Some(table) = tag_search_map.get(tag) {
             SpiSearchClient::modify_item_and_name(
                 table,
@@ -96,9 +49,7 @@ impl FlowSearchClient {
                     own_paths: None,
                     create_time: None,
                     update_time: None,
-                    ext: Some(json!({
-                        "rel_transitions": rel_transition_names,
-                    })),
+                    ext: Some(ext),
                     ext_override: None,
                     visit_keys: None,
                     kv_disable: None,

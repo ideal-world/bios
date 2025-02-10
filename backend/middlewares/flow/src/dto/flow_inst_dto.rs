@@ -345,7 +345,7 @@ pub struct FlowInstFindNextTransitionsReq {
 }
 
 /// 获取实例下一个动作列表请求
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowInstFindNextTransitionResp {
     /// Associated [flow_transition](super::flow_transition_dto::FlowTransitionDetailResp) id
     ///
@@ -376,7 +376,7 @@ pub struct FlowInstFindNextTransitionResp {
 }
 
 /// 获取实例状态及流转信息的请求
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Default, Debug, poem_openapi::Object, Clone)]
 pub struct FlowInstFindStateAndTransitionsReq {
     /// 实例ID
     pub flow_inst_id: String,

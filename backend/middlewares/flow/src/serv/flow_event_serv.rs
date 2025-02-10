@@ -101,7 +101,7 @@ impl FlowEventServ {
         if flow_inst_detail.current_vars.is_none() || conditions.is_empty() {
             return Ok(false);
         }
-        let current_vars = flow_inst_detail.current_vars.clone().unwrap();
+        let current_vars = flow_inst_detail.current_vars.clone().unwrap_or_default();
         for condition in conditions {
             if !Self::do_check_front_condition(&current_vars, &condition)? {
                 return Ok(false);
@@ -215,11 +215,10 @@ impl FlowEventServ {
             .find(|state| state.id == flow_inst_detail.current_state_id)
             .ok_or_else(|| funs.err().not_found("flow_event", "do_front_change", "illegal response", "404-flow-transition-not-found"))?
             .transitions;
-        let next_flow_transition = model_transition.iter().find(|trans| trans.id == flow_transition_id);
-        if next_flow_transition.is_none() {
-            return Err(funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"));
-        }
-        let next_flow_transition = next_flow_transition.unwrap();
+        let next_flow_transition = model_transition
+            .iter()
+            .find(|trans| trans.id == flow_transition_id)
+            .ok_or_else(|| funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"))?;
         let prev_flow_state = FlowStateServ::get_item(
             &next_flow_transition.from_flow_state_id,
             &FlowStateFilterReq {
@@ -260,17 +259,17 @@ impl FlowEventServ {
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
                     if let Some(mut change_info) = post_change.var_change_info {
-                        if change_info.changed_kind.is_some() {
-                            match change_info.changed_kind.clone().unwrap() {
+                        if let Some(changed_kind) = &change_info.changed_kind {
+                            match changed_kind {
                                 FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime => {
                                     change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
                                     change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                 }
                                 FlowTransitionActionByVarChangeInfoChangedKind::AddOrSub => {
                                     if change_info.changed_val.is_some()
-                                        && change_info.changed_val.clone().unwrap().is_object()
-                                        && change_info.changed_val.clone().unwrap().as_object().unwrap().get("value").is_some()
-                                        && change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").is_some()
+                                        && change_info.changed_val.clone().unwrap_or(json!({})).is_object()
+                                        && change_info.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("value").is_some()).is_some()
+                                        && change_info.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("op").is_some()).is_some()
                                     {
                                         let original_value = if let Some(custom_value) =
                                             FlowInstServ::find_var_by_inst_id(flow_inst_detail, &format!("custom_{}", change_info.var_name), funs, ctx).await?
@@ -285,29 +284,39 @@ impl FlowEventServ {
                                         let target_value = change_info
                                             .changed_val
                                             .clone()
-                                            .unwrap()
+                                            .unwrap_or(json!({}))
                                             .as_object()
-                                            .unwrap()
-                                            .get("value")
-                                            .unwrap()
+                                            .map(|map| map.get("value").cloned().unwrap_or(json!({})))
+                                            .unwrap_or(json!({}))
                                             .as_str()
                                             .unwrap_or_default()
                                             .parse::<f64>()
                                             .unwrap_or_default();
-                                        let changed_op = change_info.changed_val.clone().unwrap().as_object().unwrap().get("op").unwrap().as_str().unwrap_or_default().to_string();
+                                        let changed_op = change_info
+                                            .changed_val
+                                            .clone()
+                                            .unwrap_or(json!({}))
+                                            .as_object()
+                                            .map(|map| map.get("op").cloned().unwrap_or(json!({})))
+                                            .unwrap_or(json!({}))
+                                            .as_str()
+                                            .unwrap_or_default()
+                                            .to_string();
                                         if let Some(original_value) = original_value {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                                             match changed_op.as_str() {
                                                 "add" => {
                                                     change_info.changed_val = Some(json!(
-                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string()).unwrap()
-                                                            + Decimal::from_str(&target_value.to_string()).unwrap())
+                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string())
+                                                            .unwrap_or_default()
+                                                            + Decimal::from_str(&target_value.to_string()).unwrap_or_default())
                                                     ))
                                                 }
                                                 "sub" => {
                                                     change_info.changed_val = Some(json!(
-                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string()).unwrap()
-                                                            - Decimal::from_str(&target_value.to_string()).unwrap())
+                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string())
+                                                            .unwrap_or_default()
+                                                            - Decimal::from_str(&target_value.to_string()).unwrap_or_default())
                                                     ))
                                                 }
                                                 _ => {}
@@ -318,6 +327,7 @@ impl FlowEventServ {
                                 _ => {}
                             };
                         }
+
                         let rel_tag = change_info.obj_tag.unwrap_or_default();
                         if !rel_tag.is_empty() {
                             let mut resp = FlowExternalServ::do_fetch_rel_obj(
@@ -330,7 +340,7 @@ impl FlowEventServ {
                             )
                             .await?;
                             if !resp.rel_bus_objs.is_empty() {
-                                for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids {
+                                for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap_or_default().rel_bus_obj_ids {
                                     let inst_id =
                                         FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
                                     FlowExternalServ::do_modify_field(
@@ -385,7 +395,8 @@ impl FlowEventServ {
                         )
                         .await?;
                         if !resp.rel_bus_objs.is_empty() {
-                            let inst_ids = Self::find_inst_ids_by_rel_obj_ids(&flow_model, resp.rel_bus_objs.pop().unwrap().rel_bus_obj_ids, &change_info, funs, ctx).await?;
+                            let inst_ids =
+                                Self::find_inst_ids_by_rel_obj_ids(&flow_model, resp.rel_bus_objs.pop().unwrap_or_default().rel_bus_obj_ids, &change_info, funs, ctx).await?;
                             Self::do_modify_state_by_post_action(inst_ids, &change_info, modified_instance_transations.clone(), funs, ctx).await?;
                         }
                     }
@@ -435,7 +446,7 @@ impl FlowEventServ {
                     let mut rel_tags = vec![];
                     for condition_item in change_condition.conditions.iter() {
                         if condition_item.obj_tag.is_some() && !condition_item.state_id.is_empty() {
-                            rel_tags.push((condition_item.obj_tag.clone().unwrap(), condition_item.obj_tag_rel_kind.clone()));
+                            rel_tags.push((condition_item.obj_tag.clone().unwrap_or_default(), condition_item.obj_tag_rel_kind.clone()));
                         }
                     }
                     let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
@@ -450,8 +461,9 @@ impl FlowEventServ {
                             let condition = change_condition
                                 .conditions
                                 .iter()
-                                .find(|condition| condition.obj_tag.is_some() && condition.obj_tag.clone().unwrap() == rel_bus_obj.rel_tag.clone())
-                                .unwrap();
+                                .find(|condition| condition.obj_tag.is_some() && condition.obj_tag.clone().unwrap_or_default() == rel_bus_obj.rel_tag.clone())
+                                .cloned()
+                                .unwrap_or_default();
                             let rel_obj_ids = Self::filter_rel_obj_ids_by_state(&rel_bus_obj.rel_bus_obj_ids, &Some(condition.state_id.clone()), funs, ctx).await?;
                             match condition.op {
                                 StateChangeConditionOp::And => {
@@ -526,22 +538,8 @@ impl FlowEventServ {
         let insts = FlowInstServ::find_detail(rel_inst_ids, None, None, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
-            let flow_version = FlowModelVersionServ::get_item(
-                &rel_inst.rel_flow_version_id,
-                &FlowModelVersionFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        own_paths: Some("".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
             let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&rel_inst.tag, funs, ctx).await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, &flow_version, None, &None, rel_flow_versions, true, funs, ctx)
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, None, &None, rel_flow_versions, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()
