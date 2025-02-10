@@ -8,4 +8,3 @@ pub trait AuthError {
 }
 
 impl AuthError for TardisError {}
-

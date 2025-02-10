@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp,
-    FlowModelKind, FlowModelSyncModifiedFieldReq,
+    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq,
 };
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -121,9 +120,9 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        let orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         // find rel models
-        let rel_models = FlowModelServ::find_items(
+        let rel_main_models = FlowModelServ::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     enabled: Some(true),
@@ -139,7 +138,7 @@ impl FlowCiModelApi {
                     rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
                     ..Default::default()
                 }),
-                // main: Some(true),
+                main: Some(true),
                 ..Default::default()
             },
             None,
@@ -149,19 +148,45 @@ impl FlowCiModelApi {
         )
         .await?;
         let mut result = HashMap::new();
-        for rel_model in rel_models {
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
-            if new_model.main && orginal_models.contains_key(&new_model.tag) {
-                FlowInstServ::batch_update_when_switch_model(
-                    &new_model,
-                    new_model.rel_template_ids.first().cloned(),
-                    req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()),
-                    &funs,
-                    &ctx.0,
-                )
-                .await?;
-            }
-            result.insert(rel_model.id.clone(), new_model.id.clone());
+        for rel_main_model in rel_main_models {
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            FlowInstServ::batch_update_when_switch_model(
+                &new_model,
+                new_model.rel_template_ids.first().cloned(),
+                req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(rel_main_model.id.clone(), new_model.id.clone());
+        }
+        let rel_non_main_models = FlowModelServ::find_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    optional: false,
+                    rel_by_from: true,
+                    tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
+                    ..Default::default()
+                }),
+                main: Some(false),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        for rel_non_main_model in rel_non_main_models {
+            let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
@@ -246,7 +271,7 @@ impl FlowCiModelApi {
                             &ctx.0,
                         )
                         .await
-                        .unwrap()
+                        .unwrap_or_default()
                         .into_iter()
                         .map(|model| model.tag.clone())
                         .collect_vec();

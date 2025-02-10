@@ -31,10 +31,10 @@ pub mod iam_client;
 pub mod event_client;
 pub mod flow_client;
 
-#[cfg(feature = "schedule")]
-pub mod schedule_client;
 #[cfg(feature = "reach")]
 pub mod reach_client;
+#[cfg(feature = "schedule")]
+pub mod schedule_client;
 
 #[macro_export]
 ///

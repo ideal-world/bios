@@ -279,4 +279,14 @@ impl FlowCiInstApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// sync instance status to search
+    ///
+    /// 同步状态信息
+    #[oai(path = "/status/sync", method = "get")]
+    async fn sync_status(&self, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        FlowInstServ::sync_status(&funs).await?;
+        TardisResp::ok(Void {})
+    }
 }

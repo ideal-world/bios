@@ -101,10 +101,9 @@ pub struct LogItemAddV2Req {
     pub msg: Option<String>,
 }
 
-
 impl LogItemAddV2Req {
     pub fn make_valid(&mut self) {
-        if  self.kind.as_ref().is_some_and(String::is_empty) {
+        if self.kind.as_ref().is_some_and(String::is_empty) {
             self.kind = None
         }
         macro_rules! not_empty_or_none {
@@ -126,7 +125,6 @@ impl LogItemAddV2Req {
                 owner,
                 owner_name,
         }
-    
     }
 }
 
