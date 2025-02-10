@@ -1,16 +1,19 @@
+use std::collections::HashMap;
+
 use bios_basic::helper::request_helper::try_get_real_ip_from_req;
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
+use bios_sdk_invoke::clients::reach_client::ReachClient;
 use tardis::basic::dto::TardisContext;
-use tardis::db::sqlx::types::uuid::timestamp::context;
-use tardis::log;
+use tardis::basic::result::TardisResult;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::{param::Path, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use tardis::TardisFuns;
+use tardis::{log, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
@@ -104,6 +107,26 @@ impl IamCpCertApi {
                 &ctx,
             )
             .await;
+            if e.code == "401-iam-cert-valid_lock" {
+                let _ = IamLogClient::add_ctx_task(
+                    LogParamTag::IamAbnormal,
+                    None,
+                    format!("[{}]登陆密码多次错误,账号已锁定", login_req.0.ak),
+                    Some("login_lock".to_string()),
+                    &ctx,
+                )
+                .await;
+                for phone in &funs.conf::<crate::iam_config::IamConfig>().abnormal_reach_phones {
+                    let _ = ReachClient::general_send(
+                        &phone,
+                        &funs.conf::<crate::iam_config::IamConfig>().reach_pwd_lock_template_id,
+                        &HashMap::from([("user".to_string(), login_req.0.ak.clone().to_string())]),
+                        &funs,
+                        &ctx,
+                    )
+                    .await;
+                }
+            }
             ctx.execute_task().await?;
         }
         TardisResp::ok(resp?)
@@ -366,6 +389,7 @@ impl IamCpCertApi {
                 &ctx,
             )
             .await;
+            Self::login_vcode_error(&login_req.0.mail, &funs, &ctx).await?;
             ctx.execute_task().await?;
         }
         funs.commit().await?;
@@ -446,10 +470,62 @@ impl IamCpCertApi {
                 &ctx,
             )
             .await;
+            Self::login_vcode_error(&login_req.0.phone, &funs, &ctx).await?;
             ctx.execute_task().await?;
         }
         funs.commit().await?;
         TardisResp::ok(resp?)
+    }
+
+    async fn login_vcode_error(ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let err_times = funs
+            .cache()
+            .incr(
+                &format!("{}{}", funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_err_info_, ak).as_str(),
+                1,
+            )
+            .await?;
+        if funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_limit_max as i16 <= err_times as i16 {
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamAbnormal,
+                None,
+                format!(
+                    "账号:“{}” 在 “{}”内验证码校验连续错误“{}”次,存在安全风险!",
+                    ak,
+                    funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_expire_sec / 60,
+                    err_times
+                ),
+                Some("vcode_error".to_string()),
+                &ctx,
+            )
+            .await;
+            for phone in &funs.conf::<crate::iam_config::IamConfig>().abnormal_reach_phones {
+                let _ = ReachClient::general_send(
+                    &phone,
+                    &funs.conf::<crate::iam_config::IamConfig>().reach_vcode_error_template_id,
+                    &HashMap::from([
+                        ("user".to_string(), ak.to_string()),
+                        (
+                            "time_window".to_string(),
+                            format!("{}分钟", funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_expire_sec / 60),
+                        ),
+                        ("count".to_string(), format!("{}", err_times)),
+                    ]),
+                    &funs,
+                    &ctx,
+                )
+                .await;
+            }
+            funs.cache().del(&format!("{}{}", funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_err_info_, ak).as_str()).await?;
+        } else if err_times == 1 {
+            funs.cache()
+                .expire(
+                    &format!("{}{}", funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_err_info_, ak).as_str(),
+                    funs.conf::<crate::iam_config::IamConfig>().cache_key_reach_vcode_expire_sec as i64,
+                )
+                .await?;
+        }
+        Ok(())
     }
 }
 

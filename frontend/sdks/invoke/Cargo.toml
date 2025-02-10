@@ -16,7 +16,7 @@ name = "bios_sdk_invoke"
 path = "src/lib.rs"
 
 [features]
-default = ["spi_kv", "spi_log", "spi_search", "spi_stats", "iam"]
+default = ["spi_kv", "spi_log", "spi_search", "spi_stats", "iam", "reach"]
 spi_base = []
 spi_kv = ["spi_base"]
 spi_log = ["spi_base", "iam"]

@@ -21,6 +21,7 @@ ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
 ldap_client = ["ldap3"]
 spi_kv = []
 spi_search = ["event"]
+reach = []
 event = ["bios-sdk-invoke/event", "bios-basic/with-mq"]
 
 [dependencies]
@@ -51,7 +52,10 @@ nanoid = { version = "0.4" }
 strum = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
+bios-basic = { version = "0.2.0", path = "../../basic", features = [
+    "default",
+    "test",
+] }
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
     "default",
 ] }

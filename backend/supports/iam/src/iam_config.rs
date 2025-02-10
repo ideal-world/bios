@@ -11,7 +11,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::rbum_config::RbumConfig;
 use tardis::web::poem::http::HeaderName;
- 
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct IamConfig {
@@ -63,6 +63,13 @@ pub struct IamConfig {
     pub sms_base_url: String,
     pub sms_path: String,
     pub sms_pwd_path: String,
+
+    pub abnormal_reach_phones: Vec<String>,
+    pub reach_pwd_lock_template_id: String,
+    pub cache_key_reach_vcode_err_info_: String,
+    pub cache_key_reach_vcode_expire_sec: usize,
+    pub cache_key_reach_vcode_limit_max: usize,
+    pub reach_vcode_error_template_id: String,
     pub third_integration_config_key: String,
     pub third_integration_schedule_code: String,
     pub init_menu_json_path: String,
@@ -171,6 +178,12 @@ impl Default for IamConfig {
             sms_base_url: "http://reach:8080".to_string(),
             sms_path: "cc/msg/vcode".to_string(),
             sms_pwd_path: "cc/msg/pwd".to_string(),
+            abnormal_reach_phones: vec![],
+            reach_pwd_lock_template_id: "".to_string(),
+            cache_key_reach_vcode_err_info_: "iam:reach:vcode:error:info:".to_string(),
+            cache_key_reach_vcode_expire_sec: 300,
+            cache_key_reach_vcode_limit_max: 3,
+            reach_vcode_error_template_id: "".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
             iam_base_url: "http://127.0.0.1:8080/iam".to_string(),
