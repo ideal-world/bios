@@ -1,6 +1,6 @@
 use crate::{log_initializer::get_tardis_inst, serv};
 use bios_sdk_invoke::clients::{
-    event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
+    event_client::{asteroid_mq_sdk::model::Interest, mq_error, mq_client_node_opt, ContextHandler, SPI_RPC_TOPIC},
     spi_log_client::LogItemAddV2Req,
 };
 use tardis::{
@@ -18,9 +18,8 @@ async fn handle_add_event(req: LogItemAddV2Req, ctx: TardisContext) -> TardisRes
 }
 
 pub async fn handle_events() -> TardisResult<()> {
-    use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
-    if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-        topic.create_endpoint([Interest::new("log/*")]).await.map_err(mq_error)?.create_event_loop().with_handler(ContextHandler(handle_add_event)).spawn();
+    if let Some(topic) = mq_client_node_opt() {
+        topic.create_endpoint(SPI_RPC_TOPIC, [Interest::new("log/*")]).await.map_err(mq_error)?.into_event_loop().with_handler(ContextHandler(handle_add_event)).spawn();
     }
     Ok(())
 }

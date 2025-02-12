@@ -3,8 +3,8 @@
 //! 异步任务处理器
 #[cfg(feature = "with-mq")]
 use bios_sdk_invoke::clients::event_client::{
-    asteroid_mq::prelude::{EventAttribute, Subject, TopicCode},
-    get_topic,
+    asteroid_mq_sdk::model::{event::EventAttribute, Subject, TopicCode},
+    mq_client_node_opt,
 };
 use lazy_static::lazy_static;
 
@@ -107,7 +107,7 @@ impl TaskProcessor {
     ) -> TardisResult<()> {
         Self::set_status(cache_key, task_id, status, cache_client).await?;
         #[cfg(feature = "with-mq")]
-        if let Some(_topic) = get_topic(&TASK_TOPIC) {
+        if let Some(_topic) = mq_client_node_opt() {
             // todo: broadcast event to users
             // topic
             //     .send_event(
@@ -145,7 +145,7 @@ impl TaskProcessor {
     ) -> TardisResult<()> {
         Self::set_process_data(cache_key, task_id, data.clone(), cache_client).await?;
         #[cfg(feature = "with-mq")]
-        if let Some(_topic) = get_topic(&TASK_TOPIC) {
+        if let Some(_topic) =  mq_client_node_opt() {
             // todo: broadcast event to users
         }
         Ok(())
@@ -222,7 +222,7 @@ impl TaskProcessor {
         });
         TASK_HANDLE.write().await.insert(task_id, handle);
         #[cfg(feature = "with-mq")]
-        if let Some(_topic) = get_topic(&TASK_TOPIC) {
+        if let Some(_topic) =  mq_client_node_opt() {
             // todo: broadcast event to users
         }
         if let Some(ctx) = ctx {
@@ -247,7 +247,7 @@ impl TaskProcessor {
     ) -> TardisResult<u64> {
         let task_id = TaskProcessor::init_status(cache_key, Some(task_id), cache_client).await?;
         #[cfg(feature = "with-mq")]
-        if let Some(_topic) = get_topic(&TASK_TOPIC) {
+        if let Some(_topic) =  mq_client_node_opt() {
             // todo: broadcast event to users
         }
         Ok(task_id)

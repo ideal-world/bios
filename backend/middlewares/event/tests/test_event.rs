@@ -10,9 +10,9 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
 use tardis::basic::dto::TardisContext;
-use tardis::log as tracing;
 use tardis::serde_json::{json, Value};
 use tardis::web::web_resp::Void;
+use tardis::{log as tracing, TardisFunsInst};
 use tardis::{tardis_static, tokio, TardisFuns};
 use tokio::io::AsyncReadExt;
 #[tokio::test(flavor = "multi_thread")]
@@ -22,7 +22,7 @@ async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
     let _x = init_test_container::init(None).await?;
 
     init_data().await?;
-    tokio::io::stdin().read_buf(&mut Vec::new()).await?;
+    // tokio::io::stdin().read_buf(&mut Vec::new()).await?;
     test_event_topic_api().await?;
     Ok(())
 }
@@ -30,7 +30,7 @@ async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
 async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize RBUM
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
-
+    let mut funs = TardisFuns::inst(DOMAIN_CODE.to_string(), None);
     let web_server = TardisFuns::web_server();
     // Initialize Event
     event_initializer::init(web_server.as_ref()).await?;
@@ -41,10 +41,10 @@ async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
         ak: "test".to_string(),
         roles: vec![],
         groups: vec![],
-        owner: "test-owner".to_string(),
+        owner: "test".to_string(),
         ..Default::default()
     };
-
+    bios_sdk_invoke::clients::event_client::init_client_node(None, Duration::from_secs(1), &ctx, &funs).await;
     let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
     let auth = ctx.to_base64()?;
     tracing::info!(?auth, "auth");
@@ -65,33 +65,35 @@ tardis_static! {
 }
 
 pub async fn test_event_topic_api() -> Result<(), Box<dyn std::error::Error>> {
+    use bios_sdk_invoke::clients::event_client::{EventClient, EventTopicConfig};
+    let mut funs = TardisFuns::inst(DOMAIN_CODE.to_string(), None);
     const TEST_TOPIC_NAME: &str = "test-topic";
     let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
     let ctx = test_tardis_context();
-    client.set_auth(ctx).unwrap();
-    let id = client
-        .post::<_, Void>(
-            "/ci/topic",
-            &json! {{
-                "topic_code": TEST_TOPIC_NAME,
-                "overflow_policy": "RejectNew",
-                "overflow_size": 500,
-                "check_auth": true,
-            }},
-        )
-        .await;
-    tracing::info!(?id, "event registered");
+    let topic_id = EventClient::create_topic(
+        &EventTopicConfig {
+            topic_code: TEST_TOPIC_NAME.to_string(),
+            overflow_policy: Some("RejectNew".to_string()),
+            overflow_size: 500,
+            check_auth: true,
+            blocking: false,
+        },
+        ctx,
+        &funs,
+    )
+    .await?;
+    tracing::info!(?topic_id, "event registered");
     tokio::time::sleep(Duration::from_secs(1)).await;
-    let topics = client.get::<Value>("/ci/topic?page_number=1&page_size=10").await;
-    tracing::info!(?topics, "event paged list");
-    let register_auth_result = client.put::<Void, Value>(&format!("/ci/topic/{TEST_TOPIC_NAME}/register?read=true&write=true"), &Void).await;
+    let existed = EventClient::check_topic_exist(TEST_TOPIC_NAME, ctx, &funs).await?;
+    tracing::info!(?existed, "topic existed");
 
+    let register_auth_result = EventClient::register_user(TEST_TOPIC_NAME, true, true, ctx, &funs).await;
     tracing::info!(?register_auth_result, "auth registered");
+    // tracing::info!("bind context result");
+    // let bind_result = client.put::<Void, Value>("/ca/register", &Void).await;
+    // let node_id = bind_result["node_id"].as_str().expect("node_id is settled");
 
-    let bind_result = client.put::<Void, Value>("/ca/register", &Void).await;
-    let node_id = bind_result["node_id"].as_str().expect("node_id is settled");
-    tracing::info!(?node_id, "bind context result");
-    let client_node = ClientNode::connect(format!("ws://127.0.0.1:8080/{DOMAIN_CODE}/ca/connect?node_id={}", node_id)).await?;
+    let client_node = bios_sdk_invoke::clients::event_client::mq_client_node();
     const TOPIC_CODE: TopicCode = TopicCode::const_new(TEST_TOPIC_NAME);
     let mut ep = client_node.create_endpoint(TopicCode::const_new(TEST_TOPIC_NAME), [Interest::new("test_node")]).await?;
     tokio::spawn(async move {

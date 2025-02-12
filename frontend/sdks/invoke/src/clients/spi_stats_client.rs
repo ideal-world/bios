@@ -12,11 +12,11 @@ use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
 #[cfg(feature = "event")]
-use super::event_client::{get_topic, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC};
+use super::event_client::{mq_error, mq_client_node_opt, EventAttributeExt as _, SPI_RPC_TOPIC};
 
 #[cfg(feature = "event")]
 pub mod event {
-    use asteroid_mq::prelude::*;
+    use asteroid_mq_sdk::model::{event::EventAttribute, Subject};
 
     impl EventAttribute for super::StatsItemAddReq {
         const SUBJECT: Subject = Subject::const_new("stats/add");
@@ -54,19 +54,19 @@ impl SpiStatsClient {
     pub async fn fact_record_load(fact_key: &str, record_key: &str, add_req: StatsFactRecordLoadReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
         if funs.invoke_conf_in_event(InvokeModuleKind::Stats) {
-            if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-                topic
-                    .send_event(
-                        StatsItemAddReq {
-                            fact_key: fact_key.to_string(),
-                            record_key: record_key.to_string(),
-                            req: add_req,
-                        }
-                        .inject_context(funs, ctx)
-                        .json(),
-                    )
-                    .map_err(mq_error)
-                    .await?;
+            if let Some(node) = mq_client_node_opt() {
+                node.send_event(
+                    SPI_RPC_TOPIC,
+                    StatsItemAddReq {
+                        fact_key: fact_key.to_string(),
+                        record_key: record_key.to_string(),
+                        req: add_req,
+                    }
+                    .inject_context(funs, ctx)
+                    .json(),
+                )
+                .map_err(mq_error)
+                .await?;
                 return Ok(());
             }
         }
@@ -80,18 +80,18 @@ impl SpiStatsClient {
     pub async fn fact_records_load(fact_key: &str, add_req: Vec<StatsFactRecordsLoadReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
         if funs.invoke_conf_in_event(InvokeModuleKind::Stats) {
-            if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-                topic
-                    .send_event(
-                        StatsItemAddsReq {
-                            fact_key: fact_key.to_string(),
-                            reqs: add_req,
-                        }
-                        .inject_context(funs, ctx)
-                        .json(),
-                    )
-                    .map_err(mq_error)
-                    .await?;
+            if let Some(node) = mq_client_node_opt() {
+                node.send_event(
+                    SPI_RPC_TOPIC,
+                    StatsItemAddsReq {
+                        fact_key: fact_key.to_string(),
+                        reqs: add_req,
+                    }
+                    .inject_context(funs, ctx)
+                    .json(),
+                )
+                .map_err(mq_error)
+                .await?;
                 return Ok(());
             }
         }
@@ -105,9 +105,10 @@ impl SpiStatsClient {
     pub async fn fact_record_delete(fact_key: &str, record_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "event")]
         if funs.invoke_conf_in_event(InvokeModuleKind::Stats) {
-            if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
+            if let Some(topic) = mq_client_node_opt() {
                 topic
                     .send_event(
+                        SPI_RPC_TOPIC,
                         StatsItemDeleteReq {
                             fact_key: fact_key.to_string(),
                             record_key: record_key.to_string(),

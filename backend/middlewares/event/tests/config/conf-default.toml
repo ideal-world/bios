@@ -4,6 +4,9 @@
 enable = true
 cluster = "singleton"
 durable = true
+[csm.event.invoke]
+spi_app_id = "test"
+
 
 [fw.web_server]
 port = 8080

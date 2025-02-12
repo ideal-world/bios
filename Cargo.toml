@@ -66,19 +66,23 @@ strum = { version = "0.26", features = ["derive"] }
 # tardis = { version = "0.1.0-rc.17" }
 # tardis = { version = "0.2.0", path = "../tardis/tardis" }
 tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "aeb4c85" }
-# asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "d59c64d" }
-asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "b26fa4f" }
-# asteroid-mq = { version = "0.1.0-alpha.5" }
-asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "b26fa4f" }
-# asteroid-mq-sdk = { version = "0.1.0-alpha.5" }
+# asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "ed5811b" }
+asteroid-mq = { version = "0.1.0-alpha.10" }
+# asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "ed5811b" }
+asteroid-mq-sdk = { version = "0.1.0-alpha.10" }
 #spacegate
 
-# spacegate-shell = { version = "0.2.0", path = "../spacegate/crates/shell", features = [
+# spacegate-shell = { version = "0.2.0-alpha.2", path = "../spacegate/crates/shell", features = [
 #   "cache",
 #   "k8s",
 #   "ext-axum",
 # ] }
-spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", rev="8065bb6", features = [
+# spacegate-shell = { git = "https://github.com/ideal-world/spacegate.git", rev="cb8dd86", features = [
+#   "cache",
+#   "k8s",
+#   "ext-axum",
+# ] }
+spacegate-shell = { version = "0.2.0-alpha.3", features = [
   "cache",
   "k8s",
   "ext-axum",
