@@ -1,5 +1,6 @@
 use bios_basic::rbum::rbum_config::RbumConfig;
 
+use bios_sdk_invoke::invoke_config::InvokeConfig;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Mutex};
 use tardis::{
@@ -19,6 +20,7 @@ pub struct EventConfig {
     pub durable: bool,
     pub avatars: Vec<String>,
     pub cluster: Option<String>,
+    pub invoke: InvokeConfig,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -54,6 +56,7 @@ impl Default for EventConfig {
             durable: true,
             cluster: Some(Self::CLUSTER_K8S.to_string()),
             raft: None,
+            invoke: Default::default(),
         }
     }
 }

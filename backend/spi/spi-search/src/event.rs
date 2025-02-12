@@ -1,5 +1,5 @@
 use bios_sdk_invoke::{
-    clients::event_client::{get_topic, mq_error, ContextHandler, SPI_RPC_TOPIC},
+    clients::event_client::{asteroid_mq_sdk::model::Interest, mq_error, mq_client_node_opt, ContextHandler, SPI_RPC_TOPIC},
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq},
 };
 
@@ -26,13 +26,11 @@ async fn handle_delete_event(req: SearchEventItemDeleteReq, ctx: TardisContext) 
 }
 
 pub async fn handle_events() -> TardisResult<()> {
-    use bios_sdk_invoke::clients::event_client::asteroid_mq::prelude::*;
-    if let Some(topic) = get_topic(&SPI_RPC_TOPIC) {
-        topic
-            .create_endpoint([Interest::new("search/*")])
+    if let Some(node) = mq_client_node_opt() {
+        node.create_endpoint(SPI_RPC_TOPIC, [Interest::new("search/*")])
             .await
             .map_err(mq_error)?
-            .create_event_loop()
+            .into_event_loop()
             .with_handler(ContextHandler(handle_modify_event))
             .with_handler(ContextHandler(handle_add_event))
             .with_handler(ContextHandler(handle_delete_event))

@@ -22,18 +22,36 @@ impl EventTopicApi {
     ///
     /// 添加事件主题
     #[oai(path = "/", method = "post")]
-    async fn add(&self, add_or_modify_req: Json<EventTopicConfig>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add(&self, add_or_modify_req: Json<EventTopicConfig>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
         let mut add_or_modify_req = add_or_modify_req.0.into_rbum_req();
-        EventTopicServ::add_item(&mut add_or_modify_req, &funs, &ctx.0).await?;
-        TardisResp::ok(Void)
+        let id = EventTopicServ::add_item(&mut add_or_modify_req, &funs, &ctx.0).await?;
+        TardisResp::ok(id)
+    }
+
+    /// Add Event Definition
+    ///
+    /// 添加事件主题
+    #[oai(path = "/", method = "get")]
+    async fn get_by_code(&self, topic_code: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Option<EventTopicInfoResp>> {
+        let funs = get_tardis_inst();
+        let result = EventTopicServ::find_one_item(
+            &EventTopicFilterReq {
+                basic: Default::default(),
+                topic_code: Some(topic_code.0),
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(result)
     }
 
     /// Modify Event Definition
     ///
     /// 修改事件主题
-    #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, add_or_modify_req: Json<EventTopicConfig>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/", method = "put")]
+    async fn modify(&self, id: Query<String>, add_or_modify_req: Json<EventTopicConfig>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
         let mut add_or_modify_req = add_or_modify_req.0.into_rbum_req();
         EventTopicServ::modify_item(&id.0, &mut add_or_modify_req, &funs, &ctx.0).await?;
@@ -43,8 +61,8 @@ impl EventTopicApi {
     /// Delete Event Definition
     ///
     /// 删除事件主题
-    #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/", method = "delete")]
+    async fn delete(&self, id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = get_tardis_inst();
         EventTopicServ::delete_item(&id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
@@ -53,7 +71,7 @@ impl EventTopicApi {
     /// Find Event Definitions
     ///
     /// 查找事件主题
-    #[oai(path = "/", method = "get")]
+    #[oai(path = "/paged", method = "get")]
     async fn paginate(
         &self,
         id: Query<Option<String>>,

@@ -8,7 +8,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_sdk_invoke::clients::event_client::mq_node_opt;
+use bios_sdk_invoke::clients::event_client::mq_client_node_opt;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -21,6 +21,7 @@ use tardis::TardisFunsInst;
 use crate::domain::event_topic;
 use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp, SetTopicAuth, TopicAuth};
 use crate::event_config::EventInfoManager;
+use crate::event_initializer::mq_node_opt;
 
 use super::event_auth_serv::EventAuthServ;
 
