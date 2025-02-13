@@ -67,9 +67,9 @@ strum = { version = "0.26", features = ["derive"] }
 # tardis = { version = "0.2.0", path = "../tardis/tardis" }
 tardis = { git = "https://github.com/ideal-world/tardis.git", rev = "aeb4c85" }
 # asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "ed5811b" }
-asteroid-mq = { version = "0.1.0-alpha.10" }
+asteroid-mq = { version = "0.1.0-alpha.11" }
 # asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "ed5811b" }
-asteroid-mq-sdk = { version = "0.1.0-alpha.10" }
+asteroid-mq-sdk = { version = "0.1.0-alpha.11" }
 #spacegate
 
 # spacegate-shell = { version = "0.2.0-alpha.2", path = "../spacegate/crates/shell", features = [

@@ -27,3 +27,5 @@ bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", f
     "spi_log",
     "event",
 ], default-features = false }
+[features]
+local = ["bios-sdk-invoke/event-local"]

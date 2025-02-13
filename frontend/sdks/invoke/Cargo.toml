@@ -27,7 +27,8 @@ iam = []
 event = ["asteroid-mq-sdk"]
 schedule = []
 macro = ["dep:simple-invoke-client-macro"]
-
+event-ws = ["asteroid-mq-sdk/ws"]
+event-local = ["asteroid-mq-sdk/local", "asteroid-mq"]
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
@@ -41,6 +42,7 @@ tardis = { workspace = true, features = [
 simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro", optional = true }
 crossbeam = "0.8"
 asteroid-mq-sdk = { workspace = true, optional = true }
+asteroid-mq = { workspace = true, optional = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro" }
