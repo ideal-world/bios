@@ -43,6 +43,7 @@ simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-clien
 crossbeam = "0.8"
 asteroid-mq-sdk = { workspace = true, optional = true }
 asteroid-mq = { workspace = true, optional = true }
+
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 simple-invoke-client-macro = { version = "0.2.0", path = "../simple-invoke-client-macro" }

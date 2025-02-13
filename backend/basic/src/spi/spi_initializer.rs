@@ -301,7 +301,7 @@ pub mod common_pg {
         if check_table_exit(&format!("{table_flag}{tag}"), &conn, ctx).await? {
             return Ok((conn, format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}")));
         } else if !mgr {
-            return Err(TardisError::bad_request("The requested tag does not exist", ""));
+            return Err(TardisError::bad_request("The requested tag does not exist", "404-spi-tag-not-exist"));
         }
         do_init_table(
             &schema_name,

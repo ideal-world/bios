@@ -55,10 +55,7 @@ pub struct HmsDisplay<U> {
 
 impl HmsDisplay<ZhHmsTime> {
     pub fn new_zh(time: Duration) -> Self {
-        Self {
-            time,
-            unit: ZhHmsTime,
-        }
+        Self { time, unit: ZhHmsTime }
     }
 }
 
@@ -76,11 +73,10 @@ impl TimeUnitSuit for ZhHmsTime {
     }
 }
 
-
 impl<U: TimeUnitSuit> std::fmt::Display for HmsDisplay<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut time = self.time;
-        
+
         if time.as_secs() >= 3600 {
             let hour = time.as_secs() / 3600;
             time -= Duration::from_secs(hour * 3600);
@@ -98,17 +94,13 @@ impl<U: TimeUnitSuit> std::fmt::Display for HmsDisplay<U> {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
     #[test]
     fn test_hms_time_format() {
         let time = Duration::from_secs(3600 * 2 + 60 * 3 + 5);
-        let display = HmsDisplay {
-            time,
-            unit: ZhHmsTime,
-        };
+        let display = HmsDisplay { time, unit: ZhHmsTime };
         assert_eq!(display.to_string(), "2小时3分钟5秒");
     }
 

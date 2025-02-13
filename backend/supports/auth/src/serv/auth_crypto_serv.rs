@@ -13,7 +13,8 @@ use lazy_static::lazy_static;
 use crate::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    dto::auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp}, error::AuthError,
+    dto::auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp},
+    error::AuthError,
 };
 
 lazy_static! {

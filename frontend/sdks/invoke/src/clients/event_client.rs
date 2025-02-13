@@ -186,6 +186,7 @@ impl EventClient {
 pub struct EventRegisterResp {
     pub node_id: String,
 }
+
 pub async fn create_ws_client_node(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<ClientNode> {
     let module_url = funs.invoke_conf_module_url();
     let url = module_url.get("event").ok_or_else(|| TardisError::internal_error("event module url not found", ""))?;
@@ -205,6 +206,7 @@ pub async fn create_ws_client_node(ctx: &TardisContext, funs: &TardisFunsInst) -
     Ok(node)
 }
 
+
 #[cfg(feature="event-local")]
 pub async fn init_local_client_node() -> TardisResult<()> {
     use asteroid_mq::prelude::Node;
@@ -221,6 +223,7 @@ pub async fn init_ws_client_node(max_retry: Option<usize>, retry_duration: std::
     let mut retry = 0;
     loop {
         match create_ws_client_node(ctx, funs).await {
+
             Ok(node) => {
                 TardisFuns::store().insert_singleton(node);
                 tardis::tracing::info!("create client node success");

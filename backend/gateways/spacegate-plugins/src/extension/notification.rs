@@ -42,7 +42,7 @@ impl NotificationContext {
             }
 
             // set the dedup key
-            if let Err(e) = conn.set_ex::<'_, _, _,Option<String>>(&key, "1", cool_down).await {
+            if let Err(e) = conn.set_ex::<'_, _, _, Option<String>>(&key, "1", cool_down).await {
                 tracing::error!(error = ?e, "set dedup cache failed");
                 return;
             }
@@ -50,12 +50,9 @@ impl NotificationContext {
             let funs = NotifyPlugin::get_funs_inst_by_plugin_code();
             tracing::debug!(?req, "submit notify");
             let response = match req {
-                ReachRequest::ByScene(req) => {
-                    bios_sdk_invoke::clients::reach_client::ReachClient::send_message(&req.into(), &funs, &ctx).await
-  
-                }
+                ReachRequest::ByScene(req) => bios_sdk_invoke::clients::reach_client::ReachClient::send_message(&req.into(), &funs, &ctx).await,
                 ReachRequest::ByTemplate { contact, template_id, replace } => {
-                     bios_sdk_invoke::clients::reach_client::ReachClient::general_send(&contact, &template_id, &replace, &funs, &ctx).await
+                    bios_sdk_invoke::clients::reach_client::ReachClient::general_send(&contact, &template_id, &replace, &funs, &ctx).await
                 }
             };
             if let Err(e) = response {
