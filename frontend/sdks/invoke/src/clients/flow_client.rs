@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "event")]
 pub mod event {
-    use asteroid_mq::prelude::*;
+    use asteroid_mq_sdk::model::{event::*, *};
 
     use super::{FlowFrontChangeReq, FlowPostChangeReq};
     pub const FLOW_AVATAR: &str = "flow";

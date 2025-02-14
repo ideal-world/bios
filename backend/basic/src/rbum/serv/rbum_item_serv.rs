@@ -180,6 +180,8 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                 (rbum_item::Entity, rbum_item::Column::Owner),
                 (rbum_item::Entity, rbum_item::Column::CreateTime),
                 (rbum_item::Entity, rbum_item::Column::UpdateTime),
+                (rbum_item::Entity, rbum_item::Column::CreateBy),
+                (rbum_item::Entity, rbum_item::Column::UpdateBy),
                 (rbum_item::Entity, rbum_item::Column::ScopeLevel),
                 (rbum_item::Entity, rbum_item::Column::Disabled),
             ])

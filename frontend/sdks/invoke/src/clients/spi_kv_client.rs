@@ -12,7 +12,7 @@ use crate::invoke_enumeration::InvokeModuleKind;
 use super::base_spi_client::BaseSpiClient;
 #[cfg(feature = "event")]
 pub mod event {
-    use asteroid_mq::prelude::*;
+    use asteroid_mq_sdk::model::{event::EventAttribute, Subject};
     impl EventAttribute for super::KvItemAddOrModifyReq {
         const SUBJECT: Subject = Subject::const_new("kv/add");
     }

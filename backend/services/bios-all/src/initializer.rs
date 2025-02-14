@@ -3,8 +3,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_server::TardisWebServer;
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    bios_mw_event::event_initializer::init(web_server).await?;
-
+    bios_mw_event_client::event_client_initializer::init().await?;
     bios_auth::auth_initializer::init(web_server).await?;
     bios_iam::iam_initializer::init(web_server).await?;
     bios_reach::reach_initializer::init(
