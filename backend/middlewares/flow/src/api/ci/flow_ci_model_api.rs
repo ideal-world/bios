@@ -82,30 +82,6 @@ impl FlowCiModelApi {
         TardisResp::ok(result)
     }
 
-    /// add custom model by template_id
-    ///
-    /// 添加自定义模型
-    // #[oai(path = "/add_custom_model", method = "post")]
-    // async fn add_custom_model(
-    //     &self,
-    //     req: Json<FlowModelAddCustomModelReq>,
-    //     mut ctx: TardisContextExtractor,
-    //     request: &Request,
-    // ) -> TardisApiResult<Vec<FlowModelAddCustomModelResp>> {
-    //     let mut funs = flow_constants::get_tardis_inst();
-    //     check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-    //     funs.begin().await?;
-    //     let proj_template_id = req.0.proj_template_id;
-    //     let mut result = vec![];
-    //     for item in req.0.bind_model_objs {
-    //         let model_id = FlowModelServ::add_custom_model(&item.tag, proj_template_id.clone(), None, &funs, &ctx.0).await.ok();
-    //         result.push(FlowModelAddCustomModelResp { tag: item.tag, model_id });
-    //     }
-    //     funs.commit().await?;
-    //     ctx.0.execute_task().await?;
-    //     TardisResp::ok(result)
-    // }
-
     /// Creating or referencing models
     ///
     ///

@@ -17,4 +17,5 @@
 500-flow-state-prohibit-delete	当前状态节点不可删除
 500-flow_model-prohibit-enabled	当前模型不可开启
 500-flow-transition-endless-loop	状态流转出现死循环
+500-flow-inst-operate-prohibited	实例当前操作被禁止
 409-rbum-rel-exist	状态关联已存在

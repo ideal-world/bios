@@ -82,11 +82,13 @@ impl BasicQueryCondInfo {
                     }
                     BasicQueryOpKind::Like
                     | BasicQueryOpKind::LLike
-                    | BasicQueryOpKind::RLike
-                    | BasicQueryOpKind::NotLike
+                    | BasicQueryOpKind::RLike => {
+                        check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
+                    }
+                    BasicQueryOpKind::NotLike
                     | BasicQueryOpKind::NotLLike
                     | BasicQueryOpKind::NotRLike => {
-                        check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
+                        check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| !check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
                     }
                     BasicQueryOpKind::In => check_val
                         .as_array()
@@ -97,7 +99,13 @@ impl BasicQueryCondInfo {
                                 check_val_arr.contains(&cond.value)
                             }
                         })
-                        .unwrap_or(false),
+                        .unwrap_or({
+                            if cond.value.is_array() {
+                                cond.value.as_array().unwrap_or(&vec![]).contains(check_val)
+                            } else {
+                                cond.value == *check_val
+                            }
+                        }),
                     BasicQueryOpKind::NotIn => check_val.as_array().map(|check_val_arr| check_val_arr.contains(&cond.value)).unwrap_or(false),
                     BasicQueryOpKind::IsNull => false,
                     BasicQueryOpKind::IsNotNull => false,
