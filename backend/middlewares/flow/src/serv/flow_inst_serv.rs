@@ -789,7 +789,7 @@ impl FlowInstServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let flow_inst_ids = find_req.iter().map(|req| req.flow_inst_id.to_string()).unique().collect_vec();
-        let flow_insts = Self::find_detail(find_req.iter().map(|req| req.flow_inst_id.to_string()).collect_vec(), None, None, funs, ctx).await?;
+        let flow_insts = Self::find_detail(flow_inst_ids.clone(), None, None, funs, ctx).await?;
         if flow_insts.len() != flow_inst_ids.len() {
             return Err(funs.err().not_found("flow_inst", "find_state_and_next_transitions", "some flow instances not found", "404-flow-inst-not-found"));
         }
