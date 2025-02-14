@@ -3,6 +3,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::TardisFunsInst;
 
+#[cfg(feature = "event")]
 use crate::clients::event_client::mq_client_node;
 use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
 #[cfg(feature = "event")]
