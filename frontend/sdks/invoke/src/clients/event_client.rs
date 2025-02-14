@@ -166,7 +166,7 @@ impl EventClient {
         }
         Ok(resp.data.is_some())
     }
-    pub async fn register_user(topic_code: &str, read: bool, write: bool,ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn register_user(topic_code: &str, read: bool, write: bool, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let url = BaseSpiClient::module_url(InvokeModuleKind::Event, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let response = funs.web_client().put_to_obj::<TardisResp<Void>>(&format!("{url}/ci/topic/{topic_code}/register?read={read}&write={write}"), "", headers.clone()).await?;
@@ -186,7 +186,8 @@ impl EventClient {
 pub struct EventRegisterResp {
     pub node_id: String,
 }
-pub async fn create_client_node(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<ClientNode> {
+
+pub async fn create_ws_client_node(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<ClientNode> {
     let module_url = funs.invoke_conf_module_url();
     let url = module_url.get("event").ok_or_else(|| TardisError::internal_error("event module url not found", ""))?;
     let register_url = format!("{url}/ca/register");
@@ -205,10 +206,24 @@ pub async fn create_client_node(ctx: &TardisContext, funs: &TardisFunsInst) -> T
     Ok(node)
 }
 
-pub async fn init_client_node(max_retry: Option<usize>, retry_duration: std::time::Duration, ctx: &TardisContext, funs: &TardisFunsInst) {
+
+#[cfg(feature="event-local")]
+pub async fn init_local_client_node() -> TardisResult<()> {
+    use asteroid_mq::prelude::Node;
+    if let Some(server_node) = TardisFuns::store().get_singleton::<Node>() {
+        let node = ClientNode::connect_local_without_auth(server_node).await.map_err(mq_error)?;
+        TardisFuns::store().insert_singleton(node);
+        Ok(())
+    } else {
+        Err(TardisError::internal_error("mq server node not initialized", "500-mq-server-node-not-initialized"))
+    }
+}
+
+pub async fn init_ws_client_node(max_retry: Option<usize>, retry_duration: std::time::Duration, ctx: &TardisContext, funs: &TardisFunsInst) {
     let mut retry = 0;
     loop {
-        match create_client_node(ctx, funs).await {
+        match create_ws_client_node(ctx, funs).await {
+
             Ok(node) => {
                 TardisFuns::store().insert_singleton(node);
                 tardis::tracing::info!("create client node success");
