@@ -49,6 +49,7 @@ panic = "abort"
 strip = true
 
 [workspace.dependencies]
+csrf = { version = "=0.4.1" }
 # basic
 async-recursion = { version = "1.0.4" }
 serde = { version = "1", features = ["derive"] }
