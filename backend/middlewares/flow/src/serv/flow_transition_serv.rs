@@ -71,7 +71,9 @@ impl FlowTransitionServ {
             ctx,
         )
         .await?;
-
+        if add_req.iter().any(|req| req.transfer_by_auto.unwrap_or_default() != (from_state.state_kind == FlowStateKind::Start || from_state.state_kind == FlowStateKind::Branch)) {
+            return Err(funs.err().not_found("flow_transition", "add_transitions", "transfer_by_auto is not legal", "404-flow-transition-add-not-legal"));
+        }
         let flow_transitions = add_req
             .iter()
             .map(|req| flow_transition::ActiveModel {
@@ -186,8 +188,11 @@ impl FlowTransitionServ {
                         ctx,
                     )
                     .await?;
+                    if req.transfer_by_auto.unwrap_or_default() != (from_state.state_kind == FlowStateKind::Start || from_state.state_kind == FlowStateKind::Branch) {
+                        return Err(funs.err().not_found("flow_transition", "modify_transitions", "transfer_by_auto is not legal", "404-flow-transition-modify-not-legal"));
+                    }
                     flow_transition.from_flow_state_id = Set(from_flow_state_id.to_string());
-                    flow_transition.transfer_by_auto = Set(from_state.state_kind == FlowStateKind::Start || from_state.state_kind == FlowStateKind::Branch);
+                    flow_transition.transfer_by_auto = Set(req.transfer_by_auto.unwrap_or_default());
                 }
                 if let Some(to_flow_state_id) = &req.to_flow_state_id {
                     flow_transition.to_flow_state_id = Set(to_flow_state_id.to_string());

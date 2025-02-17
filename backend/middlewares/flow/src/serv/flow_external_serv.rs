@@ -46,6 +46,7 @@ impl FlowExternalServ {
                     var_name: None,
                     value: None,
                     changed_kind: None,
+                    guard_conf: None,
                 })
                 .collect_vec(),
             sys_time: Some(Utc::now().timestamp_millis()),

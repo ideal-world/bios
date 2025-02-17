@@ -116,7 +116,6 @@ pub struct FlowStateApproval {
     /// 是否允许转办
     pub referral: bool,
     /// 转办自定义人员权限
-    pub referral_guard_custom: bool,
     pub referral_guard_custom_conf: Option<FlowGuardConf>,
     /// 新增默认字段配置
     pub add_default_field: Option<FlowStateVar>,

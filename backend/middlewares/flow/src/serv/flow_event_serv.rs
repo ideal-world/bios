@@ -362,6 +362,7 @@ impl FlowEventServ {
                                             var_name: Some(change_info.var_name.clone()),
                                             value: change_info.changed_val.clone(),
                                             changed_kind: change_info.changed_kind.clone(),
+                                            guard_conf: None,
                                         }],
                                         ctx,
                                         funs,
@@ -379,6 +380,7 @@ impl FlowEventServ {
                                 var_name: Some(change_info.var_name.clone()),
                                 value: change_info.changed_val.clone(),
                                 changed_kind: change_info.changed_kind,
+                                guard_conf: None,
                             });
                         }
                     }

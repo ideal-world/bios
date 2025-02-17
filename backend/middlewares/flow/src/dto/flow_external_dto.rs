@@ -5,7 +5,7 @@ use tardis::web::poem_openapi::{
     types::{ParseFromJSON, ToJSON},
 };
 
-use super::{flow_state_dto::FlowSysStateKind, flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind};
+use super::{flow_state_dto::{FlowGuardConf, FlowSysStateKind}, flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind};
 
 /// External data exchange requests
 ///
@@ -128,6 +128,8 @@ pub struct FlowExternalParams {
     pub value: Option<Value>,
     /// 修改方式
     pub changed_kind: Option<FlowTransitionActionByVarChangeInfoChangedKind>,
+    /// 权限配置
+    pub guard_conf: Option<FlowGuardConf>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
