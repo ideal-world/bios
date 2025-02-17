@@ -1638,12 +1638,7 @@ impl FlowInstServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
-        let transition_ids = Self::do_find_next_transitions(&flow_inst_detail, None, &None, HashMap::default(), false, funs, ctx)
-            .await?
-            .next_flow_transitions
-            .into_iter()
-            .map(|tran| tran.next_flow_transition_id)
-            .collect_vec();
+        let transition_ids = FlowTransitionServ::find_transitions(&flow_inst_detail.rel_flow_version_id, Some(vec![flow_inst_detail.current_state_id.clone()]), funs, ctx).await?.into_iter().map(|tran| tran.id).collect_vec();
         let create_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
         let auto_transitions =
             FlowTransitionServ::find_detail_items(transition_ids, None, None, funs, ctx).await?.into_iter().filter(|transition| transition.transfer_by_auto).collect_vec();
