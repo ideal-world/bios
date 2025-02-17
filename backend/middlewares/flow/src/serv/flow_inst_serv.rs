@@ -483,10 +483,21 @@ impl FlowInstServ {
     pub async fn get(flow_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstDetailResp> {
         let flow_insts = Self::find_detail(vec![flow_inst_id.to_string()], None, None, funs, ctx).await?;
         if let Some(flow_inst) = flow_insts.into_iter().next() {
+            Self::check_auth(&flow_inst, funs, ctx)?;
             Ok(flow_inst)
         } else {
             Err(funs.err().not_found("flow_inst", "get", &format!("flow instance {} not found", flow_inst_id), "404-flow-inst-not-found"))
         }
+    }
+
+    pub fn check_auth(flow_inst: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if flow_inst.create_ctx.owner != ctx.owner // 当前用户不是创建人
+        && !flow_inst.artifacts.as_ref().map_or_else(|| true, |artifacts| artifacts.his_operators.clone().unwrap_or_default().contains(&ctx.owner)) // 当前用户不是历史操作人
+        && flow_inst.current_state_conf.as_ref().map_or_else(|| true, |conf| conf.operators.is_empty()) // 当前用户没有任何操作权限
+        {
+            return Err(funs.err().not_found("flow_inst", "check_auth", &format!("flow instance {} is unauthorized", flow_inst.id), "401-flow-inst-req-unauthorized"));
+        }
+        Ok(())
     }
 
     pub async fn find_detail(
@@ -2188,6 +2199,9 @@ impl FlowInstServ {
             // 转办
             FlowStateOperatorKind::Referral => {
                 if let Some(operator) = operate_req.operator.clone() {
+                    if operator == ctx.owner {
+                        return  Ok(());
+                    }
                     let mut modify_artifacts = FlowInstArtifactsModifyReq::default();
                     let mut curr_operators = artifacts.curr_operators.clone().unwrap_or_default();
                     let mut prohibit_guard_by_spec_account_ids = artifacts.prohibit_guard_by_spec_account_ids.unwrap_or_default();
@@ -2488,8 +2502,10 @@ impl FlowInstServ {
             }
             let countersign_conf = current_state_kind_conf.countersign_conf;
             let mut specified_pass_guard_conf = countersign_conf.specified_pass_guard_conf.clone().unwrap_or_default();
+            let mut specified_overrule_guard_conf = countersign_conf.specified_overrule_guard_conf.clone().unwrap_or_default();
             if current_state.own_paths != inst.own_paths {
                 specified_pass_guard_conf.get_local_conf(funs, ctx).await?;
+                specified_overrule_guard_conf.get_local_conf(funs, ctx).await?;
             }
             // 指定人通过，则通过
             if kind == FlowApprovalResultKind::Pass
@@ -2503,7 +2519,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Overrule
                 && countersign_conf.specified_overrule_guard.unwrap_or(false)
                 && countersign_conf.specified_overrule_guard_conf.is_some()
-                && specified_pass_guard_conf.check(ctx)
+                && specified_overrule_guard_conf.check(ctx)
             {
                 return Ok(true);
             }
