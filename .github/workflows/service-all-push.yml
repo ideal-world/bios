@@ -38,7 +38,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: lock csrf
-        run: cargo add csrf@0.4.1 --p bios-serv-all
+        run: cargo add csrf@0.4.1 -p bios-serv-all
 
       - name: Build rust
         run: cargo build --release -p bios-serv-all
