@@ -153,6 +153,9 @@ pub struct FlowModelVersionDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
+    pub publish_time: Option<DateTime<Utc>>,
+    pub publish_by: Option<String>,
+
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 }

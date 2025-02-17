@@ -40,6 +40,10 @@ pub struct Model {
     pub update_time: chrono::DateTime<Utc>,
     /// 修改人信息
     pub update_by: String,
+    /// 发布时间
+    pub publish_time: Option<chrono::DateTime<Utc>>,
+    /// 发布人信息
+    pub publish_by: Option<String>,
 
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
