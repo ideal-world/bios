@@ -160,6 +160,17 @@ impl PluginBsServ {
         Ok(())
     }
 
+    pub async fn find_sub_bind_ids(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+        Ok(
+            PluginRelServ::find_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, None, true, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|resp| resp.rel_id)
+                .collect(),
+        )
+    }
+
     pub async fn paginate_bs_rel_agg(
         app_tenant_id: &str,
         page_number: u32,

@@ -1,7 +1,7 @@
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq},
-        rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp},
+        rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelAttrAggAddReq},
         rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelDetailResp, RbumRelSimpleFindReq},
     },
     rbum_enumeration::RbumRelFromKind,
@@ -27,6 +27,7 @@ impl PluginRelServ {
         ext: Option<String>,
         ignore_exist_error: bool,
         to_is_outside: bool,
+        attrs: Option<Vec<RbumRelAttrAggAddReq>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -48,7 +49,7 @@ impl PluginRelServ {
                 to_is_outside,
                 ext,
             },
-            attrs: vec![],
+            attrs: attrs.unwrap_or(vec![]),
             envs: vec![],
         };
         RbumRelServ::add_rel(req, funs, ctx).await?;
@@ -78,7 +79,7 @@ impl PluginRelServ {
             return Ok(());
         }
         for rel_id in rel_ids {
-            RbumRelServ::delete_rbum(&rel_id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
         }
 
         Ok(())
@@ -170,6 +171,37 @@ impl PluginRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             true,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    pub async fn find_from_rels(
+        tag: &PluginAppBindRelKind,
+        from_rbum_kind: &RbumRelFromKind,
+        from_rbum_id: &str,
+        ext: Option<String>,
+        with: bool,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        RbumRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_owned()),
+                ext_eq: ext,
+                ..Default::default()
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
             funs,
             ctx,
         )

@@ -1,4 +1,4 @@
-use bios_basic::rbum::dto::{rbum_kind_dto::RbumKindDetailResp, rbum_rel_dto::RbumRelBoneResp};
+use bios_basic::rbum::dto::{rbum_kind_dto::RbumKindDetailResp, rbum_rel_agg_dto::RbumRelAttrAggAddReq, rbum_rel_dto::RbumRelBoneResp};
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 
@@ -10,6 +10,7 @@ pub struct PluginKindAddAggReq {
     pub app_tenant_id: String,
     pub bs_id: String,
     pub bs_rel: Option<PluginBsAddReq>,
+    pub attrs: Option<Vec<RbumRelAttrAggAddReq>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

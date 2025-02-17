@@ -178,4 +178,12 @@ impl PluginCiBsApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
+
+    /// find Plugin Service Rel App/Tenant sub bind ids
+    #[oai(path = "/find/:id/rel/:app_tenant_id/sub/bind", method = "get")]
+    async fn find_sub_bind_ids(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+        let funs = crate::get_tardis_inst();
+        let sub_bind_ids = PluginBsServ::find_sub_bind_ids(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(sub_bind_ids)
+    }
 }

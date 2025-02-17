@@ -1,6 +1,9 @@
 use bios_basic::{
     rbum::{
-        dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq, RbumRelFilterReq},
+        dto::{
+            rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq, RbumRelFilterReq},
+            rbum_rel_dto::RbumRelBoneResp,
+        },
         helper::rbum_scope_helper,
         rbum_enumeration::RbumRelFromKind,
         serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ, rbum_rel_serv::RbumRelServ},
@@ -60,6 +63,7 @@ impl PluginKindServ {
             Some(add_req.kind_id.clone()),
             false,
             true,
+            add_req.attrs.clone(),
             funs,
             ctx,
         )
@@ -107,7 +111,7 @@ impl PluginKindServ {
         .await?;
         let mut kind_aggs = Vec::new();
         for kind in kinds {
-            if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
+            if let Some(rel_bind) = PluginRelServ::find_from_rels(
                 &PluginAppBindRelKind::PluginAppBindKind,
                 &RbumRelFromKind::Item,
                 app_tenant_id,
@@ -121,12 +125,22 @@ impl PluginKindServ {
             .await?
             .first()
             {
-                match PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await {
+                match PluginRelServ::get_rel(&rel_bind.rel.to_rbum_item_id, funs, ctx).await {
                     Ok(rel) => {
-                        let rel_bs = PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await?;
+                        let mut rel_bs = PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await?;
+                        if let Some(mut rel) = rel_bs.rel.clone() {
+                            let mut new_attrs = rel_bind.attrs.clone();
+                            rel.attrs.iter().for_each(|r| {
+                                if rel_bind.attrs.iter().find(|e| e.name.eq_ignore_ascii_case(&r.name)).is_none() {
+                                    new_attrs.push(r.clone());
+                                }
+                            });
+                            rel.attrs = new_attrs;
+                            rel_bs.rel = Some(rel);
+                        }
                         kind_aggs.push(PluginKindAggResp {
                             kind: kind.clone(),
-                            rel_bind: Some(rel_bind.clone()),
+                            rel_bind: Some(RbumRelBoneResp::new(rel_bind.rel.clone(), true)),
                             rel_bs: Some(rel_bs),
                         });
                     }
