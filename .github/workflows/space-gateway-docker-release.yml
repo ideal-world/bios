@@ -26,6 +26,9 @@ jobs:
       - name: Cache rust
         uses: Swatinem/rust-cache@v2
 
+      - name: Pin csrf to 0.4.1
+        run: cargo update -p csrf --precise 0.4.1
+
       - name: Check format
         run: cargo fmt -p bios-spacegate --check
 
