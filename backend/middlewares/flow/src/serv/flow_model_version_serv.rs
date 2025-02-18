@@ -130,18 +130,20 @@ impl
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &FlowModelVersionModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<flow_model_version::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &FlowModelVersionModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<flow_model_version::ActiveModel>> {
         if modify_req.init_state_id.is_none() && modify_req.status.is_none() {
             return Ok(None);
         }
         let mut flow_mode_version = flow_model_version::ActiveModel {
             id: Set(id.to_string()),
+            update_time: Set(Utc::now()),
             ..Default::default()
         };
         if let Some(status) = &modify_req.status {
             flow_mode_version.status = Set(status.clone());
-            if *status != FlowModelVesionState::Disabled {
-                flow_mode_version.update_time = Set(Utc::now());
+            if *status == FlowModelVesionState::Enabled {
+                flow_mode_version.publish_by = Set(Some(ctx.owner.clone()));
+                flow_mode_version.publish_time = Set(Some(Utc::now()));
             }
         }
         if let Some(init_state_id) = &modify_req.init_state_id {
@@ -230,6 +232,8 @@ impl
             .column((flow_model_version::Entity, flow_model_version::Column::CreateTime))
             .column((flow_model_version::Entity, flow_model_version::Column::UpdateBy))
             .column((flow_model_version::Entity, flow_model_version::Column::UpdateTime))
+            .column((flow_model_version::Entity, flow_model_version::Column::PublishBy))
+            .column((flow_model_version::Entity, flow_model_version::Column::PublishTime))
             .expr_as(Expr::val(json! {()}), Alias::new("states"));
 
         if let Some(own_paths) = filter.own_paths.clone() {

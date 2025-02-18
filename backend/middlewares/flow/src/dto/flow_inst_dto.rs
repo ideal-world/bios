@@ -241,6 +241,7 @@ pub struct FlowInstArtifacts {
     pub curr_operators: Option<Vec<String>>,                            // 当前操作人
     pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
+    pub referral_map: HashMap<String, Vec<String>>,                     // 当前转审映射 key: 代操作用户, value: 主操作用户
     pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
@@ -264,6 +265,8 @@ pub struct FlowInstArtifactsModifyReq {
     pub prev_non_auto_account_id: Option<String>,                      // 上一个节点操作人ID
     pub curr_approval_total: Option<usize>,                            // 当前审批总数
     pub curr_vars: Option<HashMap<String, Value>>,                     // 当前参数列表
+    pub add_referral_map: Option<(String, Vec<String>)>,               // 修改转审映射
+    pub remove_referral_map: Option<String>,                           // 删除转审映射
 }
 
 /// 审批结果类型
@@ -416,7 +419,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
 /// 流转请求
 #[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferReq {
-    /// 工作流实例ID
+    /// 工作流实例ID 
     pub flow_transition_id: String,
     /// 消息内容
     pub message: Option<String>,
@@ -489,7 +492,7 @@ pub struct FlowInstOperateReq {
     /// 日志文本
     pub log_text: Option<String>,
 }
-
+ 
 /// 工作流实例过滤器
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]

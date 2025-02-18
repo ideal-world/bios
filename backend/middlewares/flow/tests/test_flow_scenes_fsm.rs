@@ -19,7 +19,7 @@ use bios_mw_flow::dto::flow_model_version_dto::{
     FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
 };
 use bios_mw_flow::dto::flow_state_dto::{
-    FLowStateIdAndName, FLowStateKindConf, FlowStateAddReq, FlowStateAggResp, FlowStateForm, FlowStateKind, FlowStateModifyReq, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowStatusAutoStrategyKind, FlowSysStateKind
+    FLowStateIdAndName, FLowStateKindConf, FlowStateAddReq, FlowStateAggResp, FlowStateApproval, FlowStateCountersignConf, FlowStateCountersignKind, FlowStateForm, FlowStateKind, FlowStateModifyReq, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind
 };
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
@@ -678,6 +678,7 @@ pub async fn test(
     let start_state_id = req_approval_flow_version.states()[0].id.clone();
     let form_autoskip_state_id = TardisFuns::field.nanoid();
     let form_state_id = TardisFuns::field.nanoid();
+    let approval_state_id = TardisFuns::field.nanoid();
     let finish_state_id = req_approval_flow_version.states()[1].id.clone();
     let start_transition_id = req_approval_flow_version.states()[0].transitions[0].id.clone();
     let _: Void = flow_client
@@ -781,10 +782,75 @@ pub async fn test(
                 ]),
                 modify_states: Some(vec![
                     FlowModelVersionModifyState {
-                        id: Some(start_state_id.clone()),
+                        id: Some(form_autoskip_state_id.clone()),
                         modify_transitions: Some(vec![FlowTransitionModifyReq {
                             id: form_autoskip_transition_id.to_string().into(),
                             to_flow_state_id: Some(form_state_id.clone()),
+                            ..Default::default()
+                        }]),
+                        ..Default::default()
+                    }
+                ]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let req_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_approval_flow.edit_version_id)).await;
+    let form_transition_id = &req_approval_flow_version.states().into_iter().find(|state| state.id == form_state_id).unwrap().transitions[0].id;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                bind_states: Some(vec![
+                    FlowModelVersionBindState {
+                        bind_new_state: Some(FlowModelBindNewStateReq {
+                            new_state: FlowStateAddReq {
+                                id: Some(approval_state_id.clone().into()),
+                                name: Some("审批节点".into()),
+                                sys_state: FlowSysStateKind::Progress,
+                                state_kind: Some(FlowStateKind::Approval),
+                                tags: Some(vec![req_approval_flow.tag.clone()]),
+                                main: Some(false),
+                                kind_conf: Some(FLowStateKindConf {
+                                    form: None,
+                                    approval: Some(FlowStateApproval {
+                                        countersign_conf: FlowStateCountersignConf {
+                                            kind: FlowStateCountersignKind::All,
+                                            ..Default::default()
+                                        },
+                                        revoke: true,
+                                        multi_approval_kind: FlowStatusMultiApprovalKind::Orsign,
+                                        pass_btn_name: "通过".to_string(),
+                                        back_btn_name: "退回".to_string(),
+                                        overrule_btn_name: "不通过".to_string(),
+                                        guard_by_creator: true,
+                                        guard_by_his_operators: false,
+                                        guard_by_assigned: false,
+                                        auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
+                                        referral: true,
+                                        ..Default::default()
+                                    }),
+                                }),
+                                ..Default::default()
+                            },
+                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        }),
+                        is_init: false,
+                        add_transitions: Some(vec![FlowTransitionAddReq {
+                            name: Some("提交".into()),
+                            from_flow_state_id: approval_state_id.clone(),
+                            to_flow_state_id: finish_state_id.clone(),
+                            ..Default::default()
+                        }]),
+                        ..Default::default()
+                    },
+                ]),
+                modify_states: Some(vec![
+                    FlowModelVersionModifyState {
+                        id: Some(form_state_id.clone()),
+                        modify_transitions: Some(vec![FlowTransitionModifyReq {
+                            id: form_transition_id.to_string().into(),
+                            to_flow_state_id: Some(approval_state_id.clone()),
                             ..Default::default()
                         }]),
                         ..Default::default()
@@ -859,6 +925,57 @@ pub async fn test(
     let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
     assert_eq!(req_inst2.current_state_id, form_state_id);
     assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 0);
+    // 切换转审操作用户
+    ctx.owner = operator.clone();
+    flow_client.set_auth(&ctx)?;
+    search_client.set_auth(&ctx)?;
+    let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
+    assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 2);
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Referral));
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Submit));
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/inst/{}/operate", req_inst_id2),
+            &FlowInstOperateReq {
+                operate: FlowStateOperatorKind::Submit,
+                operator: None,
+                vars: None,
+                all_vars: None,
+                output_message: None,
+                log_text: None,
+            },
+        )
+        .await;
+    let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
+    assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 1);
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Revoke));
+    // 切回创建人操作
+    ctx.owner = t2_data.accounts[0].clone();
+    flow_client.set_auth(&ctx)?;
+    search_client.set_auth(&ctx)?;
+    let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
+    assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 4);
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Referral));
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Back));
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Pass));
+    assert!(req_inst2.current_state_conf.clone().unwrap().operators.contains_key(&FlowStateOperatorKind::Overrule));
+    let _: Void = flow_client
+        .post(
+            &format!("/cc/inst/{}/operate", req_inst_id2),
+            &FlowInstOperateReq {
+                operate: FlowStateOperatorKind::Pass,
+                operator: None,
+                vars: None,
+                all_vars: None,
+                output_message: None,
+                log_text: None,
+            },
+        )
+        .await;
+    let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
+    assert_eq!(req_inst2.current_state_id, finish_state_id);
+    assert!(req_inst2.current_state_conf.is_none());
+
     Ok(())
 }
 

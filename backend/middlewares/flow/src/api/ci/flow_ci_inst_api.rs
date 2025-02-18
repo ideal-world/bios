@@ -14,9 +14,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
-    FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
-    FlowInstTransitionInfo, FlowOperationContext,
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -287,6 +285,20 @@ impl FlowCiInstApi {
     async fn sync_status(&self, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
         FlowInstServ::sync_status(&funs).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// operate flow instance
+    ///
+    /// 执行实例的操作
+    #[oai(path = "/:flow_inst_id/operate", method = "post")]
+    async fn operate(&self, flow_inst_id: Path<String>, operate_req: Json<FlowInstOperateReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        funs.begin().await?;
+        FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }
