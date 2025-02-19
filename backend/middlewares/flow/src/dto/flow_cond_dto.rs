@@ -49,6 +49,8 @@ impl BasicQueryCondInfo {
                                 cond.value.as_i64().unwrap_or(0) < check_val.as_i64().unwrap_or(0)
                             } else if cond.value.is_u64() && check_val.is_u64() {
                                 cond.value.as_u64().unwrap_or(0) < check_val.as_u64().unwrap_or(0)
+                            } else if cond.value.is_string() && check_val.is_string() {
+                                cond.value.as_str().unwrap_or("") < check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
@@ -60,6 +62,8 @@ impl BasicQueryCondInfo {
                                 cond.value.as_i64().unwrap_or(0) <= check_val.as_i64().unwrap_or(0)
                             } else if cond.value.is_u64() && check_val.is_u64() {
                                 cond.value.as_u64().unwrap_or(0) <= check_val.as_u64().unwrap_or(0)
+                            } else if cond.value.is_string() && check_val.is_string() {
+                                cond.value.as_str().unwrap_or("") <= check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
@@ -71,6 +75,8 @@ impl BasicQueryCondInfo {
                                 cond.value.as_i64().unwrap_or(0) > check_val.as_i64().unwrap_or(0)
                             } else if cond.value.is_u64() && check_val.is_u64() {
                                 cond.value.as_u64().unwrap_or(0) > check_val.as_u64().unwrap_or(0)
+                            } else if cond.value.is_string() && check_val.is_string() {
+                                cond.value.as_str().unwrap_or("") > check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
@@ -82,18 +88,16 @@ impl BasicQueryCondInfo {
                                 cond.value.as_i64().unwrap_or(0) >= check_val.as_i64().unwrap_or(0)
                             } else if cond.value.is_u64() && check_val.is_u64() {
                                 cond.value.as_u64().unwrap_or(0) >= check_val.as_u64().unwrap_or(0)
+                            } else if cond.value.is_string() && check_val.is_string() {
+                                cond.value.as_str().unwrap_or("") >= check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
-                        BasicQueryOpKind::Like
-                        | BasicQueryOpKind::LLike
-                        | BasicQueryOpKind::RLike => {
+                        BasicQueryOpKind::Like | BasicQueryOpKind::LLike | BasicQueryOpKind::RLike => {
                             check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
                         }
-                        BasicQueryOpKind::NotLike
-                        | BasicQueryOpKind::NotLLike
-                        | BasicQueryOpKind::NotRLike => {
+                        BasicQueryOpKind::NotLike | BasicQueryOpKind::NotLLike | BasicQueryOpKind::NotRLike => {
                             check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| !check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
                         }
                         BasicQueryOpKind::In => check_val
@@ -112,9 +116,24 @@ impl BasicQueryCondInfo {
                                     cond.value == *check_val
                                 }
                             }),
-                        BasicQueryOpKind::NotIn => check_val.as_array().map(|check_val_arr| check_val_arr.contains(&cond.value)).unwrap_or(false),
+                        BasicQueryOpKind::NotIn => check_val
+                            .as_array()
+                            .map(|check_val_arr| {
+                                if cond.value.is_array() {
+                                    !cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
+                                } else {
+                                    !check_val_arr.contains(&cond.value)
+                                }
+                            })
+                            .unwrap_or({
+                                if cond.value.is_array() {
+                                    !cond.value.as_array().unwrap_or(&vec![]).contains(check_val)
+                                } else {
+                                    cond.value != *check_val
+                                }
+                            }),
                         BasicQueryOpKind::IsNull => false,
-                        BasicQueryOpKind::IsNotNull => false,
+                        BasicQueryOpKind::IsNotNull => true,
                         BasicQueryOpKind::IsNullOrEmpty => false,
                     },
                     None => cond.op == BasicQueryOpKind::IsNullOrEmpty || cond.op == BasicQueryOpKind::IsNull,

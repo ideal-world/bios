@@ -5,7 +5,10 @@ use tardis::web::poem_openapi::{
     types::{ParseFromJSON, ToJSON},
 };
 
-use super::{flow_state_dto::{FlowGuardConf, FlowSysStateKind}, flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind};
+use super::{
+    flow_state_dto::{FlowGuardConf, FlowSysStateKind},
+    flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind,
+};
 
 /// External data exchange requests
 ///

@@ -101,6 +101,7 @@ impl FlowCcModelVersionApi {
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
+        desc_by_publish: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<TardisPage<FlowModelVersionDetailResp>> {
@@ -116,6 +117,7 @@ impl FlowCcModelVersionApi {
                 },
                 rel_model_ids: rel_model_id.0.map(|rel_model_id| vec![rel_model_id]),
                 status: Some(status.0.map_or(vec![FlowModelVesionState::Enabled, FlowModelVesionState::Disabled], |status| vec![status])),
+                desc_by_publish: desc_by_publish.0,
                 ..Default::default()
             },
             page_number.0,

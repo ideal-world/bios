@@ -12,7 +12,7 @@ use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
 #[cfg(feature = "event")]
-use super::event_client::{mq_error, mq_client_node_opt, EventAttributeExt, EventCenterClient, SPI_RPC_TOPIC};
+use super::event_client::{mq_client_node_opt, mq_error, EventAttributeExt, EventCenterClient, SPI_RPC_TOPIC};
 use super::spi_kv_client::SpiKvClient;
 
 pub struct SpiSearchClient;

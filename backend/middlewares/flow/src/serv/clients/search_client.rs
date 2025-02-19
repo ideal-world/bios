@@ -36,7 +36,7 @@ pub struct FlowSearchClient;
 impl FlowSearchClient {
     pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, ext: Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = Self::get_tag_search_map();
-        if let Some(table) = tag_search_map.get(tag) {
+        if let Some((table, _kind)) = tag_search_map.get(tag) {
             SpiSearchClient::modify_item_and_name(
                 table,
                 rel_business_obj_id,
@@ -386,18 +386,18 @@ impl FlowSearchClient {
         Ok(result)
     }
 
-    pub fn get_tag_search_map() -> HashMap<String, String> {
+    pub fn get_tag_search_map() -> HashMap<String, (String, String)> {
         HashMap::from([
-            ("CTS".to_string(), "idp_test".to_string()),
-            ("ISSUE".to_string(), "idp_test".to_string()),
-            ("ITER".to_string(), "idp_project".to_string()),
-            ("MS".to_string(), "idp_project".to_string()),
-            ("PROJ".to_string(), "idp_project".to_string()),
-            ("REQ".to_string(), "idp_project".to_string()),
-            ("TASK".to_string(), "idp_project".to_string()),
-            ("TICKET".to_string(), "ticket".to_string()),
-            ("TP".to_string(), "idp_test".to_string()),
-            ("TS".to_string(), "idp_test".to_string()),
+            ("CTS".to_string(), ("idp_test".to_string(), "idp_test_cts".to_string())),
+            ("ISSUE".to_string(), ("idp_test".to_string(), "idp_test_issue".to_string())),
+            ("ITER".to_string(), ("idp_project".to_string(), "idp_feed_iter".to_string())),
+            ("MS".to_string(), ("idp_project".to_string(), "idp_feed_ms".to_string())),
+            ("PROJ".to_string(), ("idp_project".to_string(), "idp_project".to_string())),
+            ("REQ".to_string(), ("idp_project".to_string(), "idp_feed_req".to_string())),
+            ("TASK".to_string(), ("idp_project".to_string(), "idp_feed_task".to_string())),
+            ("TICKET".to_string(), ("ticket".to_string(), "ticket_inst".to_string())),
+            ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
+            ("TS".to_string(), ("idp_test".to_string(), "idp_test_stage".to_string())),
         ])
     }
 }

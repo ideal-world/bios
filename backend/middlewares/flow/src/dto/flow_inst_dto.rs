@@ -241,7 +241,7 @@ pub struct FlowInstArtifacts {
     pub curr_operators: Option<Vec<String>>,                            // 当前操作人
     pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
-    pub referral_map: HashMap<String, Vec<String>>,                     // 当前转审映射 key: 代操作用户, value: 主操作用户
+    pub referral_map: HashMap<String, HashMap<String, Vec<String>>>,    // 当前转审映射 key: 代操作用户, value: 主操作用户
     pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
@@ -267,6 +267,7 @@ pub struct FlowInstArtifactsModifyReq {
     pub curr_vars: Option<HashMap<String, Value>>,                     // 当前参数列表
     pub add_referral_map: Option<(String, Vec<String>)>,               // 修改转审映射
     pub remove_referral_map: Option<String>,                           // 删除转审映射
+    pub clear_referral_map: Option<String>,                            // 清除转审映射信息
 }
 
 /// 审批结果类型
@@ -419,7 +420,7 @@ pub struct FlowInstFindStateAndTransitionsResp {
 /// 流转请求
 #[derive(Serialize, Deserialize, Clone, Debug, poem_openapi::Object)]
 pub struct FlowInstTransferReq {
-    /// 工作流实例ID 
+    /// 工作流实例ID
     pub flow_transition_id: String,
     /// 消息内容
     pub message: Option<String>,
@@ -492,7 +493,7 @@ pub struct FlowInstOperateReq {
     /// 日志文本
     pub log_text: Option<String>,
 }
- 
+
 /// 工作流实例过滤器
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
@@ -569,62 +570,10 @@ pub struct FlowInstCommentReq {
     pub parent_owner: Option<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct FlowInstSearchReq {
-    // Search conditions
-    pub query: FlowInstFilterReq,
-    // Advanced search
-    pub query_kind: Option<Vec<FlowInstQueryKind>>,
-    // Sort
-    // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
-    pub sort: Option<Vec<FlowInstSearchSortReq>>,
-    pub page: FlowInstSearchPageReq,
-}
-
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Eq, Hash, PartialEq, Clone)]
-pub enum FlowInstQueryKind {
-    /// 待录入
-    Form,
-    /// 待审批
-    Approval,
-    /// 我创建的
-    Create,
-    /// 历史相关
-    History,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
-pub struct FlowInstSearchPageReq {
-    pub number: u32,
-    pub size: u16,
-    // Get the total number of matching records.
-    // When the record set is very large, it will seriously affect the performance. It is not recommended to open it.
-    pub fetch_total: bool,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
-pub struct FlowInstSearchSortReq {
-    pub in_field: Option<String>,
-    #[oai(validator(min_length = "2"))]
-    pub field: String,
-    pub order: FlowInstSearchSortKind,
-}
-
-#[derive(poem_openapi::Enum, Serialize, Deserialize, Debug, Clone)]
-pub enum FlowInstSearchSortKind {
-    #[oai(rename = "asc")]
-    Asc,
-    #[oai(rename = "desc")]
-    Desc,
-}
-
-impl FlowInstSearchSortKind {
-    pub fn to_sql(&self) -> String {
-        match self {
-            FlowInstSearchSortKind::Asc => "ASC".to_string(),
-            FlowInstSearchSortKind::Desc => "DESC".to_string(),
-        }
-    }
+/// 批量检查
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstBatchCheckAuthReq {
+    pub flow_inst_ids: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
@@ -642,50 +591,4 @@ pub enum FlowInstStateKind {
     Pass,
     /// 审批拒绝
     Overrule,
-}
-
-/// 工作流实例的概要信息
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowInstSearchResp {
-    pub id: String,
-
-    pub state: Option<String>,
-
-    pub code: String,
-    /// Associated [flow_model](super::flow_model_version_dto::FlowModelVersionDetailResp) id
-    ///
-    /// 关联的[工作流模板](super::flow_model_version_dto::FlowModelVersionDetailResp) id
-    pub rel_flow_version_id: String,
-    /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
-    ///
-    /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
-    pub rel_flow_model_id: String,
-    /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) name
-    ///
-    /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
-    pub rel_flow_model_name: String,
-    /// 关联业务ID
-    pub rel_business_obj_id: String,
-    /// 当前状态ID
-    pub current_state_id: String,
-    /// 当前状态名
-    pub current_state_name: String,
-    /// 创建上下文信息
-    pub create_ctx: FlowOperationContext,
-    /// 创建时间
-    pub create_time: DateTime<Utc>,
-    /// 结束上下文信息
-    pub finish_ctx: Option<FlowOperationContext>,
-    /// 结束时间
-    pub finish_time: Option<DateTime<Utc>>,
-    /// 是否异常终止
-    pub finish_abort: bool,
-    /// 输出信息
-    pub output_message: Option<String>,
-    /// 触发的动作
-    pub rel_transition: Option<FlowModelRelTransitionExt>,
-
-    pub own_paths: String,
-
-    pub tag: String,
 }
