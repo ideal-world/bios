@@ -17,7 +17,7 @@ use tardis::{
 };
 
 #[cfg(feature = "event")]
-use super::event_client::{mq_error, mq_client_node_opt, EventAttributeExt, SPI_RPC_TOPIC};
+use super::event_client::{mq_client_node_opt, mq_error, EventAttributeExt, SPI_RPC_TOPIC};
 use super::iam_client::IamClient;
 
 #[cfg(feature = "event")]

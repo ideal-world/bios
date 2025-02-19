@@ -14,7 +14,7 @@ use tardis::{
     db::sea_orm::{
         prelude::Expr,
         sea_query::{Alias, SelectStatement},
-        EntityName, Set,
+        EntityName, Order, Set,
     },
     futures::future::join_all,
     serde_json::json,
@@ -130,7 +130,12 @@ impl
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &FlowModelVersionModifyReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<flow_model_version::ActiveModel>> {
+    async fn package_ext_modify(
+        id: &str,
+        modify_req: &FlowModelVersionModifyReq,
+        _: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Option<flow_model_version::ActiveModel>> {
         if modify_req.init_state_id.is_none() && modify_req.status.is_none() {
             return Ok(None);
         }
@@ -244,6 +249,12 @@ impl
         }
         if let Some(rel_model_ids) = filter.rel_model_ids.clone() {
             query.and_where(Expr::col((flow_model_version::Entity, flow_model_version::Column::RelModelId)).is_in(rel_model_ids));
+        }
+        if let Some(sort) = filter.desc_by_publish {
+            query.order_by(
+                (flow_model_version::Entity, flow_model_version::Column::PublishTime),
+                if sort { Order::Desc } else { Order::Asc },
+            );
         }
 
         Ok(())

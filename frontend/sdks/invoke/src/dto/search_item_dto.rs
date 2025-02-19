@@ -143,8 +143,10 @@ pub struct SearchItemSearchSortReq {
 
 #[derive(poem_openapi::Enum, Serialize, Deserialize, Debug, Clone)]
 pub enum SearchItemSearchSortKind {
+    #[serde(rename = "asc")]
     #[oai(rename = "asc")]
     Asc,
+    #[serde(rename = "desc")]
     #[oai(rename = "desc")]
     Desc,
 }

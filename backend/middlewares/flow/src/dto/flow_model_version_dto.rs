@@ -182,6 +182,8 @@ pub struct FlowModelVersionFilterReq {
     /// 关联模型ID
     pub rel_model_ids: Option<Vec<String>>,
 
+    pub desc_by_publish: Option<bool>,
+
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
 }

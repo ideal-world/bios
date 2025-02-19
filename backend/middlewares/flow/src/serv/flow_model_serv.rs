@@ -394,7 +394,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             }
         }
         if modify_req.status == Some(FlowModelStatus::Enabled) && model_detail.current_version_id.is_empty() {
-            return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow_model-prohibit-enabled"));
+            return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow-model-prohibit-enabled"));
         }
         if let Some(rel_template_ids) = &modify_req.rel_template_ids {
             join_all(
@@ -518,7 +518,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .await?
         .is_empty()
         {
-            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
         }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
 
