@@ -2772,6 +2772,10 @@ impl FlowInstServ {
     }
 
     pub async fn sync_status(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        pub struct FlowInstResult {
+            id: String,
+            state: String,
+        }
         let mut page_num = 1;
         let page_size = 50;
         loop {
@@ -2804,33 +2808,42 @@ impl FlowInstServ {
                 .await?
                 {
                     finish = false;
-                    let inst_ids = search_result
+                    let insts = search_result
                         .records
                         .iter()
-                        .map(|record| record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default())
-                        .filter(|record| !record.is_empty())
+                        .map(|record| {
+                            FlowInstResult {
+                                id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                                state: record.ext.get("state").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                            }
+                        })
+                        .filter(|record| !record.id.is_empty())
                         .collect_vec();
-                    if !inst_ids.is_empty() {
-                        let flow_insts = Self::find_detail(inst_ids, None, None, funs, ctx).await?;
+                    if !insts.is_empty() {
+                        let flow_insts = Self::find_detail(insts.iter().map(|inst| inst.id.clone()).collect_vec(), None, None, funs, ctx).await?;
                         join_all(
                             flow_insts
                                 .iter()
                                 .map(|flow_inst| async {
                                     if let Some(current_state_name) = &flow_inst.current_state_name {
-                                        let ctx = TardisContext {
-                                            own_paths: flow_inst.own_paths.clone(),
-                                            ..Default::default()
-                                        };
-                                        FlowSearchClient::modify_business_obj_search(
-                                            &flow_inst.rel_business_obj_id,
-                                            &flow_inst.tag,
-                                            json!({
-                                                "status": current_state_name,
-                                            }),
-                                            funs,
-                                            &ctx,
-                                        )
-                                        .await
+                                        if *current_state_name != insts.iter().find(|inst| inst.id == flow_inst.id).map(|inst| inst.state.clone()).unwrap_or_default() {
+                                            let ctx = TardisContext {
+                                                own_paths: flow_inst.own_paths.clone(),
+                                                ..Default::default()
+                                            };
+                                            FlowSearchClient::modify_business_obj_search(
+                                                &flow_inst.rel_business_obj_id,
+                                                &flow_inst.tag,
+                                                json!({
+                                                    "status": current_state_name,
+                                                }),
+                                                funs,
+                                                &ctx,
+                                            )
+                                            .await
+                                        } else {
+                                            Ok(())
+                                        }
                                     } else {
                                         Ok(())
                                     }
