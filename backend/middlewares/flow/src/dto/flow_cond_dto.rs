@@ -33,62 +33,57 @@ impl BasicQueryCondInfo {
     pub fn check_or_and_conds(conds: &[Vec<BasicQueryCondInfo>], check_vars: &HashMap<String, Value>) -> TardisResult<bool> {
         let is_match = conds.iter().any(|and_conds| {
             and_conds.iter().all(|cond| {
-                let field_key = if cond.field.contains("custom_") {
-                    cond.field[7..cond.field.len()].to_string()
-                } else {
-                    cond.field.clone()
-                };
-                match check_vars.get(&field_key) {
+                match check_vars.get(&cond.field) {
                     Some(check_val) => match &cond.op {
                         BasicQueryOpKind::Eq => &cond.value == check_val,
                         BasicQueryOpKind::Ne => &cond.value != check_val,
                         BasicQueryOpKind::Gt => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) < check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) < check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) < check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) < check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) < check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) < check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") < check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
                         BasicQueryOpKind::Ge => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) <= check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) <= check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) <= check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) <= check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) <= check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) <= check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") <= check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
                         BasicQueryOpKind::Lt => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) > check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) > check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) > check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) > check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) > check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) > check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") > check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
                         BasicQueryOpKind::Le => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) >= check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) >= check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) >= check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) >= check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) >= check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) >= check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") >= check_val.as_str().unwrap_or("")
                             } else {
                                 false
@@ -104,14 +99,22 @@ impl BasicQueryCondInfo {
                             .as_array()
                             .map(|check_val_arr| {
                                 if cond.value.is_array() {
-                                    cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
+                                    cond
+                                        .value
+                                        .as_array()
+                                        .unwrap_or(&vec![]).iter()
+                                        .any(|item| check_val_arr.contains(item))
                                 } else {
                                     check_val_arr.contains(&cond.value)
                                 }
                             })
                             .unwrap_or({
                                 if cond.value.is_array() {
-                                    cond.value.as_array().unwrap_or(&vec![]).contains(check_val)
+                                    cond
+                                        .value
+                                        .as_array()
+                                        .unwrap_or(&vec![])
+                                        .contains(check_val)
                                 } else {
                                     cond.value == *check_val
                                 }
