@@ -166,7 +166,7 @@ impl EventClient {
         }
         Ok(resp.data.is_some())
     }
-    pub async fn register_user(topic_code: &str, read: bool, write: bool,ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn register_user(topic_code: &str, read: bool, write: bool, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let url = BaseSpiClient::module_url(InvokeModuleKind::Event, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let response = funs.web_client().put_to_obj::<TardisResp<Void>>(&format!("{url}/ci/topic/{topic_code}/register?read={read}&write={write}"), "", headers.clone()).await?;

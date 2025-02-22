@@ -19,7 +19,9 @@ use bios_mw_flow::dto::flow_model_version_dto::{
     FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
 };
 use bios_mw_flow::dto::flow_state_dto::{
-    FLowStateIdAndName, FLowStateKindConf, FlowStateAddReq, FlowStateAggResp, FlowStateApproval, FlowStateCountersignConf, FlowStateCountersignKind, FlowStateForm, FlowStateKind, FlowStateModifyReq, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind
+    FLowStateIdAndName, FLowStateKindConf, FlowStateAddReq, FlowStateAggResp, FlowStateApproval, FlowStateCountersignConf, FlowStateCountersignKind, FlowStateForm, FlowStateKind,
+    FlowStateModifyReq, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind,
+    FlowSysStateKind,
 };
 
 use bios_mw_flow::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
@@ -87,7 +89,7 @@ pub async fn test(
     let processing_state_id = req_states.records[1].id.clone(); // 进行中
     let finish_state_id = req_states.records[2].id.clone(); // 已完成
     let closed_state_id = req_states.records[3].id.clone(); // 已关闭
-    // 2-2. creat flow template
+                                                            // 2-2. creat flow template
     let req_template_id1 = "template_req_1";
     let req_template_id2 = "template_req_2";
     let project_template_id1 = "template_project_1";
@@ -685,37 +687,35 @@ pub async fn test(
         .patch(
             &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
             &FlowModelVersionModifyReq {
-                bind_states: Some(vec![
-                    FlowModelVersionBindState {
-                        bind_new_state: Some(FlowModelBindNewStateReq {
-                            new_state: FlowStateAddReq {
-                                id: Some(form_autoskip_state_id.clone().into()),
-                                name: Some("录入节点".into()),
-                                sys_state: FlowSysStateKind::Progress,
-                                state_kind: Some(FlowStateKind::Form),
-                                tags: Some(vec![req_approval_flow.tag.clone()]),
-                                main: Some(false),
-                                kind_conf: Some(FLowStateKindConf {
-                                    form: Some(FlowStateForm {
-                                        submit_btn_name: "提交".to_string(),
-                                        auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
-                                        ..Default::default()
-                                    }),
-                                    approval: None,
+                bind_states: Some(vec![FlowModelVersionBindState {
+                    bind_new_state: Some(FlowModelBindNewStateReq {
+                        new_state: FlowStateAddReq {
+                            id: Some(form_autoskip_state_id.clone().into()),
+                            name: Some("录入节点".into()),
+                            sys_state: FlowSysStateKind::Progress,
+                            state_kind: Some(FlowStateKind::Form),
+                            tags: Some(vec![req_approval_flow.tag.clone()]),
+                            main: Some(false),
+                            kind_conf: Some(FLowStateKindConf {
+                                form: Some(FlowStateForm {
+                                    submit_btn_name: "提交".to_string(),
+                                    auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
+                                    ..Default::default()
                                 }),
-                                ..Default::default()
-                            },
-                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
-                        }),
-                        add_transitions: Some(vec![FlowTransitionAddReq {
-                            name: Some("提交".into()),
-                            from_flow_state_id: form_autoskip_state_id.clone(),
-                            to_flow_state_id: finish_state_id.clone(),
+                                approval: None,
+                            }),
                             ..Default::default()
-                        }]),
+                        },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                    }),
+                    add_transitions: Some(vec![FlowTransitionAddReq {
+                        name: Some("提交".into()),
+                        from_flow_state_id: form_autoskip_state_id.clone(),
+                        to_flow_state_id: finish_state_id.clone(),
                         ..Default::default()
-                    },
-                ]),
+                    }]),
+                    ..Default::default()
+                }]),
                 modify_states: Some(vec![
                     FlowModelVersionModifyState {
                         id: Some(start_state_id.clone()),
@@ -746,51 +746,47 @@ pub async fn test(
         .patch(
             &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
             &FlowModelVersionModifyReq {
-                bind_states: Some(vec![
-                    FlowModelVersionBindState {
-                        bind_new_state: Some(FlowModelBindNewStateReq {
-                            new_state: FlowStateAddReq {
-                                id: Some(form_state_id.clone().into()),
-                                name: Some("录入节点".into()),
-                                sys_state: FlowSysStateKind::Progress,
-                                state_kind: Some(FlowStateKind::Form),
-                                tags: Some(vec![req_approval_flow.tag.clone()]),
-                                main: Some(false),
-                                kind_conf: Some(FLowStateKindConf {
-                                    form: Some(FlowStateForm {
-                                        guard_by_creator: true,
-                                        guard_by_assigned: true,
-                                        submit_btn_name: "提交".to_string(),
-                                        auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
-                                        referral: true,
-                                        ..Default::default()
-                                    }),
-                                    approval: None,
+                bind_states: Some(vec![FlowModelVersionBindState {
+                    bind_new_state: Some(FlowModelBindNewStateReq {
+                        new_state: FlowStateAddReq {
+                            id: Some(form_state_id.clone().into()),
+                            name: Some("录入节点".into()),
+                            sys_state: FlowSysStateKind::Progress,
+                            state_kind: Some(FlowStateKind::Form),
+                            tags: Some(vec![req_approval_flow.tag.clone()]),
+                            main: Some(false),
+                            kind_conf: Some(FLowStateKindConf {
+                                form: Some(FlowStateForm {
+                                    guard_by_creator: true,
+                                    guard_by_assigned: true,
+                                    submit_btn_name: "提交".to_string(),
+                                    auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
+                                    referral: true,
+                                    ..Default::default()
                                 }),
-                                ..Default::default()
-                            },
-                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
-                        }),
-                        add_transitions: Some(vec![FlowTransitionAddReq {
-                            name: Some("提交".into()),
-                            from_flow_state_id: form_state_id.clone(),
-                            to_flow_state_id: finish_state_id.clone(),
+                                approval: None,
+                            }),
                             ..Default::default()
-                        }]),
+                        },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                    }),
+                    add_transitions: Some(vec![FlowTransitionAddReq {
+                        name: Some("提交".into()),
+                        from_flow_state_id: form_state_id.clone(),
+                        to_flow_state_id: finish_state_id.clone(),
                         ..Default::default()
-                    },
-                ]),
-                modify_states: Some(vec![
-                    FlowModelVersionModifyState {
-                        id: Some(form_autoskip_state_id.clone()),
-                        modify_transitions: Some(vec![FlowTransitionModifyReq {
-                            id: form_autoskip_transition_id.to_string().into(),
-                            to_flow_state_id: Some(form_state_id.clone()),
-                            ..Default::default()
-                        }]),
+                    }]),
+                    ..Default::default()
+                }]),
+                modify_states: Some(vec![FlowModelVersionModifyState {
+                    id: Some(form_autoskip_state_id.clone()),
+                    modify_transitions: Some(vec![FlowTransitionModifyReq {
+                        id: form_autoskip_transition_id.to_string().into(),
+                        to_flow_state_id: Some(form_state_id.clone()),
                         ..Default::default()
-                    }
-                ]),
+                    }]),
+                    ..Default::default()
+                }]),
                 ..Default::default()
             },
         )
@@ -801,61 +797,57 @@ pub async fn test(
         .patch(
             &format!("/cc/model_version/{}", req_approval_flow.edit_version_id),
             &FlowModelVersionModifyReq {
-                bind_states: Some(vec![
-                    FlowModelVersionBindState {
-                        bind_new_state: Some(FlowModelBindNewStateReq {
-                            new_state: FlowStateAddReq {
-                                id: Some(approval_state_id.clone().into()),
-                                name: Some("审批节点".into()),
-                                sys_state: FlowSysStateKind::Progress,
-                                state_kind: Some(FlowStateKind::Approval),
-                                tags: Some(vec![req_approval_flow.tag.clone()]),
-                                main: Some(false),
-                                kind_conf: Some(FLowStateKindConf {
-                                    form: None,
-                                    approval: Some(FlowStateApproval {
-                                        countersign_conf: FlowStateCountersignConf {
-                                            kind: FlowStateCountersignKind::All,
-                                            ..Default::default()
-                                        },
-                                        revoke: true,
-                                        multi_approval_kind: FlowStatusMultiApprovalKind::Orsign,
-                                        pass_btn_name: "通过".to_string(),
-                                        back_btn_name: "退回".to_string(),
-                                        overrule_btn_name: "不通过".to_string(),
-                                        guard_by_creator: true,
-                                        guard_by_his_operators: false,
-                                        guard_by_assigned: false,
-                                        auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
-                                        referral: true,
+                bind_states: Some(vec![FlowModelVersionBindState {
+                    bind_new_state: Some(FlowModelBindNewStateReq {
+                        new_state: FlowStateAddReq {
+                            id: Some(approval_state_id.clone().into()),
+                            name: Some("审批节点".into()),
+                            sys_state: FlowSysStateKind::Progress,
+                            state_kind: Some(FlowStateKind::Approval),
+                            tags: Some(vec![req_approval_flow.tag.clone()]),
+                            main: Some(false),
+                            kind_conf: Some(FLowStateKindConf {
+                                form: None,
+                                approval: Some(FlowStateApproval {
+                                    countersign_conf: FlowStateCountersignConf {
+                                        kind: FlowStateCountersignKind::All,
                                         ..Default::default()
-                                    }),
+                                    },
+                                    revoke: true,
+                                    multi_approval_kind: FlowStatusMultiApprovalKind::Orsign,
+                                    pass_btn_name: "通过".to_string(),
+                                    back_btn_name: "退回".to_string(),
+                                    overrule_btn_name: "不通过".to_string(),
+                                    guard_by_creator: true,
+                                    guard_by_his_operators: false,
+                                    guard_by_assigned: false,
+                                    auto_transfer_when_empty_kind: Some(FlowStatusAutoStrategyKind::Autoskip),
+                                    referral: true,
+                                    ..Default::default()
                                 }),
-                                ..Default::default()
-                            },
-                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
-                        }),
-                        is_init: false,
-                        add_transitions: Some(vec![FlowTransitionAddReq {
-                            name: Some("提交".into()),
-                            from_flow_state_id: approval_state_id.clone(),
-                            to_flow_state_id: finish_state_id.clone(),
+                            }),
                             ..Default::default()
-                        }]),
+                        },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                    }),
+                    is_init: false,
+                    add_transitions: Some(vec![FlowTransitionAddReq {
+                        name: Some("提交".into()),
+                        from_flow_state_id: approval_state_id.clone(),
+                        to_flow_state_id: finish_state_id.clone(),
                         ..Default::default()
-                    },
-                ]),
-                modify_states: Some(vec![
-                    FlowModelVersionModifyState {
-                        id: Some(form_state_id.clone()),
-                        modify_transitions: Some(vec![FlowTransitionModifyReq {
-                            id: form_transition_id.to_string().into(),
-                            to_flow_state_id: Some(approval_state_id.clone()),
-                            ..Default::default()
-                        }]),
+                    }]),
+                    ..Default::default()
+                }]),
+                modify_states: Some(vec![FlowModelVersionModifyState {
+                    id: Some(form_state_id.clone()),
+                    modify_transitions: Some(vec![FlowTransitionModifyReq {
+                        id: form_transition_id.to_string().into(),
+                        to_flow_state_id: Some(approval_state_id.clone()),
                         ..Default::default()
-                    }
-                ]),
+                    }]),
+                    ..Default::default()
+                }]),
                 ..Default::default()
             },
         )

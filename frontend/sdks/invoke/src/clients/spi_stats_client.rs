@@ -12,7 +12,7 @@ use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
 #[cfg(feature = "event")]
-use super::event_client::{mq_error, mq_client_node_opt, EventAttributeExt as _, SPI_RPC_TOPIC};
+use super::event_client::{mq_client_node_opt, mq_error, EventAttributeExt as _, SPI_RPC_TOPIC};
 
 #[cfg(feature = "event")]
 pub mod event {

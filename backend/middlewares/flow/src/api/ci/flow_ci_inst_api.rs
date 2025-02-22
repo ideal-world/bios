@@ -14,7 +14,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
+    FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstTransitionInfo, FlowOperationContext,
 };
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -282,9 +284,9 @@ impl FlowCiInstApi {
     ///
     /// 同步状态信息
     #[oai(path = "/status/sync", method = "get")]
-    async fn sync_status(&self, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    async fn sync_status(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
-        FlowInstServ::sync_status(&funs).await?;
+        FlowInstServ::sync_status(&funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 

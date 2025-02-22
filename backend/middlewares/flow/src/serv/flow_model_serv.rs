@@ -394,7 +394,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             }
         }
         if modify_req.status == Some(FlowModelStatus::Enabled) && model_detail.current_version_id.is_empty() {
-            return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow_model-prohibit-enabled"));
+            return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow-model-prohibit-enabled"));
         }
         if let Some(rel_template_ids) = &modify_req.rel_template_ids {
             join_all(
@@ -518,7 +518,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         .await?
         .is_empty()
         {
-            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow_model-prohibit-delete"));
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
         }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
 
@@ -1234,122 +1234,6 @@ impl FlowModelServ {
         Ok(result)
     }
 
-    /// 创建或引用模型
-    /// params:
-    /// rel_model_id：关联模型ID
-    /// rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）
-    /// rel_own_paths: 绑定实例ID（仅在引用且不创建模型时生效）
-    /// （rel_model_id：关联模型ID, rel_template_id: 绑定模板ID,可选参数（仅在创建模型，即创建副本或op为复制时生效）, op：关联模型操作类型（复制或者引用），is_create_copy：是否创建副本（当op为复制时需指定，默认不需要））
-    // pub async fn copy_or_reference_model(
-    //     rel_model_id: &str,
-    //     rel_own_paths: Option<String>,
-    //     op: &FlowModelAssociativeOperationKind,
-    //     is_create_copy: Option<bool>,
-    //     funs: &TardisFunsInst,
-    //     ctx: &TardisContext,
-    // ) -> TardisResult<FlowModelAggResp> {
-    //     let mock_ctx = if let Some(own_paths) = rel_own_paths.clone() {
-    //         TardisContext { own_paths, ..ctx.clone() }
-    //     } else {
-    //         ctx.clone()
-    //     };
-    //     let rel_model = FlowModelServ::get_item(
-    //         rel_model_id,
-    //         &FlowModelFilterReq {
-    //             basic: RbumBasicFilterReq {
-    //                 own_paths: Some("".to_string()),
-    //                 with_sub_own_paths: true,
-    //                 ignore_scope: true,
-    //                 ..Default::default()
-    //             },
-    //             ..Default::default()
-    //         },
-    //         funs,
-    //         ctx,
-    //     )
-    //     .await?;
-    //     // .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "copy_or_reference_model", "rel model not found", "404-flow-model-not-found"))?;
-    //     let result = match op {
-    //         FlowModelAssociativeOperationKind::Reference => {
-    //             if is_create_copy.unwrap_or(false) {
-    //                 let mut add_transitions = rel_model.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
-    //                 for add_transition in add_transitions.iter_mut() {
-    //                     if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
-    //                         for action_by_post_change in action_by_post_changes.iter_mut() {
-    //                             action_by_post_change.is_edit = Some(false); // 引用复制时，置为不可编辑
-    //                         }
-    //                     }
-    //                 }
-    //                 Self::add_item(
-    //                     &mut FlowModelAddReq {
-    //                         rel_model_id: Some(rel_model_id.to_string()),
-    //                         rel_template_ids: None,
-    //                         transitions: Some(add_transitions),
-    //                         ..rel_model.clone().into()
-    //                     },
-    //                     funs,
-    //                     &mock_ctx,
-    //                 )
-    //                 .await?
-    //             } else {
-    //                 if let Some(template_id) =
-    //                     FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-    //                 {
-    //                     if !FlowRelServ::exist_rels(
-    //                         &FlowRelKind::FlowAppTemplate,
-    //                         &template_id,
-    //                         Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(),
-    //                         funs,
-    //                         ctx,
-    //                     )
-    //                     .await?
-    //                     {
-    //                         FlowRelServ::add_simple_rel(
-    //                             &FlowRelKind::FlowAppTemplate,
-    //                             Self::get_app_id_by_ctx(&mock_ctx).unwrap_or_default().as_str(),
-    //                             &template_id,
-    //                             None,
-    //                             None,
-    //                             true,
-    //                             true,
-    //                             None,
-    //                             funs,
-    //                             ctx,
-    //                         )
-    //                         .await?;
-    //                     }
-    //                 }
-    //                 rel_model_id.to_string()
-    //             }
-    //         }
-    //         FlowModelAssociativeOperationKind::Copy => {
-    //             Self::add_item(
-    //                 &mut FlowModelAddReq {
-    //                     rel_model_id: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
-    //                         Some(rel_model_id.to_string())
-    //                     } else {
-    //                         None
-    //                     },
-    //                     rel_template_ids: None,
-    //                     template: rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2,
-    //                     scope_level: if rbum_scope_helper::get_scope_level_by_context(&mock_ctx)? != RbumScopeLevelKind::L2 {
-    //                         Some(rel_model.clone().scope_level)
-    //                     } else {
-    //                         None
-    //                     },
-    //                     ..rel_model.clone().into()
-    //                 },
-    //                 funs,
-    //                 &mock_ctx,
-    //             )
-    //             .await?
-    //         }
-    //     };
-    //     let new_model = Self::get_item_detail_aggs(&result, true, funs, ctx).await?;
-
-    //     Ok(new_model)
-    // }
-
     // add or modify model by own_paths
     pub async fn modify_model(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let current_model = Self::get_item(
@@ -1666,7 +1550,7 @@ impl FlowModelServ {
             ..ctx.clone()
         };
         let models = Self::find_rel_model_map(rel_template_id.clone(), true, funs, ctx).await?;
-        let mut non_main_model_ids = vec![];
+        let mut non_main_models = vec![];
         if let Some(rel_template_id) = rel_template_id.clone() {
             let rel_model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, &global_ctx)
                 .await?
@@ -1720,7 +1604,7 @@ impl FlowModelServ {
                 )
                 .await?;
             }
-            non_main_model_ids = Self::find_id_items(
+            non_main_models = Self::find_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         enabled: Some(true),
@@ -1752,8 +1636,13 @@ impl FlowModelServ {
             }
         }
         // clean non-main flow model
-        for model_id in non_main_model_ids {
-            Self::delete_item(&model_id, funs, ctx).await?;
+        for model in non_main_models {
+            if let Some(spec_tags) = spec_tags.clone() {
+                if !spec_tags.contains(&model.tag) {
+                    continue;
+                }
+            }
+            Self::delete_item(&model.id, funs, ctx).await?;
         }
         Ok(models)
     }
