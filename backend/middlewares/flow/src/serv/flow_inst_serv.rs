@@ -2073,9 +2073,13 @@ impl FlowInstServ {
         if let Some(curr_vars) = &modify_artifacts.curr_vars {
             inst_artifacts.curr_vars = Some(curr_vars.clone());
         }
-        if let Some((referral_account_id, master_account_id)) = &modify_artifacts.add_referral_map {
+        if let Some((referral_account_id, master_account_ids)) = &modify_artifacts.add_referral_map {
             let current_referral_map = inst_artifacts.referral_map.entry(inst.current_state_id.clone()).or_default();
-            current_referral_map.entry(referral_account_id.clone()).and_modify(|result| *result = master_account_id.clone()).or_default();
+            let current_referral_account_ids = current_referral_map.entry(referral_account_id.clone()).or_insert(vec![]);
+            current_referral_account_ids.clear();
+            for master_account_id in master_account_ids {
+                current_referral_account_ids.push(master_account_id.clone());
+            }
         }
         if let Some(remove_account_id) = &modify_artifacts.remove_referral_map {
             let current_referral_map = inst_artifacts.referral_map.entry(inst.current_state_id.clone()).or_default();
@@ -2533,7 +2537,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Pass
                 && countersign_conf.specified_pass_guard.unwrap_or(false)
                 && countersign_conf.specified_pass_guard_conf.is_some()
-                && specified_pass_guard_conf.check(ctx)
+                && specified_pass_guard_conf.check(approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default())
             {
                 return Ok(true);
             }
@@ -2541,7 +2545,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Overrule
                 && countersign_conf.specified_overrule_guard.unwrap_or(false)
                 && countersign_conf.specified_overrule_guard_conf.is_some()
-                && specified_overrule_guard_conf.check(ctx)
+                && specified_overrule_guard_conf.check(approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default())
             {
                 return Ok(true);
             }
@@ -2807,14 +2811,16 @@ impl FlowInstServ {
                 )
                 .await?
                 {
-                    finish = false;
+                    if !search_result.records.is_empty() {
+                        finish = false;
+                    }
                     let insts = search_result
                         .records
                         .iter()
                         .map(|record| {
                             FlowInstResult {
                                 id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
-                                state: record.ext.get("state").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                                state: record.ext.get("status").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
                             }
                         })
                         .filter(|record| !record.id.is_empty())

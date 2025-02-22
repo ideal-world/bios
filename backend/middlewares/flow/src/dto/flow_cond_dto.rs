@@ -4,7 +4,10 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use tardis::serde_json::json;
 use strum::Display;
+use tardis::chrono::{DateTime, Utc};
+use tardis::TardisFuns;
 use tardis::{basic::result::TardisResult, serde_json::Value};
 
 use tardis::web::poem_openapi;
@@ -144,6 +147,28 @@ impl BasicQueryCondInfo {
             })
         });
         Ok(is_match)
+    }
+
+    pub fn transfer(original_vars: HashMap<String, Value>) -> TardisResult<HashMap<String, Value>> {
+        let mut result = HashMap::new();
+        for (field, value) in original_vars {
+            if let Some(s) = value.as_str() {
+                if let Ok(t) = s.parse::<DateTime<Utc>>() {
+
+                } else if let Ok(o) = TardisFuns::json.str_to_json(s) {
+                    if o.is_array() {
+
+                    } else {
+                        result.insert(field, json!(o.get("itemId").map(|id| id.as_str().map(|str| str.to_string()).unwrap_or_default()).unwrap_or_default()));
+                    }
+                } else {
+                    result.insert(field, value);
+                }
+            } else {
+                result.insert(field, value);
+            }
+        }
+        Ok(result)
     }
 }
 
