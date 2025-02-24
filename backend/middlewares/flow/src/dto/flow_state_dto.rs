@@ -84,6 +84,8 @@ pub struct FlowStateForm {
     pub vars_collect: HashMap<String, FlowStateVar>,
     /// 提交动作名称
     pub submit_btn_name: String,
+    /// 扩展字段
+    pub ext: Option<Value>,
 }
 
 /// 审批节点配置信息
@@ -132,6 +134,9 @@ pub struct FlowStateApproval {
     pub back_btn_name: String,
     /// 通过动作名称
     pub pass_btn_name: String,
+
+    /// 扩展字段
+    pub ext: Option<Value>,
 }
 
 /// 状态节点字段配置
