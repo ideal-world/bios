@@ -109,7 +109,7 @@ impl FlowInstServ {
 
             current_state_id: Set(current_state_id.clone()),
 
-            create_vars: Set(None),
+            create_vars: Set(Some(TardisFuns::json.obj_to_json(&start_req.create_vars).unwrap_or(json!("")))),
             current_vars: Set(None),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
@@ -119,15 +119,6 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
-
-        let create_vars = Self::get_new_vars(&flow_model.tag, start_req.rel_business_obj_id.to_string(), funs, ctx).await?;
-        let flow_inst = flow_inst::ActiveModel {
-            id: Set(inst_id.clone()),
-            create_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
-            current_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
-            ..Default::default()
-        };
-        funs.db().update_one(flow_inst, ctx).await?;
 
         Self::do_request_webhook(
             None,
