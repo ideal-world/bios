@@ -22,7 +22,7 @@ use tardis::{
         JoinType, Order, Set,
     },
     futures_util::future::join_all,
-    log::error,
+    log::{debug, error},
     serde_json::Value,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -1454,19 +1454,28 @@ impl FlowInstServ {
     }
 
     async fn get_new_vars(tag: &str, rel_business_obj_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Value>> {
-        let mut resp = FlowExternalServ::do_query_field(tag, vec![rel_business_obj_id.clone()], &ctx.own_paths, ctx, funs)
+        let resp = FlowExternalServ::do_query_field(tag, vec![rel_business_obj_id.clone()], &ctx.own_paths, ctx, funs)
             .await?
             .objs
             .pop()
             .map(|val| TardisFuns::json.json_to_obj::<HashMap<String, Value>>(val).unwrap_or_default())
             .unwrap_or_default();
+        // @TODO 去除key的custom_前缀
+        let mut new_vars = HashMap::new();
+        for (key, value) in &resp {
+            if key.contains("custom_") {
+                new_vars.insert(key[7..key.len()].to_string(), value.clone());
+            } else {
+                new_vars.insert(key.clone(), value.clone());
+            }
+        }
         // 添加当前状态名称
         if let Some(flow_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id], Some(true), funs, ctx).await?.pop() {
             let current_state_name = Self::get(&flow_id, funs, ctx).await?.current_state_name.unwrap_or_default();
-            resp.insert("status".to_string(), json!(current_state_name));
+            new_vars.insert("status".to_string(), json!(current_state_name));
         }
 
-        Ok(resp)
+        Ok(new_vars)
     }
 
     pub async fn find_var_by_inst_id(flow_inst: &FlowInstDetailResp, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Value>> {
@@ -1652,7 +1661,10 @@ impl FlowInstServ {
             .into_iter()
             .map(|tran| tran.next_flow_transition_id)
             .collect_vec();
-        let create_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
+        let mut original_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
+        original_vars.extend(Self::get_modify_vars(&flow_inst_detail));
+        let check_vars = BasicQueryCondInfo::transform(original_vars)?;
+
         let auto_transitions =
             FlowTransitionServ::find_detail_items(transition_ids, None, None, funs, ctx).await?.into_iter().filter(|transition| transition.transfer_by_auto).collect_vec();
         if !auto_transitions.is_empty() {
@@ -1660,7 +1672,7 @@ impl FlowInstServ {
                 (transition.transfer_by_auto && transition.guard_by_other_conds().is_none())
                     || (transition.transfer_by_auto
                         && transition.guard_by_other_conds().is_some()
-                        && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap_or_default(), &create_vars).unwrap_or(true))
+                        && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap_or_default(), &check_vars).unwrap_or(true))
             }) {
                 Self::transfer(
                     &flow_inst_detail,
@@ -2228,7 +2240,7 @@ impl FlowInstServ {
 
                     let mut master_account_ids = if let Some(current_referral_map) = artifacts.referral_map.get(&inst.current_state_id) {
                         modify_artifacts.remove_referral_map = Some(ctx.owner.clone());
-                        current_referral_map.get(&ctx.owner).cloned().unwrap_or_default()
+                        current_referral_map.get(&operator).cloned().unwrap_or_default()
                     } else {
                         vec![]
                     };

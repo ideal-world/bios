@@ -3,10 +3,11 @@
 //! 基础的DTOs
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::serde_json::json;
 use strum::Display;
-use tardis::chrono::{DateTime, Utc};
+use tardis::chrono::DateTime;
 use tardis::TardisFuns;
 use tardis::{basic::result::TardisResult, serde_json::Value};
 
@@ -36,10 +37,23 @@ impl BasicQueryCondInfo {
     pub fn check_or_and_conds(conds: &[Vec<BasicQueryCondInfo>], check_vars: &HashMap<String, Value>) -> TardisResult<bool> {
         let is_match = conds.iter().any(|and_conds| {
             and_conds.iter().all(|cond| {
-                match check_vars.get(&cond.field) {
+                let field = if cond.field.contains("custom_") {
+                    cond.field[7..cond.field.len()].to_string()
+                } else {
+                    cond.field.clone()
+                };
+                match check_vars.get(&field) {
                     Some(check_val) => match &cond.op {
-                        BasicQueryOpKind::Eq => &cond.value == check_val,
-                        BasicQueryOpKind::Ne => &cond.value != check_val,
+                        BasicQueryOpKind::Eq => if cond.value.is_array() {
+                            cond.value.as_array().cloned().unwrap_or(vec![]).first().cloned().unwrap_or(json!("")) == *check_val
+                        } else {
+                            &cond.value == check_val
+                        },
+                        BasicQueryOpKind::Ne => if cond.value.is_array() {
+                            cond.value.as_array().cloned().unwrap_or(vec![]).first().cloned().unwrap_or(json!("")) != *check_val
+                        } else {
+                            &cond.value != check_val
+                        },
                         BasicQueryOpKind::Gt => {
                             if cond.value.is_f64() {
                                 cond.value.as_f64().unwrap_or(0.0) < check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
@@ -149,17 +163,30 @@ impl BasicQueryCondInfo {
         Ok(is_match)
     }
 
-    pub fn transfer(original_vars: HashMap<String, Value>) -> TardisResult<HashMap<String, Value>> {
+    /// @TODO 将前端传入的字段格式处理为当前条件判断适配的格式
+    pub fn transform(original_vars: HashMap<String, Value>) -> TardisResult<HashMap<String, Value>> {
         let mut result = HashMap::new();
         for (field, value) in original_vars {
-            if let Some(s) = value.as_str() {
-                if let Ok(t) = s.parse::<DateTime<Utc>>() {
-
-                } else if let Ok(o) = TardisFuns::json.str_to_json(s) {
+            if value.is_string() {
+                let s = value.as_str().map(|str| str.to_string()).unwrap_or_default();
+                if let Ok(t) = DateTime::parse_from_rfc3339(&s) {
+                    result.insert(field, json!(t.to_rfc3339_opts(tardis::chrono::SecondsFormat::Millis, false).to_string()));
+                } else if let Ok(o) = TardisFuns::json.str_to_json(&s) {
                     if o.is_array() {
-
+                        let list = o.as_array().cloned().unwrap_or(vec![]);
+                        if list.iter().any(|item| item.get("itemId").is_some()) {
+                            result.insert(field, json!(list.iter().map(|item| item.get("itemId").cloned().unwrap_or(json!(""))).collect_vec()));
+                        } else {
+                            result.insert(field, json!(list));
+                        }
+                    } else if o.is_object() {
+                        if let Some(id) = o.get("itemId") {
+                            result.insert(field, id.clone());
+                        } else {
+                            result.insert(field, value);
+                        }
                     } else {
-                        result.insert(field, json!(o.get("itemId").map(|id| id.as_str().map(|str| str.to_string()).unwrap_or_default()).unwrap_or_default()));
+                        result.insert(field, value);
                     }
                 } else {
                     result.insert(field, value);
