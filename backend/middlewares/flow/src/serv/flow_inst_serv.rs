@@ -22,7 +22,7 @@ use tardis::{
         JoinType, Order, Set,
     },
     futures_util::future::join_all,
-    log::{debug, error},
+    log::error,
     serde_json::Value,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
