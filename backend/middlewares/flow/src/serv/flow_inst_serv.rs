@@ -109,7 +109,7 @@ impl FlowInstServ {
 
             current_state_id: Set(current_state_id.clone()),
 
-            create_vars: Set(None),
+            create_vars: Set(Some(TardisFuns::json.obj_to_json(&start_req.create_vars).unwrap_or(json!("")))),
             current_vars: Set(None),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
 
@@ -119,15 +119,6 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
-
-        let create_vars = Self::get_new_vars(&flow_model.tag, start_req.rel_business_obj_id.to_string(), funs, ctx).await?;
-        let flow_inst = flow_inst::ActiveModel {
-            id: Set(inst_id.clone()),
-            create_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
-            current_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
-            ..Default::default()
-        };
-        funs.db().update_one(flow_inst, ctx).await?;
 
         Self::do_request_webhook(
             None,
@@ -1463,19 +1454,28 @@ impl FlowInstServ {
     }
 
     async fn get_new_vars(tag: &str, rel_business_obj_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Value>> {
-        let mut resp = FlowExternalServ::do_query_field(tag, vec![rel_business_obj_id.clone()], &ctx.own_paths, ctx, funs)
+        let resp = FlowExternalServ::do_query_field(tag, vec![rel_business_obj_id.clone()], &ctx.own_paths, ctx, funs)
             .await?
             .objs
             .pop()
             .map(|val| TardisFuns::json.json_to_obj::<HashMap<String, Value>>(val).unwrap_or_default())
             .unwrap_or_default();
+        // @TODO 去除key的custom_前缀
+        let mut new_vars = HashMap::new();
+        for (key, value) in &resp {
+            if key.contains("custom_") {
+                new_vars.insert(key[7..key.len()].to_string(), value.clone());
+            } else {
+                new_vars.insert(key.clone(), value.clone());
+            }
+        }
         // 添加当前状态名称
         if let Some(flow_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id], Some(true), funs, ctx).await?.pop() {
             let current_state_name = Self::get(&flow_id, funs, ctx).await?.current_state_name.unwrap_or_default();
-            resp.insert("status".to_string(), json!(current_state_name));
+            new_vars.insert("status".to_string(), json!(current_state_name));
         }
 
-        Ok(resp)
+        Ok(new_vars)
     }
 
     pub async fn find_var_by_inst_id(flow_inst: &FlowInstDetailResp, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Value>> {
@@ -1661,7 +1661,10 @@ impl FlowInstServ {
             .into_iter()
             .map(|tran| tran.next_flow_transition_id)
             .collect_vec();
-        let create_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
+        let mut original_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
+        original_vars.extend(Self::get_modify_vars(&flow_inst_detail));
+        let check_vars = BasicQueryCondInfo::transform(original_vars)?;
+
         let auto_transitions =
             FlowTransitionServ::find_detail_items(transition_ids, None, None, funs, ctx).await?.into_iter().filter(|transition| transition.transfer_by_auto).collect_vec();
         if !auto_transitions.is_empty() {
@@ -1669,7 +1672,7 @@ impl FlowInstServ {
                 (transition.transfer_by_auto && transition.guard_by_other_conds().is_none())
                     || (transition.transfer_by_auto
                         && transition.guard_by_other_conds().is_some()
-                        && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap_or_default(), &create_vars).unwrap_or(true))
+                        && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap_or_default(), &check_vars).unwrap_or(true))
             }) {
                 Self::transfer(
                     &flow_inst_detail,
@@ -2073,9 +2076,13 @@ impl FlowInstServ {
         if let Some(curr_vars) = &modify_artifacts.curr_vars {
             inst_artifacts.curr_vars = Some(curr_vars.clone());
         }
-        if let Some((referral_account_id, master_account_id)) = &modify_artifacts.add_referral_map {
+        if let Some((referral_account_id, master_account_ids)) = &modify_artifacts.add_referral_map {
             let current_referral_map = inst_artifacts.referral_map.entry(inst.current_state_id.clone()).or_default();
-            current_referral_map.entry(referral_account_id.clone()).and_modify(|result| *result = master_account_id.clone()).or_default();
+            let current_referral_account_ids = current_referral_map.entry(referral_account_id.clone()).or_insert(vec![]);
+            current_referral_account_ids.clear();
+            for master_account_id in master_account_ids {
+                current_referral_account_ids.push(master_account_id.clone());
+            }
         }
         if let Some(remove_account_id) = &modify_artifacts.remove_referral_map {
             let current_referral_map = inst_artifacts.referral_map.entry(inst.current_state_id.clone()).or_default();
@@ -2233,7 +2240,7 @@ impl FlowInstServ {
 
                     let mut master_account_ids = if let Some(current_referral_map) = artifacts.referral_map.get(&inst.current_state_id) {
                         modify_artifacts.remove_referral_map = Some(ctx.owner.clone());
-                        current_referral_map.get(&ctx.owner).cloned().unwrap_or_default()
+                        current_referral_map.get(&operator).cloned().unwrap_or_default()
                     } else {
                         vec![]
                     };
@@ -2533,7 +2540,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Pass
                 && countersign_conf.specified_pass_guard.unwrap_or(false)
                 && countersign_conf.specified_pass_guard_conf.is_some()
-                && specified_pass_guard_conf.check(ctx)
+                && specified_pass_guard_conf.check(approval_result.get(&FlowApprovalResultKind::Pass.to_string()).cloned().unwrap_or_default())
             {
                 return Ok(true);
             }
@@ -2541,7 +2548,7 @@ impl FlowInstServ {
             if kind == FlowApprovalResultKind::Overrule
                 && countersign_conf.specified_overrule_guard.unwrap_or(false)
                 && countersign_conf.specified_overrule_guard_conf.is_some()
-                && specified_overrule_guard_conf.check(ctx)
+                && specified_overrule_guard_conf.check(approval_result.get(&FlowApprovalResultKind::Overrule.to_string()).cloned().unwrap_or_default())
             {
                 return Ok(true);
             }
@@ -2772,6 +2779,10 @@ impl FlowInstServ {
     }
 
     pub async fn sync_status(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        pub struct FlowInstResult {
+            id: String,
+            state: String,
+        }
         let mut page_num = 1;
         let page_size = 50;
         loop {
@@ -2803,34 +2814,45 @@ impl FlowInstServ {
                 )
                 .await?
                 {
-                    finish = false;
-                    let inst_ids = search_result
+                    if !search_result.records.is_empty() {
+                        finish = false;
+                    }
+                    let insts = search_result
                         .records
                         .iter()
-                        .map(|record| record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default())
-                        .filter(|record| !record.is_empty())
+                        .map(|record| {
+                            FlowInstResult {
+                                id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                                state: record.ext.get("status").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                            }
+                        })
+                        .filter(|record| !record.id.is_empty())
                         .collect_vec();
-                    if !inst_ids.is_empty() {
-                        let flow_insts = Self::find_detail(inst_ids, None, None, funs, ctx).await?;
+                    if !insts.is_empty() {
+                        let flow_insts = Self::find_detail(insts.iter().map(|inst| inst.id.clone()).collect_vec(), None, None, funs, ctx).await?;
                         join_all(
                             flow_insts
                                 .iter()
                                 .map(|flow_inst| async {
                                     if let Some(current_state_name) = &flow_inst.current_state_name {
-                                        let ctx = TardisContext {
-                                            own_paths: flow_inst.own_paths.clone(),
-                                            ..Default::default()
-                                        };
-                                        FlowSearchClient::modify_business_obj_search(
-                                            &flow_inst.rel_business_obj_id,
-                                            &flow_inst.tag,
-                                            json!({
-                                                "status": current_state_name,
-                                            }),
-                                            funs,
-                                            &ctx,
-                                        )
-                                        .await
+                                        if *current_state_name != insts.iter().find(|inst| inst.id == flow_inst.id).map(|inst| inst.state.clone()).unwrap_or_default() {
+                                            let ctx = TardisContext {
+                                                own_paths: flow_inst.own_paths.clone(),
+                                                ..Default::default()
+                                            };
+                                            FlowSearchClient::modify_business_obj_search(
+                                                &flow_inst.rel_business_obj_id,
+                                                &flow_inst.tag,
+                                                json!({
+                                                    "status": current_state_name,
+                                                }),
+                                                funs,
+                                                &ctx,
+                                            )
+                                            .await
+                                        } else {
+                                            Ok(())
+                                        }
                                     } else {
                                         Ok(())
                                     }

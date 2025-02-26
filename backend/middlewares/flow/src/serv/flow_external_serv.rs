@@ -10,10 +10,9 @@ use tardis::{
 use crate::{
     dto::{
         flow_external_dto::{
-            FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp,
-            FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp,
+            FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp
         },
-        flow_state_dto::FlowSysStateKind,
+        flow_state_dto::{FlowGuardConf, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
     },
     flow_constants,
@@ -314,6 +313,42 @@ impl FlowExternalServ {
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))
+        }
+    }
+
+    pub async fn do_fetch_auth_account(
+        tag: &str,
+        inst_id: &str,
+        rel_business_obj_id: &str,
+        guard_conf: FlowGuardConf,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<FlowExternalFetchAuthAccountResp> {
+        let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        let header = Self::headers(None, funs, ctx).await?;
+        let body = FlowExternalReq {
+            kind: FlowExternalKind::FetchAuthAccount,
+            inst_id: inst_id.to_string(),
+            curr_tag: tag.to_string(),
+            curr_bus_obj_id: rel_business_obj_id.to_string(),
+            guard_conf: Some(guard_conf),
+            sys_time: Some(Utc::now().timestamp_millis()),
+            ..Default::default()
+        };
+        debug!("do_fetch_auth_account body: {:?}", body);
+        let resp: FlowExternalResp<FlowExternalFetchAuthAccountResp> = funs
+            .web_client()
+            .post(&external_url, &body, header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_fetch_auth_account", "illegal response", "500-external-illegal-response"))?;
+        if resp.code != *"200" {
+            return Err(funs.err().internal_error("flow_external", "do_fetch_auth_account", "illegal response", "500-external-illegal-response"));
+        }
+        if let Some(data) = resp.body {
+            Ok(data)
+        } else {
+            Err(funs.err().internal_error("flow_external", "do_fetch_auth_account", "illegal response", "500-external-illegal-response"))
         }
     }
 

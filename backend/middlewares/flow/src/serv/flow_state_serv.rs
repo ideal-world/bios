@@ -12,13 +12,10 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
-    },
-    serde_json::json,
-    TardisFuns, TardisFunsInst,
+    }, log::debug, serde_json::json, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -337,7 +334,7 @@ impl FlowStateServ {
                             .await?
                             .into_iter()
                             .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
-                            .map(|(_tag, model)| model.id)
+                            .map(|(_tag, model)| model.current_version_id)
                             .collect_vec(),
                     );
                 }
