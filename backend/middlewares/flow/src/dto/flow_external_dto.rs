@@ -72,11 +72,16 @@ pub struct FlowExternalReq {
     ///
     /// 操作人
     pub operator: Option<String>,
+    /// 触发时间（毫秒时间戳）
     pub sys_time: Option<i64>,
     /// 扩展字段
     ///
     /// Extended params
     pub params: Vec<FlowExternalParams>,
+    /// 权限配置
+    ///
+    /// guard Config
+    pub guard_conf: Option<FlowGuardConf>,
 }
 
 /// Type of request initiated, ex: query field, modification field, status change notification...
@@ -95,6 +100,8 @@ pub enum FlowExternalKind {
     QueryField,
     /// 删除业务对象
     DeleteObj,
+    /// 获取关联业务对象
+    FetchAuthAccount,
 }
 
 /// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
@@ -176,3 +183,8 @@ pub struct FlowExternalQueryFieldResp {
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalDeleteRelObjResp {}
+
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalFetchAuthAccountResp {
+    pub account_ids: Vec<String>,
+}

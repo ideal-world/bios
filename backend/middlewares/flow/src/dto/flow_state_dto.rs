@@ -84,6 +84,8 @@ pub struct FlowStateForm {
     pub vars_collect: HashMap<String, FlowStateVar>,
     /// 提交动作名称
     pub submit_btn_name: String,
+    /// 扩展字段
+    pub ext: Option<Value>,
 }
 
 /// 审批节点配置信息
@@ -132,6 +134,9 @@ pub struct FlowStateApproval {
     pub back_btn_name: String,
     /// 通过动作名称
     pub pass_btn_name: String,
+
+    /// 扩展字段
+    pub ext: Option<Value>,
 }
 
 /// 状态节点字段配置
@@ -211,17 +216,11 @@ pub struct FlowGuardConf {
 }
 
 impl FlowGuardConf {
-    pub fn check(&self, ctx: &TardisContext) -> bool {
-        if self.guard_by_spec_account_ids.is_empty() && self.guard_by_spec_role_ids.is_empty() && self.guard_by_spec_org_ids.is_empty() {
+    pub fn check(&self, approval_account_ids: Vec<String>) -> bool {
+        if self.guard_by_spec_account_ids.is_empty() {
             return true;
         }
-        if self.guard_by_spec_account_ids.contains(&ctx.owner) {
-            return true;
-        }
-        if self.guard_by_spec_role_ids.iter().any(|r| ctx.roles.contains(r)) {
-            return true;
-        }
-        if self.guard_by_spec_org_ids.iter().any(|o| ctx.groups.contains(o)) {
+        if self.guard_by_spec_account_ids.iter().any(|account_id| approval_account_ids.contains(account_id)) {
             return true;
         }
         false
