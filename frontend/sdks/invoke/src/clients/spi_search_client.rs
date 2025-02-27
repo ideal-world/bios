@@ -21,6 +21,7 @@ pub mod event {
     use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq};
     use asteroid_mq_sdk::model::{event::EventAttribute, *};
     use serde::{Deserialize, Serialize};
+    use tardis::chrono::{Duration, Utc};
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct SearchItemModifyEventPayload {
         pub tag: String,
@@ -30,12 +31,33 @@ pub mod event {
 
     impl EventAttribute for SearchItemAddReq {
         const SUBJECT: Subject = Subject::const_new("search/add");
+        fn durable_config() -> Option<MessageDurableConfig> {
+            Some(MessageDurableConfig {
+                // 两个月后过期
+                expire: Utc::now() + Duration::days(60),
+                max_receiver: Some(1),
+            })
+        }
     }
     impl EventAttribute for SearchEventItemModifyReq {
         const SUBJECT: Subject = Subject::const_new("search/modify");
+        fn durable_config() -> Option<MessageDurableConfig> {
+            Some(MessageDurableConfig {
+                // 两个月后过期
+                expire: Utc::now() + Duration::days(60),
+                max_receiver: Some(1),
+            })
+        }
     }
     impl EventAttribute for SearchEventItemDeleteReq {
         const SUBJECT: Subject = Subject::const_new("search/delete");
+        fn durable_config() -> Option<MessageDurableConfig> {
+            Some(MessageDurableConfig {
+                // 两个月后过期
+                expire: Utc::now() + Duration::days(60),
+                max_receiver: Some(1),
+            })
+        }
     }
 }
 
