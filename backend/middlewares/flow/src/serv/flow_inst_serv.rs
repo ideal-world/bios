@@ -2138,10 +2138,8 @@ impl FlowInstServ {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
                     if !finish {
-                        if (
-                            artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
-                                || artifacts.referral_map.get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
-                        )
+                        if (artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
+                            || artifacts.referral_map.get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
                             && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
                         {
                             operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
@@ -2339,7 +2337,9 @@ impl FlowInstServ {
             // 通过
             FlowStateOperatorKind::Pass => {
                 let curr_operators = artifacts.curr_operators.unwrap_or_default();
-                if !curr_operators.contains(&ctx.owner) && !artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                if !curr_operators.contains(&ctx.owner)
+                    && !artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
+                {
                     return Err(funs.err().internal_error("flow_inst_serv", "operate", "flow inst operate failed", "500-flow-inst-operate-prohibited"));
                 }
                 if curr_operators.contains(&ctx.owner) {
@@ -2433,7 +2433,9 @@ impl FlowInstServ {
             // 拒绝
             FlowStateOperatorKind::Overrule => {
                 let curr_operators = artifacts.curr_operators.unwrap_or_default();
-                if !curr_operators.contains(&ctx.owner) && !artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                if !curr_operators.contains(&ctx.owner)
+                    && !artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
+                {
                     return Err(funs.err().internal_error("flow_inst_serv", "operate", "flow inst operate failed", "500-flow-inst-operate-prohibited"));
                 }
                 if curr_operators.contains(&ctx.owner) {
@@ -2784,7 +2786,7 @@ impl FlowInstServ {
             state: String,
         }
         let mut page_num = 1;
-        let page_size = 50;
+        let page_size = 500;
         loop {
             let mut finish = true;
             let search_tags = FlowSearchClient::get_tag_search_map().values().cloned().collect_vec();
@@ -2820,11 +2822,9 @@ impl FlowInstServ {
                     let insts = search_result
                         .records
                         .iter()
-                        .map(|record| {
-                            FlowInstResult {
-                                id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
-                                state: record.ext.get("status").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
-                            }
+                        .map(|record| FlowInstResult {
+                            id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                            state: record.ext.get("status").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
                         })
                         .filter(|record| !record.id.is_empty())
                         .collect_vec();
