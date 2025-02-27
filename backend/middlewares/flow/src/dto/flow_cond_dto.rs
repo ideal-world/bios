@@ -183,38 +183,58 @@ impl BasicQueryCondInfo {
                         BasicQueryOpKind::NotLike | BasicQueryOpKind::NotLLike | BasicQueryOpKind::NotRLike => {
                             check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| !check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
                         }
-                        BasicQueryOpKind::In => check_val
-                            .as_array()
-                            .map(|check_val_arr| {
-                                if cond.value.is_array() {
-                                    cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
+                        BasicQueryOpKind::In => {
+                            let check_val_arr = if check_val.is_array() {
+                                // 数组直接返回
+                                check_val.as_array().cloned().unwrap_or(vec![])
+                            } else if check_val.is_string() {
+                                // 字符串需要判断
+                                let check_val_s = check_val.as_str().map(|s| s.to_string()).unwrap_or_default();
+                                if let Ok(o) = TardisFuns::json.str_to_json(&check_val_s) {
+                                    if o.is_array() {
+                                        // 如果字符串可以被序列化为数组，则处理后返回
+                                        o.as_array().cloned().unwrap_or(vec![])
+                                    } else {
+                                        vec![o]
+                                    }
                                 } else {
-                                    check_val_arr.contains(&cond.value)
+                                    vec![check_val.clone()]
                                 }
-                            })
-                            .unwrap_or({
-                                if cond.value.is_array() {
-                                    cond.value.as_array().unwrap_or(&vec![]).contains(check_val)
+                            } else {
+                                vec![check_val.clone()]
+                            };
+                            if cond.value.is_array() {
+                                cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
+                            } else {
+                                check_val_arr.contains(&cond.value)
+                            }
+                        },
+                        BasicQueryOpKind::NotIn => {
+                            let check_val_arr = if check_val.is_array() {
+                                // 数组直接返回
+                                check_val.as_array().cloned().unwrap_or(vec![])
+                            } else if check_val.is_string() {
+                                // 字符串需要判断
+                                let check_val_s = check_val.as_str().map(|s| s.to_string()).unwrap_or_default();
+                                if let Ok(o) = TardisFuns::json.str_to_json(&check_val_s) {
+                                    if o.is_array() {
+                                        // 如果字符串可以被序列化为数组，则处理后返回
+                                        o.as_array().cloned().unwrap_or(vec![])
+                                    } else {
+                                        vec![o]
+                                    }
                                 } else {
-                                    cond.value == *check_val
+                                    vec![check_val.clone()]
                                 }
-                            }),
-                        BasicQueryOpKind::NotIn => check_val
-                            .as_array()
-                            .map(|check_val_arr| {
-                                if cond.value.is_array() {
-                                    !cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
-                                } else {
-                                    !check_val_arr.contains(&cond.value)
-                                }
-                            })
-                            .unwrap_or({
-                                if cond.value.is_array() {
-                                    !cond.value.as_array().unwrap_or(&vec![]).contains(check_val)
-                                } else {
-                                    cond.value != *check_val
-                                }
-                            }),
+                            } else {
+                                vec![check_val.clone()]
+                            };
+                            if cond.value.is_array() {
+                                !cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
+                            } else {
+                                !check_val_arr.contains(&cond.value)
+                            }
+                        },
                         BasicQueryOpKind::IsNull => false,
                         BasicQueryOpKind::IsNotNull => true,
                         BasicQueryOpKind::IsNullOrEmpty => false,
