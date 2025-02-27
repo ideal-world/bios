@@ -3,8 +3,12 @@
 //! 基础的DTOs
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tardis::serde_json::json;
 use strum::Display;
+use tardis::chrono::DateTime;
+use tardis::TardisFuns;
 use tardis::{basic::result::TardisResult, serde_json::Value};
 
 use tardis::web::poem_openapi;
@@ -33,62 +37,70 @@ impl BasicQueryCondInfo {
     pub fn check_or_and_conds(conds: &[Vec<BasicQueryCondInfo>], check_vars: &HashMap<String, Value>) -> TardisResult<bool> {
         let is_match = conds.iter().any(|and_conds| {
             and_conds.iter().all(|cond| {
-                let field_key = if cond.field.contains("custom_") {
+                let field = if cond.field.contains("custom_") {
                     cond.field[7..cond.field.len()].to_string()
                 } else {
                     cond.field.clone()
                 };
-                match check_vars.get(&field_key) {
+                match check_vars.get(&field) {
                     Some(check_val) => match &cond.op {
-                        BasicQueryOpKind::Eq => &cond.value == check_val,
-                        BasicQueryOpKind::Ne => &cond.value != check_val,
+                        BasicQueryOpKind::Eq => if cond.value.is_array() {
+                            cond.value.as_array().cloned().unwrap_or(vec![]).first().cloned().unwrap_or(json!("")) == *check_val
+                        } else {
+                            &cond.value == check_val
+                        },
+                        BasicQueryOpKind::Ne => if cond.value.is_array() {
+                            cond.value.as_array().cloned().unwrap_or(vec![]).first().cloned().unwrap_or(json!("")) != *check_val
+                        } else {
+                            &cond.value != check_val
+                        },
                         BasicQueryOpKind::Gt => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) < check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) < check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) < check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) < check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) < check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) < check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") < check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
                         BasicQueryOpKind::Ge => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) <= check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) <= check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) <= check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) <= check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) <= check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) <= check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") <= check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
                         BasicQueryOpKind::Lt => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) > check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) > check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) > check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) > check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) > check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) > check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") > check_val.as_str().unwrap_or("")
                             } else {
                                 false
                             }
                         }
                         BasicQueryOpKind::Le => {
-                            if cond.value.is_f64() && check_val.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) >= check_val.as_f64().unwrap_or(0.0)
-                            } else if cond.value.is_i64() && check_val.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) >= check_val.as_i64().unwrap_or(0)
-                            } else if cond.value.is_u64() && check_val.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) >= check_val.as_u64().unwrap_or(0)
-                            } else if cond.value.is_string() && check_val.is_string() {
+                            if cond.value.is_f64() {
+                                cond.value.as_f64().unwrap_or(0.0) >= check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                            } else if cond.value.is_i64() {
+                                cond.value.as_i64().unwrap_or(0) >= check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                            } else if cond.value.is_u64() {
+                                cond.value.as_u64().unwrap_or(0) >= check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                            } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") >= check_val.as_str().unwrap_or("")
                             } else {
                                 false
@@ -104,14 +116,22 @@ impl BasicQueryCondInfo {
                             .as_array()
                             .map(|check_val_arr| {
                                 if cond.value.is_array() {
-                                    cond.value.as_array().unwrap_or(&vec![]).iter().any(|item| check_val_arr.contains(item))
+                                    cond
+                                        .value
+                                        .as_array()
+                                        .unwrap_or(&vec![]).iter()
+                                        .any(|item| check_val_arr.contains(item))
                                 } else {
                                     check_val_arr.contains(&cond.value)
                                 }
                             })
                             .unwrap_or({
                                 if cond.value.is_array() {
-                                    cond.value.as_array().unwrap_or(&vec![]).contains(check_val)
+                                    cond
+                                        .value
+                                        .as_array()
+                                        .unwrap_or(&vec![])
+                                        .contains(check_val)
                                 } else {
                                     cond.value == *check_val
                                 }
@@ -141,6 +161,41 @@ impl BasicQueryCondInfo {
             })
         });
         Ok(is_match)
+    }
+
+    /// @TODO 将前端传入的字段格式处理为当前条件判断适配的格式
+    pub fn transform(original_vars: HashMap<String, Value>) -> TardisResult<HashMap<String, Value>> {
+        let mut result = HashMap::new();
+        for (field, value) in original_vars {
+            if value.is_string() {
+                let s = value.as_str().map(|str| str.to_string()).unwrap_or_default();
+                if let Ok(t) = DateTime::parse_from_rfc3339(&s) {
+                    result.insert(field, json!(t.to_rfc3339_opts(tardis::chrono::SecondsFormat::Millis, false).to_string()));
+                } else if let Ok(o) = TardisFuns::json.str_to_json(&s) {
+                    if o.is_array() {
+                        let list = o.as_array().cloned().unwrap_or(vec![]);
+                        if list.iter().any(|item| item.get("itemId").is_some()) {
+                            result.insert(field, json!(list.iter().map(|item| item.get("itemId").cloned().unwrap_or(json!(""))).collect_vec()));
+                        } else {
+                            result.insert(field, json!(list));
+                        }
+                    } else if o.is_object() {
+                        if let Some(id) = o.get("itemId") {
+                            result.insert(field, id.clone());
+                        } else {
+                            result.insert(field, value);
+                        }
+                    } else {
+                        result.insert(field, value);
+                    }
+                } else {
+                    result.insert(field, value);
+                }
+            } else {
+                result.insert(field, value);
+            }
+        }
+        Ok(result)
     }
 }
 

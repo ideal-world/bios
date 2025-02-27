@@ -241,7 +241,7 @@ impl FlowSearchClient {
                 update_time: inst_resp.update_time,
                 ext: Some(json!({
                     "tag": inst_resp.tag,
-                    "current_state_id": inst_resp.current_state_id,
+                    "current_state_id": &inst_resp.current_state_id,
                     "rel_business_obj_name": name.clone(),
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
@@ -252,6 +252,7 @@ impl FlowSearchClient {
                     "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
                     "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
                     "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
+                    "curr_referral": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.referral_map.get(&inst_resp.current_state_id).cloned().unwrap_or_default().keys().cloned().collect_vec()),
                     "tenant_id": tenant.clone(),
                     "app_id": app.clone(),
                 })),

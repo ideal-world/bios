@@ -22,10 +22,18 @@ use super::iam_client::IamClient;
 
 #[cfg(feature = "event")]
 pub mod event {
-    use asteroid_mq_sdk::model::{event::EventAttribute, Subject};
+    use asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject};
+    use tardis::chrono::{Duration, Utc};
 
     impl EventAttribute for super::LogItemAddV2Req {
         const SUBJECT: Subject = Subject::const_new("log/add");
+        fn durable_config() -> Option<MessageDurableConfig> {
+            Some(MessageDurableConfig {
+                // 两个月后过期
+                expire: Utc::now() + Duration::days(60),
+                max_receiver: Some(1),
+            })
+        }
     }
 }
 #[derive(Debug, Default, Clone)]
