@@ -13,6 +13,13 @@ use crate::rbum::rbum_enumeration::RbumCertConfStatusKind;
 /// 凭证配置添加请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumCertConfAddReq {
+    /// Certificate configuration id
+    /// auto generate when None
+    ///
+    /// 凭证配置id
+    ///
+    /// 为空会自动生成
+    pub id: Option<String>,
     /// Certificate configuration type
     ///
     /// 凭证配置类型

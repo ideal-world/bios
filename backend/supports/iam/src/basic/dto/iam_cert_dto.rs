@@ -280,3 +280,22 @@ pub struct IamCertDecodeRequest {
 pub struct IamCertModifyVisibilityRequest {
     pub sk_invisible: bool,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertOAuth2ServiceCodeAddReq {
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub client_id: TrimString,
+    pub state: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub scope: TrimString,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub redirect_uri: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertOAuth2ServiceCodeVerifyReq {
+    pub code: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_uri: Option<String>,
+}

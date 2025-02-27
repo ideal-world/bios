@@ -31,6 +31,7 @@ impl IamCertMailVCodeServ {
     pub async fn add_cert_conf(add_req: &IamCertConfMailVCodeAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
+                id: None,
                 kind: TrimString(IamCertKernelKind::MailVCode.to_string()),
                 supplier: None,
                 name: TrimString(IamCertKernelKind::MailVCode.to_string()),

@@ -60,6 +60,7 @@ impl IamCertLdapServ {
         Self::validate_cert_conf(add_req, funs).await?;
         let result = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
+                id: None,
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
                 supplier: add_req.supplier.clone(),
                 name: TrimString(add_req.name.clone()),

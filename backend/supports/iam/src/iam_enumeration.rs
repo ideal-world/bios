@@ -56,7 +56,10 @@ pub enum IamCertKernelKind {
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamCertExtKind {
     Ldap,
+    /// 接入第三方OAuth2的类型
     OAuth2,
+    /// 和OAuth2的区别是，这是OAuth2服务提供商的类型
+    OAuth2Service,
     /// No configuration exists,can't login in ,\
     /// supplier can be "gitlab/cmbd-pwd/cmbd-ssh"
     ThirdParty,

@@ -41,6 +41,7 @@ impl IamCertOAuth2Serv {
     ) -> TardisResult<String> {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
+                id: None,
                 kind: TrimString(IamCertExtKind::OAuth2.to_string()),
                 supplier: Some(TrimString(cert_supplier.to_string())),
                 name: TrimString(format!("{}{}", IamCertExtKind::OAuth2, cert_supplier)),

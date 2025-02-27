@@ -89,7 +89,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
 
     async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         Ok(rbum_cert_conf::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
+            id: Set(add_req.id.as_ref().unwrap_or(&TardisFuns::field.nanoid()).to_string()),
             kind: Set(add_req.kind.to_string()),
             supplier: Set(add_req.supplier.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             name: Set(add_req.name.to_string()),

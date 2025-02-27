@@ -92,6 +92,21 @@ pub struct IamCertConfOAuth2AddOrModifyReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertConfOAuth2ServiceAddOrModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
+    pub client_id: TrimString,
+    pub client_secret: String,
+    /// The expiration time of the access_token
+    /// Default is 7 days
+    pub access_token_expire_sec: Option<i64>,
+    /// This is the callback address for the third-party access
+    /// 第三方接入的回调地址
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub redirect_uri: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfOAuth2Resp {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak: String,
