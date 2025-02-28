@@ -8,6 +8,8 @@ pub struct EventClientConfig {
     pub enable: bool,
     pub retry_duration_ms: u32,
     pub invoke: InvokeConfig,
+    #[cfg(feature = "local")]
+    pub local: bool,
 }
 
 impl Default for EventClientConfig {
@@ -17,6 +19,8 @@ impl Default for EventClientConfig {
             enable: false,
             retry_duration_ms: 5000,
             invoke: InvokeConfig::default(),
+            #[cfg(feature = "local")]
+            local: false,
         }
     }
 }

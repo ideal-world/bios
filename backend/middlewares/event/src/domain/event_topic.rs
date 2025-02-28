@@ -15,12 +15,13 @@ pub struct Model {
     pub overflow_policy: String,
     pub overflow_size: i32,
     pub check_auth: bool,
+    pub max_payload_size: i32,
     #[fill_ctx]
     pub own_paths: String,
 }
 
 impl Model {
-    pub fn into_topic_config(self) -> TopicConfig {
+    pub fn _into_topic_config(self) -> TopicConfig {
         TopicConfig {
             code: TopicCode::new(self.topic_code),
             blocking: self.blocking,
@@ -32,6 +33,7 @@ impl Model {
                 },
                 size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
             }),
+            max_payload_size: self.max_payload_size as u32
         }
     }
 }

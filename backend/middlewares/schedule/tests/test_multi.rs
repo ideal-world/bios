@@ -10,7 +10,7 @@ use bios_mw_schedule::serv::schedule_job_serv_v2::repo::{Repository, SpiKv};
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::{self, Utc};
 use tardis::rand::seq::SliceRandom;
-use tardis::{basic::result::TardisResult, rand, testcontainers, tokio};
+use tardis::{basic::result::TardisResult, rand, tokio};
 use tardis::{TardisFuns, TardisFunsInst};
 use test_common::*;
 

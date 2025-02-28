@@ -8,7 +8,6 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_sdk_invoke::clients::event_client::mq_client_node_opt;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -60,6 +59,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
             overflow_size: Set(add_req.overflow_size),
             topic_code: Set(add_req.topic_code.clone()),
             check_auth: Set(add_req.check_auth),
+            max_payload_size: Set(add_req.max_payload_size),
             ..Default::default()
         })
     }
@@ -88,6 +88,7 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
             overflow_size: Set(modify_req.overflow_size),
             topic_code: Set(modify_req.code.clone()),
             check_auth: Set(modify_req.check_auth),
+            max_payload_size: Set(modify_req.max_payload_size),
             ..Default::default()
         };
         Ok(Some(event_topic))
@@ -107,7 +108,8 @@ impl RbumItemCrudOperation<event_topic::ActiveModel, EventTopicAddOrModifyReq, E
             .column((event_topic::Entity, event_topic::Column::OverflowPolicy))
             .column((event_topic::Entity, event_topic::Column::OverflowSize))
             .column((event_topic::Entity, event_topic::Column::TopicCode))
-            .column((event_topic::Entity, event_topic::Column::CheckAuth));
+            .column((event_topic::Entity, event_topic::Column::CheckAuth))
+            .column((event_topic::Entity, event_topic::Column::MaxPayloadSize));
         if let Some(topic_code) = &req.topic_code {
             query.cond_where(Expr::col((event_topic::Entity, event_topic::Column::TopicCode)).eq(topic_code));
         }
@@ -163,7 +165,7 @@ impl EventTopicServ {
         Ok(())
     }
 
-    pub async fn unregister_user(topic: TopicCode, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn unregister_user(topic: TopicCode, ak: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         EventAuthServ::new().remove_auth(topic, ak, funs).await?;
         Ok(())
     }

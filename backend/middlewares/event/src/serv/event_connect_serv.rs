@@ -1,7 +1,7 @@
 use std::task::ready;
 
 use asteroid_mq::model::{
-    codec::{Codec, CodecKind, DynCodec},
+    codec::{Codec, DynCodec},
     connection::{EdgeConnectionError, EdgeConnectionErrorKind, EdgeNodeConnection},
     EdgePayload,
 };
@@ -62,12 +62,11 @@ impl Stream for PoemWs {
                 let payload_result = this.codec.decode(data.as_bytes()).map_err(EdgeConnectionError::codec("axum ws poll next failed"));
                 std::task::Poll::Ready(Some(payload_result))
             }
-            Some(Ok(Message::Close(_))) => {
-                tracing::debug!("received close message");
+            Some(Ok(Message::Close(close_frame))) => {
+                tracing::debug!(?close_frame, "received close message");
                 std::task::Poll::Ready(None)
             }
-            Some(Ok(p)) => {
-                tracing::debug!(?p, "unexpected message type");
+            Some(Ok(Message::Ping(_))) | Some(Ok(Message::Pong(_))) => {
                 // immediately wake up the task to poll next
                 cx.waker().wake_by_ref();
                 std::task::Poll::Pending
