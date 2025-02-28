@@ -241,7 +241,7 @@ pub struct FlowInstArtifacts {
     pub curr_operators: Option<Vec<String>>,                            // 当前操作人
     pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
     pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
-    pub referral_map: HashMap<String, HashMap<String, Vec<String>>>,    // 当前转审映射 key: 代操作用户, value: 主操作用户
+    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>,    // 当前转审映射 key: 代操作用户, value: 主操作用户
     pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
     pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
     pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
