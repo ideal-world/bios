@@ -1,20 +1,15 @@
-use std::env;
 use std::time::Duration;
 
 use asteroid_mq::prelude::{Interest, Subject, TopicCode};
 use asteroid_mq_sdk::model::EdgeMessage;
-use asteroid_mq_sdk::ClientNode;
 use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_event::event_constants::DOMAIN_CODE;
 use bios_mw_event::event_initializer;
 use tardis::basic::dto::TardisContext;
-use tardis::serde_json::{json, Value};
-use tardis::web::web_resp::Void;
-use tardis::{log as tracing, TardisFunsInst};
+use tardis::log as tracing;
 use tardis::{tardis_static, tokio, TardisFuns};
-use tokio::io::AsyncReadExt;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
     // env::set_var("RUST_LOG", "debug,tardis=trace,bios_mw_event=trace,test_event=trace,sqlx::query=off,asteroid-mq=info");
@@ -30,7 +25,7 @@ async fn test_event() -> Result<(), Box<dyn std::error::Error>> {
 async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize RBUM
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
-    let mut funs = TardisFuns::inst(DOMAIN_CODE.to_string(), None);
+    let funs = TardisFuns::inst(DOMAIN_CODE.to_string(), None);
     let web_server = TardisFuns::web_server();
     // Initialize Event
     event_initializer::init(web_server.as_ref()).await?;
@@ -66,9 +61,8 @@ tardis_static! {
 
 pub async fn test_event_topic_api() -> Result<(), Box<dyn std::error::Error>> {
     use bios_sdk_invoke::clients::event_client::{EventClient, EventTopicConfig};
-    let mut funs = TardisFuns::inst(DOMAIN_CODE.to_string(), None);
+    let funs = TardisFuns::inst(DOMAIN_CODE.to_string(), None);
     const TEST_TOPIC_NAME: &str = "test-topic";
-    let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
     let ctx = test_tardis_context();
     let topic_id = EventClient::create_topic(
         &EventTopicConfig {

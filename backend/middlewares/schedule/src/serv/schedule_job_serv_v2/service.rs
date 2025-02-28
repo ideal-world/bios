@@ -1,4 +1,9 @@
-use std::{collections::HashMap, marker::PhantomData, net::SocketAddr, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+    net::SocketAddr,
+    sync::Arc, time::Duration,
+};
 
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
@@ -6,9 +11,11 @@ use tardis::{
     futures::StreamExt,
     log::{debug, error, trace},
     serde_json,
-    tokio::sync::RwLock,
+    tokio::{self, sync::RwLock},
     TardisFuns, TardisFunsInst,
 };
+
+
 use tsuki_scheduler::{
     runtime::Tokio,
     schedule::{Cron, ScheduleDynBuilder},
@@ -50,7 +57,9 @@ where
         let runner = AsyncSchedulerRunner::tokio();
         let client = runner.client();
         let funs = Arc::new(TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None));
-
+        let config = funs.conf::<crate::schedule_config::ScheduleConfig>();
+        let force_sync_interval_sec = Duration::from_secs(config.force_sync_interval_sec as u64);
+        
         // 运行调度器
         tardis::tokio::spawn(async move { runner.run().await });
 
@@ -69,19 +78,66 @@ where
                 let mut es = std::pin::pin!(es);
                 let funs = Arc::new(TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None));
                 let ctx = Arc::new(TardisContext::default());
-                while let Some(event) = es.next().await {
+                let mut force_sync_interval = tokio::time::interval(force_sync_interval_sec);
+                enum Event {
+                    External(event::ScheduleEvent),
+                    ForceSync,
+                }
+                loop {
+                    let event: Event = tokio::select! { 
+                        event = es.next()  =>{
+                            let Some(event) = event else{
+                                break;
+                            };
+                            Event::External(event)
+                        },
+                        _ = force_sync_interval.tick() => {
+                            Event::ForceSync
+                        }
+                    };
                     match event {
-                        event::ScheduleEvent::JustDelete { code } => {
+                        Event::External(event::ScheduleEvent::JustDelete { code }) => {
                             debug!("[Bios.Schedule] event: delete {code} ");
                             this.local_delete_job(&code).await;
-                        }
-                        event::ScheduleEvent::JustCreate { code } => {
+                        },
+                        Event::External(event::ScheduleEvent::JustCreate { code }) => {
                             debug!("[Bios.Schedule] event: create {code} ");
                             let event_hub = E::from_context(funs.clone(), ctx.clone());
                             let repo = R::from_context(funs.clone(), ctx.clone());
                             let Ok(Some(job)) = repo.get_one(&code).await else { continue };
                             let Ok(task) = this.make_task(&job, event_hub) else { continue };
                             this.local_set_job(&code, task).await;
+                        },
+                        Event::ForceSync => {
+                            debug!("[Bios.Schedule] event: force sync");
+                            let event_hub = E::from_context(funs.clone(), ctx.clone());
+                            let repo = R::from_context(funs.clone(), ctx.clone());
+                            if let Ok(jobs) = repo.get_all().await {
+                                let code_job_map = jobs.into_iter().map(|j| (j.code.to_string(), j)).collect::<HashMap<_, _>>();
+
+                                let db_codes = code_job_map.keys().cloned().collect::<HashSet<_>>();
+                                let local_codes = {
+                                    let local_cache = this.local_cache.read().await;
+                                    local_cache.keys().map(|k| k.to_string()).collect::<std::collections::HashSet<_>>()
+                                };
+                                let deleted = local_codes.difference(&db_codes).collect::<Vec<_>>();
+                                let added = db_codes.difference(&local_codes).collect::<Vec<_>>();
+                                if !deleted.is_empty() || !added.is_empty() {
+                                    debug!(?deleted, ?added, "[Bios.Schedule] event: force sync");
+                                }
+                                if !deleted.is_empty() {
+                                    for code in deleted {
+                                        this.local_delete_job(code).await
+                                    }
+                                }
+                                if !added.is_empty() {
+                                    for code in added {
+                                        let Some(job) = code_job_map.get(code) else { continue };
+                                        let Ok(task) = this.make_task(job, event_hub.clone()) else { continue };
+                                        this.local_set_job(code, task).await;
+                                    }
+                                }
+                            }
                         }
                     }
                 }

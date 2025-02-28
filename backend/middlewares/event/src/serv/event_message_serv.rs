@@ -1,11 +1,11 @@
 use asteroid_mq::{
-    prelude::{DurableMessage, MessageId, TopicCode},
-    protocol::{node::raft::proposal::MessageStateUpdate, topic::durable_message::DurableMessageQuery},
+    prelude::{DurableMessage, DurableMessageQuery, MessageId, TopicCode},
+    protocol::node::raft::proposal::MessageStateUpdate,
 };
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     chrono::Utc,
-    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set, Unchanged},
+    db::sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter, QueryOrder, QuerySelect, Set, Unchanged},
     TardisFunsInst,
 };
 
@@ -14,6 +14,16 @@ use crate::domain::event_message::{ActiveModel, Column, Entity, Model};
 pub struct EventMessageServ;
 
 impl EventMessageServ {
+    pub async fn clear_archived(&self, topic: Option<&str>, funs: &TardisFunsInst) -> TardisResult<u32> {
+        let conn = funs.reldb().conn();
+        let raw_conn = conn.raw_conn();
+        let mut filter = Column::Archived.eq(true);
+        if let Some(topic) = topic {
+            filter = filter.and(Column::Topic.eq(topic));
+        }
+        let delete_result = Entity::delete_many().filter(filter).exec(raw_conn).await?;
+        Ok(delete_result.rows_affected as u32)
+    }
     pub async fn save(&self, topic: TopicCode, message: DurableMessage, funs: &TardisFunsInst) -> TardisResult<()> {
         let model: Model = Model::from_durable_message(topic, message);
         let model: ActiveModel = model.into_active_model();
@@ -42,8 +52,10 @@ impl EventMessageServ {
         let DurableMessageQuery { limit, offset, .. } = query;
         let select = Entity::find()
             .filter(Column::Archived.eq(false))
-            .filter(Column::Time.gte(Utc::now()))
+            .filter(Column::ExpireTime.gte(Utc::now()))
             .filter(Column::Topic.eq(topic.to_string()))
+            // earlier messages in the front
+            .order_by_asc(Column::Time)
             .limit(Some(limit as u64))
             .offset(Some(offset as u64));
         let conn = funs.reldb().conn();
@@ -54,7 +66,7 @@ impl EventMessageServ {
     pub async fn retrieve(&self, topic: TopicCode, message_id: MessageId, funs: &TardisFunsInst) -> TardisResult<DurableMessage> {
         let select = Entity::find()
             .filter(Column::Archived.eq(false))
-            .filter(Column::Time.gte(Utc::now()))
+            .filter(Column::ExpireTime.gte(Utc::now()))
             .filter(Column::Topic.eq(topic.to_string()))
             .filter(Column::MessageId.eq(message_id.to_base64()));
         let conn = funs.reldb().conn();

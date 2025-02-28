@@ -15,7 +15,6 @@ serde.workspace = true
 tardis = { workspace = true, features = [
   "web-server",
   "conf-remote",
-  "cluster",
   "tracing",
 ] }
 bios-iam = { version = "0.2.0", path = "../../supports/iam", features = ["spi_search", "spi_kv", "event"] }

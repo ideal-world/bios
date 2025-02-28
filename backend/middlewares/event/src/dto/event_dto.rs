@@ -4,10 +4,8 @@ use asteroid_mq::prelude::{TopicCode, TopicConfig, TopicOverflowConfig, TopicOve
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher};
 use serde::{Deserialize, Serialize};
 use tardis::{
-    basic::field::TrimString,
     chrono::{DateTime, Utc},
     db::sea_orm::{self, FromQueryResult},
-    serde_json::Value,
     web::poem_openapi,
 };
 pub(crate) fn format_code(code: &impl std::fmt::Display) -> String {
@@ -23,6 +21,7 @@ pub struct EventTopicConfig {
     pub overflow_size: i32,
     #[oai(default)]
     pub check_auth: bool,
+    pub max_payload_size: i32,
 }
 
 impl EventTopicConfig {
@@ -35,6 +34,7 @@ impl EventTopicConfig {
             overflow_policy: self.overflow_policy.unwrap_or("RejectNew".to_string()),
             overflow_size: self.overflow_size.clamp(1, i32::MAX),
             check_auth: self.check_auth,
+            max_payload_size: self.max_payload_size.clamp(1024, i32::MAX),
         }
     }
 }
@@ -49,6 +49,7 @@ pub struct EventTopicAddOrModifyReq {
     pub overflow_size: i32,
     #[oai(default)]
     pub check_auth: bool,
+    pub max_payload_size: i32,
 }
 
 impl EventTopicAddOrModifyReq {
@@ -62,8 +63,9 @@ impl EventTopicAddOrModifyReq {
                     "DropOld" => TopicOverflowPolicy::DropOld,
                     _ => TopicOverflowPolicy::default(),
                 },
-                size: NonZeroU32::new(self.overflow_size.clamp(1, u32::MAX as i32) as u32).expect("clamped"),
+                size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
             }),
+            max_payload_size: self.max_payload_size.clamp(1024, i32::MAX) as u32,
         }
     }
     pub fn from_config(config: TopicConfig) -> Self {
@@ -78,6 +80,7 @@ impl EventTopicAddOrModifyReq {
             }),
             overflow_size: config.overflow_config.as_ref().map_or(0, |c| c.size.get() as i32),
             check_auth: false,
+            max_payload_size: config.max_payload_size as i32,
         }
     }
 }
@@ -92,6 +95,7 @@ pub struct EventTopicInfoResp {
     pub overflow_policy: String,
     pub overflow_size: i32,
     pub check_auth: bool,
+    pub max_payload_size: i32
 }
 
 impl EventTopicInfoResp {
@@ -107,6 +111,7 @@ impl EventTopicInfoResp {
                 },
                 size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
             }),
+            max_payload_size: self.max_payload_size as u32
         }
     }
 }
@@ -133,36 +138,9 @@ impl RbumItemFilterFetcher for EventTopicFilterReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct EventListenerRegisterReq {
-    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
-    pub topic_code: TrimString,
-    pub topic_sk: Option<String>,
-    // #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
-    pub events: Option<Vec<TrimString>>,
-    pub avatars: Vec<TrimString>,
-    pub subscribe_mode: bool,
-}
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct EventRegisterResp {
     pub node_id: String,
     pub expire_at: DateTime<Utc>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct EventListenerInfo {
-    pub topic_code: String,
-    pub subscribe_mode: bool,
-    pub events: Option<Vec<String>>,
-    pub avatars: Vec<String>,
-    pub mgr: bool,
-    pub token: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EventMessageMgrWrap {
-    pub msg: Value,
-    pub ori_from_avatar: String,
-    pub ori_to_avatars: Option<Vec<String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

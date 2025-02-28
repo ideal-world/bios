@@ -98,7 +98,7 @@ impl Model {
             message: Message {
                 header: MessageHeader {
                     message_id: MessageId::from_base64(&self.message_id).map_err(|e| TardisError::internal_error(&e.to_string(), "base-64-decode"))?,
-                    ack_kind: MessageAckExpectKind::try_from_u8(self.ack_kind as u8).expect("valid ack kind"),
+                    ack_kind: MessageAckExpectKind::try_from_u8(self.ack_kind as u8).unwrap_or(MessageAckExpectKind::Sent),
                     target_kind: MessageTargetKind::from(self.target_kind as u8),
                     durability: self.expire_time.map(|expire| MessageDurableConfig {
                         expire,

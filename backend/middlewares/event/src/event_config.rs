@@ -28,6 +28,8 @@ pub struct RaftConfig {
     pub election_timeout_min: u64,
     pub election_timeout_max: u64,
     pub heartbeat_interval: u64,
+    pub snapshot_chunk_size_kb: u64,
+    pub snapshot_chunk_timeout_ms: u64,
 }
 
 impl Default for RaftConfig {
@@ -36,6 +38,8 @@ impl Default for RaftConfig {
             election_timeout_max: 1000,
             election_timeout_min: 500,
             heartbeat_interval: 100,
+            snapshot_chunk_size_kb: 1024 * 3,
+            snapshot_chunk_timeout_ms: 1000,
         }
     }
 }
