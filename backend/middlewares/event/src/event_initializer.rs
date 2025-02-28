@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration, vec};
 
 use asteroid_mq::{
-    prelude::{DurableService, Node, NodeConfig, NodeId},
+    prelude::{DurableService, Node, NodeConfig, NodeId, TopicConfig, TopicOverflowConfig},
     protocol::node::{
         edge::auth::EdgeAuthService,
         raft::cluster::{this_pod_id, K8sClusterProvider, StaticClusterProvider},
@@ -12,7 +12,7 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
 };
-use bios_sdk_invoke::invoke_initializer;
+use bios_sdk_invoke::{clients::event_client::SPI_RPC_TOPIC, invoke_initializer};
 use tardis::{basic::error::TardisError, tracing};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
@@ -138,18 +138,12 @@ async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: Tardis
     mq_node.load_from_durable_service().await.map_err(mq_error)?;
     // it's important to ensure the SPI_RPC_TOPIC is created, many other components depend on it
     // move this to event client initializer
-    // if mq_node.get_topic(&SPI_RPC_TOPIC).is_none() {
-    //     EventTopicServ::add_item(
-    //         &mut EventTopicAddOrModifyReq::from_config(TopicConfig {
-    //             code: SPI_RPC_TOPIC,
-    //             overflow_config: Some(TopicOverflowConfig::new_reject_new(1024)),
-    //             blocking: false,
-    //         }),
-    //         &funs,
-    //         &ctx,
-    //     )
-    //     .await?;
-    // }
+    let _load_spi_topic_result = mq_node.create_new_topic(TopicConfig {
+        code: SPI_RPC_TOPIC,
+        overflow_config: Some(TopicOverflowConfig::new_reject_new(50000)),
+        blocking: false,
+        max_payload_size: 1024 * 1024
+    }).await;
     Ok(())
 }
 
