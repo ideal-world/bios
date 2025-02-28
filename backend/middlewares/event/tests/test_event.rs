@@ -39,7 +39,7 @@ async fn init_data() -> Result<(), Box<dyn std::error::Error>> {
         owner: "test".to_string(),
         ..Default::default()
     };
-    bios_sdk_invoke::clients::event_client::init_client_node(None, Duration::from_secs(1), &ctx, &funs).await;
+    bios_sdk_invoke::clients::event_client::init_ws_client_node(None, Duration::from_secs(1), &ctx, &funs).await;
     let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
     let auth = ctx.to_base64()?;
     tracing::info!(?auth, "auth");
