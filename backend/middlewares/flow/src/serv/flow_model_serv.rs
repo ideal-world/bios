@@ -367,6 +367,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn after_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        let rel_version_ids = FlowModelVersionServ::find_id_items(
+            &FlowModelVersionFilterReq {
+                rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         if modify_req.name.is_some() {
             // 同步修改名称到版本
             for model_id in FlowModelVersionServ::find_id_items(
@@ -395,6 +406,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if modify_req.status == Some(FlowModelStatus::Enabled) && model_detail.current_version_id.is_empty() {
             return Err(funs.err().internal_error("flow_model_serv", "after_modify_item", "Current model is not enabled", "500-flow-model-prohibit-enabled"));
+        }
+        if modify_req.disabled == Some(true) {
+            for rel_version_id in &rel_version_ids {
+                FlowInstServ::unsafe_abort_inst(rel_version_id, funs, ctx).await?;
+            }
         }
         if let Some(rel_template_ids) = &modify_req.rel_template_ids {
             join_all(
@@ -479,20 +495,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             if let Some(disabled) = modify_req.disabled {
                 version_modify_req.disabled = Some(disabled);
             }
-            let rel_version_ids = FlowModelVersionServ::find_id_items(
-                &FlowModelVersionFilterReq {
-                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for rel_version_id in rel_version_ids {
+            for rel_version_id in &rel_version_ids {
                 let mut version_modify_req_clone = version_modify_req.clone();
-                FlowModelVersionServ::modify_item(&rel_version_id, &mut version_modify_req_clone, funs, ctx).await?;
+                FlowModelVersionServ::modify_item(rel_version_id, &mut version_modify_req_clone, funs, ctx).await?;
             }
         }
 
@@ -989,7 +994,7 @@ impl FlowModelServ {
 
         let filter_ids = if template_id.is_none() {
             if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
-                Some(FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await.unwrap_or_default())
+                Some(FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await?.unwrap_or_default())
             } else {
                 Some(vec![])
             }
@@ -1283,7 +1288,7 @@ impl FlowModelServ {
                 "404-flow-inst-rel-model-not-found",
             )
         })?;
-        let model_detail = if let Ok(model_ids) = FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await {
+        let model_detail = if let Some(model_ids) = FlowRelServ::find_model_ids_by_app_id(&app_id, funs, ctx).await? {
             // 引用租户模板的审批流
             Self::find_one_detail_item(
                 &FlowModelFilterReq {
@@ -1385,7 +1390,7 @@ impl FlowModelServ {
             result = FlowModelServ::find_detail_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await.unwrap_or_default()),
+                        ids: Some(FlowRelServ::find_model_ids_by_app_id(Self::get_app_id_by_ctx(ctx).unwrap_or_default().as_str(), funs, ctx).await?.unwrap_or_default()),
                         ignore_scope: true,
                         own_paths: Some("".to_string()),
                         with_sub_own_paths: true,
@@ -1642,8 +1647,24 @@ impl FlowModelServ {
                     continue;
                 }
             }
+            // abort instances with current ctx 
+            let rel_version_ids = FlowModelVersionServ::find_id_items(
+                &FlowModelVersionFilterReq {
+                    rel_model_ids: Some(vec![model.id.clone()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for rel_version_id in rel_version_ids {
+                FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
+            }
             Self::delete_item(&model.id, funs, ctx).await?;
         }
+
         Ok(models)
     }
 

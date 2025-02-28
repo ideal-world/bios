@@ -195,7 +195,7 @@ impl BasicQueryCondInfo {
                                         // 如果字符串可以被序列化为数组，则处理后返回
                                         o.as_array().cloned().unwrap_or(vec![])
                                     } else {
-                                        vec![o]
+                                        vec![check_val.clone()]
                                     }
                                 } else {
                                     vec![check_val.clone()]
@@ -221,7 +221,7 @@ impl BasicQueryCondInfo {
                                         // 如果字符串可以被序列化为数组，则处理后返回
                                         o.as_array().cloned().unwrap_or(vec![])
                                     } else {
-                                        vec![o]
+                                        vec![check_val.clone()]
                                     }
                                 } else {
                                     vec![check_val.clone()]
