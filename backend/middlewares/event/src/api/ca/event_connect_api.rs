@@ -58,7 +58,7 @@ impl EventConnectApi {
                 let Some(connection) = node.get_edge_connection(node_id) else {
                     return;
                 };
-                let _ = connection.finish_signal.recv_async().await;
+                let _ = connection.finish_signal.notified().await;
                 let _ = register_serv.unregister_ctx(node_id).await;
                 tracing::info!(?node_id, "edge disconnected");
             })

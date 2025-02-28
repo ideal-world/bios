@@ -15,6 +15,8 @@ pub struct ScheduleConfig {
     pub distributed_lock_expire_sec: u32,
     /// The expire key prefix of the distributed lock, default "schedual:job:lock:"
     pub distributed_lock_key_prefix: String,
+    /// interval to force sync jobs from database
+    pub force_sync_interval_sec: u32,
 }
 
 impl Default for ScheduleConfig {
@@ -26,6 +28,7 @@ impl Default for ScheduleConfig {
             cache_key_job_changed_info: "spi:job:changed:info:".to_string(),
             cache_key_job_changed_timer_sec: 30,
             distributed_lock_expire_sec: 30,
+            force_sync_interval_sec: 30,
             distributed_lock_key_prefix: "schedual:job:lock:".to_string(),
         }
     }

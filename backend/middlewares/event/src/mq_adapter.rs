@@ -46,7 +46,7 @@ impl Durable for BiosDurableAdapter {
     async fn batch_retrieve(
         &self,
         topic: asteroid_mq::prelude::TopicCode,
-        query: asteroid_mq::protocol::topic::durable_message::DurableMessageQuery,
+        query: asteroid_mq::prelude::DurableMessageQuery,
     ) -> Result<Vec<asteroid_mq::prelude::DurableMessage>, asteroid_mq::prelude::DurableError> {
         self.message_serv.batch_retrieve(topic, query, &self.funs).await.map_err(|e| DurableError::with_source(Self::CONTEXT, e))
     }
