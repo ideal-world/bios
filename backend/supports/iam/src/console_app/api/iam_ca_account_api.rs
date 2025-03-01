@@ -30,7 +30,7 @@ impl IamCaAccountApi {
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::get_account_detail_aggs(&id.0, &IamAccountFilterReq::default(), false, true, &funs, &ctx.0).await?;
+        let result = IamAccountServ::get_account_detail_aggs(&id.0, &IamAccountFilterReq::default(), false, true, false, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

@@ -47,6 +47,7 @@ impl IamSearchClient {
             },
             true,
             true,
+            true,
             funs,
             &mock_ctx,
         )
@@ -159,7 +160,7 @@ impl IamSearchClient {
                     "status": account_resp.status,
                     "temporary":account_resp.temporary,
                     "lock_status": account_resp.lock_status,
-                    "role_id": account_roles,
+                    "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
                     "dept_id": account_resp_dept_id,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
