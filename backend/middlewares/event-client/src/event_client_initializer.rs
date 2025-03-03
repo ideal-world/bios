@@ -1,5 +1,6 @@
 use crate::event_client_config::EventClientConfig;
-use bios_sdk_invoke::clients::event_client::init_client_node;
+use bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::ClientNode;
+use bios_sdk_invoke::clients::event_client::init_ws_client_node;
 use bios_sdk_invoke::invoke_initializer;
 use std::time::Duration;
 use tardis::tracing::{self, instrument};
@@ -22,7 +23,12 @@ pub async fn init() -> TardisResult<()> {
             own_paths: invoke_config.spi_app_id.to_string(),
             ..Default::default()
         };
-        init_client_node(config.max_retry_times, Duration::from_millis(config.retry_duration_ms as u64), &context, &funs).await;
+        #[cfg(feature = "local")]
+        if config.local {
+            bios_sdk_invoke::clients::event_client::init_local_client_node().await?;
+            return Ok(())
+        } 
+        init_ws_client_node(config.max_retry_times, Duration::from_millis(config.retry_duration_ms as u64), &context, &funs).await;
     } else {
         tardis::tracing::info!("event client no enabled");
     }

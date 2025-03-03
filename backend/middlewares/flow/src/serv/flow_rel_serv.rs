@@ -243,21 +243,29 @@ impl FlowRelServ {
         }
     }
 
-    pub async fn find_model_ids_by_app_id(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn find_model_ids_by_app_id(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         let template_id = Self::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, app_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
         if let Some(template_id) = template_id {
-            Ok(Self::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+            Ok(
+                Some (
+                    Self::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec()
+                )
+            )
         } else {
-            Err(funs.err().conflict(&FlowRelKind::FlowAppTemplate.to_string(), "find_models_by_app_id", "rel not found", "404-rel-not-found"))
+            Ok(None)
         }
     }
 
-    pub async fn find_app_ids_by_model_id(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn find_app_ids_by_model_id(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         let template_id = Self::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
         if let Some(template_id) = template_id {
-            Ok(Self::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec())
+            Ok(
+                Some(
+                    Self::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec()
+                )
+            )
         } else {
-            Err(funs.err().conflict(&FlowRelKind::FlowModelTemplate.to_string(), "find_models_by_app_id", "rel not found", "404-rel-not-found"))
+            Ok(None)
         }
     }
 }

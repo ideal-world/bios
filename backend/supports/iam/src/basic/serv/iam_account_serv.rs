@@ -459,6 +459,7 @@ impl IamAccountServ {
         filter: &IamAccountFilterReq,
         use_sys_org: bool,
         use_sys_cert: bool,
+        skip_filter_role: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<IamAccountDetailAggResp> {
@@ -471,31 +472,57 @@ impl IamAccountServ {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
-        let roles = IamRoleServ::find_items(
-            &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: false,
-                    rel_ctx_owner: false,
-                    with_sub_own_paths: true,
-                    enabled: Some(true),
+        let roles = if skip_filter_role {
+            IamRoleServ::find_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        optional: false,
+                        tag: Some(IamRelKind::IamAccountRole.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 },
-                rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: false,
-                    optional: false,
-                    tag: Some(IamRelKind::IamAccountRole.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(account.id.clone()),
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+        } else {
+            IamRoleServ::find_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_ctx_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        optional: false,
+                        tag: Some(IamRelKind::IamAccountRole.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
                     ..Default::default()
-                }),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+        }; 
 
         let enabled_apps = IamAppServ::find_items(
             &IamAppFilterReq {
@@ -561,7 +588,7 @@ impl IamAccountServ {
             temporary: account.temporary,
             lock_status: account.lock_status,
             icon: account.icon,
-            roles: roles.iter().filter(|r| r.own_paths == ctx.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
+            roles: roles.iter().filter(|r| skip_filter_role || r.own_paths == ctx.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
             apps,
             groups,
             certs: IamCertServ::find_certs(
@@ -701,6 +728,7 @@ impl IamAccountServ {
                 },
                 false,
                 true,
+                false,
                 funs,
                 &tenant_ctx,
             )

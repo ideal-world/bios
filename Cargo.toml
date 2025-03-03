@@ -65,10 +65,12 @@ testcontainers-modules = {version = "0.11", features = ["redis"]}
 # tardis = { version = "0.1.0-rc.17" }
 # tardis = { version = "0.2.0", path = "../tardis/tardis" }
 tardis = {git = "https://gitee.com/ideal-world/tardis.git", rev = "aeb4c85"}
-# asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "ed5811b" }
-asteroid-mq = {version = "0.1.0-alpha.10"}
-# asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "ed5811b" }
-asteroid-mq-sdk = {version = "0.1.0-alpha.10"}
+# asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "f1412ce" }
+# asteroid-mq = { path = "../asteroid/asteroid-mq/server" }
+asteroid-mq = {version = "0.1.0-alpha.15"}
+# asteroid-mq-sdk = { git = "https://github.com/4t145/asteroid-mq.git", rev = "f1412ce" }
+# asteroid-mq-sdk = { path = "../asteroid/asteroid-mq/sdk/rust"  }
+asteroid-mq-sdk = {version = "0.1.0-alpha.15"}
 #spacegate
 
 # spacegate-shell = { version = "0.2.0-alpha.2", path = "../spacegate/crates/shell", features = [

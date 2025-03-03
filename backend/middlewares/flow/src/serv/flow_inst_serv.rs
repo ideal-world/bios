@@ -2077,19 +2077,25 @@ impl FlowInstServ {
             inst_artifacts.curr_vars = Some(curr_vars.clone());
         }
         if let Some((referral_account_id, master_account_ids)) = &modify_artifacts.add_referral_map {
-            let current_referral_map = inst_artifacts.referral_map.entry(inst.current_state_id.clone()).or_default();
+            let mut referral_map = inst_artifacts.referral_map.clone().unwrap_or_default();
+            let current_referral_map = referral_map.entry(inst.current_state_id.clone()).or_default();
             let current_referral_account_ids = current_referral_map.entry(referral_account_id.clone()).or_insert(vec![]);
             current_referral_account_ids.clear();
             for master_account_id in master_account_ids {
                 current_referral_account_ids.push(master_account_id.clone());
             }
+            inst_artifacts.referral_map = Some(referral_map);
         }
         if let Some(remove_account_id) = &modify_artifacts.remove_referral_map {
-            let current_referral_map = inst_artifacts.referral_map.entry(inst.current_state_id.clone()).or_default();
+            let mut referral_map = inst_artifacts.referral_map.clone().unwrap_or_default();
+            let current_referral_map = referral_map.entry(inst.current_state_id.clone()).or_default();
             current_referral_map.remove(remove_account_id);
+            inst_artifacts.referral_map = Some(referral_map);
         }
         if let Some(state_id) = &modify_artifacts.clear_referral_map {
-            inst_artifacts.referral_map.remove(state_id);
+            let mut referral_map = inst_artifacts.referral_map.clone().unwrap_or_default();
+            referral_map.remove(state_id);
+            inst_artifacts.referral_map = Some(referral_map);
         }
         let flow_inst = flow_inst::ActiveModel {
             id: Set(inst.id.clone()),
@@ -2117,7 +2123,7 @@ impl FlowInstServ {
                     let artifacts = artifacts.clone().unwrap_or_default();
                     if !finish
                         && (artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
-                            || artifacts.referral_map.get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
+                            || artifacts.referral_map.clone().unwrap_or_default().get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
                         && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
                     {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
@@ -2138,10 +2144,8 @@ impl FlowInstServ {
                     let mut operators = HashMap::new();
                     let artifacts = artifacts.clone().unwrap_or_default();
                     if !finish {
-                        if (
-                            artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
-                                || artifacts.referral_map.get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
-                        )
+                        if (artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
+                            || artifacts.referral_map.clone().unwrap_or_default().get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
                             && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
                         {
                             operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
@@ -2238,7 +2242,7 @@ impl FlowInstServ {
                     prohibit_guard_by_spec_account_ids.push(ctx.owner.clone());
                     modify_artifacts.prohibit_guard_conf_account_ids = Some(prohibit_guard_by_spec_account_ids);
 
-                    let mut master_account_ids = if let Some(current_referral_map) = artifacts.referral_map.get(&inst.current_state_id) {
+                    let mut master_account_ids = if let Some(current_referral_map) = artifacts.referral_map.clone().unwrap_or_default().get(&inst.current_state_id) {
                         modify_artifacts.remove_referral_map = Some(ctx.owner.clone());
                         current_referral_map.get(&operator).cloned().unwrap_or_default()
                     } else {
@@ -2339,7 +2343,10 @@ impl FlowInstServ {
             // 通过
             FlowStateOperatorKind::Pass => {
                 let curr_operators = artifacts.curr_operators.unwrap_or_default();
-                if !curr_operators.contains(&ctx.owner) && !artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                let referral_map = artifacts.referral_map.clone().unwrap_or_default();
+                if !curr_operators.contains(&ctx.owner)
+                    && !referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
+                {
                     return Err(funs.err().internal_error("flow_inst_serv", "operate", "flow inst operate failed", "500-flow-inst-operate-prohibited"));
                 }
                 if curr_operators.contains(&ctx.owner) {
@@ -2355,8 +2362,8 @@ impl FlowInstServ {
                     )
                     .await?;
                 }
-                if artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
-                    if let Some(current_referral_map) = artifacts.referral_map.get(&inst.current_state_id) {
+                if referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                    if let Some(current_referral_map) = referral_map.get(&inst.current_state_id) {
                         let master_account_ids = current_referral_map.get(&ctx.owner).cloned().unwrap_or_default();
                         for master_account_id in master_account_ids {
                             Self::modify_inst_artifacts(
@@ -2433,7 +2440,10 @@ impl FlowInstServ {
             // 拒绝
             FlowStateOperatorKind::Overrule => {
                 let curr_operators = artifacts.curr_operators.unwrap_or_default();
-                if !curr_operators.contains(&ctx.owner) && !artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                let referral_map = artifacts.referral_map.unwrap_or_default();
+                if !curr_operators.contains(&ctx.owner)
+                    && !referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
+                {
                     return Err(funs.err().internal_error("flow_inst_serv", "operate", "flow inst operate failed", "500-flow-inst-operate-prohibited"));
                 }
                 if curr_operators.contains(&ctx.owner) {
@@ -2449,8 +2459,8 @@ impl FlowInstServ {
                     )
                     .await?;
                 }
-                if artifacts.referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
-                    if let Some(current_referral_map) = artifacts.referral_map.get(&inst.current_state_id) {
+                if referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                    if let Some(current_referral_map) = referral_map.get(&inst.current_state_id) {
                         let master_account_ids = current_referral_map.get(&ctx.owner).cloned().unwrap_or_default();
                         for master_account_id in master_account_ids {
                             Self::modify_inst_artifacts(
@@ -2784,7 +2794,7 @@ impl FlowInstServ {
             state: String,
         }
         let mut page_num = 1;
-        let page_size = 50;
+        let page_size = 500;
         loop {
             let mut finish = true;
             let search_tags = FlowSearchClient::get_tag_search_map().values().cloned().collect_vec();
@@ -2820,11 +2830,9 @@ impl FlowInstServ {
                     let insts = search_result
                         .records
                         .iter()
-                        .map(|record| {
-                            FlowInstResult {
-                                id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
-                                state: record.ext.get("status").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
-                            }
+                        .map(|record| FlowInstResult {
+                            id: record.ext.get("inst_id").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
+                            state: record.ext.get("status").unwrap_or(&json!("")).as_str().map(|s| s.to_string()).unwrap_or_default(),
                         })
                         .filter(|record| !record.id.is_empty())
                         .collect_vec();

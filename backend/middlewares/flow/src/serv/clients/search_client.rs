@@ -252,7 +252,7 @@ impl FlowSearchClient {
                     "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
                     "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
                     "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
-                    "curr_referral": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.referral_map.get(&inst_resp.current_state_id).cloned().unwrap_or_default().keys().cloned().collect_vec()),
+                    "curr_referral": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.referral_map.clone().unwrap_or_default().get(&inst_resp.current_state_id).cloned().unwrap_or_default().keys().cloned().collect_vec()),
                     "tenant_id": tenant.clone(),
                     "app_id": app.clone(),
                 })),

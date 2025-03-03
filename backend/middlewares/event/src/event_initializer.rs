@@ -10,7 +10,7 @@ use asteroid_mq::{
 use bios_basic::rbum::{
     dto::{rbum_domain_dto::RbumDomainAddReq, rbum_kind_dto::RbumKindAddReq},
     rbum_enumeration::RbumScopeLevelKind,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_kind_serv::RbumKindServ},
 };
 use bios_sdk_invoke::{clients::event_client::SPI_RPC_TOPIC, invoke_initializer};
 use tardis::{basic::error::TardisError, tracing};
@@ -25,14 +25,13 @@ use tardis::{
 use crate::{
     api::{
         ca::{event_connect_api, event_register_api},
-        ci::event_topic_api,
+        ci::{event_message_api, event_topic_api},
     },
     domain::{event_auth, event_message, event_topic},
-    dto::event_dto::EventTopicAddOrModifyReq,
     event_config::{EventConfig, EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
     mq_adapter::{BiosDurableAdapter, BiosEdgeAuthAdapter},
-    serv::{event_register_serv, event_topic_serv::EventTopicServ},
+    serv::event_register_serv,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -120,6 +119,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
             DOMAIN_CODE,
             (
                 event_topic_api::EventTopicApi,
+                event_message_api::EventMessageApi,
                 event_connect_api::EventConnectApi {
                     register_serv: register_serv.clone(),
                 },
@@ -137,18 +137,13 @@ async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: Tardis
     let mq_node = init_mq_node(config, funs.clone(), &ctx).await;
     mq_node.load_from_durable_service().await.map_err(mq_error)?;
     // it's important to ensure the SPI_RPC_TOPIC is created, many other components depend on it
-    if mq_node.get_topic(&SPI_RPC_TOPIC).is_none() {
-        EventTopicServ::add_item(
-            &mut EventTopicAddOrModifyReq::from_config(TopicConfig {
-                code: SPI_RPC_TOPIC,
-                overflow_config: Some(TopicOverflowConfig::new_reject_new(1024)),
-                blocking: false,
-            }),
-            &funs,
-            &ctx,
-        )
-        .await?;
-    }
+    // move this to event client initializer
+    let _load_spi_topic_result = mq_node.create_new_topic(TopicConfig {
+        code: SPI_RPC_TOPIC,
+        overflow_config: Some(TopicOverflowConfig::new_reject_new(50000)),
+        blocking: false,
+        max_payload_size: 1024 * 1024
+    }).await;
     Ok(())
 }
 
@@ -162,6 +157,8 @@ pub async fn init_mq_node(config: &EventConfig, funs: Arc<TardisFunsInst>, ctx: 
             election_timeout_min: raft_config.election_timeout_min,
             election_timeout_max: raft_config.election_timeout_max,
             heartbeat_interval: raft_config.heartbeat_interval,
+            snapshot_max_chunk_size: raft_config.snapshot_chunk_size_kb * 1024,
+            install_snapshot_timeout: raft_config.snapshot_chunk_timeout_ms,
             ..Default::default()
         };
         let node = match config.cluster.as_deref() {
