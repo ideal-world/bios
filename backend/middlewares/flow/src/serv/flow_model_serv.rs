@@ -362,6 +362,21 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(mut modify_version) = modify_req.modify_version.clone() {
             FlowModelVersionServ::modify_item(&current_model.current_version_id, &mut modify_version, funs, ctx).await?;
         }
+        if modify_req.status == Some(FlowModelStatus::Enabled) && current_model.current_version_id.is_empty() {
+            modify_req.current_version_id = FlowModelVersionServ::find_id_items(
+                &FlowModelVersionFilterReq {
+                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .first()
+            .cloned();
+        }
         Ok(())
     }
 
@@ -558,9 +573,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             ctx,
         )
         .await?;
-        for rel_version_id in rel_version_ids {
-            FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
-            FlowModelVersionServ::delete_item(&rel_version_id, funs, ctx).await?;
+        for rel_version_id in &rel_version_ids {
+            FlowInstServ::unsafe_abort_inst(rel_version_id, funs, ctx).await?;
+        }
+        for rel_version_id in &rel_version_ids {
+            FlowModelVersionServ::delete_item(rel_version_id, funs, ctx).await?;
         }
 
         Ok(Some(detail))
@@ -1647,7 +1664,7 @@ impl FlowModelServ {
                     continue;
                 }
             }
-            // abort instances with current ctx 
+            // abort instances with current ctx
             let rel_version_ids = FlowModelVersionServ::find_id_items(
                 &FlowModelVersionFilterReq {
                     rel_model_ids: Some(vec![model.id.clone()]),

@@ -12,10 +12,14 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    db::sea_orm::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
-    }, log::debug, serde_json::json, TardisFuns, TardisFunsInst
+    },
+    log::debug,
+    serde_json::json,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{

@@ -522,7 +522,7 @@ impl IamAccountServ {
                 ctx,
             )
             .await?
-        }; 
+        };
 
         let enabled_apps = IamAppServ::find_items(
             &IamAppFilterReq {

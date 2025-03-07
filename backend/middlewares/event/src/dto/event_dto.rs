@@ -95,7 +95,7 @@ pub struct EventTopicInfoResp {
     pub overflow_policy: String,
     pub overflow_size: i32,
     pub check_auth: bool,
-    pub max_payload_size: i32
+    pub max_payload_size: i32,
 }
 
 impl EventTopicInfoResp {
@@ -111,7 +111,7 @@ impl EventTopicInfoResp {
                 },
                 size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
             }),
-            max_payload_size: self.max_payload_size as u32
+            max_payload_size: self.max_payload_size as u32,
         }
     }
 }

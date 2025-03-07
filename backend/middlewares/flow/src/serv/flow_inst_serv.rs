@@ -1655,45 +1655,62 @@ impl FlowInstServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
-        let transition_ids = Self::do_find_next_transitions(&flow_inst_detail, None, &None, HashMap::default(), false, funs, ctx)
+        match Self::find_auto_transition(&flow_inst_detail, funs, ctx).await {
+            Ok(auto_transition) => {
+                if let Some(auto_transition) = auto_transition {
+                    Self::transfer(
+                        &flow_inst_detail,
+                        &FlowInstTransferReq {
+                            flow_transition_id: auto_transition.id,
+                            message: None,
+                            vars: None,
+                        },
+                        false,
+                        FlowExternalCallbackOp::Auto,
+                        modified_instance_transations.clone(),
+                        ctx,
+                        funs,
+                    )
+                    .await?;
+                } else {
+                    Self::abort(&flow_inst_detail.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+                }
+                Ok(())
+            }, 
+            Err(e) => {
+                if e.code == "404".to_string() {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+
+            }
+        }
+    }
+
+    // 获取自动流转节点
+    async fn find_auto_transition(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowTransitionDetailResp>> {
+        let transition_ids = Self::do_find_next_transitions(flow_inst_detail, None, &None, HashMap::default(), false, funs, ctx)
             .await?
             .next_flow_transitions
             .into_iter()
             .map(|tran| tran.next_flow_transition_id)
             .collect_vec();
         let mut original_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
-        original_vars.extend(Self::get_modify_vars(&flow_inst_detail));
+        original_vars.extend(Self::get_modify_vars(flow_inst_detail));
         let check_vars = BasicQueryCondInfo::transform(original_vars)?;
 
         let auto_transitions =
             FlowTransitionServ::find_detail_items(transition_ids, None, None, funs, ctx).await?.into_iter().filter(|transition| transition.transfer_by_auto).collect_vec();
-        if !auto_transitions.is_empty() {
-            if let Some(auto_transition) = auto_transitions.into_iter().find(|transition| {
-                (transition.transfer_by_auto && transition.guard_by_other_conds().is_none())
-                    || (transition.transfer_by_auto
-                        && transition.guard_by_other_conds().is_some()
-                        && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap_or_default(), &check_vars).unwrap_or(true))
-            }) {
-                Self::transfer(
-                    &flow_inst_detail,
-                    &FlowInstTransferReq {
-                        flow_transition_id: auto_transition.id,
-                        message: None,
-                        vars: None,
-                    },
-                    false,
-                    FlowExternalCallbackOp::Auto,
-                    modified_instance_transations.clone(),
-                    ctx,
-                    funs,
-                )
-                .await?;
-            } else {
-                Self::abort(&flow_inst_detail.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
-            }
+        if auto_transitions.is_empty() {
+            return Err(funs.err().not_found("flow_inst", "find_auto_transition", "auto transition not found", "404-flow-transition-not-found"));
         }
-
-        Ok(())
+        Ok(auto_transitions.into_iter().find(|transition| {
+            (transition.transfer_by_auto && transition.guard_by_other_conds().is_none())
+                || (transition.transfer_by_auto
+                    && transition.guard_by_other_conds().is_some()
+                    && BasicQueryCondInfo::check_or_and_conds(&transition.guard_by_other_conds().unwrap_or_default(), &check_vars).unwrap_or(true))
+        }))
     }
 
     // 当进入该节点时
@@ -1758,7 +1775,6 @@ impl FlowInstServ {
                         .collect::<Vec<_>>();
                 }
                 modify_req.curr_operators = Some(FlowSearchClient::search_guard_accounts(&guard_custom_conf, funs, ctx).await?);
-                modify_req.prohibit_guard_conf_account_ids = Some(vec![]);
                 modify_req.state = Some(FlowInstStateKind::Form);
                 Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
                 // 当操作人为空时的逻辑
@@ -1801,7 +1817,6 @@ impl FlowInstServ {
                         FlowStatusAutoStrategyKind::SpecifyAgent => {
                             modify_req.curr_operators =
                                 Some(FlowSearchClient::search_guard_accounts(&form_conf.auto_transfer_when_empty_guard_custom_conf.clone().unwrap_or_default(), funs, ctx).await?);
-                            modify_req.prohibit_guard_conf_account_ids = Some(vec![]);
                             Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
                         }
                         FlowStatusAutoStrategyKind::TransferState => {
@@ -1855,7 +1870,6 @@ impl FlowInstServ {
                 let curr_approval_total = guard_accounts.len();
                 modify_req.curr_approval_total = Some(curr_approval_total);
                 modify_req.curr_operators = Some(guard_accounts);
-                modify_req.prohibit_guard_conf_account_ids = Some(vec![]);
                 modify_req.state = Some(FlowInstStateKind::Approval);
 
                 Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
@@ -1903,7 +1917,6 @@ impl FlowInstServ {
                             let guard_accounts = FlowSearchClient::search_guard_accounts(&auto_transfer_when_empty_guard_custom_conf, funs, ctx).await?;
                             modify_req.curr_approval_total = Some(guard_accounts.len());
                             modify_req.curr_operators = Some(guard_accounts);
-                            modify_req.prohibit_guard_conf_account_ids = Some(vec![]);
                             Self::modify_inst_artifacts(&flow_inst_detail.id, &modify_req, funs, ctx).await?;
                         }
                         FlowStatusAutoStrategyKind::TransferState => {
@@ -2041,9 +2054,6 @@ impl FlowInstServ {
                 inst_artifacts.his_operators = Some(his_operators);
             }
         }
-        if let Some(prohibit_guard_conf_account_ids) = &modify_artifacts.prohibit_guard_conf_account_ids {
-            inst_artifacts.prohibit_guard_by_spec_account_ids = Some(prohibit_guard_conf_account_ids.clone());
-        }
         if let Some((add_approval_account_id, add_approval_result)) = &modify_artifacts.add_approval_result {
             let current_state_result = inst_artifacts.approval_result.entry(inst.current_state_id.clone()).or_default();
             let current_account_ids = current_state_result.entry(add_approval_result.to_string()).or_default();
@@ -2123,8 +2133,12 @@ impl FlowInstServ {
                     let artifacts = artifacts.clone().unwrap_or_default();
                     if !finish
                         && (artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
-                            || artifacts.referral_map.clone().unwrap_or_default().get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
-                        && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
+                            || artifacts
+                                .referral_map
+                                .clone()
+                                .unwrap_or_default()
+                                .get(state_id)
+                                .map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
                     {
                         operators.insert(FlowStateOperatorKind::Submit, form.submit_btn_name.clone());
                         if form.referral {
@@ -2145,8 +2159,12 @@ impl FlowInstServ {
                     let artifacts = artifacts.clone().unwrap_or_default();
                     if !finish {
                         if (artifacts.curr_operators.clone().unwrap_or_default().contains(&ctx.owner)
-                            || artifacts.referral_map.clone().unwrap_or_default().get(state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
-                            && !artifacts.prohibit_guard_by_spec_account_ids.clone().unwrap_or_default().contains(&ctx.owner)
+                            || artifacts
+                                .referral_map
+                                .clone()
+                                .unwrap_or_default()
+                                .get(state_id)
+                                .map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)))
                         {
                             operators.insert(FlowStateOperatorKind::Pass, approval.pass_btn_name.clone());
                             operators.insert(FlowStateOperatorKind::Overrule, approval.overrule_btn_name.clone());
@@ -2235,12 +2253,8 @@ impl FlowInstServ {
                     }
                     let mut modify_artifacts = FlowInstArtifactsModifyReq::default();
                     let mut curr_operators = artifacts.curr_operators.clone().unwrap_or_default();
-                    let mut prohibit_guard_by_spec_account_ids = artifacts.prohibit_guard_by_spec_account_ids.unwrap_or_default();
                     curr_operators = curr_operators.into_iter().filter(|account_id| *account_id != ctx.owner.clone()).collect_vec();
                     modify_artifacts.curr_operators = Some(curr_operators);
-                    prohibit_guard_by_spec_account_ids = prohibit_guard_by_spec_account_ids.into_iter().filter(|account_id| *account_id != operator.clone()).collect_vec();
-                    prohibit_guard_by_spec_account_ids.push(ctx.owner.clone());
-                    modify_artifacts.prohibit_guard_conf_account_ids = Some(prohibit_guard_by_spec_account_ids);
 
                     let mut master_account_ids = if let Some(current_referral_map) = artifacts.referral_map.clone().unwrap_or_default().get(&inst.current_state_id) {
                         modify_artifacts.remove_referral_map = Some(ctx.owner.clone());

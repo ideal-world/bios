@@ -237,24 +237,22 @@ pub struct FLowInstStateApprovalConf {
 // 流程实例中对应的数据存储
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
-    pub his_operators: Option<Vec<String>>,                             // 历史操作人
-    pub curr_operators: Option<Vec<String>>,                            // 当前操作人
-    pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
-    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
-    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>,    // 当前转审映射 key: 代操作用户, value: 主操作用户
-    pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
-    pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
-    pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
-    pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
-    pub state: Option<FlowInstStateKind>,                               // 状态
+    pub his_operators: Option<Vec<String>>,                                  // 历史操作人
+    pub curr_operators: Option<Vec<String>>,                                 // 当前操作人
+    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>,      // 当前审批结果
+    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>, // 当前转审映射 key: 代操作用户, value: 主操作用户
+    pub approval_total: Option<HashMap<String, usize>>,                      // 审批总数
+    pub form_state_map: HashMap<String, HashMap<String, Value>>,             // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub curr_vars: Option<HashMap<String, Value>>,                           // 当前参数列表
+    pub prev_non_auto_state_id: Option<Vec<String>>,                         // 上一个非自动节点ID列表
+    pub prev_non_auto_account_id: Option<String>,                            // 上一个节点操作人ID
+    pub state: Option<FlowInstStateKind>,                                    // 状态
 }
 
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
     pub state: Option<FlowInstStateKind>,
-    pub prohibit_guard_conf_account_ids: Option<Vec<String>>,          // 禁止操作人ID列表
     pub add_his_operator: Option<String>,                              // 添加历史操作人
     pub curr_operators: Option<Vec<String>>,                           // 更新操作人列表
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
