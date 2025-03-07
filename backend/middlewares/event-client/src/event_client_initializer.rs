@@ -1,4 +1,5 @@
 use crate::event_client_config::EventClientConfig;
+use bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::ClientNode;
 use bios_sdk_invoke::clients::event_client::init_ws_client_node;
 use bios_sdk_invoke::invoke_initializer;
 use std::time::Duration;

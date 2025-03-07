@@ -43,6 +43,9 @@ where
     const BROADCAST: bool = T::BROADCAST;
     const EXPECT_ACK_KIND: MessageAckExpectKind = T::EXPECT_ACK_KIND;
     const SUBJECT: asteroid_mq_sdk::model::Subject = T::SUBJECT;
+    fn durable_config() -> Option<MessageDurableConfig> {
+        T::durable_config()
+    }
 }
 
 impl<T> ContextEvent<T> {
@@ -206,8 +209,7 @@ pub async fn create_ws_client_node(ctx: &TardisContext, funs: &TardisFunsInst) -
     Ok(node)
 }
 
-
-#[cfg(feature="event-local")]
+#[cfg(feature = "event-local")]
 pub async fn init_local_client_node() -> TardisResult<()> {
     use asteroid_mq::prelude::Node;
     if let Some(server_node) = TardisFuns::store().get_singleton::<Node>() {
@@ -223,7 +225,6 @@ pub async fn init_ws_client_node(max_retry: Option<usize>, retry_duration: std::
     let mut retry = 0;
     loop {
         match create_ws_client_node(ctx, funs).await {
-
             Ok(node) => {
                 TardisFuns::store().insert_singleton(node);
                 tardis::tracing::info!("create client node success");
