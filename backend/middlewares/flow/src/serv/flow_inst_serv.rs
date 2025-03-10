@@ -1678,12 +1678,11 @@ impl FlowInstServ {
                 Ok(())
             }, 
             Err(e) => {
-                if e.code == "404".to_string() {
+                if e.code == *"404-flow-flow_inst-find_auto_transition" {
                     Ok(())
                 } else {
                     Err(e)
                 }
-
             }
         }
     }
