@@ -2129,7 +2129,10 @@ impl FlowInstServ {
             FlowModelRelTransitionKind::Delete => {
                 FlowExternalServ::do_delete_rel_obj(tag, rel_business_obj_id, &inst_id, ctx, funs).await?;
             }
-            FlowModelRelTransitionKind::Related => {}
+            FlowModelRelTransitionKind::Related => {
+                let vars_collect = Self::get_modify_vars(artifacts, state_ids);
+                FlowExternalServ::do_update_related_obj(tag, rel_business_obj_id, &inst_id, &vars_collect, ctx, funs).await?;
+            }
             FlowModelRelTransitionKind::Transfer(tran) => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);
                 let params = vars_collect

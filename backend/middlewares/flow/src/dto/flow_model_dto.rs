@@ -220,7 +220,8 @@ impl From<FlowModelRelTransitionExt> for FlowModelRelTransitionKind {
         match value.id.as_str() {
             "__EDIT__" => Self::Edit,
             "__DELETE__" => Self::Delete,
-            "__RELATED__" => Self::Related,
+            "__REQRELATED__" => Self::Related,
+            "__TASKRELATED__" => Self::Related,
             _ => Self::Transfer(value),
         }
     }

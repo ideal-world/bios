@@ -187,6 +187,9 @@ pub struct FlowExternalQueryFieldResp {
 pub struct FlowExternalDeleteRelObjResp {}
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalUpdateRelationshipResp {}
+
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchAuthAccountResp {
     pub account_ids: Vec<String>,
 }
