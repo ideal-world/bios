@@ -17,7 +17,6 @@ use tardis::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
     },
-    log::debug,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };

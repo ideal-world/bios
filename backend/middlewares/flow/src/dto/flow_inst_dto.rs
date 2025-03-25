@@ -23,6 +23,8 @@ pub struct FlowInstStartReq {
     pub tag: String,
     /// 创建时的参数列表
     pub create_vars: Option<HashMap<String, Value>>,
+    /// 创建时的参数列表
+    pub check_vars: Option<HashMap<String, Value>>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
     /// 创建时修改的参数列表
@@ -141,6 +143,8 @@ pub struct FlowInstDetailResp {
     pub rel_flow_model_name: String,
     /// 关联业务ID
     pub rel_business_obj_id: String,
+    /// 关联动作ID
+    pub rel_transition_id: Option<String>,
 
     pub tag: String,
 

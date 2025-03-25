@@ -22,6 +22,10 @@ pub struct Model {
     #[index]
     pub rel_business_obj_id: String,
 
+    /// Business object Id / 关联的动作Id
+    #[index]
+    pub rel_transition_id: Option<String>,
+
     /// Whether master workflow / 是否主流程
     #[index]
     pub main: bool,

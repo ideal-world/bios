@@ -66,6 +66,9 @@ impl MockApi {
             FlowExternalKind::FetchAuthAccount => {
                 json!(FlowExternalFetchAuthAccountResp { account_ids: vec![] })
             }
+            FlowExternalKind::UpdateRelationship => {
+                json!(FlowExternalFetchAuthAccountResp { account_ids: vec![] })
+            }
         };
         MockResp::ok(result)
     }

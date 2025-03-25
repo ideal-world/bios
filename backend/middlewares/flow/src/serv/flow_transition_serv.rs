@@ -469,7 +469,7 @@ impl FlowTransitionServ {
 
     // 获取动作关联模型
     pub async fn find_rel_model_map(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let mut rel_transitons = HashMap::new();
+        let mut rel_transitions = HashMap::new();
         let rel_template_id = if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(ctx) {
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
         } else {
@@ -499,10 +499,10 @@ impl FlowTransitionServ {
         for rel_model_id in rel_model_ids {
             let transition_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
             if let Some(transition_id) = transition_id {
-                rel_transitons.insert(transition_id, rel_model_id.clone());
+                rel_transitions.insert(transition_id, rel_model_id.clone());
             }
         }
 
-        Ok(rel_transitons)
+        Ok(rel_transitions)
     }
 }

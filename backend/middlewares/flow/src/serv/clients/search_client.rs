@@ -21,7 +21,7 @@ use tardis::{
 use crate::{
     dto::{
         flow_inst_dto::FlowInstDetailResp,
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionKind},
         flow_state_dto::FlowGuardConf,
     },
     flow_constants,
@@ -249,7 +249,7 @@ impl FlowSearchClient {
                     "finish_time": inst_resp.finish_time,
                     "op_time": inst_resp.update_time,
                     "state": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.state.clone().unwrap_or_default()),
-                    "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
+                    "rel_transition": FlowModelRelTransitionKind::from(inst_resp.rel_transition.clone().unwrap_or_default()).to_string(),
                     "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
                     "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
                     "curr_referral": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.referral_map.clone().unwrap_or_default().get(&inst_resp.current_state_id).cloned().unwrap_or_default().keys().cloned().collect_vec()),
@@ -288,7 +288,7 @@ impl FlowSearchClient {
                     "finish_time": inst_resp.finish_time,
                     "op_time": inst_resp.update_time,
                     "state": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.state.clone().unwrap_or_default()),
-                    "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
+                    "rel_transition": FlowModelRelTransitionKind::from(inst_resp.rel_transition.clone().unwrap_or_default()).to_string(),
                     "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
                     "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
                     "tenant_id": tenant.clone(),

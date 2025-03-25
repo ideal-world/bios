@@ -231,6 +231,7 @@ impl FlowCiInstApi {
                     rel_business_obj_id: add_req.0.rel_business_obj_id.clone(),
                     tag: add_req.0.tag.clone(),
                     create_vars: add_req.0.create_vars.clone(),
+                    check_vars: None,
                     transition_id: None,
                     vars: None,
                     log_text: None,
