@@ -66,7 +66,7 @@ csrf = "=0.4.1"
 # tardis
 # tardis = { version = "0.1.0-rc.17" }
 # tardis = { version = "0.2.0", path = "../tardis/tardis" }
-tardis = {git = "https://gitee.com/ideal-world/tardis.git", rev = "c8a8730"}
+tardis = {git = "https://gitee.com/ideal-world/tardis.git", rev = "aeb4c85"}
 # asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "f1412ce" }
 # asteroid-mq = { path = "../asteroid/asteroid-mq/server" }
 asteroid-mq = {version = "0.1.0-alpha.15"}
