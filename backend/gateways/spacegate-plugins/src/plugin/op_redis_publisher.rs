@@ -86,7 +86,7 @@ impl Plugin for RedisPublisherPlugin {
                 let mut conn = client.get_conn().await;
                 match serde_json::to_string(&content) {
                     Ok(v) => {
-                        match script.key(&key).arg(v).invoke_async::<_, bool>(&mut conn).await {
+                        match script.key(&key).arg(v).invoke_async::<bool>(&mut conn).await {
                             Ok(_) => {
                                 log::trace!("[Plugin.OPRedisPublisher]Publish channel:{key} success")
                             }

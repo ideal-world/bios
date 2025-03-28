@@ -1,6 +1,6 @@
 #![warn(clippy::unwrap_used)]
 
-pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, bios_error_limit, content_filter, ip_time, rewrite_ns_b_ip};
+pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, bios_error_limit, content_filter, ip_time, rewrite_ns_b_ip, license};
 
 mod consts;
 mod extension;
@@ -22,4 +22,5 @@ pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<notify::NotifyPlugin>();
     repo.register::<content_filter::ContentFilterPlugin>();
     repo.register::<bios_error_limit::BiosErrorLimitPlugin>();
+    repo.register::<license::LicensePlugin>();
 }
