@@ -3,4 +3,7 @@ pub mod iam_app;
 pub mod iam_config;
 pub mod iam_res;
 pub mod iam_role;
+pub mod iam_sub_deploy;
+pub mod iam_sub_deploy_host;
+pub mod iam_sub_deploy_license;
 pub mod iam_tenant;

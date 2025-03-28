@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
@@ -135,6 +133,9 @@ impl IamRelServ {
         }
         if rel_kind == &IamRelKind::IamAccountApp {
             IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
+        }
+        if rel_kind == &IamRelKind::IamSubDeployAccount {
+            IamSearchClient::async_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
         }
 
         if rel_kind == &IamRelKind::IamResRole {
@@ -573,6 +574,9 @@ impl IamRelServ {
             }
             IamRelKind::IamAccountRel => {
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
+            }
+            IamRelKind::IamSubDeployAccount => {
+                IamSearchClient::async_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             _ => {}
         }

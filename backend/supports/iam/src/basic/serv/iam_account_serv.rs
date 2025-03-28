@@ -236,6 +236,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
         }
+        if let Some(rbum_item_rel_filter_req) = &filter.rel3 {
+            Self::package_rel(query, Alias::new("rbum_rel3"), rbum_item_rel_filter_req);
+        }
         if let Some(set_rel) = &filter.set_rel {
             Self::package_set_rel(query, Alias::new("rbum_set_rel"), set_rel);
         }
@@ -522,7 +525,7 @@ impl IamAccountServ {
                 ctx,
             )
             .await?
-        }; 
+        };
 
         let enabled_apps = IamAppServ::find_items(
             &IamAppFilterReq {
