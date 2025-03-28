@@ -5,21 +5,23 @@
 
 use std::sync::{Arc, OnceLock};
 
-use ed25519_dalek::VerifyingKey;
 use http::{header::CONTENT_TYPE, HeaderValue, StatusCode};
+use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::body::Bytes,
+    kernel::extension::PeerAddr,
     plugin::{
         schema,
         schemars::{self, JsonSchema},
         Inner, Plugin, PluginSchemaExt,
     },
-    BoxError, SgBody, SgRequest, SgResponse, SgResponseExt,
+    BoxError, SgBody, SgRequest, SgRequestExt, SgResponse, SgResponseExt,
 };
 use tardis::{
     chrono::{DateTime, Utc},
-    serde_json, tokio,
+    crypto::crypto_sm2_4::TardisCryptoSm2PublicKey,
+    serde_json, tokio, TardisFuns,
 };
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct LicensePluginConfig {
@@ -27,7 +29,7 @@ pub struct LicensePluginConfig {
 }
 
 pub struct LicensePlugin {
-    pub verify_key: Arc<VerifyingKey>,
+    pub verify_key: Arc<TardisCryptoSm2PublicKey>,
     pub certification_info: Arc<tokio::sync::RwLock<Option<CertificationInfo>>>,
 }
 
@@ -52,6 +54,7 @@ pub fn mid(pubkey: &str) -> Result<&'static str, BoxError> {
 pub struct CertificationInfo {
     mid_info: String,
     expire: DateTime<Utc>,
+    ip_white_list: Option<Vec<IpNet>>,
 }
 
 impl CertificationInfo {
@@ -68,17 +71,16 @@ pub struct Certification {
 }
 
 impl Certification {
-    pub fn verify(&self, vk: &VerifyingKey) -> Result<(), BoxError> {
-        use ed25519_dalek::Verifier;
-        use std::str::FromStr;
-        let signature = ed25519_dalek::Signature::from_str(&self.signature)?;
-        vk.verify(self.info.as_bytes(), &signature)?;
+    pub fn verify(&self, vk: &TardisCryptoSm2PublicKey) -> Result<(), BoxError> {
+        let result = vk.verify(&self.info, &self.signature)?;
+        if !result {
+            return Err("signature verify failed".into());
+        }
         Ok(())
     }
     pub fn from_pem(pem: String) -> Result<Self, BoxError> {
-        use base64::prelude::*;
         let chunk = pem.lines().fold(String::new(), |s, line| if line.starts_with('-') { s } else { s + line });
-        let json = BASE64_STANDARD.decode(chunk)?;
+        let json = TardisFuns::crypto.base64.decode(chunk)?;
         let this = serde_json::from_slice(&json)?;
         Ok(this)
     }
@@ -119,6 +121,13 @@ impl Plugin for LicensePlugin {
                 self.certification_info.write().await.take();
                 return Ok(Certification::certification_expired_response());
             } else {
+                // check ip white list
+                if let Some(ip_white_list) = &has_certification.ip_white_list {
+                    let ip = req.extract::<PeerAddr>();
+                    if !ip_white_list.iter().any(|ip_net| ip_net.contains(&ip.0.ip())) {
+                        return Ok(SgResponse::with_code_message(StatusCode::UNAUTHORIZED, "Your IP is not in the white list of license."));
+                    }
+                }
                 return Ok(inner.call(req).await);
             }
         } else {
@@ -130,12 +139,8 @@ impl Plugin for LicensePlugin {
     }
 
     fn create(plugin_config: spacegate_shell::model::PluginConfig) -> Result<Self, spacegate_shell::plugin::BoxError> {
-        use base64::prelude::*;
         let config: LicensePluginConfig = serde_json::from_value(plugin_config.spec)?;
-        let vk_base64 = config.verify_key;
-        let vk_bytes = BASE64_STANDARD.decode(&vk_base64)?;
-        let vk_bytes = vk_bytes.try_into().map_err(|e| format!("invalid verify key {e:X?}"))?;
-        let verify_key = VerifyingKey::from_bytes(&vk_bytes)?;
+        let verify_key = TardisCryptoSm2PublicKey::from_public_key_str(&config.verify_key)?;
         Ok(LicensePlugin {
             verify_key: Arc::new(verify_key),
             certification_info: Arc::new(tokio::sync::RwLock::new(None)),
@@ -149,25 +154,25 @@ impl Plugin for LicensePlugin {
 
 #[cfg(test)]
 mod test {
-    use ed25519_dalek::{ed25519::signature::Signer, SigningKey};
-    use tardis::{chrono::TimeDelta, rand};
-
     use super::*;
+    use tardis::chrono::TimeDelta;
+    use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey, TardisCryptoSm2};
     #[test]
     fn gen_pem() {
         let info = CertificationInfo {
             mid_info: "mid".into(),
             expire: Utc::now() + TimeDelta::weeks(999),
+            ip_white_list: None,
         };
-        use base64::prelude::*;
         let info = serde_json::to_string(&info).unwrap();
-        let sk: SigningKey = SigningKey::from_bytes(&rand::random());
-        let vk: VerifyingKey = sk.verifying_key();
-        println!("vk: {}", BASE64_STANDARD.encode(vk.to_bytes()));
-        let signature = sk.sign(info.as_bytes()).to_string();
+        let sk = TardisCryptoSm2.new_private_key().unwrap();
+        println!("sk: {:#?}", sk.serialize());
+        let vk = TardisCryptoSm2.new_public_key(&sk).unwrap();
+        println!("vk: {:#?}", vk.serialize());
+        let signature = sk.sign(&info).unwrap();
         let cert = Certification { info, signature };
         let cert = serde_json::to_string(&cert).unwrap();
-        let cert_base64 = BASE64_STANDARD.encode(cert);
+        let cert_base64 = TardisFuns::crypto.base64.encode(cert);
         // 80 char per line
         let cert_base64_chunks: Vec<_> = cert_base64.as_bytes().chunks(80).map(|chunk| std::str::from_utf8(chunk).unwrap()).collect();
         let cert_base64 = cert_base64_chunks.join("\n");

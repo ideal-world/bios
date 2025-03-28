@@ -37,8 +37,6 @@ tardis = { workspace = true, features = ["web-client"] }
 ipnet = "2.8.0"
 machineid-rs = "1.2.4"
 http = { version = "1" }
-ed25519-dalek = "2.1.1"
-base64 = "0.22"
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
