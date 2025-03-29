@@ -20,3 +20,4 @@
 500-flow-model-prohibit-enabled	当前模型不可开启
 500-flow-transition-endless-loop	状态流转出现死循环
 500-flow-inst-operate-prohibited	实例当前操作被禁止
+500-flow-inst-auto-finish	实例自动结束

@@ -2,7 +2,8 @@ use std::{
     collections::{HashMap, HashSet},
     marker::PhantomData,
     net::SocketAddr,
-    sync::Arc, time::Duration,
+    sync::Arc,
+    time::Duration,
 };
 
 use tardis::{
@@ -14,7 +15,6 @@ use tardis::{
     tokio::{self, sync::RwLock},
     TardisFuns, TardisFunsInst,
 };
-
 
 use tsuki_scheduler::{
     runtime::Tokio,
@@ -59,7 +59,7 @@ where
         let funs = Arc::new(TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None));
         let config = funs.conf::<crate::schedule_config::ScheduleConfig>();
         let force_sync_interval_sec = Duration::from_secs(config.force_sync_interval_sec as u64);
-        
+
         // 运行调度器
         tardis::tokio::spawn(async move { runner.run().await });
 
@@ -84,7 +84,7 @@ where
                     ForceSync,
                 }
                 loop {
-                    let event: Event = tokio::select! { 
+                    let event: Event = tokio::select! {
                         event = es.next()  =>{
                             let Some(event) = event else{
                                 break;
@@ -99,7 +99,7 @@ where
                         Event::External(event::ScheduleEvent::JustDelete { code }) => {
                             debug!("[Bios.Schedule] event: delete {code} ");
                             this.local_delete_job(&code).await;
-                        },
+                        }
                         Event::External(event::ScheduleEvent::JustCreate { code }) => {
                             debug!("[Bios.Schedule] event: create {code} ");
                             let event_hub = E::from_context(funs.clone(), ctx.clone());
@@ -107,7 +107,7 @@ where
                             let Ok(Some(job)) = repo.get_one(&code).await else { continue };
                             let Ok(task) = this.make_task(&job, event_hub) else { continue };
                             this.local_set_job(&code, task).await;
-                        },
+                        }
                         Event::ForceSync => {
                             debug!("[Bios.Schedule] event: force sync");
                             let event_hub = E::from_context(funs.clone(), ctx.clone());

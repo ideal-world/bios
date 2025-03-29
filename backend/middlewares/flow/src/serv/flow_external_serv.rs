@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use bios_sdk_invoke::{clients::spi_kv_client::SpiKvClient, invoke_constants::TARDIS_CONTEXT};
 use itertools::Itertools;
+use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -11,7 +14,7 @@ use crate::{
     dto::{
         flow_external_dto::{
             FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp,
-            FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp,
+            FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp, FlowExternalUpdateRelationshipResp,
         },
         flow_state_dto::{FlowGuardConf, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
@@ -314,6 +317,53 @@ impl FlowExternalServ {
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))
+        }
+    }
+
+    pub async fn do_update_related_obj(
+        tag: &str,
+        rel_business_obj_id: &str,
+        inst_id: &str,
+        update_objs: &HashMap<String, Value>,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<FlowExternalUpdateRelationshipResp> {
+        let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        if external_url.is_empty() {
+            return Ok(FlowExternalUpdateRelationshipResp {});
+        }
+        let mut params = vec![];
+        for (key, update_obj) in update_objs {
+            params.push(FlowExternalParams {
+                var_id: Some(key.clone()),
+                value: Some(update_obj.clone()),
+                ..Default::default()
+            });
+        }
+        let header = Self::headers(None, funs, ctx).await?;
+        let body = FlowExternalReq {
+            kind: FlowExternalKind::UpdateRelationship,
+            inst_id: inst_id.to_string(),
+            curr_tag: tag.to_string(),
+            curr_bus_obj_id: rel_business_obj_id.to_string(),
+            sys_time: Some(Utc::now().timestamp_millis()),
+            params,
+            ..Default::default()
+        };
+        debug!("do_delete_rel_obj body: {:?}", body);
+        let resp: FlowExternalResp<FlowExternalUpdateRelationshipResp> = funs
+            .web_client()
+            .post(&external_url, &body, header)
+            .await?
+            .body
+            .ok_or_else(|| funs.err().internal_error("flow_external", "do_update_related_obj", "illegal response", "500-external-illegal-response"))?;
+        if resp.code != *"200" {
+            return Err(funs.err().internal_error("flow_external", "do_update_related_obj", "illegal response", "500-external-illegal-response"));
+        }
+        if let Some(data) = resp.body {
+            Ok(data)
+        } else {
+            Err(funs.err().internal_error("flow_external", "do_update_related_obj", "illegal response", "500-external-illegal-response"))
         }
     }
 

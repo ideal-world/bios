@@ -10,25 +10,40 @@ use tardis::{
 };
 
 use super::{
-    flow_model_dto::FlowModelRelTransitionExt,
+    flow_model_dto::{FlowModelRelTransitionExt, FlowModelRelTransitionKind},
     flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
 pub struct FlowInstStartReq {
     /// 关联业务ID
     pub rel_business_obj_id: String,
     pub tag: String,
     /// 创建时的参数列表
     pub create_vars: Option<HashMap<String, Value>>,
+    /// 创建时的参数列表
+    pub check_vars: Option<HashMap<String, Value>>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
     /// 创建时修改的参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 关联的子业务对象触发的动作ID
+    pub rel_transition_id: Option<String>,
+    /// 关联的子业务对象
+    pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,
+    /// 操作人权限
+    pub operator_map: Option<HashMap<String, Vec<String>>>,
     /// 日志文本
     pub log_text: Option<String>,
+}
+
+// 实例关联的子业务对象
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstRelChildObj {
+    pub tag: String,
+    pub obj_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -141,6 +156,11 @@ pub struct FlowInstDetailResp {
     pub rel_flow_model_name: String,
     /// 关联业务ID
     pub rel_business_obj_id: String,
+    /// 关联动作ID
+    pub rel_transition_id: Option<String>,
+
+    /// 关联的实例ID
+    pub rel_inst_id: Option<String>,
 
     pub tag: String,
 
@@ -237,24 +257,23 @@ pub struct FLowInstStateApprovalConf {
 // 流程实例中对应的数据存储
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
-    pub his_operators: Option<Vec<String>>,                             // 历史操作人
-    pub curr_operators: Option<Vec<String>>,                            // 当前操作人
-    pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
-    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
-    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>,    // 当前转审映射 key: 代操作用户, value: 主操作用户
-    pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
-    pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
-    pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
-    pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
-    pub state: Option<FlowInstStateKind>,                               // 状态
+    pub his_operators: Option<Vec<String>>,                                  // 历史操作人
+    pub curr_operators: Option<Vec<String>>,                                 // 当前操作人
+    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>,      // 当前审批结果
+    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>, // 当前转审映射 key: 代操作用户, value: 主操作用户
+    pub approval_total: Option<HashMap<String, usize>>,                      // 审批总数
+    pub form_state_map: HashMap<String, HashMap<String, Value>>,             // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub curr_vars: Option<HashMap<String, Value>>,                           // 当前参数列表
+    pub prev_non_auto_state_id: Option<Vec<String>>,                         // 上一个非自动节点ID列表
+    pub prev_non_auto_account_id: Option<String>,                            // 上一个节点操作人ID
+    pub state: Option<FlowInstStateKind>,                                    // 状态
+    pub operator_map: Option<HashMap<String, Vec<String>>>,                  // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
 }
 
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
     pub state: Option<FlowInstStateKind>,
-    pub prohibit_guard_conf_account_ids: Option<Vec<String>>,          // 禁止操作人ID列表
     pub add_his_operator: Option<String>,                              // 添加历史操作人
     pub curr_operators: Option<Vec<String>>,                           // 更新操作人列表
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
@@ -268,6 +287,7 @@ pub struct FlowInstArtifactsModifyReq {
     pub add_referral_map: Option<(String, Vec<String>)>,               // 修改转审映射
     pub remove_referral_map: Option<String>,                           // 删除转审映射
     pub clear_referral_map: Option<String>,                            // 清除转审映射信息
+    pub operator_map: Option<HashMap<String, Vec<String>>>,            // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
 }
 
 /// 审批结果类型
@@ -505,6 +525,8 @@ pub struct FlowInstFilterReq {
     pub flow_version_id: Option<String>,
     /// 业务ID
     pub rel_business_obj_ids: Option<Vec<String>>,
+    /// 关联的实例ID
+    pub rel_inst_id: Option<String>,
     /// 标签
     pub tag: Option<String>,
 
@@ -576,7 +598,15 @@ pub struct FlowInstBatchCheckAuthReq {
     pub flow_inst_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
+/// 获取实例所适配的模板
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstFindRelModelReq {
+    pub transition_id: Option<String>,
+    pub tag: String,
+    pub vars: HashMap<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Copy, Clone)]
 pub enum FlowInstStateKind {
     /// 录入中
     #[default]
@@ -591,4 +621,29 @@ pub enum FlowInstStateKind {
     Pass,
     /// 审批拒绝
     Overrule,
+}
+
+/// 在search中使用的实例详情
+pub struct FlowInstDetailInSearch {
+    pub id: String,
+    pub title: Option<String>,
+    pub name: Option<String>,
+    pub content: Option<String>,
+    pub owner: String,
+    pub own_paths: String,
+    pub tag: Option<String>,
+    pub current_state_id: Option<String>,
+    pub rel_business_obj_name: Option<String>,
+    pub current_state_name: Option<String>,
+    pub current_state_kind: Option<FlowStateKind>,
+    pub rel_business_obj_id: Option<String>,
+    pub finish_time: Option<DateTime<Utc>>,
+    pub op_time: Option<DateTime<Utc>>,
+    pub state: Option<FlowInstStateKind>,
+    pub rel_transition: Option<FlowModelRelTransitionKind>,
+    pub his_operators: Option<Vec<String>>,
+    pub curr_operators: Option<Vec<String>>,
+    pub curr_referral: Option<Vec<String>>,
+    pub create_time: Option<DateTime<Utc>>,
+    pub update_time: Option<DateTime<Utc>>,
 }

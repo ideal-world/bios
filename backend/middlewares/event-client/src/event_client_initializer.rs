@@ -26,8 +26,8 @@ pub async fn init() -> TardisResult<()> {
         #[cfg(feature = "local")]
         if config.local {
             bios_sdk_invoke::clients::event_client::init_local_client_node().await?;
-            return Ok(())
-        } 
+            return Ok(());
+        }
         init_ws_client_node(config.max_retry_times, Duration::from_millis(config.retry_duration_ms as u64), &context, &funs).await;
     } else {
         tardis::tracing::info!("event client no enabled");

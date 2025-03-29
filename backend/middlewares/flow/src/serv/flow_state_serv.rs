@@ -12,17 +12,23 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    db::sea_orm::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
-    }, log::debug, serde_json::json, TardisFuns, TardisFunsInst
+    },
+    serde_json::json,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     domain::flow_state,
-    dto::flow_state_dto::{
-        FlowStateAddReq, FlowStateAggResp, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind,
-        FlowStateModifyReq, FlowStateNameResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
+    dto::{
+        flow_state_dto::{
+            FlowStateAddReq, FlowStateAggResp, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind,
+            FlowStateModifyReq, FlowStateNameResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
+        },
+        flow_transition_dto::FlowTransitionFilterReq,
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -317,6 +323,7 @@ impl FlowStateServ {
     pub(crate) async fn find_names(
         ids: Option<Vec<String>>,
         tag: Option<String>,
+        main: Option<bool>,
         app_ids: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -349,6 +356,7 @@ impl FlowStateServ {
                     ..Default::default()
                 },
                 tag,
+                main,
                 flow_version_ids,
                 ..Default::default()
             },
@@ -449,7 +457,16 @@ impl FlowStateServ {
             ctx,
         )
         .await?;
-        let transitions = FlowTransitionServ::find_transitions(flow_version_id, Some(vec![state.id.clone()]), funs, ctx).await?;
+        let transitions = FlowTransitionServ::find_detail_items(
+            &FlowTransitionFilterReq {
+                flow_version_id: Some(flow_version_id.to_string()),
+                specified_state_ids: Some(vec![state.id.clone()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let kind_conf = state.kind_conf();
         Ok(FlowStateAggResp {
             id: state.id.clone(),

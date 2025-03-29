@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use itertools::Itertools;
+use tardis::basic::dto::TardisContext;
 use tardis::chrono::Utc;
 use tardis::log::debug;
 use tardis::serde_json::Value;
@@ -14,13 +15,16 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
-    FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstTransferReq, FlowInstTransferResp,
-    FlowInstTransitionInfo, FlowOperationContext,
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
+    FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
 };
+use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
+use crate::serv::flow_event_serv::FlowEventServ;
 use crate::serv::flow_inst_serv::FlowInstServ;
+use crate::serv::flow_transition_serv::FlowTransitionServ;
 #[derive(Clone)]
 pub struct FlowCiInstApi;
 
@@ -231,9 +235,13 @@ impl FlowCiInstApi {
                     rel_business_obj_id: add_req.0.rel_business_obj_id.clone(),
                     tag: add_req.0.tag.clone(),
                     create_vars: add_req.0.create_vars.clone(),
+                    check_vars: None,
                     transition_id: None,
                     vars: None,
                     log_text: None,
+                    rel_transition_id: None,
+                    rel_child_objs: None,
+                    operator_map: None,
                 },
                 add_req.0.current_state_name.clone(),
                 &funs,
@@ -300,6 +308,82 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// sync instance status to search
+    ///
+    /// 批量操作实例
+    #[oai(path = "/:flow_inst_id/batch_operate", method = "post")]
+    async fn batch_operate(
+        &self,
+        flow_inst_id: Path<String>,
+        operate_req: Json<HashMap<String, FlowInstOperateReq>>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowInstServ::batch_operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+
+        TardisResp::ok(Void {})
+    }
+
+    /// sync instance status to search
+    ///
+    /// 自动触发前置条件(脚本)
+    #[oai(path = "/auto_front_change", method = "post")]
+    async fn auto_front_change(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        let trans_with_front_changes = FlowTransitionServ::find_detail_items(
+            &FlowTransitionFilterReq {
+                is_empty_front_changes: Some(false),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        for trans_with_front_change in trans_with_front_changes {
+            let insts = FlowInstServ::find_detail_items(
+                &FlowInstFilterReq {
+                    flow_version_id: Some(trans_with_front_change.rel_flow_model_version_id.clone()),
+                    current_state_id: Some(trans_with_front_change.from_flow_state_id),
+                    main: Some(true),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            for inst in insts {
+                ctx.0
+                    .add_async_task(Box::new(|| {
+                        Box::pin(async move {
+                            let curr_inst = inst.clone();
+                            let inst_ctx = TardisContext {
+                                own_paths: curr_inst.own_paths.clone(),
+                                ..Default::default()
+                            };
+                            let task_handle = tardis::tokio::spawn(async move {
+                                let mut funs = flow_constants::get_tardis_inst();
+                                funs.begin().await.unwrap_or_default();
+                                let _ = FlowEventServ::do_front_change(&curr_inst, loop_check_helper::InstancesTransition::default(), &inst_ctx, &funs).await;
+                                funs.commit().await.unwrap_or_default();
+                            });
+                            match task_handle.await {
+                                Ok(_) => {}
+                                Err(e) => tardis::log::error!("Flow Instance {} do_front_change error:{:?}", inst.id, e),
+                            }
+                            Ok(())
+                        })
+                    }))
+                    .await?;
+            }
+        }
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }

@@ -33,7 +33,7 @@ impl Model {
                 },
                 size: NonZeroU32::new(self.overflow_size.clamp(1, i32::MAX) as u32).expect("clamped"),
             }),
-            max_payload_size: self.max_payload_size as u32
+            max_payload_size: self.max_payload_size as u32,
         }
     }
 }

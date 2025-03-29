@@ -705,4 +705,8 @@ pub struct FlowTransitionFilterReq {
     pub flow_version_id: Option<String>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
+    /// 后置动作为空
+    pub is_empty_post_changes: Option<bool>,
+    /// 前置动作为空
+    pub is_empty_front_changes: Option<bool>,
 }
