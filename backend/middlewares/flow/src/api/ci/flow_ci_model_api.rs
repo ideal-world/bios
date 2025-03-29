@@ -280,4 +280,16 @@ impl FlowCiModelApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
+
+    /// 初始化评审模板（脚本）
+    #[oai(path = "/init_review_model", method = "post")]
+    async fn init_review_model(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::init_review_model(&funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
 }

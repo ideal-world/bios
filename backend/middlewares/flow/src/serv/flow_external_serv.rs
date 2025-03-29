@@ -320,7 +320,14 @@ impl FlowExternalServ {
         }
     }
 
-    pub async fn do_update_related_obj(tag: &str, rel_business_obj_id: &str, inst_id: &str, update_objs: &HashMap<String, Value>, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<FlowExternalUpdateRelationshipResp> {
+    pub async fn do_update_related_obj(
+        tag: &str,
+        rel_business_obj_id: &str,
+        inst_id: &str,
+        update_objs: &HashMap<String, Value>,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<FlowExternalUpdateRelationshipResp> {
         let external_url = Self::get_external_url(tag, ctx, funs).await?;
         if external_url.is_empty() {
             return Ok(FlowExternalUpdateRelationshipResp {});

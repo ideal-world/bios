@@ -10,13 +10,13 @@ use tardis::{
 };
 
 use super::{
-    flow_model_dto::FlowModelRelTransitionExt,
+    flow_model_dto::{FlowModelRelTransitionExt, FlowModelRelTransitionKind},
     flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
 pub struct FlowInstStartReq {
     /// 关联业务ID
     pub rel_business_obj_id: String,
@@ -29,8 +29,21 @@ pub struct FlowInstStartReq {
     pub transition_id: Option<String>,
     /// 创建时修改的参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 关联的子业务对象触发的动作ID
+    pub rel_transition_id: Option<String>,
+    /// 关联的子业务对象
+    pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,
+    /// 操作人权限
+    pub operator_map: Option<HashMap<String, Vec<String>>>,
     /// 日志文本
     pub log_text: Option<String>,
+}
+
+// 实例关联的子业务对象
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstRelChildObj {
+    pub tag: String,
+    pub obj_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -146,6 +159,9 @@ pub struct FlowInstDetailResp {
     /// 关联动作ID
     pub rel_transition_id: Option<String>,
 
+    /// 关联的实例ID
+    pub rel_inst_id: Option<String>,
+
     pub tag: String,
 
     pub main: bool,
@@ -251,6 +267,7 @@ pub struct FlowInstArtifacts {
     pub prev_non_auto_state_id: Option<Vec<String>>,                         // 上一个非自动节点ID列表
     pub prev_non_auto_account_id: Option<String>,                            // 上一个节点操作人ID
     pub state: Option<FlowInstStateKind>,                                    // 状态
+    pub operator_map: Option<HashMap<String, Vec<String>>>,                  // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
 }
 
 // 流程实例中数据存储更新
@@ -270,6 +287,7 @@ pub struct FlowInstArtifactsModifyReq {
     pub add_referral_map: Option<(String, Vec<String>)>,               // 修改转审映射
     pub remove_referral_map: Option<String>,                           // 删除转审映射
     pub clear_referral_map: Option<String>,                            // 清除转审映射信息
+    pub operator_map: Option<HashMap<String, Vec<String>>>,            // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
 }
 
 /// 审批结果类型
@@ -507,6 +525,8 @@ pub struct FlowInstFilterReq {
     pub flow_version_id: Option<String>,
     /// 业务ID
     pub rel_business_obj_ids: Option<Vec<String>>,
+    /// 关联的实例ID
+    pub rel_inst_id: Option<String>,
     /// 标签
     pub tag: Option<String>,
 
@@ -578,7 +598,15 @@ pub struct FlowInstBatchCheckAuthReq {
     pub flow_inst_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
+/// 获取实例所适配的模板
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstFindRelModelReq {
+    pub transition_id: Option<String>,
+    pub tag: String,
+    pub vars: HashMap<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Copy, Clone)]
 pub enum FlowInstStateKind {
     /// 录入中
     #[default]
@@ -593,4 +621,29 @@ pub enum FlowInstStateKind {
     Pass,
     /// 审批拒绝
     Overrule,
+}
+
+/// 在search中使用的实例详情
+pub struct FlowInstDetailInSearch {
+    pub id: String,
+    pub title: Option<String>,
+    pub name: Option<String>,
+    pub content: Option<String>,
+    pub owner: String,
+    pub own_paths: String,
+    pub tag: Option<String>,
+    pub current_state_id: Option<String>,
+    pub rel_business_obj_name: Option<String>,
+    pub current_state_name: Option<String>,
+    pub current_state_kind: Option<FlowStateKind>,
+    pub rel_business_obj_id: Option<String>,
+    pub finish_time: Option<DateTime<Utc>>,
+    pub op_time: Option<DateTime<Utc>>,
+    pub state: Option<FlowInstStateKind>,
+    pub rel_transition: Option<FlowModelRelTransitionKind>,
+    pub his_operators: Option<Vec<String>>,
+    pub curr_operators: Option<Vec<String>>,
+    pub curr_referral: Option<Vec<String>>,
+    pub create_time: Option<DateTime<Utc>>,
+    pub update_time: Option<DateTime<Utc>>,
 }

@@ -194,11 +194,13 @@ pub struct FlowModelRelTransitionExt {
 }
 
 /// 关联动作类型
-#[derive(PartialEq)]
+#[derive(PartialEq, Default, Clone)]
 pub enum FlowModelRelTransitionKind {
+    #[default]
     Edit,
     Delete,
     Related,
+    Review,
     Transfer(FlowModelRelTransitionExt),
 }
 
@@ -208,6 +210,7 @@ impl fmt::Display for FlowModelRelTransitionKind {
             Self::Edit => write!(f, "编辑"),
             Self::Delete => write!(f, "删除"),
             Self::Related => write!(f, "关联"),
+            Self::Review => write!(f, "评审"),
             Self::Transfer(tran) => {
                 write!(f, "{}({})", tran.name, tran.from_flow_state_name)
             }
@@ -222,6 +225,7 @@ impl From<FlowModelRelTransitionExt> for FlowModelRelTransitionKind {
             "__DELETE__" => Self::Delete,
             "__REQRELATED__" => Self::Related,
             "__TASKRELATED__" => Self::Related,
+            "__REVIEW__" => Self::Review,
             _ => Self::Transfer(value),
         }
     }
@@ -233,6 +237,7 @@ impl FlowModelRelTransitionKind {
             Self::Edit => "编辑审批".to_string(),
             Self::Delete => "删除审批".to_string(),
             Self::Related => "关联审批".to_string(),
+            Self::Review => "评审审批".to_string(),
             Self::Transfer(tran) => format!("{}({})", tran.name, tran.from_flow_state_name).to_string(),
         }
     }

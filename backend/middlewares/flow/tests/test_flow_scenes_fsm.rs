@@ -615,6 +615,9 @@ pub async fn test(
                 vars: None,
                 check_vars: None,
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
             },
         )
         .await;
@@ -937,6 +940,9 @@ pub async fn test(
                 vars: None,
                 check_vars: None,
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
             },
         )
         .await;
@@ -953,6 +959,9 @@ pub async fn test(
                 vars: None,
                 check_vars: Some(HashMap::from([("name".to_string(), json!("xxx111"))])),
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
             },
         )
         .await;
@@ -969,6 +978,9 @@ pub async fn test(
                 vars: None,
                 check_vars: Some(HashMap::from([("name".to_string(), json!("xxx1111"))])),
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
             },
         )
         .await;

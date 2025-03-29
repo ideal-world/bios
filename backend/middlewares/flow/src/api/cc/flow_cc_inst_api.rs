@@ -11,9 +11,10 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstBatchCheckAuthReq, FlowInstCommentReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq,
-    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
-    FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
+    FlowInstFindRelModelReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq,
+    FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
+use crate::dto::flow_model_dto::FlowModelDetailResp;
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -152,6 +153,7 @@ impl FlowCcInstApi {
         finish: Query<Option<bool>>,
         main: Query<Option<bool>>,
         current_state_id: Query<Option<String>>,
+        rel_inst_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -169,6 +171,7 @@ impl FlowCcInstApi {
                 main: main.0,
                 current_state_id: current_state_id.0,
                 rel_business_obj_ids: rel_business_obj_id.0.map(|id| vec![id]),
+                rel_inst_id: rel_inst_id.0,
                 with_sub: with_sub.0,
                 ..Default::default()
             },
@@ -358,13 +361,26 @@ impl FlowCcInstApi {
         TardisResp::ok(result)
     }
 
-    /// add comment
-    ///
     /// Batch checking of operating privileges
+    ///
+    /// 批量检查操作权限
     #[oai(path = "/batch/check_auth", method = "patch")]
     async fn batch_check_auth(&self, req: Json<FlowInstBatchCheckAuthReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<String>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::batch_check_auth(req.0.flow_inst_ids, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Getting the adapted related model
+    ///
+    /// 获取适配的关联模型
+    #[oai(path = "/rel_model", method = "post")]
+    async fn get_rel_model(&self, req: Json<FlowInstFindRelModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelDetailResp> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowInstServ::find_rel_model(req.transition_id.clone(), &req.tag, &req.vars, &funs, &ctx.0)
+            .await?
+            .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
