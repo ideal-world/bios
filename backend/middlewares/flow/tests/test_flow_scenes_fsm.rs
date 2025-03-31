@@ -8,6 +8,7 @@ use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
+use bios_mw_flow::dto::flow_cond_dto::{BasicQueryCondInfo, BasicQueryOpKind};
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
 use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq};
@@ -34,7 +35,7 @@ use std::time::Duration;
 use tardis::basic::result::TardisResult;
 use tardis::log::{debug, info};
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
 
 pub async fn test(
@@ -120,6 +121,7 @@ pub async fn test(
                 icon: None,
                 rel_model_id: None,
                 disabled: None,
+                front_conds: None,
             },
         )
         .await;
@@ -233,6 +235,7 @@ pub async fn test(
                 scope_level: Some(RbumScopeLevelKind::Private),
                 icon: None,
                 rel_model_id: None,
+                front_conds: None,
                 disabled: None,
             },
         )
@@ -277,6 +280,7 @@ pub async fn test(
                 rel_transition_ids: None,
                 add_version: None,
                 current_version_id: None,
+                front_conds: None,
             },
         )
         .await;
@@ -609,7 +613,11 @@ pub async fn test(
                 rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: None,
                 vars: None,
+                check_vars: None,
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
             },
         )
         .await;
@@ -653,6 +661,40 @@ pub async fn test(
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "进行中");
+    // 新建空审批流
+    let req_delete_flow: FlowModelAggResp = flow_client
+        .post(
+            "/cc/model",
+            &FlowModelAddReq {
+                kind: FlowModelKind::AsModel,
+                status: FlowModelStatus::Enabled,
+                rel_transition_ids: Some(vec!["__DELETE__".to_string()]),
+                add_version: None,
+                current_version_id: None,
+                name: "编辑需求审批流".into(),
+                info: Some("xxx".to_string()),
+                rel_template_ids: None,
+                template: false,
+                main: false,
+                tag: Some("REQ".to_string()),
+                scope_level: None,
+                icon: None,
+                rel_model_id: None,
+                disabled: None,
+                front_conds: None,
+            },
+        )
+        .await;
+    let req_delete_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_delete_flow.edit_version_id)).await;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", req_delete_flow_version.id),
+            &FlowModelVersionModifyReq {
+                status: Some(FlowModelVesionState::Enabled),
+                ..Default::default()
+            },
+        )
+        .await;
     // 新建审批流
     let req_approval_flow: FlowModelAggResp = flow_client
         .post(
@@ -673,6 +715,12 @@ pub async fn test(
                 icon: None,
                 rel_model_id: None,
                 disabled: None,
+                front_conds: Some(vec![vec![BasicQueryCondInfo {
+                    field: "name".to_string(),
+                    op: BasicQueryOpKind::Like,
+                    op_text: None,
+                    value: json!("1111"),
+                }]]),
             },
         )
         .await;
@@ -880,23 +928,66 @@ pub async fn test(
         "state_and_next_transitions: {:?}",
         TardisFuns::json.obj_to_json(&state_and_next_transitions).unwrap().to_string()
     );
-    // 启动审批流实例
-    let req_inst_id2: String = flow_client
-        .post(
+    // 尝试启动空配置的实例
+    let resp_error: TardisResp<String> = flow_client
+        .post_resp(
             "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: rel_business_obj_id.clone(),
+                transition_id: Some("__DELETE__".to_string()),
+                vars: None,
+                check_vars: None,
+                log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
+            },
+        )
+        .await;
+    assert_eq!(resp_error.code, *"500-flow-flow_inst-start_secondary_flow");
+    // 尝试启动不符合条件的审批流
+    let empty_inst_id: String = flow_client
+        .post(
+            "/cc/inst/try",
             &FlowInstStartReq {
                 tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: Some("__EDIT__".to_string()),
                 vars: None,
+                check_vars: Some(HashMap::from([("name".to_string(), json!("xxx111"))])),
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
+            },
+        )
+        .await;
+    assert_eq!(empty_inst_id, "".to_string());
+    // 启动审批流实例
+    let req_inst_id2: String = flow_client
+        .post(
+            "/cc/inst/try",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: rel_business_obj_id.clone(),
+                transition_id: Some("__EDIT__".to_string()),
+                vars: None,
+                check_vars: Some(HashMap::from([("name".to_string(), json!("xxx1111"))])),
+                log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
             },
         )
         .await;
     sleep(Duration::from_millis(5000)).await;
     let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
     assert_eq!(req_inst2.current_state_id, form_state_id);
+    assert_eq!(req_inst2.rel_flow_version_id, req_approval_flow.edit_version_id);
     assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 2);
     assert!(req_inst2.current_state_conf.unwrap().operators.contains_key(&FlowStateOperatorKind::Referral));
     // 操作转审

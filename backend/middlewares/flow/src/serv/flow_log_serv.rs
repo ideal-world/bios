@@ -9,8 +9,7 @@ use tardis::{
 
 use crate::dto::{
     flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq},
-    flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-    flow_model_version_dto::FlowModelVersionFilterReq,
+    flow_model_dto::FlowModelRelTransitionKind,
     flow_state_dto::{FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
 };
 
@@ -19,8 +18,6 @@ use super::{
         kv_client::FlowKvClient,
         log_client::{FlowLogClient, LogParamContent, LogParamExt, LogParamExtSceneKind, LogParamOp, LogParamTag},
     },
-    flow_model_serv::FlowModelServ,
-    flow_model_version_serv::FlowModelVersionServ,
     flow_state_serv::FlowStateServ,
 };
 
@@ -28,20 +25,10 @@ pub struct FlowLogServ;
 
 impl FlowLogServ {
     // 添加审批流发起日志
-    pub async fn add_start_log(
-        start_req: &FlowInstStartReq,
-        flow_inst_detail: &FlowInstDetailResp,
-        create_vars: &HashMap<String, Value>,
-        flow_model: &FlowModelDetailResp,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn add_start_log(start_req: &FlowInstStartReq, flow_inst_detail: &FlowInstDetailResp, create_vars: &HashMap<String, Value>, ctx: &TardisContext) -> TardisResult<()> {
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
-        let rel_transition = flow_model.rel_transition().unwrap_or_default();
-        let operand = match rel_transition.id.as_str() {
-            "__EDIT__" => "编辑审批".to_string(),
-            "__DELETE__" => "删除审批".to_string(),
-            _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
-        };
+        let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
+        let operand = rel_transition.log_text();
         let mut log_ext = LogParamExt {
             scene_kind: Some(vec![String::from(LogParamExtSceneKind::ApprovalFlow)]),
             new_log: Some(true),
@@ -102,16 +89,11 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
-        flow_model: &FlowModelDetailResp,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
-        let rel_transition = flow_model.rel_transition().unwrap_or_default();
-        let operand = match rel_transition.id.as_str() {
-            "__EDIT__" => "编辑审批".to_string(),
-            "__DELETE__" => "删除审批".to_string(),
-            _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
-        };
+        let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
+        let operand = rel_transition.log_text();
         let mut log_ext = LogParamExt {
             scene_kind: Some(vec![String::from(LogParamExtSceneKind::Dynamic)]),
             new_log: Some(true),
@@ -173,16 +155,11 @@ impl FlowLogServ {
         _start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         _create_vars: &HashMap<String, Value>,
-        flow_model: &FlowModelDetailResp,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
-        let rel_transition = flow_model.rel_transition().unwrap_or_default();
-        let subject = match rel_transition.id.as_str() {
-            "__EDIT__" => "编辑审批".to_string(),
-            "__DELETE__" => "删除审批".to_string(),
-            _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
-        };
+        let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
+        let subject = rel_transition.log_text();
         let log_ext = LogParamExt {
             scene_kind: Some(vec![String::from(LogParamExtSceneKind::Detail)]),
             new_log: Some(true),
@@ -316,40 +293,8 @@ impl FlowLogServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
-        let flow_model_version = FlowModelVersionServ::get_item(
-            &flow_inst_detail.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let flow_model = FlowModelServ::get_item(
-            &flow_model_version.rel_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let rel_transition = flow_model.rel_transition().unwrap_or_default();
-        let subject_text = match rel_transition.id.as_str() {
-            "__EDIT__" => "编辑审批".to_string(),
-            "__DELETE__" => "删除审批".to_string(),
-            _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
-        };
+        let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
+        let subject_text = rel_transition.log_text();
         let current_state = FlowStateServ::get_item(
             &flow_inst_detail.current_state_id,
             &FlowStateFilterReq {
@@ -430,42 +375,10 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
-        let flow_model_version = FlowModelVersionServ::get_item(
-            &flow_inst_detail.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let flow_model = FlowModelServ::get_item(
-            &flow_model_version.rel_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let rel_transition = flow_model.rel_transition().unwrap_or_default();
-        let subject_text = match rel_transition.id.as_str() {
-            "__EDIT__" => "编辑审批".to_string(),
-            "__DELETE__" => "删除审批".to_string(),
-            _ => format!("{}({})", rel_transition.name, rel_transition.from_flow_state_name).to_string(),
-        };
+        let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
+        let subject_text = rel_transition.log_text();
         let log_ext = LogParamExt {
             scene_kind: Some(vec![String::from(LogParamExtSceneKind::ApprovalFlow)]),
             new_log: Some(true),

@@ -6,18 +6,9 @@ use bios_basic::rbum::{
 };
 use bios_sdk_invoke::invoke_initializer;
 
-use itertools::Itertools;
-
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::{
-        reldb_client::TardisActiveModel,
-        sea_orm::{
-            self,
-            sea_query::{Expr, Query, Table},
-        },
-    },
-    futures::future::join_all,
+    db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
     log::info,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -39,11 +30,7 @@ use crate::{
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
-    serv::{
-        flow_model_serv::FlowModelServ,
-        flow_rel_serv::{FlowRelKind, FlowRelServ},
-        flow_state_serv::FlowStateServ,
-    },
+    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -87,7 +74,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
-        rebind_model_with_template(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -116,52 +102,7 @@ async fn check_initialized(funs: &TardisFunsInst, ctx: &TardisContext) -> Tardis
     .await
 }
 
-async fn rebind_model_with_template(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    #[derive(sea_orm::FromQueryResult)]
-    pub struct FlowModelRelTemolateResult {
-        id: String,
-        rel_template_id: String,
-        own_paths: String,
-    }
-    join_all(
-        funs.db()
-            .find_dtos::<FlowModelRelTemolateResult>(
-                Query::select()
-                    .columns([flow_model::Column::Id, flow_model::Column::RelTemplateId, flow_model::Column::OwnPaths])
-                    .from(flow_model::Entity)
-                    .and_where(Expr::col(flow_model::Column::RelTemplateId).ne("")),
-            )
-            .await?
-            .into_iter()
-            .map(|result| async move {
-                let custom_ctx = TardisContext {
-                    own_paths: result.own_paths,
-                    ..ctx.clone()
-                };
-                FlowRelServ::add_simple_rel(
-                    &FlowRelKind::FlowModelTemplate,
-                    &result.id,
-                    &result.rel_template_id,
-                    None,
-                    None,
-                    true,
-                    true,
-                    None,
-                    funs,
-                    &custom_ctx,
-                )
-                .await
-            })
-            .collect_vec(),
-    )
-    .await
-    .into_iter()
-    .collect::<TardisResult<Vec<()>>>()?;
-
-    Ok(())
-}
-
-async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
+async fn init_basic_info(funs: &TardisFunsInst) -> TardisResult<()> {
     let kind_state_id = RbumKindServ::get_rbum_kind_id_by_code(flow_constants::RBUM_KIND_STATE_CODE, funs)
         .await?
         .ok_or_else(|| funs.err().not_found("flow", "init", "not found state kind", ""))?;
@@ -202,7 +143,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst, ctx: &TardisContext) -> Tardi
     Ok(())
 }
 
-async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+async fn add_kind(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             code: TrimString(scheme.to_string()),
@@ -220,7 +161,7 @@ async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx:
     .await
 }
 
-async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+async fn add_domain(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
             code: TrimString(flow_constants::DOMAIN_CODE.to_string()),
@@ -236,7 +177,7 @@ async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRes
     .await
 }
 
-pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
+pub async fn truncate_data(funs: &TardisFunsInst) -> TardisResult<()> {
     rbum_initializer::truncate_data(funs).await?;
     funs.db().execute(Table::truncate().table(flow_state::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_model::Entity)).await?;

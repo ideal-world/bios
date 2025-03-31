@@ -20,7 +20,7 @@ use tardis::{
 
 use crate::{
     dto::{
-        flow_inst_dto::FlowInstDetailResp,
+        flow_inst_dto::FlowInstDetailInSearch,
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::FlowGuardConf,
     },
@@ -194,13 +194,14 @@ impl FlowSearchClient {
         Ok(())
     }
 
-    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let inst_resp = FlowInstServ::get(inst_id, funs, &mock_ctx).await?;
+        let inst_resp = FlowInstServ::get_search_item(inst_id, funs, &mock_ctx).await?;
+        let is_modify = Box::new(is_modify);
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let inst_id_cp = inst_resp.id.clone();
@@ -219,7 +220,7 @@ impl FlowSearchClient {
     }
 
     // flow inst 全局搜索埋点方法
-    pub async fn add_or_modify_instance_search(inst_resp: &FlowInstDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_instance_search(inst_resp: &FlowInstDetailInSearch, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst_id = &inst_resp.id;
         // 数据共享权限处理
         let tenant = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &inst_resp.own_paths).unwrap_or_default();
@@ -227,32 +228,31 @@ impl FlowSearchClient {
         let visit_tenants = vec![tenant.clone()];
         let visit_apps = vec![app.clone()];
         let own_paths = Some(inst_resp.own_paths.clone());
-        let name = inst_resp.create_vars.clone().unwrap_or_default().get("name").unwrap_or(&json!("")).as_str().unwrap_or("").to_string();
         let key = inst_id.clone();
         if *is_modify {
             let modify_req = SearchItemModifyReq {
                 kind: Some(SEARCH_INSTANCE_TAG.to_string()),
-                title: Some(inst_resp.code.clone()),
-                name: Some(name.clone()),
-                content: Some(format!("{} {}", inst_resp.code, name)),
-                owner: Some(inst_resp.create_ctx.owner.clone()),
+                title: inst_resp.title.clone(),
+                name: inst_resp.name.clone(),
+                content: inst_resp.content.clone(),
+                owner: Some(inst_resp.owner.clone()),
                 own_paths,
-                create_time: Some(inst_resp.create_time),
+                create_time: inst_resp.create_time,
                 update_time: inst_resp.update_time,
                 ext: Some(json!({
                     "tag": inst_resp.tag,
                     "current_state_id": &inst_resp.current_state_id,
-                    "rel_business_obj_name": name.clone(),
+                    "rel_business_obj_name": inst_resp.rel_business_obj_name,
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
                     "finish_time": inst_resp.finish_time,
                     "op_time": inst_resp.update_time,
-                    "state": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.state.clone().unwrap_or_default()),
+                    "state": inst_resp.state,
                     "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
-                    "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
-                    "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
-                    "curr_referral": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.referral_map.clone().unwrap_or_default().get(&inst_resp.current_state_id).cloned().unwrap_or_default().keys().cloned().collect_vec()),
+                    "his_operators": inst_resp.his_operators,
+                    "curr_operators": inst_resp.curr_operators,
+                    "curr_referral": inst_resp.curr_referral,
                     "tenant_id": tenant.clone(),
                     "app_id": app.clone(),
                 })),
@@ -272,25 +272,25 @@ impl FlowSearchClient {
                 tag: SEARCH_INSTANCE_TAG.to_string(),
                 kind: SEARCH_INSTANCE_TAG.to_string(),
                 key: TrimString(key),
-                title: inst_resp.code.clone(),
-                content: format!("{} {}", inst_resp.code, name),
-                owner: Some(inst_resp.create_ctx.owner.clone()),
+                title: inst_resp.title.clone().unwrap_or_default(),
+                content: inst_resp.content.clone().unwrap_or_default(),
+                owner: Some(inst_resp.owner.clone()),
                 own_paths,
-                create_time: Some(inst_resp.create_time),
+                create_time: inst_resp.create_time,
                 update_time: inst_resp.update_time,
                 ext: Some(json!({
                     "tag": inst_resp.tag,
                     "current_state_id": inst_resp.current_state_id,
                     "current_state_name": inst_resp.current_state_name,
                     "current_state_kind": inst_resp.current_state_kind,
-                    "rel_business_obj_name": name.clone(),
+                    "rel_business_obj_name": inst_resp.rel_business_obj_name,
                     "rel_business_obj_id": inst_resp.rel_business_obj_id,
                     "finish_time": inst_resp.finish_time,
                     "op_time": inst_resp.update_time,
-                    "state": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.state.clone().unwrap_or_default()),
+                    "state": inst_resp.state,
                     "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
-                    "his_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.his_operators.clone().unwrap_or_default()),
-                    "curr_operators": inst_resp.artifacts.as_ref().map(|artifacts| artifacts.curr_operators.clone().unwrap_or_default()),
+                    "his_operators": inst_resp.his_operators,
+                    "curr_operators": inst_resp.curr_operators,
                     "tenant_id": tenant.clone(),
                     "app_id": app.clone(),
                 })),
@@ -303,7 +303,7 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            SpiSearchClient::add_item_and_name(&add_req, Some(inst_resp.code.clone()), funs, ctx).await?;
+            SpiSearchClient::add_item_and_name(&add_req, inst_resp.title.clone(), funs, ctx).await?;
         }
         Ok(())
     }

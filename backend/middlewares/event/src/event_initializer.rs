@@ -138,12 +138,14 @@ async fn init_mq_cluster(config: &EventConfig, funs: TardisFunsInst, ctx: Tardis
     mq_node.load_from_durable_service().await.map_err(mq_error)?;
     // it's important to ensure the SPI_RPC_TOPIC is created, many other components depend on it
     // move this to event client initializer
-    let _load_spi_topic_result = mq_node.create_new_topic(TopicConfig {
-        code: SPI_RPC_TOPIC,
-        overflow_config: Some(TopicOverflowConfig::new_reject_new(50000)),
-        blocking: false,
-        max_payload_size: 1024 * 1024
-    }).await;
+    let _load_spi_topic_result = mq_node
+        .create_new_topic(TopicConfig {
+            code: SPI_RPC_TOPIC,
+            overflow_config: Some(TopicOverflowConfig::new_reject_new(50000)),
+            blocking: false,
+            max_payload_size: 1024 * 1024,
+        })
+        .await;
     Ok(())
 }
 
