@@ -2532,7 +2532,7 @@ impl FlowInstServ {
         }
         for (inst_id, operate_req) in batch_operate_req {
             let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
-            FlowInstServ::operate(&inst, &operate_req, funs, ctx).await?;
+            FlowInstServ::operate(&inst, operate_req, funs, ctx).await?;
         }
         Ok(())
     }
@@ -2789,7 +2789,7 @@ impl FlowInstServ {
                             )
                             .await?;
                             if all_child_insts.iter().all(|child| {
-                                child.artifacts.as_ref().map_or(false, |artifacts| {
+                                child.artifacts.as_ref().is_some_and(|artifacts| {
                                     artifacts.state.unwrap_or_default() == FlowInstStateKind::Pass || artifacts.state.unwrap_or_default() == FlowInstStateKind::Overrule
                                 })
                             }) {

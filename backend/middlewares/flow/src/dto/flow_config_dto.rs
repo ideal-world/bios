@@ -6,3 +6,18 @@ pub struct FlowConfigModifyReq {
     pub code: String,
     pub value: String,
 }
+
+// 评审相关配置
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowRootConfigResp {
+    pub code: String,
+    pub label: FlowReviewConfigLabelResp,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[serde(rename_all = "snake_case")]
+pub struct FlowReviewConfigLabelResp {
+    pub origin_status: String,
+    pub pass_status: String,
+    pub unpass_status: String,
+}
