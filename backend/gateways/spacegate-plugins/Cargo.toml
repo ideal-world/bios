@@ -35,9 +35,8 @@ jsonpath-rust = "0.3.1"
 bios-auth = { version = "0.2.0", path = "../../supports/auth", default-features = false }
 tardis = { workspace = true, features = ["web-client"] }
 ipnet = "2.8.0"
-
+machineid-rs = "1.2.4"
 http = { version = "1" }
-
 [dev-dependencies]
 pprof = { version = "0.12.1", features = ["flamegraph"] }
 tardis = { workspace = true, features = ["test", "web-client"] }
