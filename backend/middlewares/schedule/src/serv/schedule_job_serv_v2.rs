@@ -35,7 +35,6 @@ pub async fn delete(code: &str, funs: TardisFunsInst, ctx: TardisContext) -> Tar
     service().delete_job(code, repo, event).await
 }
 
-
 pub(crate) fn init() {
     tardis::tokio::spawn(async move {
         // 这里初始化服务

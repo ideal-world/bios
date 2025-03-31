@@ -132,6 +132,4 @@ impl EventTopicApi {
         EventTopicServ::unregister_user(TopicCode::new(topic_code.0), &ctx.0.ak, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
-
-
 }

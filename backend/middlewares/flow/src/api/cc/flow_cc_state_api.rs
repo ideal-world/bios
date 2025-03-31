@@ -161,6 +161,7 @@ impl FlowCcStateApi {
         &self,
         ids: Query<Option<Vec<String>>>,
         tag: Query<Option<String>>,
+        main: Query<Option<bool>>,
         app_ids: Query<Option<String>>,
         ctx: TardisContextExtractor,
         _request: &Request,
@@ -169,6 +170,7 @@ impl FlowCcStateApi {
         let resp = FlowStateServ::find_names(
             ids.0,
             tag.0,
+            main.0,
             app_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
             &funs,
             &ctx.0,

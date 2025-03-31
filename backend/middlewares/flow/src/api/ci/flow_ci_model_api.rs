@@ -7,14 +7,12 @@ use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use itertools::Itertools;
 use std::iter::Iterator;
-use tardis::basic::dto::TardisContext;
 use tardis::futures::future::join_all;
 use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -269,58 +267,6 @@ impl FlowCiModelApi {
         TardisResp::ok(result)
     }
 
-    /// batch add rels with template and app
-    ///
-    /// 批量添加模板和应用的关联关系
-    #[oai(path = "/batch_add_template_app_rels", method = "get")]
-    async fn batch_add_template_app_rels(&self, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        let global_ctx = TardisContext::default();
-        funs.begin().await?;
-        let rels = RbumRelServ::find_rels(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some("FlowModelPath".to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            &funs,
-            &global_ctx,
-        )
-        .await?;
-        for rel in rels {
-            let ctx = TardisContext {
-                own_paths: rel.rel.own_paths,
-                owner: rel.rel.owner,
-                ..Default::default()
-            };
-            let rel_model_id = rel.rel.from_rbum_id;
-            if let Some(template_id) =
-                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_model_id, None, None, &funs, &ctx).await?.pop().map(|rel| rel.rel_id)
-            {
-                FlowRelServ::add_simple_rel(
-                    &FlowRelKind::FlowAppTemplate,
-                    &rel.rel.to_rbum_item_id.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string()).unwrap_or_default(),
-                    &template_id,
-                    None,
-                    None,
-                    true,
-                    true,
-                    None,
-                    &funs,
-                    &ctx,
-                )
-                .await?;
-            }
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void)
-    }
-
     /// Synchronize modified fields
     ///
     /// 同步修改的字段
@@ -330,6 +276,18 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::sync_modified_field(&modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// 初始化评审模板（脚本）
+    #[oai(path = "/init_review_model", method = "post")]
+    async fn init_review_model(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::init_review_model(&funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
