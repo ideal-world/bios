@@ -55,13 +55,7 @@ use crate::{
 };
 
 use super::{
-    clients::{log_client::LogParamOp, search_client::FlowSearchClient},
-    flow_event_serv::FlowEventServ,
-    flow_external_serv::FlowExternalServ,
-    flow_log_serv::FlowLogServ,
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_transition_serv::FlowTransitionServ,
+    clients::{log_client::LogParamOp, search_client::FlowSearchClient}, flow_config_serv::FlowConfigServ, flow_event_serv::FlowEventServ, flow_external_serv::FlowExternalServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowInstServ;
@@ -1795,10 +1789,19 @@ impl FlowInstServ {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             if let Some(update_states) = &update_states {
                 for (old_state, new_state) in update_states {
-                    Self::unsafe_modify_state(&new_model.tag, Some(vec![old_state.clone()]), new_state, funs, &mock_ctx).await?;
+                    Self::unsafe_modify_state(&FlowInstFilterReq {
+                        main: Some(true),
+                        tag: Some(new_model.tag.clone()),
+                        current_state_id: Some(old_state.clone()),
+                        ..Default::default()
+                    },new_state, funs, &mock_ctx).await?;
                 }
             } else {
-                Self::unsafe_modify_state(&new_model.tag, None, &new_model.init_state_id, funs, &mock_ctx).await?;
+                Self::unsafe_modify_state(&FlowInstFilterReq {
+                    main: Some(true),
+                    tag: Some(new_model.tag.clone()),
+                    ..Default::default()
+                }, &new_model.init_state_id, funs, &mock_ctx).await?;
             }
             Self::unsafe_modify_rel_model_id(&new_model.tag, &new_model.current_version_id, funs, &mock_ctx).await?;
         }
@@ -1839,23 +1842,18 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn unsafe_modify_state(tag: &str, modify_model_state_ids: Option<Vec<String>>, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..Default::default()
         };
         let insts = Self::find_detail_items(
-            &FlowInstFilterReq {
-                main: Some(true),
-                tag: Some(tag.to_string()),
-                ..Default::default()
-            },
+            filter,
             funs,
             ctx,
         )
         .await?
         .into_iter()
-        .filter(|inst| modify_model_state_ids.is_none() || modify_model_state_ids.clone().unwrap_or_default().contains(&inst.current_state_id))
         .collect_vec();
         let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
         let mut update_statement = Query::update();
@@ -2278,7 +2276,22 @@ impl FlowInstServ {
                 FlowExternalServ::do_update_related_obj(tag, rel_business_obj_id, &inst_id, &vars_collect, ctx, funs).await?;
             }
             FlowModelRelTransitionKind::Review => {
-                // @TODO 评审通过
+                if let Some(conf) = FlowConfigServ::get_root_config(tag, funs, ctx).await? {
+                    if artifacts.state.unwrap_or_default() == FlowInstStateKind::Pass {
+                        Self::unsafe_modify_state(&FlowInstFilterReq {
+                            ids: Some(vec![inst_id.clone()]),
+                            current_state_id: Some(conf.origin_status.clone()),
+                            ..Default::default()
+                        }, &conf.pass_status, funs, ctx).await?;
+                    }
+                    if artifacts.state.unwrap_or_default() == FlowInstStateKind::Overrule {
+                        Self::unsafe_modify_state(&FlowInstFilterReq {
+                            ids: Some(vec![inst_id.clone()]),
+                            current_state_id: Some(conf.origin_status.clone()),
+                            ..Default::default()
+                        }, &conf.unpass_status, funs, ctx).await?;
+                    }
+                }
             }
             FlowModelRelTransitionKind::Transfer(tran) => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);

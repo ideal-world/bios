@@ -28,23 +28,19 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_cond_dto::BasicQueryCondInfo,
-        flow_model_dto::{
+        flow_cond_dto::BasicQueryCondInfo, flow_inst_dto::FlowInstFilterReq, flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
             FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp,
             FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
-        },
-        flow_model_version_dto::{
+        }, flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
             FlowModelVesionState,
-        },
-        flow_state_dto::{
+        }, flow_state_dto::{
             FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
-        },
-        flow_transition_dto::{
+        }, flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation,
             FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
-        },
+        }
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
@@ -2063,7 +2059,12 @@ impl FlowModelServ {
         }
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            FlowInstServ::unsafe_modify_state(&flow_model.tag, Some(vec![req.state_id.clone()]), &req.new_state_id, funs, &mock_ctx).await?;
+            FlowInstServ::unsafe_modify_state(&FlowInstFilterReq {
+                main: Some(true),
+                tag: Some(flow_model.tag.clone()),
+                current_state_id: Some(req.state_id.clone()),
+                ..Default::default()
+            }, &req.new_state_id, funs, &mock_ctx).await?;
         }
         Self::modify_model(
             flow_model_id,

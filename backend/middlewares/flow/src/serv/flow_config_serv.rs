@@ -4,7 +4,7 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult}, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
-use crate::{dto::flow_config_dto::{FlowConfigModifyReq, FlowRootConfigResp}, flow_constants};
+use crate::{dto::flow_config_dto::{FlowConfigModifyReq, FlowReviewConfigLabelResp, FlowRootConfigResp}, flow_constants};
 
 pub struct FlowConfigServ;
 
@@ -33,9 +33,10 @@ impl FlowConfigServ {
     }
 
     // 获取父级配置
-    pub async fn get_root_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowRootConfigResp> {
+    pub async fn get_root_config(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowReviewConfigLabelResp>> {
         let result = SpiKvClient::get_item(format!("__tag__:{}:{}", ctx.own_paths, flow_constants::ROOT_CONFIG_KV), None, funs, ctx).await?
         .ok_or_else(|| funs.err().not_found("flow_config", "get_review_config", "review config is not found", "404-flow-config-not-found"))?;
-        TardisFuns::json.json_to_obj(result.value)
+        let config = TardisFuns::json.json_to_obj::<Vec<FlowRootConfigResp>>(result.value)?;
+        Ok(config.into_iter().find(|conf| conf.code == tag.to_string()).map(|conf| conf.label))
     }
 }
