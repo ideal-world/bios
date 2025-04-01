@@ -107,6 +107,11 @@ pub enum IamRelKind {
     IamProductSpec,
     IamCertProduct,
     IamCertSpec,
+
+    IamSubDeployAccount,
+    IamSubDeployOrg,
+    IamSubDeployApps,
+    IamSubDeployRel,
 }
 
 #[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
@@ -398,4 +403,12 @@ impl IamConfigKind {
     pub fn parse(kind: &str) -> TardisResult<IamConfigKind> {
         IamConfigKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not config kind: {kind}"), "404-iam-config-kind-not-exist"))
     }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum IamSubDeployHostKind {
+    /// 二级部署白名单
+    IamSubDeployHostWhite,
+    ///二级部署黑名单
+    IamSubDeployHostBlack,
 }

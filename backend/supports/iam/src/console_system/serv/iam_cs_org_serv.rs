@@ -157,7 +157,7 @@ impl IamCsOrgServ {
         .await?;
         IamSetServ::copy_tree_to_new_set(&curr_tree, &curr_set_id, None, Some(old_rel.from_rbum_id.clone()), funs, ctx).await?;
 
-        RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
+        RbumRelServ::delete_rel_with_ext(&old_rel.id, funs, ctx).await?;
         Ok(())
     }
 

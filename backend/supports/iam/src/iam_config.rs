@@ -212,6 +212,7 @@ pub struct BasicInfo {
     pub kind_account_id: String,
     pub kind_role_id: String,
     pub kind_res_id: String,
+    pub kind_sub_deploy_id: String,
     pub domain_iam_id: String,
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
@@ -248,6 +249,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_kind_account_id(&self) -> String;
     fn iam_basic_kind_role_id(&self) -> String;
     fn iam_basic_kind_res_id(&self) -> String;
+    fn iam_basic_kind_sub_deploy_id(&self) -> String;
     fn iam_basic_domain_iam_id(&self) -> String;
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
@@ -274,6 +276,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_kind_res_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.kind_res_id.clone())
+    }
+
+    fn iam_basic_kind_sub_deploy_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_sub_deploy_id.clone())
     }
 
     fn iam_basic_domain_iam_id(&self) -> String {

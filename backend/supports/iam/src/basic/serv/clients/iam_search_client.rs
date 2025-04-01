@@ -19,11 +19,11 @@ use crate::{
             iam_account_dto::IamAccountDetailAggResp,
             iam_filer_dto::{IamAccountFilterReq, IamTenantFilterReq},
         },
-        serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_tenant_serv::IamTenantServ},
+        serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::IamSetKind,
+    iam_enumeration::{IamRelKind, IamSetKind},
 };
 pub struct IamSearchClient;
 
@@ -93,6 +93,7 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
+        let sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAccount, account_id, &funs, &ctx).await?;
         let mock_ctx = TardisContext {
             own_paths: "".to_owned(),
             ..ctx.clone()
@@ -162,6 +163,7 @@ impl IamSearchClient {
                     "lock_status": account_resp.lock_status,
                     "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
                     "dept_id": account_resp_dept_id,
+                    "sub_deploy_ids":sub_deploy_ids,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
@@ -205,6 +207,7 @@ impl IamSearchClient {
                     "lock_status": account_resp.lock_status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
+                    "sub_deploy_ids":sub_deploy_ids,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,

@@ -1020,7 +1020,7 @@ impl IamCertServ {
             return Ok(());
         }
         for rel_id in rel_ids {
-            RbumRelServ::delete_rbum(&rel_id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
         }
         Ok(())
     }

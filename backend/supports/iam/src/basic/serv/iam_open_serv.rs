@@ -171,7 +171,7 @@ impl IamOpenServ {
         )
         .await?;
         for rel in old_product_rels {
-            RbumRelServ::delete_rbum(&rel.id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel.id, funs, ctx).await?;
         }
         let old_spec_rels = RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
@@ -187,21 +187,7 @@ impl IamOpenServ {
         )
         .await?;
         for rel in old_spec_rels {
-            let env_ids = RbumRelEnvServ::find_id_rbums(
-                &RbumRelExtFilterReq {
-                    rel_rbum_rel_id: Some(rel.id.clone()),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for env_id in env_ids {
-                RbumRelEnvServ::delete_rbum(&env_id, funs, ctx).await?;
-            }
-            RbumRelServ::delete_rbum(&rel.id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel.id, funs, ctx).await?;
         }
 
         let product_id = IamResServ::find_one_detail_item(

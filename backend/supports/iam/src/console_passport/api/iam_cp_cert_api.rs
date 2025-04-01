@@ -3,7 +3,6 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 use tardis::basic::dto::TardisContext;
-use tardis::db::sqlx::types::uuid::timestamp::context;
 use tardis::log;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
