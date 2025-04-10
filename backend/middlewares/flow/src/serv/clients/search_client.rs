@@ -182,6 +182,7 @@ impl FlowSearchClient {
                     groups: None,
                 }),
                 kv_disable: None,
+                data_source: None,
             };
             SpiSearchClient::add_item_and_name(&add_req, Some(model_resp.name.clone()), funs, ctx).await?;
         }
@@ -302,6 +303,7 @@ impl FlowSearchClient {
                     groups: None,
                 }),
                 kv_disable: None,
+                data_source: None,
             };
             SpiSearchClient::add_item_and_name(&add_req, inst_resp.title.clone(), funs, ctx).await?;
         }

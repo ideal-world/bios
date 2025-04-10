@@ -86,6 +86,7 @@ pub struct LogItemAddReq {
     pub rel_key: Option<String>,
     pub id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
+    pub data_source: Option<String>,
     pub owner: Option<String>,
     pub own_paths: Option<String>,
 }
@@ -101,11 +102,13 @@ pub struct LogItemAddV2Req {
     pub rel_key: Option<String>,
     pub idempotent_id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
+    pub data_source: Option<String>,
     pub owner: Option<String>,
     pub owner_name: Option<String>,
     pub own_paths: Option<String>,
     pub disable: Option<bool>,
     pub push: bool,
+    pub ignore_push: Option<bool>,
     pub msg: Option<String>,
 }
 
@@ -159,6 +162,7 @@ impl SpiLogClient {
             rel_key,
             id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            data_source: None,
             owner: Some(ctx.owner.clone()),
             own_paths: Some(ctx.own_paths.clone()),
         };
@@ -189,11 +193,13 @@ impl SpiLogClient {
             rel_key,
             idempotent_id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            data_source: None,
             owner: Some(ctx.owner.clone()),
             own_paths: Some(ctx.own_paths.clone()),
             msg: None,
             owner_name,
             push: false,
+            ignore_push: None,
             disable: None,
         };
         Self::addv2(req, funs, ctx).await?;
