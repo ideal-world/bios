@@ -146,11 +146,13 @@ impl IamLogClient {
             rel_key,
             idempotent_id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            data_source: None,
             owner,
             own_paths,
             msg: None,
             owner_name: None,
             push: false,
+            ignore_push: None,
             disable: None,
         };
         SpiLogClient::addv2(add_req, funs, ctx).await?;
