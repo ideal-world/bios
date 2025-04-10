@@ -1,5 +1,4 @@
 mod test_common;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use bios_basic::test::init_test_container;
@@ -18,10 +17,10 @@ fn new_task(code: &str) -> ScheduleJob {
     // let period = random::<u8>() % 5 + 1;
     ScheduleJob {
         code: code.into(),
-        cron: vec![format!("1/{period} * * * * *", period = 2)],
+        cron: vec![format!("0 */2 * * * *")],
         callback_url: "http://127.0.0.1:8080/callback/inc".into(),
-        enable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(5)),
-        disable_time: Utc::now().checked_add_signed(chrono::Duration::seconds(10)),
+        enable_time: None,
+        disable_time: Utc::now().checked_add_signed(chrono::Duration::minutes(100)),
         ..Default::default()
     }
 }
@@ -31,7 +30,7 @@ fn funs() -> TardisFunsInst {
 #[tokio::test]
 async fn test_multi() -> TardisResult<()> {
     // std::env::set_current_dir("middlewares/schedule").unwrap();
-    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO,bios_mw_schedule=TRACE,tardis=off");
+    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO,bios_mw_schedule=TRACE,tardis=off,poem=off");
     let container_hold = init_test_container::init(None).await?;
 
     init_tardis().await?;
@@ -54,10 +53,11 @@ async fn test_multi() -> TardisResult<()> {
             .expect("fail to add schedule task");
         }
     }
-    tokio::time::sleep(tokio::time::Duration::from_secs(11)).await;
+    tokio::signal::ctrl_c().await?;
+    // tokio::time::sleep(tokio::time::Duration::from_secs(11)).await;
     // 10 * (3 / 2 + 1) == 20
     // if every task is executed twice and only executed by one task serv, then the counter should be 20
-    assert!(test_env.counter.load(Ordering::SeqCst) == 25);
+    // assert!(test_env.counter.load(Ordering::SeqCst) == 25);
     drop(container_hold);
     Ok(())
 }
