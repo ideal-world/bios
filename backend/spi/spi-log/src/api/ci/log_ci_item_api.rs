@@ -1,11 +1,12 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::log_item_dto::{LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp};
-use crate::serv::log_item_serv;
+use crate::dto::log_item_dto::{LogConfigReq, LogExportDataReq, LogExportDataResp, LogImportDataReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp};
+use crate::serv::{log_item_serv, log_transfer_serv};
 use tardis::serde_json::Value;
 
 #[derive(Clone)]
@@ -83,5 +84,23 @@ impl LogCiItemApiV2 {
         let funs = crate::get_tardis_inst();
         log_item_serv::delete_config(&mut find_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
+    }
+
+    #[oai(path = "/export", method = "put")]
+    async fn export_data(&self, export_req: Json<LogExportDataReq>, ctx: TardisContextExtractor) -> TardisApiResult<LogExportDataResp> {
+        let funs = crate::get_tardis_inst();
+        let result = log_transfer_serv::export_data(&export_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    #[oai(path = "/import", method = "put")]
+    async fn import_data(&self, import_req: Json<LogImportDataReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+        let funs = crate::get_tardis_inst();
+        let _ = log_transfer_serv::import_data(&import_req.0, &funs, &ctx.0).await?;
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 }
