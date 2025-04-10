@@ -15,7 +15,7 @@ pub struct Model {
     pub rel_flow_version_id: String,
 
     /// Instance code / 实例编码
-    #[index(unique)]
+    #[index]
     pub code: Option<String>,
 
     /// Business object Id / 关联的业务对象Id

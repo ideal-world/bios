@@ -124,7 +124,7 @@ impl FlowCcInstApi {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::paginate(
             flow_model_id.0,
-            tag.0,
+            tag.0.map(|tag| vec![tag]),
             finish.0,
             main.0,
             current_state_id.0,
@@ -166,7 +166,7 @@ impl FlowCcInstApi {
         let result = FlowInstServ::paginate_detail_items(
             &FlowInstFilterReq {
                 flow_version_id: flow_model_id.0,
-                tag: tag.0,
+                tags: tag.0.map(|tag| vec![tag]),
                 finish: finish.0,
                 main: main.0,
                 current_state_id: current_state_id.0,

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use itertools::Itertools;
+use serde_json::to_string;
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::Utc;
 use tardis::log::debug;
@@ -11,13 +12,11 @@ use tardis::web::poem::web::Path;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::poem_openapi::{self, param::Query};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
-    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
-    FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
 };
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
@@ -386,5 +385,42 @@ impl FlowCiInstApi {
         }
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Find Instances
+    ///
+    /// 获取实例列表
+    #[oai(path = "/", method = "get")]
+    async fn paginate(
+        &self,
+        flow_model_id: Query<Option<String>>,
+        rel_business_obj_id: Query<Option<String>>,
+        tags: Query<Option<String>>,
+        finish: Query<Option<bool>>,
+        main: Query<Option<bool>>,
+        current_state_id: Query<Option<String>>,
+        with_sub: Query<Option<bool>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowInstServ::paginate(
+            flow_model_id.0,
+            tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec()),
+            finish.0,
+            main.0,
+            current_state_id.0,
+            rel_business_obj_id.0,
+            with_sub.0,
+            page_number.0,
+            page_size.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 }

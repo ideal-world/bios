@@ -528,7 +528,7 @@ pub struct FlowInstFilterReq {
     /// 关联的实例ID
     pub rel_inst_id: Option<String>,
     /// 标签
-    pub tag: Option<String>,
+    pub tags: Option<Vec<String>>,
 
     /// 是否主流程
     pub main: Option<bool>,

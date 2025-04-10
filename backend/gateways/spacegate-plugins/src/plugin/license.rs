@@ -156,7 +156,7 @@ impl Plugin for LicensePlugin {
 mod test {
     use super::*;
     use tardis::chrono::TimeDelta;
-    use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey, TardisCryptoSm2};
+    use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2, TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey};
     #[test]
     fn gen_pem() {
         let info = CertificationInfo {

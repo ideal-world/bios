@@ -28,19 +28,24 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_cond_dto::BasicQueryCondInfo, flow_inst_dto::FlowInstFilterReq, flow_model_dto::{
+        flow_cond_dto::BasicQueryCondInfo,
+        flow_inst_dto::FlowInstFilterReq,
+        flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
             FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp,
             FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
-        }, flow_model_version_dto::{
+        },
+        flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
             FlowModelVesionState,
-        }, flow_state_dto::{
+        },
+        flow_state_dto::{
             FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
-        }, flow_transition_dto::{
+        },
+        flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation,
             FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
-        }
+        },
     },
     flow_config::FlowBasicInfoManager,
     flow_constants,
@@ -236,7 +241,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .into_iter()
             .collect::<TardisResult<Vec<()>>>()?;
         }
-        if add_req.template && add_req.main && add_req.rel_model_id.clone().map_or(true, |id| id.is_empty()) {
+        if add_req.template && add_req.main && add_req.rel_model_id.clone().is_none_or(|id| id.is_empty()) {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
@@ -1408,7 +1413,7 @@ impl FlowModelServ {
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some("".to_string()),
-                        ignore_scope: true,
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
                     template: Some(true),
@@ -2059,12 +2064,18 @@ impl FlowModelServ {
         }
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            FlowInstServ::unsafe_modify_state(&FlowInstFilterReq {
-                main: Some(true),
-                tag: Some(flow_model.tag.clone()),
-                current_state_id: Some(req.state_id.clone()),
-                ..Default::default()
-            }, &req.new_state_id, funs, &mock_ctx).await?;
+            FlowInstServ::unsafe_modify_state(
+                &FlowInstFilterReq {
+                    main: Some(true),
+                    tags: Some(vec![flow_model.tag.clone()]),
+                    current_state_id: Some(req.state_id.clone()),
+                    ..Default::default()
+                },
+                &req.new_state_id,
+                funs,
+                &mock_ctx,
+            )
+            .await?;
         }
         Self::modify_model(
             flow_model_id,
