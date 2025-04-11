@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use itertools::Itertools;
-use serde_json::to_string;
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::Utc;
 use tardis::log::debug;
@@ -18,6 +17,7 @@ use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
 };
+use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
@@ -391,14 +391,17 @@ impl FlowCiInstApi {
     ///
     /// 获取实例列表
     #[oai(path = "/", method = "get")]
+    #[allow(clippy::too_many_arguments)]
     async fn paginate(
         &self,
         flow_model_id: Query<Option<String>>,
         rel_business_obj_id: Query<Option<String>>,
         tags: Query<Option<String>>,
         finish: Query<Option<bool>>,
+        finish_abort: Query<Option<bool>>,
         main: Query<Option<bool>>,
         current_state_id: Query<Option<String>>,
+        current_state_sys_kind: Query<Option<FlowSysStateKind>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -410,8 +413,10 @@ impl FlowCiInstApi {
             flow_model_id.0,
             tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec()),
             finish.0,
+            finish_abort.0,
             main.0,
             current_state_id.0,
+            current_state_sys_kind.0,
             rel_business_obj_id.0,
             with_sub.0,
             page_number.0,

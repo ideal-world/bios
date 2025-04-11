@@ -1387,7 +1387,11 @@ impl FlowModelServ {
         .filter(|model| {
             let front_conds = model.front_conds();
             if let Some(front_conds) = front_conds {
-                BasicQueryCondInfo::check_or_and_conds(&front_conds, vars).unwrap_or(true)
+                if front_conds.is_empty() {
+                    true
+                } else {
+                    BasicQueryCondInfo::check_or_and_conds(&front_conds, vars).unwrap_or(true)
+                }
             } else {
                 true
             }

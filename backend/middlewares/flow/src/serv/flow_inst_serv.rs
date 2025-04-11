@@ -29,7 +29,7 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_inst, flow_model_version},
+    domain::{flow_inst, flow_model_version, flow_state},
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
@@ -305,7 +305,7 @@ impl FlowInstServ {
         let create_vars = Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.to_string(), funs, ctx).await?;
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
-            code: Set(Some(if child { Self::gen_inst_code(funs).await? } else { "".to_string() })),
+            code: Set(Some(if !child { Self::gen_inst_code(funs).await? } else { "".to_string() })),
             tag: Set(Some(start_req.tag.clone())),
             rel_flow_version_id: Set(flow_model.current_version_id.clone()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.clone()),
@@ -564,6 +564,10 @@ impl FlowInstServ {
                 Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
             )
             .left_join(
+                flow_state::Entity,
+                Expr::col((flow_state::Entity, ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
+            )
+            .left_join(
                 rel_model_table.clone(),
                 Cond::all()
                     .add(Expr::col((rel_model_table.clone(), Alias::new("from_rbum_id"))).equals((flow_model_version_table.clone(), flow_model_version::Column::RelModelId)))
@@ -600,8 +604,14 @@ impl FlowInstServ {
                 query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishTime)).is_null());
             }
         }
+        if let Some(finish_abort) = filter.finish_abort {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).eq(finish_abort));
+        }
         if let Some(current_state_id) = &filter.current_state_id {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(current_state_id));
+        }
+        if let Some(current_state_sys_kind) = &filter.current_state_sys_kind {
+            query.and_where(Expr::col((flow_state::Entity, flow_state::Column::SysState)).eq(current_state_sys_kind.clone()));
         }
         if let Some(rel_business_obj_ids) = &filter.rel_business_obj_ids {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelBusinessObjId)).is_in(rel_business_obj_ids));
@@ -1002,12 +1012,15 @@ impl FlowInstServ {
             .collect_vec())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn paginate(
         flow_version_id: Option<String>,
         tags: Option<Vec<String>>,
         finish: Option<bool>,
+        finish_abort: Option<bool>,
         main: Option<bool>,
         current_state_id: Option<String>,
+        current_state_sys_kind: Option<FlowSysStateKind>,
         rel_business_obj_id: Option<String>,
         with_sub: Option<bool>,
         page_number: u32,
@@ -1022,8 +1035,10 @@ impl FlowInstServ {
                 flow_version_id,
                 tags,
                 finish,
+                finish_abort,
                 main,
                 current_state_id,
+                current_state_sys_kind,
                 rel_business_obj_ids: rel_business_obj_id.map(|id| vec![id]),
                 with_sub,
                 ..Default::default()
@@ -2612,8 +2627,9 @@ impl FlowInstServ {
     }
 
     pub async fn batch_operate(inst_id: &str, batch_operate_req: &HashMap<String, FlowInstOperateReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rel_inst_ids = FlowInstServ::find_ids(
+        let rel_business_obj_ids = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
+                with_sub: Some(true),
                 rel_inst_id: Some(inst_id.to_string()),
                 ..Default::default()
             },
@@ -2622,15 +2638,27 @@ impl FlowInstServ {
         )
         .await?
         .into_iter()
+        .map(|inst| inst.rel_business_obj_id)
         .sorted()
         .collect_vec();
-        let req_inst_ids = batch_operate_req.keys().cloned().sorted().collect_vec();
-        if req_inst_ids != rel_inst_ids {
+        let req_business_obj_ids = batch_operate_req.keys().cloned().sorted().collect_vec();
+        if req_business_obj_ids != rel_business_obj_ids {
             return Err(funs.err().not_found("flow_inst", "batch_operate", "some flow instances not found", "404-flow-inst-not-found"));
         }
-        for (inst_id, operate_req) in batch_operate_req {
-            let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
-            FlowInstServ::operate(&inst, operate_req, funs, ctx).await?;
+        for (rel_business_obj_id, operate_req) in batch_operate_req {
+            if let Some(child_inst_id) = FlowInstServ::find_ids(
+                &FlowInstFilterReq {
+                    rel_business_obj_ids: Some(vec![rel_business_obj_id.clone()]),
+                    rel_inst_id: Some(inst_id.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?.pop() {
+                let inst = FlowInstServ::get(&child_inst_id, funs, ctx).await?;
+                FlowInstServ::operate(&inst, operate_req, funs, ctx).await?;
+            }
         }
         Ok(())
     }
@@ -3209,7 +3237,6 @@ impl FlowInstServ {
                     .columns([flow_inst::Column::Code])
                     .from(flow_inst::Entity)
                     .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
-                    .and_where(Expr::col(flow_inst::Column::Main).eq(false)),
             )
             .await?;
         let current_date = Utc::now();

@@ -535,8 +535,12 @@ pub struct FlowInstFilterReq {
 
     /// 是否结束
     pub finish: Option<bool>,
+    /// 是否强制结束
+    pub finish_abort: Option<bool>,
     /// 当前状态ID
     pub current_state_id: Option<String>,
+    pub current_state_sys_kind: Option<FlowSysStateKind>,
+    
     pub with_sub: Option<bool>,
 }
 
