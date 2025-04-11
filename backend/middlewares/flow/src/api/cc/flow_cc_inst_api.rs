@@ -15,6 +15,7 @@ use crate::dto::flow_inst_dto::{
     FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::dto::flow_model_dto::FlowModelDetailResp;
+use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -107,14 +108,17 @@ impl FlowCcInstApi {
     ///
     /// 获取实例列表
     #[oai(path = "/", method = "get")]
+    #[allow(clippy::too_many_arguments)]
     async fn paginate(
         &self,
         flow_model_id: Query<Option<String>>,
         rel_business_obj_id: Query<Option<String>>,
         tag: Query<Option<String>>,
         finish: Query<Option<bool>>,
+        finish_abort: Query<Option<bool>>,
         main: Query<Option<bool>>,
         current_state_id: Query<Option<String>>,
+        current_state_sys_kind: Query<Option<FlowSysStateKind>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -124,10 +128,12 @@ impl FlowCcInstApi {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::paginate(
             flow_model_id.0,
-            tag.0,
+            tag.0.map(|tag| vec![tag]),
             finish.0,
+            finish_abort.0,
             main.0,
             current_state_id.0,
+            current_state_sys_kind.0,
             rel_business_obj_id.0,
             with_sub.0,
             page_number.0,
@@ -166,7 +172,7 @@ impl FlowCcInstApi {
         let result = FlowInstServ::paginate_detail_items(
             &FlowInstFilterReq {
                 flow_version_id: flow_model_id.0,
-                tag: tag.0,
+                tags: tag.0.map(|tag| vec![tag]),
                 finish: finish.0,
                 main: main.0,
                 current_state_id: current_state_id.0,

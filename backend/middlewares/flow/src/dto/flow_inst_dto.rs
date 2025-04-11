@@ -528,15 +528,19 @@ pub struct FlowInstFilterReq {
     /// 关联的实例ID
     pub rel_inst_id: Option<String>,
     /// 标签
-    pub tag: Option<String>,
+    pub tags: Option<Vec<String>>,
 
     /// 是否主流程
     pub main: Option<bool>,
 
     /// 是否结束
     pub finish: Option<bool>,
+    /// 是否强制结束
+    pub finish_abort: Option<bool>,
     /// 当前状态ID
     pub current_state_id: Option<String>,
+    pub current_state_sys_kind: Option<FlowSysStateKind>,
+    
     pub with_sub: Option<bool>,
 }
 
