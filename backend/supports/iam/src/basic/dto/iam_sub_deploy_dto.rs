@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 
@@ -5,6 +6,10 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
+
+use super::iam_account_dto::{IamAccountDetailAggResp, IamAccountDetailResp};
+use super::iam_config_dto::IamConfigDetailResp;
+use super::iam_role_dto::IamRoleDetailResp;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
@@ -70,4 +75,13 @@ pub struct IamSubDeployDetailResp {
     pub update_time: DateTime<Utc>,
     pub create_by: String,
     pub update_by: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamSubDeployOneExportAggResp {
+    pub account: Vec<IamAccountDetailAggResp>,
+    pub role: Vec<IamRoleDetailResp>,
+    pub org: RbumSetTreeResp,
+    pub apps: RbumSetTreeResp,
+    pub iam_config: IamConfigDetailResp,
 }

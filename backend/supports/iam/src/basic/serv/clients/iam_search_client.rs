@@ -193,6 +193,7 @@ impl IamSearchClient {
                 key: TrimString(key),
                 title: account_resp.name.clone(),
                 content: format!("{},{:?}", account_resp.name, account_certs,),
+                data_source: None,
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
                     Some(account_resp.own_paths.clone())

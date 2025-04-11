@@ -317,7 +317,7 @@ pub(crate) async fn fact_col_record_sync(fact_conf_key: &str, fact_col_conf_key:
             Ok(())
         },
         &funs.cache(),
-        "".to_string(),
+        "spi-stats".to_string(),
         None,
         ctx,
     )

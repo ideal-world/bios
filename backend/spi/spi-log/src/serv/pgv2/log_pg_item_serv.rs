@@ -22,7 +22,9 @@ use bios_basic::{
 };
 
 use crate::{
-    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp},
+    dto::log_item_dto::{
+        AdvBasicQueryCondInfo, LogConfigReq, LogExportDataReq, LogExportDataResp, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, LogImportDataReq,
+    },
     log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
 };
 
@@ -56,7 +58,10 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
                 vec![Value::from(key.to_string())],
             )
             .await?;
-
+        //如果没有上次的记录
+        if check(&add_req.tag, key, &id, funs, ctx, inst).await? {
+            return Ok(id);
+        }
         if let Some(last_record) = get_last_record {
             let mut last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
@@ -116,6 +121,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
         Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.content.clone()),
+        Value::from(add_req.data_source.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
@@ -134,22 +140,41 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-  (idempotent_id, kind, key, tag, op, content, owner, owner_name, own_paths, push, ext, rel_key, msg{})
+  (idempotent_id, kind, key, tag, op, content, data_source, owner, owner_name, own_paths, push, ext, rel_key, msg{})
 VALUES
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13{})
+  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14{})
 "#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $14" } else { "" },
+            if add_req.ts.is_some() { ", $15" } else { "" },
         ),
         params,
     )
     .await?;
     conn.commit().await?;
     //if push is true, then push to EDA
-    if add_req.push {
+    if add_req.push && !add_req.ignore_push.unwrap_or(false) {
         push_to_eda(add_req, &ref_fields, funs, ctx).await?;
     }
     Ok(id)
+}
+
+async fn check(tag: &str, key: &str, idempotent_id: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    // 初始化要保存的内容
+    let (conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
+    let count: i64 = conn
+        .query_one(
+            &format!(
+                r#"
+select count(1) as _count from {table_name} where key = $1 and idempotent_id = $2
+"#
+            ),
+            vec![Value::from(key), Value::from(idempotent_id)],
+        )
+        .await?
+        .ok_or_else(|| TardisError::not_found("not found", "404-spi-log-not-found"))?
+        .try_get("", "_count")?;
+    Ok(count > 0)
 }
 
 fn get_ref_filed_value(ref_log_record_ts: &DateTime<Utc>, ref_log_record_key: &str) -> String {
@@ -590,7 +615,7 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, owner, owner_name, own_paths, rel_key, msg, count(*) OVER() AS total
+                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, data_source, owner, owner_name, own_paths, rel_key, msg, count(*) OVER() AS total
 FROM {table_name}
 WHERE
   {}
@@ -627,6 +652,7 @@ ORDER BY ts DESC
                 content: item.try_get("", "content")?,
                 rel_key: item.try_get("", "rel_key")?,
                 kind: item.try_get("", "kind")?,
+                data_source: item.try_get("", "data_source")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 msg: item.try_get("", "msg")?,

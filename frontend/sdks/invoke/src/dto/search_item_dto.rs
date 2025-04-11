@@ -18,6 +18,7 @@ pub struct SearchItemAddReq {
     pub title: String,
     // #[oai(validator(min_length = "2"))]
     pub content: String,
+    pub data_source: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     #[oai(validator(min_length = "2"))]

@@ -674,7 +674,7 @@ impl IamCtSubDeployLicenseApi {
         let funs = iam_constants::get_tardis_inst();
         let result = IamSubDeployLicenseServ::generate_license(&id.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
-        let attachment = Attachment::new(result.into_bytes()).filename("license_.key");
+        let attachment = Attachment::new(result.into_bytes()).filename("license.cert");
         Ok(attachment.into())
     }
 

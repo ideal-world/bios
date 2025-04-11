@@ -23,6 +23,7 @@ pub struct SearchItemAddReq {
     pub title: String,
     // #[oai(validator(min_length = "2"))]
     pub content: String,
+    pub data_source: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     // #[oai(validator(min_length = "2"))]
@@ -41,6 +42,7 @@ impl From<bios_sdk_invoke::dto::search_item_dto::SearchItemAddReq> for SearchIte
             key: value.key,
             title: value.title,
             content: value.content,
+            data_source: value.data_source,
             owner: value.owner,
             own_paths: value.own_paths,
             create_time: value.create_time,
@@ -284,6 +286,7 @@ pub struct SearchItemSearchResp {
     pub title: String,
     #[oai(validator(min_length = "2"))]
     pub content: String,
+    pub data_source: String,
     #[oai(validator(min_length = "2"))]
     pub owner: String,
     #[oai(validator(min_length = "2"))]
@@ -528,4 +531,54 @@ pub struct SearchQueryMetricsResp {
     /// }
     /// ```
     pub group: Value,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchExportDataReq {
+    pub tags: Vec<String>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchExportDataResp {
+    pub tag_data: HashMap<String, Vec<SearchExportAggResp>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchImportDataReq {
+    pub data_source: String,
+    pub tag_data: HashMap<String, Vec<SearchImportAggReq>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchExportAggResp {
+    pub tag: String,
+    pub kind: String,
+    pub key: String,
+    pub title: String,
+    pub content: String,
+    pub data_source: String,
+    pub owner: String,
+    pub own_paths: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    pub ext: Value,
+    pub visit_keys: Option<Value>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchImportAggReq {
+    pub tag: String,
+    pub kind: String,
+    pub key: String,
+    pub title: String,
+    pub content: String,
+    pub data_source: String,
+    pub owner: String,
+    pub own_paths: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    pub ext: Value,
+    pub visit_keys: Option<SearchItemVisitKeysReq>,
 }

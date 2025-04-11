@@ -4,7 +4,7 @@ use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use bios_basic::spi_dispatch_service;
 
-use crate::dto::log_item_dto::{LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{LogConfigReq, LogExportDataReq, LogExportDataResp, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, LogImportDataReq};
 use crate::log_initializer;
 use tardis::web::web_resp::TardisPage;
 

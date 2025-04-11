@@ -14,8 +14,9 @@ use bios_basic::{
 };
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq,
-    SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportDataReq, SearchExportDataResp, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq,
+    SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    SearchImportDataReq,
 };
 
 use super::search_es_initializer;
@@ -322,6 +323,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     key: item.key.to_string(),
                     title: item.title.clone(),
                     content: item.content.clone(),
+                    data_source: item.data_source.clone().unwrap_or_default(),
                     owner: item.owner.clone().unwrap_or_default(),
                     own_paths: item.own_paths.clone().unwrap_or_default(),
                     create_time: item.create_time.unwrap_or_default(),
@@ -859,4 +861,13 @@ pub async fn query_metrics(_query_req: &SearchQueryMetricsReq, funs: &TardisFuns
 
 pub async fn refresh_tsv(_tag: &str, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
     Err(funs.err().format_error("search_es_item_serv", "refresh_tsv", "not supports", "500-not-supports"))
+}
+
+pub async fn export_data(_export_req: &SearchExportDataReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<SearchExportDataResp> {
+    let tag_data = HashMap::new();
+    Ok(SearchExportDataResp { tag_data })
+}
+
+pub async fn import_data(_import_req: &SearchImportDataReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<bool> {
+    Ok(true)
 }

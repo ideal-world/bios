@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::iter::Map;
+
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
@@ -15,7 +18,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
 use crate::basic::dto::iam_filer_dto::{IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq};
-use crate::basic::dto::iam_sub_deploy_dto::{IamSubDeployAddReq, IamSubDeployDetailResp, IamSubDeployModifyReq, IamSubDeploySummaryResp};
+use crate::basic::dto::iam_sub_deploy_dto::{IamSubDeployAddReq, IamSubDeployDetailResp, IamSubDeployModifyReq, IamSubDeployOneExportAggResp, IamSubDeploySummaryResp};
 use crate::basic::dto::iam_sub_deploy_host_dto::{IamSubDeployHostAddReq, IamSubDeployHostDetailResp, IamSubDeployHostModifyReq};
 use crate::basic::dto::iam_sub_deploy_license_dto::{IamSubDeployLicenseAddReq, IamSubDeployLicenseDetailResp, IamSubDeployLicenseModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -182,6 +185,10 @@ impl IamSubDeployServ {
         IamRelServ::exist_rels(rel_kind, id, to_rbum_item_id, funs, ctx).await
     }
 
+    pub(crate) async fn exist_to_rel(rel_kind: &IamRelKind, to_rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        IamRelServ::exist_to_rel(rel_kind, to_rbum_item_id, funs, ctx).await
+    }
+
     pub(crate) async fn find_rel_id_by_sub_deploy_id(rel_kind: &IamRelKind, id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         IamRelServ::find_from_id_rels(rel_kind, true, id, None, None, funs, ctx).await
     }
@@ -189,6 +196,18 @@ impl IamSubDeployServ {
     pub(crate) async fn find_sub_deploy_id_by_rel_id(rel_kind: &IamRelKind, id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         IamRelServ::find_to_id_rels(rel_kind, id, None, None, funs, ctx).await
     }
+
+    pub(crate) async fn one_deploy_export(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSubDeployOneExportAggResp> {
+        let mut export = IamSubDeployOneExportAggResp {
+            account: todo!(),
+            org: todo!(),
+            apps: todo!(),
+            role: todo!(),
+            iam_config: todo!(),
+        };
+        Ok(export)
+    }
+
 }
 
 #[async_trait]

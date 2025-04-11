@@ -8,7 +8,7 @@ use tardis::{
 };
 
 use crate::{
-    api::ci::{stats_ci_conf_api, stats_ci_metric_api, stats_ci_record_api, stats_ci_sync_api},
+    api::ci::{stats_ci_conf_api, stats_ci_metric_api, stats_ci_record_api, stats_ci_sync_api, stats_ci_transfer_api},
     stats_config::StatsConfig,
     stats_constants::DOMAIN_CODE,
 };
@@ -43,6 +43,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 stats_ci_record_api::StatsCiRecordApi,
                 stats_ci_metric_api::StatsCiMetricApi,
                 stats_ci_sync_api::StatsCiSyncApi,
+                stats_ci_transfer_api::StatsCiTransferApi,
             ),
         )
         .await;

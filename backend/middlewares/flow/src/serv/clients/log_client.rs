@@ -190,6 +190,7 @@ impl FlowLogClient {
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,
+            data_source: None,
         };
         SpiLogClient::add(req, funs, ctx).await?;
         Ok(())
@@ -233,6 +234,8 @@ impl FlowLogClient {
             owner_name,
             push,
             disable: None,
+            data_source: None,
+            ignore_push: None,
         };
         SpiLogClient::addv2(req, funs, ctx).await?;
         Ok(())
