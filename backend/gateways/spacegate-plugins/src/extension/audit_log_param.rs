@@ -109,6 +109,8 @@ fn send_audit_log(spi_app_id: &str, log_url: &str, tag: &str, content: LogParamC
                     own_paths: None,
                     msg: None,
                     owner_name: None,
+                    data_source: None,
+                    ignore_push: None,
                     push: false,
                     disable: None,
                 },
