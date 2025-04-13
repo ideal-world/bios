@@ -8,6 +8,7 @@
 404-flow-inst-not-found	找不到实例
 404-flow-model-not-found	找不到模型
 404-flow-state-not-found	找不到状态节点
+404-flow-config-not-found	找不到配置
 404-flow-transition-not-found	找不到模型
 404-rel-not-found	找不到关联状态
 404-flow-inst-rel-model-not-found	找不到实例关联的模型

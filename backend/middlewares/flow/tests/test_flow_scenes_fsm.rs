@@ -11,7 +11,9 @@ use bios_iam::iam_test_helper::BIOSWebTestClient;
 use bios_mw_flow::dto::flow_cond_dto::{BasicQueryCondInfo, BasicQueryOpKind};
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
-use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq};
+use bios_mw_flow::dto::flow_inst_dto::{
+    FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstRelChildObj, FlowInstStartReq,
+};
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq,
     FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
@@ -914,20 +916,104 @@ pub async fn test(
             },
         )
         .await;
-    let _versions: TardisPage<FlowModelVersionDetailResp> = flow_client.get(&format!("/cc/model_version?rel_model_id={}&page_number=1&page_size=100", req_approval_flow.id)).await;
-    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
-        .put(
-            "/cc/inst/batch/state_transitions",
-            &vec![FlowInstFindStateAndTransitionsReq {
-                flow_inst_id: req_inst_id1.clone(),
-                vars: None,
-            }],
+    let review_approval_flow: FlowModelAggResp = flow_client
+        .post(
+            "/cc/model",
+            &FlowModelAddReq {
+                kind: FlowModelKind::AsModel,
+                status: FlowModelStatus::Enabled,
+                rel_transition_ids: Some(vec!["__REVIEW__".to_string()]),
+                add_version: None,
+                current_version_id: None,
+                name: "评审审批流".into(),
+                info: Some("xxx".to_string()),
+                rel_template_ids: None,
+                template: false,
+                main: false,
+                tag: Some("REVIEW".to_string()),
+                scope_level: None,
+                icon: None,
+                rel_model_id: None,
+                disabled: None,
+                front_conds: None,
+            },
         )
         .await;
-    info!(
-        "state_and_next_transitions: {:?}",
-        TardisFuns::json.obj_to_json(&state_and_next_transitions).unwrap().to_string()
-    );
+    let review_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", review_approval_flow.edit_version_id)).await;
+    let start_review_state_id = review_approval_flow_version.states()[0].id.clone();
+    let approval_review_state_id = TardisFuns::field.nanoid();
+    let finish_review_state_id = review_approval_flow_version.states()[1].id.clone();
+    let start_review_transition_id = review_approval_flow_version.states()[0].transitions[0].id.clone();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", review_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                bind_states: Some(vec![FlowModelVersionBindState {
+                    bind_new_state: Some(FlowModelBindNewStateReq {
+                        new_state: FlowStateAddReq {
+                            id: Some(approval_review_state_id.clone().into()),
+                            name: Some("审批节点".into()),
+                            sys_state: FlowSysStateKind::Progress,
+                            state_kind: Some(FlowStateKind::Approval),
+                            tags: Some(vec![review_approval_flow.tag.clone()]),
+                            main: Some(false),
+                            kind_conf: Some(FLowStateKindConf {
+                                form: None,
+                                approval: Some(FlowStateApproval {
+                                    countersign_conf: FlowStateCountersignConf {
+                                        kind: FlowStateCountersignKind::All,
+                                        ..Default::default()
+                                    },
+                                    revoke: true,
+                                    multi_approval_kind: FlowStatusMultiApprovalKind::Orsign,
+                                    pass_btn_name: "通过".to_string(),
+                                    back_btn_name: "退回".to_string(),
+                                    overrule_btn_name: "不通过".to_string(),
+                                    guard_by_creator: true,
+                                    guard_by_his_operators: false,
+                                    guard_by_assigned: false,
+                                    auto_transfer_when_empty_kind: None,
+                                    referral: true,
+                                    ..Default::default()
+                                }),
+                            }),
+                            ..Default::default()
+                        },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                    }),
+                    is_init: false,
+                    add_transitions: Some(vec![FlowTransitionAddReq {
+                        name: Some("提交".into()),
+                        from_flow_state_id: approval_review_state_id.clone(),
+                        to_flow_state_id: finish_review_state_id.clone(),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                }]),
+                modify_states: Some(vec![FlowModelVersionModifyState {
+                    id: Some(start_review_state_id.clone()),
+                    modify_transitions: Some(vec![FlowTransitionModifyReq {
+                        id: start_review_transition_id.clone().into(),
+                        to_flow_state_id: Some(approval_review_state_id.clone()),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let review_approval_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", review_approval_flow.edit_version_id)).await;
+    info!("review_approval_version: {:?}", TardisFuns::json.obj_to_json(&review_approval_version).unwrap().to_string());
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", review_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                status: Some(FlowModelVesionState::Enabled),
+                ..Default::default()
+            },
+        )
+        .await;
     // 尝试启动空配置的实例
     let resp_error: TardisResp<String> = flow_client
         .post_resp(
@@ -966,7 +1052,7 @@ pub async fn test(
         )
         .await;
     assert_eq!(empty_inst_id, "".to_string());
-    // 启动审批流实例
+    // 尝试启动审批流实例
     let req_inst_id2: String = flow_client
         .post(
             "/cc/inst/try",
@@ -1058,7 +1144,30 @@ pub async fn test(
     let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
     assert_eq!(req_inst2.current_state_id, finish_state_id);
     assert!(req_inst2.current_state_conf.is_none());
-
+    // 创建携带子工作流的实例
+    let review_obj_id = TardisFuns::field.nanoid();
+    let child_obj_id = TardisFuns::field.nanoid();
+    let resp: TardisResp<String> = flow_client
+        .post_resp(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REVIEW".to_string(),
+                create_vars: None,
+                rel_business_obj_id: review_obj_id.clone(),
+                transition_id: None,
+                vars: None,
+                check_vars: None,
+                log_text: None,
+                rel_transition_id: Some("__REVIEW__".to_string()),
+                rel_child_objs: Some(vec![FlowInstRelChildObj {
+                    tag: "REQ".to_string(),
+                    obj_id: child_obj_id.clone(),
+                }]),
+                operator_map: None,
+            },
+        )
+        .await;
+    assert_eq!(resp.code, "200".to_string());
     Ok(())
 }
 
