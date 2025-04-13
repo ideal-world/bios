@@ -36,6 +36,8 @@ pub const RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE: &str = "app_normal_develop";
 pub const RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE: &str = "app_normal_product";
 pub const RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE: &str = "app_normal_iterate";
 pub const RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE: &str = "app_normal_test";
+pub const RBUM_ITEM_NAME_APP_READ_ROLE: &str = "app_read";
+
 
 pub const RBUM_ITEM_ID_TENANT_LEN: u8 = 6;
 pub const RBUM_ITEM_ID_APP_LEN: u8 = 6;

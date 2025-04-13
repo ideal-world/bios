@@ -199,13 +199,14 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                 iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string(),
                 iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string(),
                 iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
             ]),
             rbum_kind_id: Some(kind_role_id.clone()),
             rbum_domain_id: Some(domain_iam_id.clone()),
             ..Default::default()
         },
         1,
-        4,
+        5,
         Some(false),
         None,
         funs,
@@ -238,6 +239,12 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found app admin role", ""))?;
 
+    let role_app_read_id = roles
+        .iter()
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE)
+        .map(|r| r.id.clone())
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found app read role", ""))?;
+
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
         kind_app_id,
@@ -250,6 +257,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         role_tenant_admin_id,
         role_app_admin_id,
         kind_sub_deploy_id,
+        role_app_read_id,
     })?;
     Ok(())
 }
@@ -286,6 +294,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_tenant_audit_id: "".to_string(),
         role_tenant_admin_id: "".to_string(),
         role_app_admin_id: "".to_string(),
+        role_app_read_id: "".to_string(),
         kind_sub_deploy_id: kind_sub_deploy_id.to_string(),
     })?;
 
@@ -462,6 +471,26 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         &ctx,
     )
     .await?;
+    let role_app_read_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string())),
+                name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string()),
+                icon: None,
+                sort: None,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+                disabled: None,
+                kind: Some(IamRoleKind::App),
+                extend_role_id: None,
+                in_embed: Some(true),
+                in_base: Some(true),
+            },
+            res_ids: Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        },
+        funs,
+        &ctx,
+    )
+    .await?;
 
     let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
@@ -585,6 +614,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_tenant_admin_id,
         role_tenant_audit_id,
         role_app_admin_id,
+        role_app_read_id,
         kind_sub_deploy_id,
     })?;
 

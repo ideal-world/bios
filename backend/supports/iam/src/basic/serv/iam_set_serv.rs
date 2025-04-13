@@ -32,6 +32,7 @@ use super::clients::iam_search_client::IamSearchClient;
 use super::clients::iam_stats_client::IamStatsClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
+use super::iam_sub_deploy_serv::IamSubDeployServ;
 
 const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
 
@@ -325,6 +326,15 @@ impl IamSetServ {
             ctx,
         )
         .await?;
+        if item.kind == IamSetKind::Apps.to_string() {
+            if IamSubDeployServ::exist_to_rel(&IamRelKind::IamSubDeployApps, set_cate_id, funs, ctx).await? {
+                return Err(funs.err().conflict("iam_set", "delete_set_cate", &format!("apps is used by sub deploy"), "409-rbum-apps-is-used-by-sub-deploy"));
+            }
+        } else if item.kind == IamSetKind::Org.to_string() {
+            if IamSubDeployServ::exist_to_rel(&IamRelKind::IamSubDeployOrg, set_cate_id, funs, ctx).await? {
+                return Err(funs.err().conflict("iam_set", "delete_set_cate", &format!("org is used by sub deploy"), "409-rbum-org-is-used-by-sub-deploy"));
+            }
+        }
 
         let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
 
