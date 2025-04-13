@@ -75,7 +75,7 @@ asteroid-mq = {version = "0.1.0-alpha.16"}
 asteroid-mq-sdk = {version = "0.1.0-alpha.16"}
 #spacegate
 
-spacegate-shell = { version = "0.2.0-alpha.4", path = "../spacegate/crates/shell", features = [
+spacegate-shell = { version = "0.2.0-alpha.4", features = [
   "cache",
   "k8s",
   "ext-axum",
