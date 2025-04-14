@@ -522,6 +522,80 @@ impl IamSetServ {
         .await
     }
 
+    pub async fn get_app_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<(String, String)>> {
+        // 获取 account_id 对应的 set_cate
+        let rbum_set_cate_code = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.to_string()),
+                rel_rbum_item_ids: Some(vec![account_id.to_string()]),
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .iter()
+        .filter(|r| r.rel_rbum_set_cate_sys_code.is_some())
+        .map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default())
+        .collect::<Vec<String>>();
+        if rbum_set_cate_code.is_empty() {
+            return Ok(vec![]);
+        }
+        // 获取 sys_cate_code 当前层级及下级的 set_cate
+        let rbum_set_cates = RbumSetCateServ::find_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_set_id: Some(set_id.to_string()),
+                sys_codes: Some(rbum_set_cate_code.clone()),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if rbum_set_cates.is_empty() {
+            return Ok(vec![]);
+        }
+        // 获取 set_cate 下面的应用
+        let apps = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.to_string()),
+                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_app_id()]),
+                rel_rbum_set_cate_ids: Some(rbum_set_cates.iter().map(|r| r.id.clone()).collect()),
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .iter()
+        .map(|r| (r.rel_rbum_item_id.clone(), r.rel_rbum_item_name.clone()))
+        .collect::<Vec<(String, String)>>();
+        Ok(apps)
+    }
+
     pub async fn get_menu_tree_by_roles(set_id: &str, role_ids: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
