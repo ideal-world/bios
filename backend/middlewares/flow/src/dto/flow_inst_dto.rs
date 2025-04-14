@@ -37,6 +37,8 @@ pub struct FlowInstStartReq {
     pub operator_map: Option<HashMap<String, Vec<String>>>,
     /// 日志文本
     pub log_text: Option<String>,
+    /// 关联的工作流id
+    pub rel_inst_id: Option<String>,
 }
 
 // 实例关联的子业务对象

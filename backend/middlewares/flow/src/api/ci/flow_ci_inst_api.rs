@@ -4,7 +4,7 @@ use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::Utc;
-use tardis::log::debug;
+use tardis::log::{debug, warn};
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Path;
@@ -241,6 +241,7 @@ impl FlowCiInstApi {
                     rel_transition_id: None,
                     rel_child_objs: None,
                     operator_map: None,
+                    ..Default::default()
                 },
                 add_req.0.current_state_name.clone(),
                 &funs,
@@ -319,10 +320,12 @@ impl FlowCiInstApi {
         &self,
         flow_inst_id: Path<String>,
         operate_req: Json<HashMap<String, FlowInstOperateReq>>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Void> {
+        warn!("ci inst batch_operate flow_inst_id: {:?}, req: {:?}", flow_inst_id, operate_req);
         let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowInstServ::batch_operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -405,10 +408,11 @@ impl FlowCiInstApi {
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::paginate(
             flow_model_id.0,
             tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec()),

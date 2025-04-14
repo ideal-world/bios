@@ -620,6 +620,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -971,7 +972,7 @@ pub async fn test(
                                     overrule_btn_name: "不通过".to_string(),
                                     guard_by_creator: true,
                                     guard_by_his_operators: false,
-                                    guard_by_assigned: false,
+                                    guard_by_assigned: true,
                                     auto_transfer_when_empty_kind: None,
                                     referral: true,
                                     ..Default::default()
@@ -1029,6 +1030,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -1048,6 +1050,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -1067,6 +1070,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -1163,7 +1167,10 @@ pub async fn test(
                     tag: "REQ".to_string(),
                     obj_id: child_obj_id.clone(),
                 }]),
-                operator_map: None,
+                operator_map: Some(HashMap::from([
+                    (approval_review_state_id.clone(), vec![t1_data.accounts[0].clone()])
+                ])),
+                ..Default::default()
             },
         )
         .await;

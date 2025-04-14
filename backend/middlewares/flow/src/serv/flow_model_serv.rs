@@ -1077,7 +1077,6 @@ impl FlowModelServ {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
-                    ignore_scope: true,
                     ..Default::default()
                 },
                 ..Default::default()

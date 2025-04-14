@@ -11,7 +11,7 @@ pub struct FlowConfigModifyReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowRootConfigResp {
     pub code: String,
-    pub label: FlowReviewConfigLabelResp,
+    pub label: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
