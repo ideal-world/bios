@@ -84,6 +84,7 @@ impl FlowInstServ {
                     let rel_child_model = Self::find_rel_model(start_req.rel_transition_id.clone(), &start_req.tag, &create_vars, funs, ctx)
                         .await?
                         .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))?;
+                    FlowSearchClient::async_add_or_modify_instance_search(&inst_id, false, funs, ctx).await?;
                     for rel_child_obj in rel_child_objs {
                         // 终止未完成的审批流实例
                         for unfinished_inst_id in Self::find_ids(
@@ -101,7 +102,6 @@ impl FlowInstServ {
                         }
                         Self::start_child_flow(&inst_id, rel_child_obj, &rel_child_model, start_req, funs, ctx).await?;
                     }
-                    FlowSearchClient::async_add_or_modify_instance_search(&inst_id, false, funs, ctx).await?;
                 }
                 Ok(inst_id)
             } else {
@@ -129,8 +129,9 @@ impl FlowInstServ {
             let inst_id = Self::start_main_flow(start_req, &rel_model, current_state_name, funs, ctx).await?;
             if let Some(rel_child_objs) = &start_req.rel_child_objs {
                 let rel_child_model = Self::find_rel_model(start_req.rel_transition_id.clone(), &start_req.tag, &create_vars, funs, ctx)
-                    .await?
-                    .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))?;
+                .await?
+                .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))?;
+                FlowSearchClient::async_add_or_modify_instance_search(&inst_id, false, funs, ctx).await?;
                 for rel_child_obj in rel_child_objs {
                     // 终止未完成的审批流实例
                     for unfinished_inst_id in Self::find_ids(
@@ -148,7 +149,6 @@ impl FlowInstServ {
                     }
                     Self::start_child_flow(&inst_id, rel_child_obj, &rel_child_model, start_req, funs, ctx).await?;
                 }
-                FlowSearchClient::async_add_or_modify_instance_search(&inst_id, false, funs, ctx).await?;
             }
             Ok(inst_id)
         } else {
@@ -1231,6 +1231,19 @@ impl FlowInstServ {
                     Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
                 }
             });
+
+            if !Self::find_ids(
+                &FlowInstFilterReq {
+                    with_sub: Some(true),
+                    rel_inst_id: Some(flow_inst_detail.id.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?.is_empty() {
+                FlowSearchClient::async_add_or_modify_instance_search(&flow_inst_detail.id, true, funs, ctx).await?;
+            }
         }
 
         result
@@ -2399,6 +2412,37 @@ impl FlowInstServ {
                         .await?;
                     }
                 }
+                // 结束主流程的状态流实例
+                let next_trans= Self::find_next_transitions(&rel_inst, &FlowInstFindNextTransitionsReq {
+                    vars: None,
+                }, funs, ctx).await?;
+                for next_tran in next_trans {
+                    let next_state = FlowStateServ::get_item(&next_tran.next_flow_state_id, &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                    if next_state.sys_state == FlowSysStateKind::Finish {
+                        Self::transfer(
+                            &rel_inst,
+                            &FlowInstTransferReq {
+                                flow_transition_id: next_tran.next_flow_transition_id,
+                                message: None,
+                                vars: None,
+                            },
+                            false,
+                            FlowExternalCallbackOp::Auto,
+                            loop_check_helper::InstancesTransition::default(),
+                            ctx,
+                            funs,
+                        )
+                        .await?;
+                        break;
+                    }
+                }
             }
             FlowModelRelTransitionKind::Transfer(tran) => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);
@@ -3360,7 +3404,11 @@ impl FlowInstServ {
     }
 
     pub async fn get_search_item(flow_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstDetailInSearch> {
-        let inst = Self::get(flow_inst_id, funs, ctx).await?;
+        let mut inst = Self::get(flow_inst_id, funs, ctx).await?;
+        // 若为子审批流，则按父审批流为准
+        if let Some(rel_inst_id) = inst.rel_inst_id {
+            inst = Self::get(&rel_inst_id, funs, ctx).await?;
+        }
         let child_inst = Self::find_detail_items(
             &FlowInstFilterReq {
                 with_sub: Some(true),
