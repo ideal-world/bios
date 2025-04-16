@@ -95,24 +95,27 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
     }
 
     async fn after_add_item(id: &str, add_req: &mut FlowStateAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        FlowLogClient::add_ctx_task(
-            LogParamTag::DynamicLog,
-            Some(id.to_string()),
-            LogParamContent {
-                subject: Some("工作流状态".to_string()),
-                name: Some(add_req.name.clone().unwrap_or_default().to_string()),
-                sub_kind: Some("flow_state".to_string()),
-                ..Default::default()
-            },
-            None,
-            Some("dynamic_log_tenant_config".to_string()),
-            Some("新建".to_string()),
-            rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
-            ctx,
-            false,
-        )
-        .await?;
+        if add_req.main.unwrap_or(false) {
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(id.to_string()),
+                LogParamContent {
+                    subject: Some("工作流状态".to_string()),
+                    name: Some(add_req.name.clone().unwrap_or_default().to_string()),
+                    sub_kind: Some("flow_state".to_string()),
+                    ..Default::default()
+                },
+                None,
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("新建".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                false,
+                ctx,
+                false,
+            )
+            .await?;
+        }
+        
         Ok(())
     }
 
@@ -131,24 +134,27 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
     }
 
     async fn after_modify_item(id: &str, _: &mut FlowStateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        FlowLogClient::add_ctx_task(
-            LogParamTag::DynamicLog,
-            Some(id.to_string()),
-            LogParamContent {
-                subject: Some("工作流状态".to_string()),
-                name: Some(Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?.name),
-                sub_kind: Some("flow_state".to_string()),
-                ..Default::default()
-            },
-            None,
-            Some("dynamic_log_tenant_config".to_string()),
-            Some("编辑".to_string()),
-            rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
-            ctx,
-            false,
-        )
-        .await?;
+        let state = Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?;
+        if state.main {
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(id.to_string()),
+                LogParamContent {
+                    subject: Some("工作流状态".to_string()),
+                    name: Some(state.name),
+                    sub_kind: Some("flow_state".to_string()),
+                    ..Default::default()
+                },
+                None,
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("编辑".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                false,
+                ctx,
+                false,
+            )
+            .await?;
+        }
         Ok(())
     }
     async fn package_item_modify(_: &str, modify_req: &FlowStateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
@@ -220,24 +226,26 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
 
     async fn after_delete_item(id: &str, detail: &Option<FlowStateDetailResp>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(detail) = detail {
-            FlowLogClient::add_ctx_task(
-                LogParamTag::DynamicLog,
-                Some(id.to_string()),
-                LogParamContent {
-                    subject: Some("工作流状态".to_string()),
-                    name: Some(detail.name.clone()),
-                    sub_kind: Some("flow_state".to_string()),
-                    ..Default::default()
-                },
-                None,
-                Some("dynamic_log_tenant_config".to_string()),
-                Some("删除".to_string()),
-                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-                true,
-                ctx,
-                false,
-            )
-            .await?;
+            if detail.main {
+                FlowLogClient::add_ctx_task(
+                    LogParamTag::DynamicLog,
+                    Some(id.to_string()),
+                    LogParamContent {
+                        subject: Some("工作流状态".to_string()),
+                        name: Some(detail.name.clone()),
+                        sub_kind: Some("flow_state".to_string()),
+                        ..Default::default()
+                    },
+                    None,
+                    Some("dynamic_log_tenant_config".to_string()),
+                    Some("删除".to_string()),
+                    rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                    false,
+                    ctx,
+                    false,
+                )
+                .await?;
+            }
         }
         Ok(())
     }

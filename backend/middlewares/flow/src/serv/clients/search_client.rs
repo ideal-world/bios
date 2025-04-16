@@ -50,7 +50,7 @@ impl FlowSearchClient {
                     create_time: None,
                     update_time: None,
                     ext: Some(ext),
-                    ext_override: None,
+                    ext_override: Some(false),
                     visit_keys: None,
                     kv_disable: None,
                 },

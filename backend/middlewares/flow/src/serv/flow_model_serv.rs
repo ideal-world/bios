@@ -43,8 +43,7 @@ use crate::{
             FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
         },
         flow_transition_dto::{
-            FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation,
-            FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
+            FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation, FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq
         },
     },
     flow_config::FlowBasicInfoManager,
@@ -2138,7 +2137,7 @@ impl FlowModelServ {
                 "REVIEW",
                 start_state_id.clone(),
                 review_state_ids,
-                "评审通用审批流",
+                "评审通用工作流",
                 vec![
                     FlowTransitionInitInfo {
                         from_flow_state_id: start_state_id.clone(),
@@ -2173,8 +2172,66 @@ impl FlowModelServ {
                             change_content: None,
                             change_content_label: None,
                         }],
+                        action_by_post_changes: vec![
+                            FlowTransitionPostActionInfo {
+                                kind: FlowTransitionActionChangeKind::Var,
+                                describe: "".to_string(),
+                                obj_tag: None,
+                                obj_tag_rel_kind: None,
+                                obj_current_state_id: None,
+                                change_condition: None,
+                                changed_state_id: "".to_string(),
+                                current: false,
+                                var_name: "review_end_time".to_string(),
+                                changed_val: None,
+                                changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
+                                is_edit: None,
+                            },
+                        ],
                         ..Default::default()
                     },
+                ],
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+    pub async fn init_tc_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tc_init_model = Self::paginate_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                tags: Some(vec!["TC".to_string()]),
+                ..Default::default()
+            },
+            1,
+            1,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .records
+        .pop();
+        if tc_init_model.is_none() {
+            let mut bind_states = vec![];
+            bind_states.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
+            bind_states.push(FlowStateServ::init_state("TC", "已评审", FlowSysStateKind::Finish, "", funs, ctx).await?);
+            Self::init_model(
+                "TC",
+                bind_states[0].clone(),
+                bind_states.clone(),
+                "用例通用工作流",
+                vec![
+                    FlowTransitionInitInfo {
+                        from_flow_state_id: bind_states[0].clone(),
+                        to_flow_state_id: bind_states[1].clone(),
+                        name: "评审".to_string(),
+                        guard_by_his_operators: Some(true),
+                        ..Default::default()
+                    }
                 ],
                 funs,
                 ctx,
