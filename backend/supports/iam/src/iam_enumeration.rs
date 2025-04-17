@@ -109,6 +109,7 @@ pub enum IamRelKind {
     IamCertSpec,
 
     IamSubDeployAccount,
+    IamSubDeployAuthAccount,
     IamSubDeployOrg,
     IamSubDeployApps,
     IamSubDeployRel,

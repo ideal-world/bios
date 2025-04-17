@@ -110,6 +110,7 @@ impl IamCtAccountApi {
         app_ids: Query<Option<String>>,
         cate_ids: Query<Option<String>>,
         sub_deploy_ids: Query<Option<String>>,
+        auth_sub_deploy_ids: Query<Option<String>>,
         status: Query<Option<bool>>,
         app_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
@@ -150,6 +151,17 @@ impl IamCtAccountApi {
             RbumItemRelFilterReq {
                 rel_by_from: false,
                 tag: Some(IamRelKind::IamSubDeployAccount.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_ids: Some(sub_deploy_ids),
+                own_paths: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            }
+        });
+        let rel4 = auth_sub_deploy_ids.0.map(|sub_deploy_ids| {
+            let sub_deploy_ids = sub_deploy_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
+            RbumItemRelFilterReq {
+                rel_by_from: false,
+                tag: Some(IamRelKind::IamSubDeployAuthAccount.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 rel_item_ids: Some(sub_deploy_ids),
                 own_paths: Some(ctx.own_paths.clone()),
@@ -199,6 +211,7 @@ impl IamCtAccountApi {
                 rel,
                 rel2,
                 rel3,
+                rel4,
                 set_rel,
                 ..Default::default()
             },

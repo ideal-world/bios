@@ -94,6 +94,7 @@ impl IamSearchClient {
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
         let sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAccount, account_id, &funs, &ctx).await?;
+        let auth_sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAuthAccount, account_id, &funs, &ctx).await?;
         let mock_ctx = TardisContext {
             own_paths: "".to_owned(),
             ..ctx.clone()
@@ -163,7 +164,8 @@ impl IamSearchClient {
                     "lock_status": account_resp.lock_status,
                     "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
                     "dept_id": account_resp_dept_id,
-                    "sub_deploy_ids":sub_deploy_ids,
+                    "sub_deploy_ids": sub_deploy_ids,
+                    "auth_sub_deploy_ids": auth_sub_deploy_ids,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
@@ -208,7 +210,8 @@ impl IamSearchClient {
                     "lock_status": account_resp.lock_status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
-                    "sub_deploy_ids":sub_deploy_ids,
+                    "sub_deploy_ids": sub_deploy_ids,
+                    "auth_sub_deploy_ids": auth_sub_deploy_ids,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,

@@ -213,6 +213,86 @@ impl IamCtSubDeployApi {
         TardisResp::ok(result)
     }
 
+    /// Add Sub Deploy Rel Auth Account
+    /// 添加二级部署关联认证账号
+    #[oai(path = "/:id/auth/account/:account_id", method = "put")]
+    async fn add_rel_auth_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamSubDeployServ::add_rel_auth_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch add Sub Deploy Rel Auth Account
+    /// 批量添加二级部署关联认证账号
+    #[oai(path = "/:id/auth/account/batch/:account_ids", method = "put")]
+    async fn batch_add_rel_auth_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        join_all(account_ids.0.split(',').map(|account_id| async { IamSubDeployServ::add_rel_auth_account(&id.0, account_id, &funs, &ctx.0).await }).collect_vec())
+            .await
+            .into_iter()
+            .collect::<Result<Vec<()>, TardisError>>()?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Sub Deploy Rel Auth Account
+    /// 删除二级部署关联认证账号
+    #[oai(path = "/:id/auth/account/:account_id", method = "delete")]
+    async fn delete_rel_auth_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamSubDeployServ::delete_rel_auth_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch delete Sub Deploy Rel Auth Account
+    /// 批量删除二级部署关联认证账号
+    #[oai(path = "/:id/auth/account/batch/:account_ids", method = "delete")]
+    async fn batch_delete_rel_auth_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let split = account_ids.0.split(',').collect::<Vec<_>>();
+        for s in split {
+            IamSubDeployServ::delete_rel_auth_account(&id.0, s, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Get Sub Deploy Rel Auth Account Ids
+    /// 获取二级部署关联认证账号
+    #[oai(path = "/:id/auth/account", method = "get")]
+    async fn find_rel_auth_account_ids(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamSubDeployServ::find_rel_id_by_sub_deploy_id(&IamRelKind::IamSubDeployAuthAccount, &id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Exist Sub Deploy Rel Auth Account
+    /// 二级部署关联认证账号是否存在
+    #[oai(path = "/:id/auth/account/:account_id/exist", method = "get")]
+    async fn exist_rel_auth_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamSubDeployServ::exist_sub_deploy_rels(&IamRelKind::IamSubDeployAuthAccount, &id.0, &account_id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Add Sub Deploy Rel Org
     /// 添加二级部署关联组织
     #[oai(path = "/:id/org/:org_id", method = "put")]
