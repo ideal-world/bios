@@ -7,11 +7,11 @@ use tardis::{
 };
 
 use crate::{
-    dto::{flow_config_dto::{FlowConfigModifyReq, FlowReviewConfigLabelResp, FlowRootConfigResp}, flow_inst_dto::FlowInstFilterReq},
+    dto::flow_config_dto::{FlowConfigModifyReq, FlowReviewConfigLabelResp, FlowRootConfigResp},
     flow_constants,
 };
 
-use super::{flow_inst_serv::FlowInstServ, flow_rel_serv::{FlowRelKind, FlowRelServ}};
+use super::flow_rel_serv::{FlowRelKind, FlowRelServ};
 
 pub struct FlowConfigServ;
 
@@ -40,7 +40,7 @@ impl FlowConfigServ {
     }
 
     // 获取父级配置 租户id:项目id:项目模板id:review_config
-    pub async fn get_root_config(root_tag: &str, child_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowReviewConfigLabelResp>> {
+    pub async fn get_root_config(root_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowRootConfigResp>> {
         let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
         let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
         let key = if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_paths, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id) {
@@ -51,8 +51,11 @@ impl FlowConfigServ {
         let result = SpiKvClient::get_item(key, None, funs, ctx)
             .await?
             .ok_or_else(|| funs.err().not_found("flow_config", "get_root_config", "review config is not found", "404-flow-config-not-found"))?;
-        let config = TardisFuns::json.json_to_obj::<Vec<FlowRootConfigResp>>(result.value)?;
-        if let Some(config) = config.into_iter().find(|conf| conf.code == *child_tag) {
+        TardisFuns::json.json_to_obj::<Vec<FlowRootConfigResp>>(result.value)
+    }
+
+    pub fn get_root_config_by_tag(config: &[FlowRootConfigResp], tag: &str) -> TardisResult<Option<FlowReviewConfigLabelResp>> {
+        if let Some(config) = config.iter().find(|conf| conf.code == *tag) {
             TardisFuns::json.str_to_obj::<FlowReviewConfigLabelResp>(&config.label).map_or(Ok(None), |o| Ok(Some(o)))
         } else {
             Ok(None)

@@ -177,7 +177,7 @@ impl FlowCcInstApi {
                 main: main.0,
                 current_state_id: current_state_id.0,
                 rel_business_obj_ids: rel_business_obj_id.0.map(|id| vec![id]),
-                rel_inst_id: rel_inst_id.0,
+                rel_inst_ids: rel_inst_id.0.map(|id| vec![id]),
                 with_sub: with_sub.0,
                 ..Default::default()
             },
