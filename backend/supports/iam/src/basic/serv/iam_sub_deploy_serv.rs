@@ -4,7 +4,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPac
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::Utc;
+use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::prelude::Expr;
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::{self, *};
@@ -15,7 +15,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
 use crate::basic::dto::iam_filer_dto::{IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq};
-use crate::basic::dto::iam_sub_deploy_dto::{IamSubDeployAddReq, IamSubDeployDetailResp, IamSubDeployModifyReq, IamSubDeployOneExportAggResp, IamSubDeploySummaryResp};
+use crate::basic::dto::iam_sub_deploy_dto::{
+    IamSubDeployAddReq, IamSubDeployDetailResp, IamSubDeployModifyReq, IamSubDeployOneExportAggResp, IamSubDeployOneImportReq, IamSubDeploySummaryResp,
+    IamSubDeployTowExportAggResp, IamSubDeployTowImportReq,
+};
 use crate::basic::dto::iam_sub_deploy_host_dto::{IamSubDeployHostAddReq, IamSubDeployHostDetailResp, IamSubDeployHostModifyReq};
 use crate::basic::dto::iam_sub_deploy_license_dto::{IamSubDeployLicenseAddReq, IamSubDeployLicenseDetailResp, IamSubDeployLicenseModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -154,6 +157,14 @@ impl IamSubDeployServ {
         IamRelServ::delete_simple_rel(&IamRelKind::IamSubDeployAccount, id, account_id, funs, ctx).await
     }
 
+    pub(crate) async fn add_rel_auth_account(id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamSubDeployAuthAccount, id, account_id, None, None, true, false, funs, ctx).await
+    }
+
+    pub(crate) async fn delete_rel_auth_account(id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamSubDeployAuthAccount, id, account_id, funs, ctx).await
+    }
+
     pub(crate) async fn add_rel_org(id: &str, org_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_simple_rel(&IamRelKind::IamSubDeployOrg, id, org_id, None, None, true, true, funs, ctx).await
     }
@@ -195,14 +206,52 @@ impl IamSubDeployServ {
     }
 
     pub(crate) async fn one_deploy_export(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSubDeployOneExportAggResp> {
+        let sub_deploy = Self::get_item(
+            id,
+            &IamSubDeployFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let mut export = IamSubDeployOneExportAggResp {
-            account: todo!(),
-            org: todo!(),
-            apps: todo!(),
-            role: todo!(),
-            iam_config: todo!(),
+            account: None,
+            org: None,
+            apps: None,
+            role: None, // Updated from todo!() to None
+            iam_config: None, // Updated from todo!() to None
+            cert: None, // Updated from todo!() to None
         };
         Ok(export)
+    }
+
+    pub(crate) async fn one_deploy_import(import_req: IamSubDeployOneImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Ok(())
+    }
+
+    pub(crate) async fn sub_deploy_export(
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<IamSubDeployTowExportAggResp> {
+        let mut export = IamSubDeployTowExportAggResp {
+            account: None,
+            org: None,
+            apps: None, // Updated from todo!() to None
+            role: None, // Updated from todo!() to None
+            iam_config: None, // Updated from todo!() to None
+        };
+        Ok(export)
+    }
+
+    pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Ok(())
     }
 }
 

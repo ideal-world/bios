@@ -239,6 +239,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if let Some(rbum_item_rel_filter_req) = &filter.rel3 {
             Self::package_rel(query, Alias::new("rbum_rel3"), rbum_item_rel_filter_req);
         }
+        if let Some(rbum_item_rel_filter_req) = &filter.rel4 {
+            Self::package_rel(query, Alias::new("rbum_rel4"), rbum_item_rel_filter_req);
+        }
         if let Some(set_rel) = &filter.set_rel {
             Self::package_set_rel(query, Alias::new("rbum_set_rel"), set_rel);
         }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
@@ -5,7 +7,9 @@ use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use crate::basic::dto::iam_account_dto::IamAccountAttrResp;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -71,6 +75,25 @@ impl IamCpAccountServ {
                 app_icon: app.icon,
                 roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             });
+        }
+
+        if ctx.own_paths != "" {
+            let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?;
+            let mut app_role_read = HashMap::new();
+            app_role_read.insert(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(), funs.iam_basic_role_app_read_id());
+            for (app_id, app_name) in app_items {
+                if old_app_ids.contains(&app_id) {
+                    continue;
+                }
+                apps.push(IamCpAccountAppInfoResp {
+                    app_id: app_id.clone(),
+                    app_name: app_name.clone(),
+                    app_icon: "".to_string(),
+                    roles: app_role_read.clone(),
+                });
+            }
         }
 
         let tenant_name = if ctx.own_paths.is_empty() {

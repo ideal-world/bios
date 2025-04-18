@@ -21,7 +21,8 @@ ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
 ldap_client = ["ldap3"]
 spi_kv = []
 spi_search = ["event"]
-event = ["bios-sdk-invoke/event", "bios-basic/with-mq"]
+# event = ["bios-sdk-invoke/event", "bios-basic/with-mq"]
+event = ["bios-sdk-invoke/event"]
 
 [dependencies]
 serde.workspace = true

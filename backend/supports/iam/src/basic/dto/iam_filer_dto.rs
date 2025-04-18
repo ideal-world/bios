@@ -60,6 +60,7 @@ pub struct IamAccountFilterReq {
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub rel3: Option<RbumItemRelFilterReq>,
+    pub rel4: Option<RbumItemRelFilterReq>,
     pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
     pub status: Option<IamAccountStatusKind>,

@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
@@ -79,9 +82,36 @@ pub struct IamSubDeployDetailResp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSubDeployOneExportAggResp {
-    pub account: Vec<IamAccountDetailAggResp>,
-    pub role: Vec<IamRoleDetailResp>,
-    pub org: RbumSetTreeResp,
-    pub apps: RbumSetTreeResp,
-    pub iam_config: IamConfigDetailResp,
+    pub account: Option<Vec<IamAccountDetailResp>>,
+    pub cert: Option<HashMap<String, Vec<RbumCertSummaryWithSkResp>>>,
+    pub role: Option<Vec<IamRoleDetailResp>>,
+    pub org: Option<RbumSetTreeResp>,
+    pub apps: Option<RbumSetTreeResp>,
+    pub iam_config: Option<IamConfigDetailResp>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamSubDeployOneImportReq {
+    pub account: Option<Vec<IamAccountDetailResp>>,
+    pub role: Option<Vec<IamRoleDetailResp>>,
+    pub org: Option<RbumSetTreeResp>,
+    pub apps: Option<RbumSetTreeResp>,
+    pub iam_config: Option<IamConfigDetailResp>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamSubDeployTowImportReq {
+    pub account: Option<Vec<IamAccountDetailResp>>,
+    pub role: Option<Vec<IamRoleDetailResp>>,
+    pub org: Option<RbumSetTreeResp>,
+    pub apps: Option<RbumSetTreeResp>,
+    pub iam_config: Option<IamConfigDetailResp>,
+}
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamSubDeployTowExportAggResp {
+    pub account: Option<Vec<IamAccountDetailAggResp>>,
+    pub role: Option<Vec<IamRoleDetailResp>>,
+    pub org: Option<RbumSetTreeResp>,
+    pub apps: Option<RbumSetTreeResp>,
+    pub iam_config: Option<IamConfigDetailResp>,
 }

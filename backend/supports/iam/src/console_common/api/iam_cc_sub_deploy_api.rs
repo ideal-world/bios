@@ -36,6 +36,20 @@ impl IamCcSubDeployApi {
         TardisResp::ok(result)
     }
 
+    #[oai(path = "/auth/account/exist", method = "get")]
+    async fn exist_rel_auth_account_by_account_ids(&self, account_ids: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, bool>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let split = account_ids.0.split(',').collect::<Vec<_>>();
+        let mut result = HashMap::new();
+        for s in split {
+            let exist = IamSubDeployServ::exist_to_rel(&IamRelKind::IamSubDeployAuthAccount, s, &funs, &ctx.0).await?;
+            result.insert(s.to_string(), exist);
+        }
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Exist Sub Deploy Rel Apps By Org Ids
     ///
     /// 二级部署关联组织列表是否存在
