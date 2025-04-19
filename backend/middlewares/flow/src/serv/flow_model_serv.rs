@@ -290,6 +290,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             && modify_req.rel_model_id.is_none()
             && modify_req.current_version_id.is_none()
             && modify_req.status.is_none()
+            && modify_req.front_conds.is_none()
         {
             return Ok(None);
         }
@@ -314,6 +315,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if let Some(current_version_id) = &modify_req.current_version_id {
             flow_model.current_version_id = Set(current_version_id.clone());
+        }
+        if let Some(front_conds) = &modify_req.front_conds {
+            flow_model.front_conds = Set(Some(json!(front_conds)));
         }
         Ok(Some(flow_model))
     }

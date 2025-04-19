@@ -202,6 +202,9 @@ impl FlowSearchClient {
             ..ctx.clone()
         };
         let inst_resp = FlowInstServ::get_search_item(inst_id, funs, &mock_ctx).await?;
+        if !inst_resp.rel_inst_id.clone().is_none_or(|id| id.is_empty()) {
+            return  Ok(());
+        }
         let is_modify = Box::new(is_modify);
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {

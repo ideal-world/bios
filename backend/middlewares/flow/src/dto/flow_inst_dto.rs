@@ -636,6 +636,7 @@ pub enum FlowInstStateKind {
 }
 
 /// 在search中使用的实例详情
+#[derive(Debug)]
 pub struct FlowInstDetailInSearch {
     pub id: String,
     pub title: Option<String>,
@@ -658,4 +659,5 @@ pub struct FlowInstDetailInSearch {
     pub curr_referral: Option<Vec<String>>,
     pub create_time: Option<DateTime<Utc>>,
     pub update_time: Option<DateTime<Utc>>,
+    pub rel_inst_id: Option<String>,
 }
