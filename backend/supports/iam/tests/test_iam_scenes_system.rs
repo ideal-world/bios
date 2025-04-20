@@ -390,6 +390,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
             "/cs/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("audit_admin".to_string())),
                     name: TrimString("审计管理员".to_string()),
                     // 必须设置成全局作用域（1）

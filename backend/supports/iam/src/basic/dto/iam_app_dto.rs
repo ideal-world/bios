@@ -91,7 +91,7 @@ pub struct IamAppSummaryResp {
     pub contact_phone: String,
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAppDetailResp {
     pub id: String,
     pub name: String,

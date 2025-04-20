@@ -369,6 +369,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let role_sys_admin_id = IamRoleServ::add_role_agg(
         &mut IamRoleAggAddReq {
             role: IamRoleAddReq {
+                id: None,
                 code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string())),
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
                 icon: None,
@@ -412,6 +413,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let role_tenant_admin_id = IamRoleServ::add_role_agg(
         &mut IamRoleAggAddReq {
             role: IamRoleAddReq {
+                id: None,
                 code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string())),
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
                 icon: None,
@@ -433,6 +435,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let role_tenant_audit_id = IamRoleServ::add_role_agg(
         &mut IamRoleAggAddReq {
             role: IamRoleAddReq {
+                id: None,
                 code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string())),
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
                 icon: None,
@@ -454,6 +457,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let role_app_admin_id = IamRoleServ::add_role_agg(
         &mut IamRoleAggAddReq {
             role: IamRoleAddReq {
+                id: None,
                 code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string())),
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
                 icon: None,
@@ -474,6 +478,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let role_app_read_id = IamRoleServ::add_role_agg(
         &mut IamRoleAggAddReq {
             role: IamRoleAddReq {
+                id: None,
                 code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string())),
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string()),
                 icon: None,
@@ -675,6 +680,7 @@ async fn add_role<'a>(
     let role_id = IamRoleServ::add_role_agg(
         &mut IamRoleAggAddReq {
             role: IamRoleAddReq {
+                id: None,
                 code: Some(TrimString(code.to_string())),
                 name: TrimString(name.to_string()),
                 kind: Some(kind.clone()),

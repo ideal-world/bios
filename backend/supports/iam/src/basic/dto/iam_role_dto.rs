@@ -25,6 +25,7 @@ pub struct IamRoleAggCopyReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamRoleAddReq {
+    pub id: Option<TrimString>,
     pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,

@@ -363,6 +363,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
             "/ct/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("audit_admin".to_string())),
                     name: TrimString("审计管理员".to_string()),
                     // 必须设置成全局作用域（1）
@@ -506,6 +507,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
             "/ct/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("role5".to_string())),
                     name: TrimString("角色5".to_string()),
                     scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),

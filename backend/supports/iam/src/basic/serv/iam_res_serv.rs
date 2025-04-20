@@ -705,6 +705,7 @@ impl IamMenuServ {
     ) -> TardisResult<String> {
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
+                id: None,
                 name: TrimString(name.to_string()),
                 bus_code: TrimString(bus_code.to_string()),
                 icon: None,
