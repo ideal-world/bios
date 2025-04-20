@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tardis::{
-    chrono::{DateTime, Utc}, db::sea_orm, serde_json::Value, web::poem_openapi
+    chrono::{DateTime, Utc},
+    db::sea_orm,
+    serde_json::Value,
+    web::poem_openapi,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

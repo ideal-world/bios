@@ -548,7 +548,7 @@ pub struct FlowInstFilterReq {
     /// 当前状态ID
     pub current_state_id: Option<String>,
     pub current_state_sys_kind: Option<FlowSysStateKind>,
-    
+
     pub with_sub: Option<bool>,
 }
 

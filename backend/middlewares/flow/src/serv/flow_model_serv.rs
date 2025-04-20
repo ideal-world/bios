@@ -43,7 +43,9 @@ use crate::{
             FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
         },
         flow_transition_dto::{
-            FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation, FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo, FlowTransitionSortStatesReq
+            FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq,
+            FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation, FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq,
+            FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
         },
     },
     flow_config::FlowBasicInfoManager,
@@ -2176,22 +2178,20 @@ impl FlowModelServ {
                             change_content: None,
                             change_content_label: None,
                         }],
-                        action_by_post_changes: vec![
-                            FlowTransitionPostActionInfo {
-                                kind: FlowTransitionActionChangeKind::Var,
-                                describe: "".to_string(),
-                                obj_tag: None,
-                                obj_tag_rel_kind: None,
-                                obj_current_state_id: None,
-                                change_condition: None,
-                                changed_state_id: "".to_string(),
-                                current: false,
-                                var_name: "review_end_time".to_string(),
-                                changed_val: None,
-                                changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
-                                is_edit: None,
-                            },
-                        ],
+                        action_by_post_changes: vec![FlowTransitionPostActionInfo {
+                            kind: FlowTransitionActionChangeKind::Var,
+                            describe: "".to_string(),
+                            obj_tag: None,
+                            obj_tag_rel_kind: None,
+                            obj_current_state_id: None,
+                            change_condition: None,
+                            changed_state_id: "".to_string(),
+                            current: false,
+                            var_name: "review_end_time".to_string(),
+                            changed_val: None,
+                            changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
+                            is_edit: None,
+                        }],
                         ..Default::default()
                     },
                 ],
@@ -2228,15 +2228,13 @@ impl FlowModelServ {
                 bind_states[0].clone(),
                 bind_states.clone(),
                 "用例通用工作流",
-                vec![
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: bind_states[0].clone(),
-                        to_flow_state_id: bind_states[1].clone(),
-                        name: "评审".to_string(),
-                        guard_by_his_operators: Some(true),
-                        ..Default::default()
-                    }
-                ],
+                vec![FlowTransitionInitInfo {
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
+                    name: "评审".to_string(),
+                    guard_by_his_operators: Some(true),
+                    ..Default::default()
+                }],
                 funs,
                 ctx,
             )

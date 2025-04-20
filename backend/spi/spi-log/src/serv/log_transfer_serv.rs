@@ -144,13 +144,7 @@ pub async fn import_data(import_req: &LogImportDataReq, funs: &TardisFunsInst, c
     Ok(true)
 }
 
-pub async fn import_log_v1(
-    data_source: &str,
-    tag_data: HashMap<String, Vec<LogImportAggReq>>,
-    funs: &TardisFunsInst,
-    ctx: &TardisContext,
-    inst: &SpiBsInst,
-) -> TardisResult<bool> {
+pub async fn import_log_v1(data_source: &str, tag_data: HashMap<String, Vec<LogImportAggReq>>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
     for (tag, tag_data) in &tag_data {
         let max_size = tag_data.len();
         let mut page = 0;

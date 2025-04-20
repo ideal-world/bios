@@ -351,7 +351,10 @@ impl FlowTransitionServ {
             .expr_as(Expr::col((from_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("from_flow_state_color"))
             .expr_as(Expr::col((to_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("to_flow_state_name"))
             .expr_as(Expr::col((to_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("to_flow_state_color"))
-            .expr_as(Expr::col((to_state_table.clone(), Alias::new("sys_state"))).if_null(""), Alias::new("to_flow_state_sys_state"))
+            .expr_as(
+                Expr::col((to_state_table.clone(), Alias::new("sys_state"))).if_null(""),
+                Alias::new("to_flow_state_sys_state"),
+            )
             .from(flow_transition::Entity)
             .join_as(
                 JoinType::LeftJoin,

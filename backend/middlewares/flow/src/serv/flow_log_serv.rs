@@ -25,7 +25,13 @@ pub struct FlowLogServ;
 
 impl FlowLogServ {
     // 添加审批流发起日志
-    pub async fn add_start_log(start_req: &FlowInstStartReq, flow_inst_detail: &FlowInstDetailResp, create_vars: &HashMap<String, Value>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_start_log(
+        start_req: &FlowInstStartReq,
+        flow_inst_detail: &FlowInstDetailResp,
+        create_vars: &HashMap<String, Value>,
+        _funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let operand = rel_transition.log_text();
