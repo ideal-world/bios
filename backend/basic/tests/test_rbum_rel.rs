@@ -246,6 +246,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel】 : Prepare : RbumKindServ::add_rbum");
     let set_id = RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
+            id: None,
             code: TrimString("set_test".to_string()),
             kind: TrimString("".to_string()),
             name: TrimString(" 测试集合 ".to_string()),
@@ -263,6 +264,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
 
     let set_cat_l1_id = RbumSetCateServ::add_rbum(
         &mut RbumSetCateAddReq {
+            id: None,
             bus_code: TrimString("".to_string()),
             name: TrimString("l1".to_string()),
             icon: None,
@@ -279,6 +281,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
 
     let set_cat_l1_l1_id = RbumSetCateServ::add_rbum(
         &mut RbumSetCateAddReq {
+            id: None,
             bus_code: TrimString("".to_string()),
             name: TrimString("l1_1".to_string()),
             icon: None,
@@ -295,6 +298,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
 
     let set_cat_l1_l1_l1_id = RbumSetCateServ::add_rbum(
         &mut RbumSetCateAddReq {
+            id: None,
             bus_code: TrimString("".to_string()),
             name: TrimString("l2_1_1".to_string()),
             icon: None,

@@ -17,6 +17,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// 资源集添加请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetAddReq {
+    pub id: Option<TrimString>,
     /// Resource set code
     ///
     /// 资源集编码
@@ -136,7 +137,7 @@ pub struct RbumSetSummaryResp {
 /// Resource set detail information
 ///
 /// 资源集详细信息
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult, Clone)]
 pub struct RbumSetDetailResp {
     /// Resource set id
     ///
