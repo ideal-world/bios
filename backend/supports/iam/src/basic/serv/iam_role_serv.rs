@@ -58,7 +58,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 
     async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
-            id: if add_req.extend_role_id.is_some() {
+            id: if add_req.id.is_some() {
+                Some(TrimString::from(add_req.id.clone().unwrap_or_default()))
+            } else if add_req.extend_role_id.is_some() {
                 Some(TrimString::from(format!(
                     "{}:{}",
                     add_req.extend_role_id.clone().unwrap_or_default(),
@@ -402,6 +404,7 @@ impl IamRoleServ {
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
+                        id: None,
                         code: Some(TrimString::from(format!("{}:{}", tenant_or_app_id, base_role.code))),
                         name: TrimString::from(base_role.name),
                         icon: Some(base_role.icon),
@@ -444,6 +447,7 @@ impl IamRoleServ {
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
+                        id: None,
                         code: Some(TrimString::from(format!("{}:{}", app_id, app_role.code))),
                         name: TrimString::from(app_role.name),
                         icon: Some(app_role.icon),
@@ -525,6 +529,7 @@ impl IamRoleServ {
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
+                        id: None,
                         code: Some(TrimString::from(format!("{}:{}", app_id, app_role.code))),
                         name: TrimString::from(app_role.name.clone()),
                         icon: Some(app_role.icon.clone()),
@@ -590,6 +595,7 @@ impl IamRoleServ {
                         let _ = Self::add_role_agg(
                             &mut IamRoleAggAddReq {
                                 role: IamRoleAddReq {
+                                    id: None,
                                     code: Some(TrimString::from(format!("{}:{}", app_id, app_role_clone.code))),
                                     name: TrimString::from(app_role.name.clone()),
                                     icon: Some(app_role_clone.icon.clone()),
