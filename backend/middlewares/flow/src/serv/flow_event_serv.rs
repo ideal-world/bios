@@ -540,8 +540,7 @@ impl FlowEventServ {
         let insts = FlowInstServ::find_detail(rel_inst_ids, None, None, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
-            let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&rel_inst.tag, funs, ctx).await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, None, &None, rel_flow_versions, true, funs, ctx)
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, None, &None, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()

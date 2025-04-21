@@ -421,6 +421,8 @@ pub struct FlowInstFindStateAndTransitionsReq {
 pub struct FlowInstFindStateAndTransitionsResp {
     /// 实例ID
     pub flow_inst_id: String,
+    /// 业务ID
+    pub rel_business_obj_id: String,
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
@@ -443,6 +445,33 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
     /// 绑定其他工作流的动作
     pub rel_flow_versions: HashMap<String, String>,
+}
+
+/// 实例流转信息
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstFindTransitionsResp {
+    /// 实例ID
+    pub flow_inst_id: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
+    pub current_flow_state_name: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) sys_state
+    pub current_flow_state_sys_kind: FlowSysStateKind,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
+    pub current_flow_state_color: String,
+    /// Associated [flow_state_ext](FlowStateRelModelExt)
+    ///
+    /// 关联的[工作流状态扩展](FlowStateRelModelExt)
+    pub current_flow_state_ext: FlowStateRelModelExt,
+    /// 结束时间
+    pub finish_time: Option<DateTime<Utc>>,
+    /// 流转信息
+    pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
 /// 流转请求

@@ -382,6 +382,7 @@ impl FlowSearchClient {
             ("TICKET".to_string(), ("ticket".to_string(), "ticket_inst".to_string())),
             ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
             ("TS".to_string(), ("idp_test".to_string(), "idp_test_stage".to_string())),
+            ("TC".to_string(), ("idp_test".to_string(), "idp_test_case".to_string())),
         ])
     }
 }

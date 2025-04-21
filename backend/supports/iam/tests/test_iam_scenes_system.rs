@@ -751,6 +751,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
             "/cs/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("test_role".to_string())),
                     name: TrimString("测试角色".to_string()),
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),

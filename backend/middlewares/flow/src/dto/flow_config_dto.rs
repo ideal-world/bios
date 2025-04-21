@@ -17,7 +17,7 @@ pub struct FlowRootConfigResp {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 #[serde(rename_all = "camelCase")]
 pub struct FlowReviewConfigLabelResp {
-    pub origin_status: String,
+    pub origin_status: Vec<String>,
     pub pass_status: String,
     pub unpass_status: String,
 }

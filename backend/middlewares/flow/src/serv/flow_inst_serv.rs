@@ -34,11 +34,7 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq,
-            FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq,
-            FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq,
-            FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp,
-            FlowInstTransitionInfo, FlowOperationContext,
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
         },
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
         flow_model_version_dto::FlowModelVersionFilterReq,
@@ -108,6 +104,17 @@ impl FlowInstServ {
                             ctx,
                         )
                         .await?;
+                        // 更新业务主流程的artifact的状态为审批中
+                        if let Some(main_child_inst_id) = Self::find_ids(&FlowInstFilterReq {
+                            rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
+                            main: Some(true),
+                            ..Default::default()
+                        }, funs, ctx).await?.pop() {
+                            Self::modify_inst_artifacts(&main_child_inst_id, &FlowInstArtifactsModifyReq {
+                                state: Some(FlowInstStateKind::Approval),
+                                ..Default::default()
+                            }, funs, ctx).await?;
+                        }
                     }
                 }
                 Ok(inst_id)
@@ -165,6 +172,17 @@ impl FlowInstServ {
                         ctx,
                     )
                     .await?;
+                    // 更新业务主流程的artifact的状态为审批中
+                    if let Some(main_child_inst_id) = Self::find_ids(&FlowInstFilterReq {
+                        rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
+                        main: Some(true),
+                        ..Default::default()
+                    }, funs, ctx).await?.pop() {
+                        Self::modify_inst_artifacts(&main_child_inst_id, &FlowInstArtifactsModifyReq {
+                            state: Some(FlowInstStateKind::Approval),
+                            ..Default::default()
+                        }, funs, ctx).await?;
+                    }
                 }
             }
             Ok(inst_id)
@@ -406,13 +424,13 @@ impl FlowInstServ {
             &start_req.rel_business_obj_id,
             &start_req.tag,
             json!({
+                "rel_state": inst.artifacts.unwrap_or_default().state,
                 "rel_transition_state_name": inst.current_state_name,
             }),
             funs,
             ctx,
         )
         .await?;
-
         Ok(inst_id)
     }
 
@@ -797,6 +815,17 @@ impl FlowInstServ {
             )
             .await?;
             FlowSearchClient::add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
+            // 更新业务主流程的artifact的状态为审批拒绝
+            if let Some(main_inst_id) = Self::find_ids(&FlowInstFilterReq {
+                rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
+                main: Some(true),
+                ..Default::default()
+            }, funs, ctx).await?.pop() {
+                Self::modify_inst_artifacts(&main_inst_id, &FlowInstArtifactsModifyReq {
+                    state: Some(FlowInstStateKind::Overrule),
+                    ..Default::default()
+                }, funs, ctx).await?;
+            }
             if flow_inst_detail.rel_inst_id.is_none_or(|id| id.is_empty()) {
                 if let Some(main_inst) = Self::find_detail_items(
                     &FlowInstFilterReq {
@@ -1200,27 +1229,8 @@ impl FlowInstServ {
                 rel_flow_version_map.insert(flow_inst.tag.clone(), rel_flow_versions);
             }
         }
-        let mut state_and_next_transitions = join_all(
-            flow_insts
-                .iter()
-                .map(|flow_inst| async {
-                    if let (Some(req), Some(rel_flow_versions)) = (
-                        find_req.iter().find(|req| req.flow_inst_id == flow_inst.id),
-                        rel_flow_version_map.get(&flow_inst.tag).cloned(),
-                    ) {
-                        Self::do_find_next_transitions(flow_inst, None, &req.vars, rel_flow_versions, false, funs, ctx).await.ok()
-                    } else {
-                        None
-                    }
-                })
-                .collect_vec(),
-        )
-        .await
-        .into_iter()
-        .flatten()
-        .collect_vec();
         // 若当前数据项存在未结束的审批流，则清空其中的transitions
-        let unfinished_approve_flow_inst_ids = Self::find_ids(
+        let unfinished_approve_flow_obj_ids = Self::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
                 main: Some(false),
@@ -1230,7 +1240,10 @@ impl FlowInstServ {
             funs,
             ctx,
         )
-        .await?;
+        .await?.into_iter()
+        .map(|inst| inst.rel_business_obj_id)
+        .unique()
+        .collect_vec();
         // 若当前数据项存在关联子审批流，则保留其中的transitions
         let root_inst_ids = Self::find_detail_items(
             &FlowInstFilterReq {
@@ -1245,11 +1258,45 @@ impl FlowInstServ {
         .map(|inst| inst.rel_inst_id.unwrap_or_default())
         .unique()
         .collect_vec();
-        for item in state_and_next_transitions.iter_mut() {
-            if unfinished_approve_flow_inst_ids.contains(&item.flow_inst_id) && !root_inst_ids.contains(&item.flow_inst_id) {
-                item.next_flow_transitions.clear();
-            }
-        }
+        let state_and_next_transitions = join_all(
+            flow_insts
+                .iter()
+                .map(|flow_inst| async {
+                    if let (Some(req), Some(rel_flow_versions)) = (
+                        find_req.iter().find(|req| req.flow_inst_id == flow_inst.id),
+                        rel_flow_version_map.get(&flow_inst.tag).cloned(),
+                    ) {
+                        Self::do_find_next_transitions(flow_inst, None, &req.vars, false, funs, ctx).await
+                        .ok()
+                        .map(|resp| FlowInstFindStateAndTransitionsResp {
+                            flow_inst_id:resp.flow_inst_id,
+                            rel_business_obj_id:flow_inst.rel_business_obj_id.clone(),
+                            current_flow_state_name:resp.current_flow_state_name,
+                            current_flow_state_sys_kind:resp.current_flow_state_sys_kind,
+                            current_flow_state_color:resp.current_flow_state_color,
+                            current_flow_state_ext:resp.current_flow_state_ext,
+                            finish_time:resp.finish_time,
+                            next_flow_transitions: if unfinished_approve_flow_obj_ids.contains(&flow_inst.rel_business_obj_id)
+                                && !root_inst_ids.contains(&flow_inst.id) 
+                                && flow_inst.artifacts.clone().unwrap_or_default().state == Some(FlowInstStateKind::Approval)
+                                {
+                                    vec![]
+                                } else {
+                                    resp.next_flow_transitions
+                                },
+                            rel_flow_versions,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .flatten()
+        .collect_vec();
+
         Ok(state_and_next_transitions)
     }
 
@@ -1259,9 +1306,7 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowInstFindNextTransitionResp>> {
-        let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst.tag, funs, ctx).await?;
-        let state_and_next_transitions = Self::do_find_next_transitions(flow_inst, None, &next_req.vars, rel_flow_versions, false, funs, ctx).await?;
-        Ok(state_and_next_transitions.next_flow_transitions)
+        Ok(Self::do_find_next_transitions(flow_inst, None, &next_req.vars, false, funs, ctx).await?.next_flow_transitions)
     }
 
     pub async fn check_transfer_vars(
@@ -1498,12 +1543,10 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
-        let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
         let next_flow_transition = Self::do_find_next_transitions(
             flow_inst_detail,
             Some(transfer_req.flow_transition_id.to_string()),
             &transfer_req.vars,
-            rel_flow_versions,
             skip_filter,
             funs,
             ctx,
@@ -1714,8 +1757,7 @@ impl FlowInstServ {
             &global_ctx,
         )
         .await?;
-        let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&flow_inst_detail.tag, funs, ctx).await?;
-        let next_flow_transitions = Self::do_find_next_transitions(flow_inst_detail, None, &None, rel_flow_versions, false, funs, ctx).await?.next_flow_transitions;
+        let next_flow_transitions = Self::do_find_next_transitions(flow_inst_detail, None, &None, false, funs, ctx).await?.next_flow_transitions;
 
         Ok(FlowInstTransferResp {
             prev_flow_state_id: prev_flow_state.id,
@@ -1769,11 +1811,10 @@ impl FlowInstServ {
         flow_inst: &FlowInstDetailResp,
         spec_flow_transition_id: Option<String>,
         req_vars: &Option<HashMap<String, Value>>,
-        rel_flow_versions: HashMap<String, String>,
         skip_filter: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<FlowInstFindStateAndTransitionsResp> {
+    ) -> TardisResult<FlowInstFindTransitionsResp> {
         let flow_model_transitions = FlowTransitionServ::find_detail_items(
             &FlowTransitionFilterReq {
                 flow_version_id: Some(flow_inst.rel_flow_version_id.clone()),
@@ -1920,7 +1961,7 @@ impl FlowInstServ {
             })
             .collect::<TardisResult<Vec<_>>>()?;
 
-        let state_and_next_transitions = FlowInstFindStateAndTransitionsResp {
+        let state_and_next_transitions = FlowInstFindTransitionsResp {
             flow_inst_id: flow_inst.id.to_string(),
             finish_time: flow_inst.finish_time,
             current_flow_state_name: flow_inst.current_state_name.as_ref().unwrap_or(&"".to_string()).to_string(),
@@ -1928,7 +1969,6 @@ impl FlowInstServ {
             current_flow_state_sys_kind: flow_inst.current_state_sys_kind.as_ref().unwrap_or(&FlowSysStateKind::Start).clone(),
             current_flow_state_ext: flow_inst.current_state_ext.clone().unwrap_or_default(),
             next_flow_transitions: next_transitions,
-            rel_flow_versions,
         };
         Ok(state_and_next_transitions)
     }
@@ -2201,18 +2241,28 @@ impl FlowInstServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
-        let transition_ids = Self::do_find_next_transitions(&flow_inst_detail, None, &None, HashMap::default(), false, funs, ctx)
+        let transition_ids = Self::do_find_next_transitions(&flow_inst_detail, None, &None, false, funs, ctx)
             .await?
             .next_flow_transitions
             .into_iter()
             .map(|tran| tran.next_flow_transition_id)
             .collect_vec();
-        let mut original_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
-        original_vars.extend(Self::get_modify_vars(
-            &flow_inst_detail.artifacts.clone().unwrap_or_default(),
-            &flow_inst_detail.transitions.clone().unwrap_or_default().into_iter().map(|tran| tran.from_state_id.unwrap_or_default()).collect_vec(),
-        ));
-        let check_vars = BasicQueryCondInfo::transform(original_vars)?;
+        let check_vars = if let Some(rel_inst_id) = &flow_inst_detail.rel_inst_id {
+            let root_inst = Self::get(rel_inst_id, funs, ctx).await?;
+            let mut original_vars = root_inst.create_vars.clone().unwrap_or_default();
+            original_vars.extend(Self::get_modify_vars(
+                &root_inst.artifacts.clone().unwrap_or_default(),
+                &root_inst.transitions.clone().unwrap_or_default().into_iter().map(|tran| tran.from_state_id.unwrap_or_default()).collect_vec(),
+            ));
+            BasicQueryCondInfo::transform(original_vars)?
+        } else {
+            let mut original_vars = flow_inst_detail.create_vars.clone().unwrap_or_default();
+            original_vars.extend(Self::get_modify_vars(
+                &flow_inst_detail.artifacts.clone().unwrap_or_default(),
+                &flow_inst_detail.transitions.clone().unwrap_or_default().into_iter().map(|tran| tran.from_state_id.unwrap_or_default()).collect_vec(),
+            ));
+            BasicQueryCondInfo::transform(original_vars)?
+        };
         match Self::find_auto_transition(transition_ids, &check_vars, funs, ctx).await {
             Ok(auto_transition) => {
                 if let Some(auto_transition) = auto_transition {
@@ -2650,6 +2700,11 @@ impl FlowInstServ {
                         if let Some(child_inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_child_obj.obj_id.clone()], Some(true), funs, ctx).await?.pop() {
                             if let Some(conf) = FlowConfigServ::get_root_config_by_tag(&root_config, &rel_child_obj.tag)? {
                                 if pass_child_obj_ids.contains(&rel_child_obj.obj_id) {
+                                    // 更新业务主流程的artifact的状态为审批通过
+                                    Self::modify_inst_artifacts(&child_inst_id, &FlowInstArtifactsModifyReq {
+                                        state: Some(FlowInstStateKind::Pass),
+                                        ..Default::default()
+                                    }, funs, ctx).await?;
                                     Self::unsafe_modify_state(
                                         &FlowInstFilterReq {
                                             ids: Some(vec![child_inst_id.clone()]),
@@ -2662,6 +2717,11 @@ impl FlowInstServ {
                                     )
                                     .await?;
                                 } else {
+                                    // 更新业务主流程的artifact的状态为审批拒绝
+                                    Self::modify_inst_artifacts(&child_inst_id, &FlowInstArtifactsModifyReq {
+                                        state: Some(FlowInstStateKind::Overrule),
+                                        ..Default::default()
+                                    }, funs, ctx).await?;
                                     Self::unsafe_modify_state(
                                         &FlowInstFilterReq {
                                             ids: Some(vec![child_inst_id.clone()]),
@@ -2678,6 +2738,11 @@ impl FlowInstServ {
                         }
                     }
 
+                    // 更新业务主流程的artifact的状态为审批通过
+                    Self::modify_inst_artifacts(&main_inst.id, &FlowInstArtifactsModifyReq {
+                        state: Some(FlowInstStateKind::Pass),
+                        ..Default::default()
+                    }, funs, ctx).await?;
                     // 结束主流程的状态流实例
                     let next_trans = Self::find_next_transitions(&main_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?;
                     for next_tran in next_trans {
