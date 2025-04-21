@@ -137,6 +137,9 @@ impl IamRelServ {
         if rel_kind == &IamRelKind::IamSubDeployAccount {
             IamSearchClient::async_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
         }
+        if rel_kind == &IamRelKind::IamSubDeployAuthAccount {
+            IamSearchClient::async_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
+        }
 
         if rel_kind == &IamRelKind::IamResRole {
             let res_id = from_iam_item_id;
