@@ -12,7 +12,7 @@ use itertools::Itertools;
 use serde_json::{json, Value};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::{debug, error},
+    log::debug,
     tokio,
     web::{poem_openapi::types::ToJSON, web_resp::TardisPage},
     TardisFunsInst,
@@ -20,7 +20,6 @@ use tardis::{
 
 use crate::{
     dto::{
-        flow_inst_dto::FlowInstDetailInSearch,
         flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
         flow_state_dto::FlowGuardConf,
     },
@@ -50,7 +49,7 @@ impl FlowSearchClient {
                     create_time: None,
                     update_time: None,
                     ext: Some(ext),
-                    ext_override: None,
+                    ext_override: Some(false),
                     visit_keys: None,
                     kv_disable: None,
                 },
@@ -195,41 +194,23 @@ impl FlowSearchClient {
         Ok(())
     }
 
-    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let ctx_clone = ctx.clone();
+    // flow inst 全局搜索埋点方法
+    pub async fn add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
         let inst_resp = FlowInstServ::get_search_item(inst_id, funs, &mock_ctx).await?;
-        let is_modify = Box::new(is_modify);
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let inst_id_cp = inst_resp.id.clone();
-                let task_handle = tokio::spawn(async move {
-                    let funs = flow_constants::get_tardis_inst();
-                    let _ = Self::add_or_modify_instance_search(&inst_resp, is_modify, &funs, &ctx_clone).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => error!("Flow search_client {} async_add_or_modify_instance_search error:{:?}", inst_id_cp, e),
-                }
-                Ok(())
-            })
-        }))
-        .await
-    }
-
-    // flow inst 全局搜索埋点方法
-    pub async fn add_or_modify_instance_search(inst_resp: &FlowInstDetailInSearch, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let inst_id = &inst_resp.id;
+        if !inst_resp.rel_inst_id.clone().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         // 数据共享权限处理
         let tenant = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &inst_resp.own_paths).unwrap_or_default();
         let app = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &inst_resp.own_paths).unwrap_or_default();
         let visit_tenants = vec![tenant.clone()];
         let visit_apps = vec![app.clone()];
         let own_paths = Some(inst_resp.own_paths.clone());
-        let key = inst_id.clone();
+        let key = inst_id;
         if *is_modify {
             let modify_req = SearchItemModifyReq {
                 kind: Some(SEARCH_INSTANCE_TAG.to_string()),
@@ -267,7 +248,7 @@ impl FlowSearchClient {
                 }),
                 kv_disable: None,
             };
-            SpiSearchClient::modify_item_and_name(SEARCH_INSTANCE_TAG, &key, &modify_req, funs, ctx).await?;
+            SpiSearchClient::modify_item_and_name(SEARCH_INSTANCE_TAG, key, &modify_req, funs, ctx).await?;
         } else {
             let add_req = SearchItemAddReq {
                 tag: SEARCH_INSTANCE_TAG.to_string(),
@@ -401,6 +382,7 @@ impl FlowSearchClient {
             ("TICKET".to_string(), ("ticket".to_string(), "ticket_inst".to_string())),
             ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
             ("TS".to_string(), ("idp_test".to_string(), "idp_test_stage".to_string())),
+            ("TC".to_string(), ("idp_test".to_string(), "idp_test_case".to_string())),
         ])
     }
 }

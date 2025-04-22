@@ -43,6 +43,7 @@ use tardis::TardisFuns;
 pub async fn test(
     flow_client: &mut TestHttpClient,
     search_client: &mut TestHttpClient,
+    kv_client: &mut TestHttpClient,
     iam_client: &mut BIOSWebTestClient,
     sysadmin_name: String,
     sysadmin_password: String,
@@ -75,7 +76,7 @@ pub async fn test(
     for code in codes {
         modify_configs.push(FlowConfigModifyReq {
             code: code.to_string(),
-            value: "https://127.0.0.1:8080/mock/mock/exchange_data".to_string(),
+            value: "http://127.0.0.1:8080/mock/mock/exchange_data".to_string(),
         });
     }
     let _: Void = flow_client.post("/cs/config", &modify_configs).await;
@@ -620,6 +621,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -971,7 +973,7 @@ pub async fn test(
                                     overrule_btn_name: "不通过".to_string(),
                                     guard_by_creator: true,
                                     guard_by_his_operators: false,
-                                    guard_by_assigned: false,
+                                    guard_by_assigned: true,
                                     auto_transfer_when_empty_kind: None,
                                     referral: true,
                                     ..Default::default()
@@ -1029,6 +1031,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -1048,6 +1051,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -1067,6 +1071,7 @@ pub async fn test(
                 rel_transition_id: None,
                 rel_child_objs: None,
                 operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -1163,7 +1168,8 @@ pub async fn test(
                     tag: "REQ".to_string(),
                     obj_id: child_obj_id.clone(),
                 }]),
-                operator_map: None,
+                operator_map: Some(HashMap::from([(approval_review_state_id.clone(), vec![t1_data.accounts[0].clone()])])),
+                ..Default::default()
             },
         )
         .await;
@@ -1348,7 +1354,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
             &json!({
                 "tag":"iam_account",
                 "kind": "iam_account",
-                "key": "u002_2",
+                "key": t2_account_id2,
                 "title": "u002_2",
                 "content": format!("u002_2,{:?}", vec!["user_dp2_2", "devopsxxx22@xx.com"],),
                 "owner":"u002_2",

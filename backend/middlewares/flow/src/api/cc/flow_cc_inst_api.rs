@@ -177,7 +177,7 @@ impl FlowCcInstApi {
                 main: main.0,
                 current_state_id: current_state_id.0,
                 rel_business_obj_ids: rel_business_obj_id.0.map(|id| vec![id]),
-                rel_inst_id: rel_inst_id.0,
+                rel_inst_ids: rel_inst_id.0.map(|id| vec![id]),
                 with_sub: with_sub.0,
                 ..Default::default()
             },
@@ -382,11 +382,9 @@ impl FlowCcInstApi {
     ///
     /// 获取适配的关联模型
     #[oai(path = "/rel_model", method = "post")]
-    async fn get_rel_model(&self, req: Json<FlowInstFindRelModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelDetailResp> {
+    async fn get_rel_model(&self, req: Json<FlowInstFindRelModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Option<FlowModelDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::find_rel_model(req.transition_id.clone(), &req.tag, &req.vars, &funs, &ctx.0)
-            .await?
-            .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))?;
+        let result = FlowInstServ::find_rel_model(req.transition_id.clone(), &req.tag, &req.vars, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
