@@ -1,19 +1,25 @@
+use std::collections::HashSet;
+
 use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppAggModifyReq};
+use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self};
-use crate::iam_enumeration::IamSetKind;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::process::task_processor::TaskProcessor;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::web::Path;
 use tardis::web::poem_openapi;
 
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
@@ -65,6 +71,91 @@ impl IamCiAppApi {
         } else {
             TardisResp::ok(None)
         }
+    }
+
+    /// Find all relevant apps in the context (i.e. apps owned by the account and apps in the app collection items)
+    /// 
+    /// 查找上下文所有相关应用（既账号拥有的应用以及应用集合项中的应用）
+    #[oai(path = "/all/ctx", method = "get")]
+    async fn find_all_app_ctx(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let mut app_ids = IamAppServ::find_id_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    optional: false,
+                    tag: Some(IamRelKind::IamAccountApp.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(ctx.owner.clone()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let cate_codes = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_item_can_not_exist: Some(true),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_item_ids: Some(vec![ctx.owner.clone()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|resp| resp.rel_rbum_set_cate_sys_code.unwrap_or("".to_string()))
+        .collect::<Vec<String>>();
+        if cate_codes.is_empty() {
+            return TardisResp::ok(vec![]);
+        }
+        let apps_item_ids = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_item_can_not_exist: Some(true),
+                rel_rbum_set_id: Some(set_id.clone()),
+                rel_rbum_set_cate_sys_codes: Some(cate_codes),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_app_id()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx,
+        )
+        .await?
+        .iter()
+        .map(|r| r.rel_rbum_item_id.clone())
+        .collect::<Vec<_>>();
+        app_ids.extend(apps_item_ids);
+        // 去重
+        app_ids = app_ids.into_iter().collect::<HashSet<_>>().into_iter().collect();
+        TardisResp::ok(app_ids)
     }
 
     /// Find App Set Items (app)

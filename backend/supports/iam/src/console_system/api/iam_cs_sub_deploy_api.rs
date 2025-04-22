@@ -20,7 +20,7 @@ pub struct IamCsSubDeployApi;
 
 /// System Console Sub Deploy API
 /// 系统控制台 二级部署 API
-#[poem_openapi::OpenApi(prefix_path = "/cs/sub_deploy", tag = "bios_basic::ApiTag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/sub_deploy", tag = "bios_basic::ApiTag::System")]
 impl IamCsSubDeployApi {
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamSubDeployAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
