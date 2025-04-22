@@ -55,11 +55,11 @@ pub(crate) async fn find_fact_record(
                 r#"SELECT *
 FROM {table_name}
 WHERE 
-     (ct > $1 or ct <= $2) 
+     (ct > $1 or ct <= $2) and own_paths like $3
 ORDER BY ct DESC
 "#,
             ),
-            vec![Value::from(start_time), Value::from(end_time)],
+            vec![Value::from(start_time), Value::from(end_time), Value::from(format!("{}%", ctx.own_paths.clone()))],
         )
         .await?;
 
@@ -124,11 +124,11 @@ pub(crate) async fn find_fact_record_del(
                 r#"SELECT key, ct
 FROM {table_name}
 WHERE 
-     (ct > $1 or ct <= $2) 
+     (ct > $1 or ct <= $2) and own_paths like $3
 ORDER BY ct DESC
 "#,
             ),
-            vec![Value::from(start_time), Value::from(end_time)],
+            vec![Value::from(start_time), Value::from(end_time), Value::from(format!("{}%", ctx.own_paths.clone()))],
         )
         .await?;
 

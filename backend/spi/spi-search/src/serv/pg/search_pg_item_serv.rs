@@ -1423,8 +1423,8 @@ pub async fn export_data(export_req: &SearchExportDataReq, funs: &TardisFunsInst
         let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
         let result = conn
             .query_all(
-                &format!("SELECT key, kind, title, content, data_source, owner, own_paths, create_time, update_time, ext, visit_keys FROM {table_name} WHERE (create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2) order by create_time desc"),
-                vec![Value::from(export_req.start_time.clone()), Value::from(export_req.end_time.clone())],
+                &format!("SELECT key, kind, title, content, data_source, owner, own_paths, create_time, update_time, ext, visit_keys FROM {table_name} WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2)) and own_paths like $3 order by create_time desc"),
+                vec![Value::from(export_req.start_time.clone()), Value::from(export_req.end_time.clone()), Value::from(format!("{}%", ctx.own_paths.clone()))],
             )
             .await?;
         let result = result
