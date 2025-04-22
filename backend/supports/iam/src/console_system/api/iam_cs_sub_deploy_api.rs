@@ -91,7 +91,7 @@ impl IamCsSubDeployApi {
                 },
                 province: province.0,
                 access_url: access_url.0,
-                extend_sub_deploy_id: extend_sub_deploy_id.0,
+                extend_sub_deploy_id: Some(extend_sub_deploy_id.0.unwrap_or("".to_string())),
                 ..Default::default()
             },
             page_number.0,
