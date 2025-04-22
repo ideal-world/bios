@@ -80,6 +80,7 @@ impl IamCtSubDeployApi {
         province: Query<Option<String>>,
         access_url: Query<Option<String>>,
         enabled: Query<Option<bool>>,
+        extend_sub_deploy_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -102,6 +103,7 @@ impl IamCtSubDeployApi {
                 },
                 province: province.0,
                 access_url: access_url.0,
+                extend_sub_deploy_id: extend_sub_deploy_id.0,
                 ..Default::default()
             },
             page_number.0,

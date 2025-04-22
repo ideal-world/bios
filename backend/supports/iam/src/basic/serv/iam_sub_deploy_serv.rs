@@ -38,6 +38,7 @@ use crate::basic::dto::iam_sub_deploy_host_dto::{IamSubDeployHostAddReq, IamSubD
 use crate::basic::dto::iam_sub_deploy_license_dto::{IamSubDeployLicenseAddReq, IamSubDeployLicenseDetailResp, IamSubDeployLicenseModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
+use crate::iam_constants::RBUM_ITEM_ID_SUB_ROLE_LEN;
 use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamCertKernelKind, IamConfigDataTypeKind, IamConfigKind, IamRelKind, IamRoleKind, IamSetKind, IamSubDeployHostKind};
 
 use super::iam_account_serv::IamAccountServ;
@@ -68,8 +69,17 @@ impl RbumItemCrudOperation<iam_sub_deploy::ActiveModel, IamSubDeployAddReq, IamS
     }
 
     async fn package_item_add(add_req: &IamSubDeployAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        let id = if let Some(extend_sub_deploy_id) = &add_req.extend_sub_deploy_id {
+            Some(TrimString::from(format!(
+                "{}:{}",
+                extend_sub_deploy_id.clone(),
+                TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
+            )))
+        } else {
+            None
+        };
         Ok(RbumItemKernelAddReq {
-            id: None,
+            id,
             code: None,
             name: add_req.name.clone().unwrap_or(TrimString::from("")),
             scope_level: add_req.scope_level.clone(),
@@ -83,6 +93,7 @@ impl RbumItemCrudOperation<iam_sub_deploy::ActiveModel, IamSubDeployAddReq, IamS
             province: Set(add_req.province.clone()),
             access_url: Set(add_req.access_url.clone().unwrap_or("".to_string())),
             note: Set(add_req.note.clone().unwrap_or("".to_string())),
+            extend_sub_deploy_id: Set(add_req.extend_sub_deploy_id.clone().unwrap_or("".to_string())),
             ..Default::default()
         })
     }
@@ -119,15 +130,37 @@ impl RbumItemCrudOperation<iam_sub_deploy::ActiveModel, IamSubDeployAddReq, IamS
         Ok(Some(iam_sub_deploy))
     }
 
+    async fn before_delete_item(id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Option<IamSubDeployDetailResp>> {
+        if funs
+            .db()
+            .count(Query::select().column(iam_sub_deploy::Column::Id).from(iam_sub_deploy::Entity).and_where(Expr::col(iam_sub_deploy::Column::ExtendSubDeployId).eq(id)))
+            .await?
+            > 0
+        {
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "delete",
+                &format!("can not delete {}.{} when there are associated by extend_sub_deploy_id", Self::get_obj_name(), id),
+                "409-iam-sub-deploy-delete-conflict",
+            ));
+        }
+        Ok(None)
+    }
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamSubDeployFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_sub_deploy::Entity, iam_sub_deploy::Column::Province));
         query.column((iam_sub_deploy::Entity, iam_sub_deploy::Column::AccessUrl));
         query.column((iam_sub_deploy::Entity, iam_sub_deploy::Column::Note));
+        query.column((iam_sub_deploy::Entity, iam_sub_deploy::Column::ExtendSubDeployId));
         if let Some(province) = &filter.province {
             query.and_where(Expr::col(iam_sub_deploy::Column::Province).eq(province));
         }
         if let Some(access_url) = &filter.access_url {
             query.and_where(Expr::col(iam_sub_deploy::Column::AccessUrl).like(access_url));
+        }
+        if let Some(extend_sub_deploy_id) = &filter.extend_sub_deploy_id {
+            query.and_where(Expr::col(iam_sub_deploy::Column::ExtendSubDeployId).eq(extend_sub_deploy_id));
+        } else {
+            query.and_where(Expr::col(iam_sub_deploy::Column::ExtendSubDeployId).ne(""));
         }
         Ok(())
     }
@@ -264,7 +297,7 @@ impl IamSubDeployServ {
         .await?;
         let account_ids = accounts.iter().map(|account| account.id.clone()).collect::<Vec<_>>();
 
-        let (orgs_set, orgs_set_cate) = Self::export_apps(id, funs, ctx).await?;
+        let (orgs_set, orgs_set_cate) = Self::export_orgs(id, funs, ctx).await?;
         let (apps_set, apps_set_cate) = Self::export_apps(id, funs, ctx).await?;
 
         Ok(IamSubDeployOneExportAggResp {

@@ -41,7 +41,7 @@ use crate::console_interface::api::{
 };
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
-    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_tenant_api,
+    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_sub_deploy_api, iam_cs_tenant_api
 };
 use crate::console_tenant::api::{
     iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_cert_manage_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api,
@@ -99,6 +99,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cs_role_api::IamCsRoleApi,
                     iam_cs_res_api::IamCsResApi,
                     iam_cs_spi_data_api::IamCsSpiDataApi,
+                    iam_cs_sub_deploy_api::IamCsSubDeployApi,
                 ),
                 (
                     iam_ct_tenant_api::IamCtTenantApi,

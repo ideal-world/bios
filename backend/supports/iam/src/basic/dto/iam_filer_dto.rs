@@ -24,6 +24,7 @@ pub struct IamSubDeployFilterReq {
     pub rel2: Option<RbumItemRelFilterReq>,
     pub province: Option<String>,
     pub access_url: Option<String>,
+    pub extend_sub_deploy_id: Option<String>,
 }
 
 impl RbumItemFilterFetcher for IamSubDeployFilterReq {

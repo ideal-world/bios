@@ -12,7 +12,7 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
-use super::iam_account_dto::{IamAccountDetailAggResp, IamAccountDetailResp};
+use super::iam_account_dto::IamAccountDetailResp;
 use super::iam_app_dto::IamAppDetailResp;
 use super::iam_config_dto::IamConfigDetailResp;
 use super::iam_role_dto::IamRoleDetailResp;
@@ -27,6 +27,7 @@ pub struct IamSubDeployAddReq {
     pub access_url: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub note: Option<String>,
+    pub extend_sub_deploy_id: Option<String>,
     pub scope_level: Option<RbumScopeLevelKind>,
 }
 
@@ -54,6 +55,7 @@ pub struct IamSubDeploySummaryResp {
     pub access_url: String,
     pub note: String,
     pub disabled: bool,
+    pub extend_sub_deploy_id: String,
 
     pub own_paths: String,
     pub owner: String,
@@ -73,6 +75,7 @@ pub struct IamSubDeployDetailResp {
     pub access_url: String,
     pub note: String,
     pub disabled: bool,
+    pub extend_sub_deploy_id: String,
 
     pub own_paths: String,
     pub owner: String,

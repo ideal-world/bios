@@ -15,6 +15,11 @@ pub struct Model {
 
     pub note: String,
 
+    // 扩展部署ID
+    #[index]
+    pub extend_sub_deploy_id: String,
+
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+
 }
