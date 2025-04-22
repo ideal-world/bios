@@ -156,6 +156,9 @@ pub struct FlowModelModifyReq {
     /// 关联父级工作流模板ID
     pub rel_model_id: Option<String>,
 
+    /// 满足条件时，触发该流程
+    pub front_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
+
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 }
@@ -194,7 +197,7 @@ pub struct FlowModelRelTransitionExt {
 }
 
 /// 关联动作类型
-#[derive(PartialEq, Default, Clone)]
+#[derive(PartialEq, Default, Debug, Clone)]
 pub enum FlowModelRelTransitionKind {
     #[default]
     Edit,

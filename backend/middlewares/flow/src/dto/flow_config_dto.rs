@@ -11,13 +11,13 @@ pub struct FlowConfigModifyReq {
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowRootConfigResp {
     pub code: String,
-    pub label: FlowReviewConfigLabelResp,
+    pub label: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub struct FlowReviewConfigLabelResp {
-    pub origin_status: String,
+    pub origin_status: Vec<String>,
     pub pass_status: String,
     pub unpass_status: String,
 }

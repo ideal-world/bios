@@ -8,7 +8,7 @@ use tardis::{
     TardisFuns,
 };
 
-use super::{flow_cond_dto::BasicQueryCondInfo, flow_var_dto::FlowVarInfo};
+use super::{flow_cond_dto::BasicQueryCondInfo, flow_state_dto::FlowSysStateKind, flow_var_dto::FlowVarInfo};
 
 /// 添加动作
 #[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
@@ -154,6 +154,11 @@ pub struct FlowTransitionDetailResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub to_flow_state_color: String,
+    /// 当前状态系统类型
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 系统类型
+    pub to_flow_state_sys_state: FlowSysStateKind,
     /// 为true时，不需要用户干预，在满足条件的前提下自动流转
     pub transfer_by_auto: bool,
     /// 存在值时，到达时间后，在满足条件的前提下自动流转
