@@ -1244,20 +1244,6 @@ impl FlowInstServ {
         .map(|inst| inst.rel_business_obj_id)
         .unique()
         .collect_vec();
-        // 若当前数据项存在关联子审批流，则保留其中的transitions
-        let root_inst_ids = Self::find_detail_items(
-            &FlowInstFilterReq {
-                rel_inst_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.id.clone()).collect_vec()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .into_iter()
-        .map(|inst| inst.rel_inst_id.unwrap_or_default())
-        .unique()
-        .collect_vec();
         let state_and_next_transitions = join_all(
             flow_insts
                 .iter()
@@ -1269,21 +1255,24 @@ impl FlowInstServ {
                         Self::do_find_next_transitions(flow_inst, None, &req.vars, false, funs, ctx).await
                         .ok()
                         .map(|resp| FlowInstFindStateAndTransitionsResp {
-                            flow_inst_id:resp.flow_inst_id,
-                            rel_business_obj_id:flow_inst.rel_business_obj_id.clone(),
-                            current_flow_state_name:resp.current_flow_state_name,
-                            current_flow_state_sys_kind:resp.current_flow_state_sys_kind,
-                            current_flow_state_color:resp.current_flow_state_color,
-                            current_flow_state_ext:resp.current_flow_state_ext,
-                            finish_time:resp.finish_time,
-                            next_flow_transitions: if unfinished_approve_flow_obj_ids.contains(&flow_inst.rel_business_obj_id)
-                                && !root_inst_ids.contains(&flow_inst.id) 
-                                && flow_inst.artifacts.clone().unwrap_or_default().state == Some(FlowInstStateKind::Approval)
-                                {
-                                    vec![]
-                                } else {
-                                    resp.next_flow_transitions
-                                },
+                            flow_inst_id: resp.flow_inst_id,
+                            rel_business_obj_id: flow_inst.rel_business_obj_id.clone(),
+                            current_flow_state_name: resp.current_flow_state_name,
+                            current_flow_state_sys_kind: resp.current_flow_state_sys_kind,
+                            current_flow_state_color: resp.current_flow_state_color,
+                            current_flow_state_ext: resp.current_flow_state_ext,
+                            finish_time: resp.finish_time,
+                            next_flow_transitions:
+                            if (
+                                unfinished_approve_flow_obj_ids.contains(&flow_inst.rel_business_obj_id)
+                                && flow_inst.artifacts.clone().unwrap_or_default().rel_transition_id.is_none()
+                            )
+                            || flow_inst.artifacts.clone().unwrap_or_default().state == Some(FlowInstStateKind::Approval)
+                            {
+                                vec![]
+                            } else {
+                                resp.next_flow_transitions
+                            },
                             rel_flow_versions,
                         })
                     } else {

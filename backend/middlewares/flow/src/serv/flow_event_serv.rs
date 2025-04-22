@@ -32,7 +32,7 @@ use crate::{
 
 use super::{
     flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_model_version_serv::FlowModelVersionServ,
-    flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ,
+    flow_state_serv::FlowStateServ,
 };
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 

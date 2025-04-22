@@ -483,7 +483,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert_eq!(account.exts.len(), 1);
     assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "".to_string());
     assert_eq!(account.certs.len(), 2);
-    assert!(account.certs.contains_key(&("UserPwd".to_string())));
+    assert!(account.certs.contains_key("UserPwd"));
 
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/cs/cert?account_id={}", account_id)).await;
