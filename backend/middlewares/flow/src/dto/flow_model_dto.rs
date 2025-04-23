@@ -56,6 +56,8 @@ pub struct FlowModelAddReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+
+    pub data_source: Option<String>,
 }
 
 impl From<FlowModelDetailResp> for FlowModelAddReq {
@@ -105,6 +107,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             tag: Some(value.tag.clone()),
             scope_level: Some(value.scope_level),
             disabled: Some(value.disabled),
+            data_source: Some(value.data_source),
         }
     }
 }
@@ -284,6 +287,7 @@ pub struct FlowModelDetailResp {
     pub update_time: DateTime<Utc>,
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
+    pub data_source: String,
 }
 
 impl FlowModelDetailResp {

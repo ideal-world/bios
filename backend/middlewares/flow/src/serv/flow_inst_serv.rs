@@ -951,6 +951,8 @@ impl FlowInstServ {
             pub rel_business_obj_id: String,
             pub rel_transition_id: Option<String>,
             pub rel_inst_id: Option<String>,
+
+            pub data_source: String,
         }
         let rel_state_table = Alias::new("rel_state");
         let flow_state_table = Alias::new("flow_state");
@@ -1090,6 +1092,7 @@ impl FlowInstServ {
                     rel_inst_id: inst.rel_inst_id,
                     tag: inst.tag,
                     main: inst.main,
+                    data_source: inst.data_source,
                     create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap_or_default()),
                     create_ctx: inst.create_ctx,
                     create_time: inst.create_time,
@@ -1407,6 +1410,7 @@ impl FlowInstServ {
                         operator_map: artifacts.operator_map.clone(),
                         log_text: None,
                         rel_inst_id: None,
+                        data_source: Some(flow_inst_detail.data_source.clone()),
                     },
                     false,
                     &approve_model,

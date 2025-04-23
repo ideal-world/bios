@@ -32,6 +32,9 @@ impl FlowLogServ {
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let operand = rel_transition.log_text();
@@ -98,6 +101,9 @@ impl FlowLogServ {
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let operand = rel_transition.log_text();
@@ -165,6 +171,9 @@ impl FlowLogServ {
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let subject = rel_transition.log_text();
@@ -219,6 +228,9 @@ impl FlowLogServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         let current_state = FlowStateServ::get_item(
             &flow_inst_detail.current_state_id,
             &FlowStateFilterReq {
@@ -300,6 +312,9 @@ impl FlowLogServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let subject_text = rel_transition.log_text();
@@ -384,6 +399,9 @@ impl FlowLogServ {
     }
 
     pub async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            return Ok(());
+        }
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let subject_text = rel_transition.log_text();

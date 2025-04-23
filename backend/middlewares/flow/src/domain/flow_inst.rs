@@ -99,4 +99,7 @@ pub struct Model {
     pub comments: Option<Vec<FlowInstCommentInfo>>,
 
     pub own_paths: String,
+
+    #[index]
+    pub data_source: String,
 }

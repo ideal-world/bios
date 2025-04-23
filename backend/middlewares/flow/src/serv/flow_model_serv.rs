@@ -880,6 +880,7 @@ impl FlowModelServ {
                 template: true,
                 main: true,
                 rel_model_id: None,
+                data_source: None,
             },
             funs,
             ctx,

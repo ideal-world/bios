@@ -39,6 +39,8 @@ pub struct FlowInstStartReq {
     pub log_text: Option<String>,
     /// 关联的工作流id
     pub rel_inst_id: Option<String>,
+
+    pub data_source: Option<String>,
 }
 
 // 实例关联的子业务对象
@@ -231,6 +233,8 @@ pub struct FlowInstDetailResp {
     pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
+
+    pub data_source: String,
 }
 
 // 状态配置
@@ -566,6 +570,8 @@ pub struct FlowInstFilterReq {
     pub rel_inst_ids: Option<Vec<String>>,
     /// 标签
     pub tags: Option<Vec<String>>,
+
+    pub data_source: Option<String>,
 
     /// 是否主流程
     pub main: Option<bool>,

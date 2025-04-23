@@ -129,4 +129,7 @@ pub struct Model {
 
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+
+    #[index]
+    pub data_source: String,
 }
