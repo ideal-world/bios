@@ -43,8 +43,8 @@ async fn export_log_v1(
         let (conn, table_name) = pg::log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
         let result = conn
             .query_all(
-                &format!("SELECT key, kind, content, data_source, owner, own_paths, ext, op, rel_key, ts, id FROM {table_name} WHERE (ts > $1 or ts <= $2) order by ts desc"),
-                vec![Value::from(start_time), Value::from(end_time)],
+                &format!("SELECT key, kind, content, data_source, owner, own_paths, ext, op, rel_key, ts, id FROM {table_name} WHERE (ts > $1 or ts <= $2) and own_paths like $3 order by ts desc"),
+                vec![Value::from(start_time), Value::from(end_time), Value::from(format!("{}%", ctx.own_paths.clone()))],
             )
             .await?;
         let result = result
@@ -86,8 +86,8 @@ async fn export_log_v2(
         let (conn, table_name) = pgv2::log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
         let result = conn
             .query_all(
-                &format!("SELECT key, kind, content, data_source, owner, owner_name, own_paths, ext, tag, op, rel_key, ts, idempotent_id, disable, msg, push FROM {table_name} WHERE (ts > $1 or ts <= $2) order by ts desc"),
-                vec![Value::from(start_time), Value::from(end_time)],
+                &format!("SELECT key, kind, content, data_source, owner, owner_name, own_paths, ext, tag, op, rel_key, ts, idempotent_id, disable, msg, push FROM {table_name} WHERE (ts > $1 or ts <= $2)  and own_paths like $3 order by ts desc"),
+                vec![Value::from(start_time), Value::from(end_time), Value::from(format!("{}%", ctx.own_paths.clone()))],
             )
             .await?;
         let result = result

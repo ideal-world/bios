@@ -21,12 +21,16 @@ pub async fn export_data(export_req: &KvExportDataReq, funs: &TardisFunsInst, ct
             &format!(
                 r#"SELECT k AS key, v AS value, info, owner, own_paths, disable, scope_level, create_time, update_time
 FROM {}
-WHERE (create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2)
+WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2)) and own_paths like $3
 ORDER BY create_time DESC
 "#,
                 table_name
             ),
-            vec![Value::from(export_req.start_time.clone()), Value::from(export_req.end_time.clone())],
+            vec![
+                Value::from(export_req.start_time.clone()),
+                Value::from(export_req.end_time.clone()),
+                Value::from(format!("{}%", ctx.own_paths.clone())),
+            ],
         )
         .await?;
     Ok(KvExportDataResp { kv_data })
@@ -55,7 +59,7 @@ pub async fn import_data(receive_req: &KvImportDataReq, funs: &TardisFunsInst, c
     Ok(true)
 }
 
-pub async fn import_kv(kv_data: Vec<KvImportAggReq>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+pub async fn import_kv(kv_data: Vec<KvImportAggReq>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
