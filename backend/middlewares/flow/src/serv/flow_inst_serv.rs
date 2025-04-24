@@ -3183,6 +3183,7 @@ impl FlowInstServ {
                 Self::modify_inst_artifacts(
                     &inst.id,
                     &FlowInstArtifactsModifyReq {
+                        add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Form)),
                         form_state_map: Some(operate_req.vars.clone().unwrap_or_default()),
                         prev_non_auto_state_id: Some(prev_non_auto_state_id),
                         prev_non_auto_account_id: Some(ctx.owner.clone()),
