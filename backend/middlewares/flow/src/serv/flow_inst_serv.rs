@@ -605,6 +605,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OutputMessage),
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
                 (flow_inst::Entity, flow_inst::Column::Tag),
+                (flow_inst::Entity, flow_inst::Column::DataSource),
             ])
             .expr_as(
                 Expr::col((flow_model_version_table.clone(), Alias::new("rel_model_id"))).if_null(""),
@@ -683,6 +684,9 @@ impl FlowInstServ {
         }
         if let Some(rel_inst_ids) = &filter.rel_inst_ids {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelInstId)).is_in(rel_inst_ids));
+        }
+        if let Some(data_source) = &filter.data_source {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::DataSource)).eq(data_source));
         }
 
         Ok(())
@@ -952,7 +956,7 @@ impl FlowInstServ {
             pub rel_transition_id: Option<String>,
             pub rel_inst_id: Option<String>,
 
-            pub data_source: String,
+            pub data_source: Option<String>,
         }
         let rel_state_table = Alias::new("rel_state");
         let flow_state_table = Alias::new("flow_state");
@@ -985,6 +989,7 @@ impl FlowInstServ {
                 (flow_inst::Entity, flow_inst::Column::OwnPaths),
                 (flow_inst::Entity, flow_inst::Column::Artifacts),
                 (flow_inst::Entity, flow_inst::Column::Comments),
+                (flow_inst::Entity, flow_inst::Column::DataSource),
             ])
             .expr_as(Expr::col((rel_state_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
@@ -1092,7 +1097,7 @@ impl FlowInstServ {
                     rel_inst_id: inst.rel_inst_id,
                     tag: inst.tag,
                     main: inst.main,
-                    data_source: inst.data_source,
+                    data_source: inst.data_source.clone().unwrap_or_default(),
                     create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap_or_default()),
                     create_ctx: inst.create_ctx,
                     create_time: inst.create_time,

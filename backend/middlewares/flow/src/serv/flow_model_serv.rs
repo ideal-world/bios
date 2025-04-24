@@ -607,6 +607,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .column((flow_model::Entity, flow_model::Column::Status))
             .column((flow_model::Entity, flow_model::Column::CurrentVersionId))
             .column((flow_model::Entity, flow_model::Column::FrontConds))
+            .column((flow_model::Entity, flow_model::Column::DataSource))
             .expr_as(Expr::val("".to_string()), Alias::new("init_state_id"))
             .expr_as(Expr::val(json! {()}), Alias::new("transitions"))
             .expr_as(Expr::val(json! {()}), Alias::new("states"))
@@ -2269,19 +2270,57 @@ impl FlowModelServ {
         if tc_init_model.is_none() {
             let mut bind_states = vec![];
             bind_states.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
-            bind_states.push(FlowStateServ::init_state("TC", "已评审", FlowSysStateKind::Finish, "", funs, ctx).await?);
+            bind_states.push(FlowStateServ::init_state("TC", "评审通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            bind_states.push(FlowStateServ::init_state("TC", "评审不通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            let start_state = bind_states[0].clone();
+            let pass_state = bind_states[1].clone();
+            let unpass_state = bind_states[2].clone();
+            let close_state = FlowStateServ::find_one_item(&FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    scope_level: Some(RbumScopeLevelKind::Root),
+                    name: Some("已关闭".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?.ok_or_else(|| funs.err().not_found("flow_model_serv", "init_tc_model", "close state not found", "404-flow-state-not-found"))?.id;
             Self::init_model(
                 "TC",
-                bind_states[0].clone(),
+                start_state.clone(),
                 bind_states.clone(),
                 "用例通用工作流",
-                vec![FlowTransitionInitInfo {
-                    from_flow_state_id: bind_states[0].clone(),
-                    to_flow_state_id: bind_states[1].clone(),
-                    name: "评审".to_string(),
-                    guard_by_his_operators: Some(true),
-                    ..Default::default()
-                }],
+                vec![
+                    FlowTransitionInitInfo {
+                        from_flow_state_id: start_state.clone(),
+                        to_flow_state_id: pass_state.clone(),
+                        name: "通过".to_string(),
+                        ..Default::default()
+                    },
+                    FlowTransitionInitInfo {
+                        from_flow_state_id: start_state.clone(),
+                        to_flow_state_id: unpass_state.clone(),
+                        name: "拒绝".to_string(),
+                        ..Default::default()
+                    },
+                    FlowTransitionInitInfo {
+                        from_flow_state_id: pass_state.clone(),
+                        to_flow_state_id: close_state.clone(),
+                        name: "关闭".to_string(),
+                        ..Default::default()
+                    },
+                    FlowTransitionInitInfo {
+                        from_flow_state_id: unpass_state.clone(),
+                        to_flow_state_id: close_state.clone(),
+                        name: "关闭".to_string(),
+                        ..Default::default()
+                    },
+                    FlowTransitionInitInfo {
+                        from_flow_state_id: close_state.clone(),
+                        to_flow_state_id: start_state.clone(),
+                        name: "激活".to_string(),
+                        ..Default::default()
+                    },
+                ],
                 funs,
                 ctx,
             )
