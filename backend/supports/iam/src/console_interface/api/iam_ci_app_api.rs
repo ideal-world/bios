@@ -74,7 +74,7 @@ impl IamCiAppApi {
     }
 
     /// Find all relevant apps in the context (i.e. apps owned by the account and apps in the app collection items)
-    /// 
+    ///
     /// 查找上下文所有相关应用（既账号拥有的应用以及应用集合项中的应用）
     #[oai(path = "/all/ctx", method = "get")]
     async fn find_all_app_ctx(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
@@ -127,7 +127,7 @@ impl IamCiAppApi {
         .map(|resp| resp.rel_rbum_set_cate_sys_code.unwrap_or("".to_string()))
         .collect::<Vec<String>>();
         if cate_codes.is_empty() {
-            return TardisResp::ok(vec![]);
+            return TardisResp::ok(app_ids);
         }
         let apps_item_ids = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -153,7 +153,6 @@ impl IamCiAppApi {
         .map(|r| r.rel_rbum_item_id.clone())
         .collect::<Vec<_>>();
         app_ids.extend(apps_item_ids);
-        // 去重
         app_ids = app_ids.into_iter().collect::<HashSet<_>>().into_iter().collect();
         TardisResp::ok(app_ids)
     }
