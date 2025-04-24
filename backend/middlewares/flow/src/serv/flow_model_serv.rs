@@ -12,17 +12,10 @@ use bios_basic::rbum::{
 use itertools::Itertools;
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult}, db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, Set,
-    },
-    futures::future::join_all,
-    log::error,
-    serde_json::json,
-    tokio,
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, log::error, serde_json::json, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -31,9 +24,7 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq,
-            FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp,
-            FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -970,6 +961,8 @@ impl FlowModelServ {
             }
         }
 
+        let rel_transitions= model_detail.rel_transitions();
+
         Ok(FlowModelAggResp {
             id: model_detail.id.clone(),
             name: model_detail.name,
@@ -1005,6 +998,8 @@ impl FlowModelServ {
             scope_level: model_detail.scope_level,
             disabled: model_detail.disabled,
             main: model_detail.main,
+            status: model_detail.status,
+            rel_transitions,
         })
     }
 
@@ -1074,6 +1069,7 @@ impl FlowModelServ {
         rel_model_id: &str,
         op: &FlowModelAssociativeOperationKind,
         kind: FlowModelKind,
+        data_source: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowModelAggResp> {
@@ -1135,6 +1131,7 @@ impl FlowModelServ {
                     &mut FlowModelAddReq {
                         kind,
                         rel_template_ids: None,
+                        data_source,
                         ..rel_model.clone().into()
                     },
                     funs,
@@ -1207,6 +1204,7 @@ impl FlowModelServ {
                             scope_level: Some(rel_model.scope_level.clone()),
                             disabled: Some(rel_model.disabled),
                         }),
+                        data_source,
                         ..rel_model.clone().into()
                     },
                     funs,
@@ -1253,6 +1251,7 @@ impl FlowModelServ {
                 &from_model.id,
                 &FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 FlowModelKind::AsTemplateAndAsModel,
+                None,
                 funs,
                 ctx,
             )
@@ -2100,6 +2099,53 @@ impl FlowModelServ {
         )
         .await?;
         Ok(())
+    }
+
+    pub async fn find_or_create(req: &FlowModelFIndOrCreatReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+        let models = Self::find_rel_models(Some(req.rel_template_id.clone()), true, Some(req.tags.clone()), funs, ctx).await?;
+        // 若存在符合tag的模板则直接返回
+        let mut result = HashMap::new();
+        for model in models {
+            if req.tags.contains(&model.tag) && !result.contains_key(&model.tag) {
+                result.insert(model.tag.clone(), model);
+            }
+        }
+        if result.keys().len() != req.tags.len() {
+            let default_models = Self::find_detail_items(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    scope_level: Some(RbumScopeLevelKind::Root),
+                    ..Default::default()
+                },
+                tags: Some(req.tags.clone()),
+                ..Default::default()
+            }, None, None, funs, ctx).await?;
+            for tag in &req.tags {
+                if !result.contains_key(tag) {
+                    // 若不存在模型，则新建
+                    let default_model_id = default_models
+                        .iter()
+                        .find(|model| model.tag == *tag)
+                        .map(|model| model.id.clone()).ok_or_else(|| funs.err().not_found("flow_model_serv", "find_or_create", &format!("default model not found by {}", tag), "404-flow-model-not-found"))?;
+                    let new_model_agg = Self::copy_or_reference_model(&default_model_id, &req.op, FlowModelKind::AsTemplateAndAsModel, req.data_source.clone(), funs, ctx).await?;
+                    FlowRelServ::add_simple_rel(
+                        &FlowRelKind::FlowModelTemplate,
+                        &new_model_agg.id,
+                        &req.rel_template_id,
+                        None,
+                        None,
+                        false,
+                        true,
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    result.insert(new_model_agg.tag.clone(), new_model_agg.into());
+                }
+            }
+        }
+        Ok(result)
     }
 
     pub async fn init_review_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

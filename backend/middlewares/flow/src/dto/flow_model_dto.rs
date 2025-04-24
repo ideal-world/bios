@@ -7,6 +7,7 @@ use bios_basic::rbum::{
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::{
+    serde_json::json,
     basic::field::TrimString,
     chrono::{DateTime, Utc},
     db::sea_orm::{self, prelude::*},
@@ -191,6 +192,29 @@ pub struct FlowModelSummaryResp {
     pub rel_transitions: Option<Value>,
 }
 
+impl From<FlowModelAggResp> for FlowModelSummaryResp {
+    fn from(value: FlowModelAggResp) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            icon: value.icon,
+            info: value.info,
+            init_state_id: value.init_state_id,
+            rel_model_id: value.rel_model_id,
+            current_version_id: value.current_version_id,
+            owner: value.owner,
+            own_paths: value.own_paths,
+            create_time: value.create_time,
+            update_time: value.update_time,
+            tag: value.tag,
+            disabled: value.disabled,
+            status: value.status,
+            states: json!(value.states),
+            rel_transitions: value.rel_transitions.map(|rel_transitions| json!(rel_transitions)),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Default, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowModelRelTransitionExt {
     pub id: String,
@@ -360,6 +384,7 @@ pub struct FlowModelAggResp {
     pub name: String,
     pub icon: String,
     pub info: String,
+    pub status: FlowModelStatus,
     /// 是否作为模板使用
     pub template: bool,
     /// 关联父级模型ID
@@ -383,6 +408,8 @@ pub struct FlowModelAggResp {
     pub disabled: bool,
     /// 是否作为主流程
     pub main: bool,
+    /// 关联动作
+    pub rel_transitions: Option<Vec<FlowModelRelTransitionExt>>,
 }
 
 /// 绑定状态
@@ -487,7 +514,7 @@ pub struct FlowModelFindRelStateResp {
 }
 
 /// 工作流关联操作类型
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, poem_openapi::Enum)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, poem_openapi::Enum)]
 pub enum FlowModelAssociativeOperationKind {
     #[default]
     Reference,
@@ -552,4 +579,13 @@ pub struct FlowModelSyncModifiedFieldReq {
     /// 参数列表
     pub add_fields: Option<Vec<String>>,
     pub delete_fields: Option<Vec<String>>,
+}
+
+/// 状态排序
+#[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelFIndOrCreatReq {
+    pub rel_template_id: String,
+    pub tags: Vec<String>,
+    pub op: FlowModelAssociativeOperationKind,
+    pub data_source: Option<String>,
 }
