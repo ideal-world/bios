@@ -16,7 +16,7 @@ use super::{
     flow_var_dto::FlowVarInfo,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowInstStartReq {
     /// 关联业务ID
     pub rel_business_obj_id: String,
@@ -544,7 +544,7 @@ pub struct FlowInstModifyCurrentVarsReq {
 }
 
 /// 操作实例请求
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
 pub struct FlowInstOperateReq {
     pub operate: FlowStateOperatorKind,
     /// 修改参数列表

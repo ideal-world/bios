@@ -74,6 +74,7 @@ impl From<LogParamTag> for String {
     }
 }
 
+#[derive(Serialize, Debug, Clone)]
 pub enum LogParamOp {
     // 发起
     Start,
