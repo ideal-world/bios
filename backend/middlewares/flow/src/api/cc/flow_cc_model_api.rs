@@ -11,8 +11,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq,
-    FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -375,6 +374,16 @@ impl FlowCcModelApi {
     async fn get_rel_transitions(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowTransitionDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::get_rel_transitions(&flow_model_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get all templates by template id, if the template is not found, then new template according to the default template.
+    ///
+    /// 获取当前模板id下的所有模板，若不存在则按默认模板新建。
+    #[oai(path = "/find_or_create", method = "post")]
+    async fn find_or_create(&self, req: Json<FlowModelFIndOrCreatReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::find_or_create(&req.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }

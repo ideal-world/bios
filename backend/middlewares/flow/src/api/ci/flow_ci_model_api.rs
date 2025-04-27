@@ -123,7 +123,7 @@ impl FlowCiModelApi {
         .await?;
         let mut result = HashMap::new();
         for rel_main_model in rel_main_models {
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
             FlowInstServ::batch_update_when_switch_model(
                 &new_model,
                 new_model.rel_template_ids.first().cloned(),
@@ -160,7 +160,7 @@ impl FlowCiModelApi {
         )
         .await?;
         for rel_non_main_model in rel_non_main_models {
-            let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

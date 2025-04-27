@@ -20,8 +20,7 @@ use tardis::{
 
 use crate::{
     dto::{
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
-        flow_state_dto::FlowGuardConf,
+        flow_inst_dto::FlowInstFilterReq, flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq}, flow_state_dto::FlowGuardConf
     },
     flow_constants,
     serv::{flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ},
@@ -33,7 +32,20 @@ const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
-    pub async fn modify_business_obj_search(rel_business_obj_id: &str, tag: &str, ext: Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn refresh_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let (rel_state, rel_transition_state_name) = FlowInstServ::find_detail_items(&FlowInstFilterReq {
+            rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+            main: Some(false),
+            finish: Some(false),
+            ..Default::default()
+        }, funs, ctx).await?.pop().map(|inst| (inst.artifacts.unwrap_or_default().state, inst.current_state_name)).unwrap_or_default();
+        let ext = json!({
+            "rel_state": rel_state, // 审批状态
+            "rel_transition_state_name": rel_transition_state_name, // 审批节点名
+        });
+        Self::modify_business_obj_search_ext(rel_business_obj_id, tag, ext, funs, ctx).await
+    }
+    pub async fn modify_business_obj_search_ext(rel_business_obj_id: &str, tag: &str, ext: Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = Self::get_tag_search_map();
         if let Some((table, _kind)) = tag_search_map.get(tag) {
             SpiSearchClient::modify_item_and_name(

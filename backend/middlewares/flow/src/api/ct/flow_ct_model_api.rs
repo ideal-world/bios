@@ -63,6 +63,7 @@ impl FlowCtModelApi {
                 &rel_model_id,
                 &FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 FlowModelKind::AsTemplateAndAsModel,
+                None,
                 &funs,
                 &ctx.0,
             )
@@ -131,6 +132,7 @@ impl FlowCtModelApi {
                 &from_model.rel_model_id,
                 &FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 FlowModelKind::AsTemplateAndAsModel,
+                None,
                 &funs,
                 &ctx.0,
             )
