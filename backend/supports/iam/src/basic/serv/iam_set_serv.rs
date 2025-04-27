@@ -491,13 +491,16 @@ impl IamSetServ {
     }
 
     pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let mut rbum_item_ids = vec![account_id.to_string()];
+        let app_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamAccountApp, true, account_id, None, None, funs, ctx).await?;
+        rbum_item_ids.extend(app_ids);
         let tree_with_account = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
                 hide_item_with_disabled: true,
-                rel_rbum_item_ids: Some(vec![account_id.to_string()]),
-                rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
+                rel_rbum_item_ids: Some(rbum_item_ids),
+                // rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
                 ..Default::default()
             },
             funs,
