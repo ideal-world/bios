@@ -675,6 +675,19 @@ pub enum FlowInstStateKind {
     Overrule,
 }
 
+impl Display for FlowInstStateKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlowInstStateKind::Form => write!(f, "FORM"),
+            FlowInstStateKind::Approval => write!(f, "Approval"),
+            FlowInstStateKind::Back => write!(f, "Back"),
+            FlowInstStateKind::Revoke => write!(f, "Revoke"),
+            FlowInstStateKind::Pass => write!(f, "Pass"),
+            FlowInstStateKind::Overrule => write!(f, "Overrule"),
+        }
+    }
+}
+
 /// 在search中使用的实例详情
 #[derive(Debug)]
 pub struct FlowInstDetailInSearch {
@@ -707,6 +720,6 @@ pub struct FlowInstDetailInSearch {
 pub struct ModifyObjSearchExtReq {
     pub tag: String,
     pub status: Option<String>,  // 当前状态
-    pub rel_state: Option<FlowInstStateKind>, // 审批状态
+    pub rel_state: Option<String>, // 审批状态
     pub rel_transition_state_name: Option<String>, // 审批节点名
 }

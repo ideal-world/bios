@@ -97,7 +97,7 @@ impl FlowInstServ {
                         let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                             tag: rel_child_obj.tag.clone(),
                             status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
-                            rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default()),
+                            rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                             rel_transition_state_name: Some("".to_string()),
                         })?;
                         FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
@@ -162,7 +162,7 @@ impl FlowInstServ {
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: rel_child_obj.tag.clone(),
                         status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
-                        rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default()),
+                        rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                         rel_transition_state_name: Some("".to_string()),
                     })?;
                     FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
@@ -795,6 +795,7 @@ impl FlowInstServ {
                     ..Default::default()
                 }, funs, ctx).await?;
             }
+            // 主审批流中止时，流转对应业务的状态流为结束
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 if let Some(main_inst) = Self::find_detail_items(
                     &FlowInstFilterReq {
@@ -1497,8 +1498,8 @@ impl FlowInstServ {
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: child_inst.tag.clone(),
                 status: current_state_name,
-                rel_state,
-                rel_transition_state_name,
+                rel_state: Some(rel_state.map_or("".to_string(),|s| s.to_string())),
+                rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
             })?;
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
         }
@@ -2566,8 +2567,8 @@ impl FlowInstServ {
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: child_inst.tag.clone(),
                     status: if flow_inst_detail.finish_time.is_some() { child_main_inst.current_state_name.clone() } else { Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()) },
-                    rel_state: if flow_inst_detail.finish_time.is_some() { None } else { child_inst.artifacts.clone().unwrap_or_default().state },
-                    rel_transition_state_name: if flow_inst_detail.finish_time.is_some() { None } else { child_inst.current_state_name },
+                    rel_state: if flow_inst_detail.finish_time.is_some() { Some("".to_string()) } else { child_inst.artifacts.clone().unwrap_or_default().state.map(|s| s.to_string()) },
+                    rel_transition_state_name: if flow_inst_detail.finish_time.is_some() { Some("".to_string()) } else { child_inst.current_state_name },
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
             }
@@ -2723,8 +2724,8 @@ impl FlowInstServ {
                                 let modify_ext_req = ModifyObjSearchExtReq {
                                     tag: child_inst.tag.clone(),
                                     status: current_state_name,
-                                    rel_state,
-                                    rel_transition_state_name,
+                                    rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
+                                    rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
                                 };
                                 let modify_serach_ext = TardisFuns::json.obj_to_string(&modify_ext_req)?;
                                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;

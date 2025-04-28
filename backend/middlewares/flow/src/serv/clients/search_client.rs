@@ -12,7 +12,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult}, log::debug, tokio, web::{poem_openapi::types::ToJSON, web_resp::TardisPage}, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult}, log::{debug, warn}, tokio, web::{poem_openapi::types::ToJSON, web_resp::TardisPage}, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -68,7 +68,7 @@ impl FromStr for FlowSearchTaskKind {
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
-    pub async fn add_search_task(kind: &FlowSearchTaskKind, key: &str, val: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_search_task(kind: &FlowSearchTaskKind, key: &str, val: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_key = format!("{}_{}_{}", flow_constants::DOMAIN_CODE, kind, key);
         let val = match *kind {
             FlowSearchTaskKind::ModifyInstance => { val.to_string() },
@@ -91,6 +91,7 @@ impl FlowSearchClient {
             },
         };
         ctx.remove_ext(&task_key).await?;
+        warn!("task_key:{}, val: {}", task_key, val);
         ctx.add_ext(&task_key, &val).await?;
         Ok(())
     }
@@ -131,8 +132,8 @@ impl FlowSearchClient {
         }, funs, ctx).await?.pop().map(|inst| (inst.artifacts.unwrap_or_default().state, inst.current_state_name)).unwrap_or_default();
         let req = ModifyObjSearchExtReq {
             tag: tag.to_string(),
-            rel_state,
-            rel_transition_state_name,
+            rel_state: Some(rel_state.map_or("".to_string(),|s| s.to_string())),
+            rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
             ..Default::default()
         };
         let val = TardisFuns::json.obj_to_string(&req)?;
