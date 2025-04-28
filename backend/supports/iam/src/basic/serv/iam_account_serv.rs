@@ -41,7 +41,8 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
+use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -568,6 +569,25 @@ impl IamAccountServ {
                 roles: roles.iter().filter(|r| r.own_paths == app.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
                 groups: HashMap::default(),
             });
+        }
+        if ctx.own_paths != "" {
+            let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &mock_tenant_ctx).await?;
+            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &ctx.owner, &funs, &mock_tenant_ctx).await?;
+            let mut app_role_read = HashMap::new();
+            app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            for (app_id, app_name) in app_items {
+                if old_app_ids.contains(&app_id) {
+                    continue;
+                }
+                apps.push(IamAccountAppInfoResp {
+                    app_id: app_id.clone(),
+                    app_name: app_name.clone(),
+                    app_icon: "".to_string(),
+                    roles: app_role_read.clone(),
+                    groups: HashMap::default(),
+                });
+            }
         }
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
