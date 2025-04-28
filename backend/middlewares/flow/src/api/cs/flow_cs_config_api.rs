@@ -7,6 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::flow_config_dto::FlowConfigModifyReq;
 
 use crate::flow_constants;
+use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_config_serv::FlowConfigServ;
 #[derive(Clone)]
 pub struct FlowCsConfigApi;
@@ -21,6 +22,7 @@ impl FlowCsConfigApi {
         funs.begin().await?;
         FlowConfigServ::modify_config(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -32,6 +34,7 @@ impl FlowCsConfigApi {
         funs.begin().await?;
         let result = FlowConfigServ::get_config(&funs, &ctx.0).await?;
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
