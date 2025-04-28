@@ -16,7 +16,7 @@ use super::{
     flow_var_dto::FlowVarInfo,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowInstStartReq {
     /// 关联业务ID
     pub rel_business_obj_id: String,
@@ -39,6 +39,8 @@ pub struct FlowInstStartReq {
     pub log_text: Option<String>,
     /// 关联的工作流id
     pub rel_inst_id: Option<String>,
+
+    pub data_source: Option<String>,
 }
 
 // 实例关联的子业务对象
@@ -231,6 +233,8 @@ pub struct FlowInstDetailResp {
     pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
+
+    pub data_source: String,
 }
 
 // 状态配置
@@ -306,6 +310,8 @@ pub enum FlowApprovalResultKind {
     Pass,
     /// 拒绝
     Overrule,
+    /// 录入
+    Form,
 }
 
 impl Display for FlowApprovalResultKind {
@@ -313,6 +319,7 @@ impl Display for FlowApprovalResultKind {
         match self {
             FlowApprovalResultKind::Pass => write!(f, "PASS"),
             FlowApprovalResultKind::Overrule => write!(f, "OVERRULE"),
+            FlowApprovalResultKind::Form => write!(f, "FORM"),
         }
     }
 }
@@ -324,6 +331,7 @@ impl FromStr for FlowApprovalResultKind {
         match s.to_uppercase().as_str() {
             "PASS" => Ok(Self::Pass),
             "OVERRULE" => Ok(Self::Overrule),
+            "FORM" => Ok(Self::Form),
             _ => Err(TardisError::bad_request(&format!("invalid FlowApprovalResultKind: {}", s), "400-operator-invalid-param")),
         }
     }
@@ -536,7 +544,7 @@ pub struct FlowInstModifyCurrentVarsReq {
 }
 
 /// 操作实例请求
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
 pub struct FlowInstOperateReq {
     pub operate: FlowStateOperatorKind,
     /// 修改参数列表
@@ -566,6 +574,8 @@ pub struct FlowInstFilterReq {
     pub rel_inst_ids: Option<Vec<String>>,
     /// 标签
     pub tags: Option<Vec<String>>,
+
+    pub data_source: Option<String>,
 
     /// 是否主流程
     pub main: Option<bool>,

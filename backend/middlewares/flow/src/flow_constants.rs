@@ -7,6 +7,7 @@ pub const RBUM_KIND_MODEL_CODE: &str = "fw-model";
 pub const RBUM_EXT_TABLE_MODEL: &str = "flow_model";
 pub const RBUM_KIND_MODEL_VERSION_CODE: &str = "fw-model-version";
 pub const RBUM_EXT_TABLE_MODEL_VERSION: &str = "flow_model_version";
+pub const SPECIFED_APPROVING_STATE_NAME: &str = "评审中";
 
 pub fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None)

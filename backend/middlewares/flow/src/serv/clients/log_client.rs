@@ -74,6 +74,7 @@ impl From<LogParamTag> for String {
     }
 }
 
+#[derive(Serialize, Debug, Clone)]
 pub enum LogParamOp {
     // 发起
     Start,
@@ -253,6 +254,8 @@ impl FlowLogClient {
             ("CTS", "转测单"),
             ("TP", "测试计划"),
             ("TS", "测试阶段"),
+            ("TC", "用例"),
+            ("REVIEW", "评审"),
         ]);
         flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }
@@ -260,7 +263,7 @@ impl FlowLogClient {
     pub fn get_junp_kind(tag: &str) -> String {
         let flow_tag_map = HashMap::from([
             ("MS", "idp_feed_ms"),
-            ("ITER", "idp_feed_iter "),
+            ("ITER", "idp_feed_iter"),
             ("REQ", "idp_feed_req"),
             ("TASK", "idp_feed_task"),
             ("ISSUE", "idp_test_issue"),
@@ -268,6 +271,8 @@ impl FlowLogClient {
             ("TP", "idp_test_plan"),
             ("TS", "idp_test_stage"),
             ("FLOW", "flow_approval_edit"),
+            ("TC", "idp_test_case"),
+            ("REVIEW", "idp_feed_review"),
         ]);
         flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }

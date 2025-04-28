@@ -125,6 +125,7 @@ pub async fn test(
                 rel_model_id: None,
                 disabled: None,
                 front_conds: None,
+                data_source: None,
             },
         )
         .await;
@@ -239,6 +240,7 @@ pub async fn test(
                 icon: None,
                 rel_model_id: None,
                 front_conds: None,
+                data_source: None,
                 disabled: None,
             },
         )
@@ -284,6 +286,7 @@ pub async fn test(
                 add_version: None,
                 current_version_id: None,
                 front_conds: None,
+                data_source: None,
             },
         )
         .await;
@@ -686,6 +689,7 @@ pub async fn test(
                 rel_model_id: None,
                 disabled: None,
                 front_conds: None,
+                data_source: None,
             },
         )
         .await;
@@ -725,6 +729,7 @@ pub async fn test(
                     op_text: None,
                     value: json!("1111"),
                 }]]),
+                data_source: None,
             },
         )
         .await;
@@ -938,6 +943,7 @@ pub async fn test(
                 rel_model_id: None,
                 disabled: None,
                 front_conds: None,
+                data_source: None,
             },
         )
         .await;
