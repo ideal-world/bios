@@ -11,6 +11,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::dto::flow_state_dto::{FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateFilterReq, FlowStateKind, FlowStateSummaryResp, FlowSysStateKind};
 use crate::flow_constants;
+use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_state_serv::FlowStateServ;
 #[derive(Clone)]
 pub struct FlowCiStateApi;
@@ -81,6 +82,7 @@ impl FlowCiStateApi {
             &ctx.0,
         )
         .await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -100,6 +102,7 @@ impl FlowCiStateApi {
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

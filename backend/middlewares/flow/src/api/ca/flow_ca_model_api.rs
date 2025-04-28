@@ -10,7 +10,7 @@ use tardis::web::{
 use crate::{
     dto::flow_model_dto::{FlowModelAggResp, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceReq},
     flow_constants,
-    serv::{flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ},
+    serv::{clients::search_client::FlowSearchClient, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ},
 };
 
 #[derive(Clone)]
@@ -41,6 +41,7 @@ impl FlowCaModelApi {
         }
 
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -62,6 +63,7 @@ impl FlowCaModelApi {
         FlowInstServ::batch_update_when_switch_model(&new_model, None, None, &funs, &ctx.0).await?;
 
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(new_model)
     }

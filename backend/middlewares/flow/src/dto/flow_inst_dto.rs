@@ -67,6 +67,7 @@ pub struct FlowInstBatchBindReq {
     pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
+    pub data_source: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -699,4 +700,13 @@ pub struct FlowInstDetailInSearch {
     pub create_time: Option<DateTime<Utc>>,
     pub update_time: Option<DateTime<Utc>>,
     pub rel_inst_id: Option<String>,
+}
+
+/// 修改业务search的ext
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct ModifyObjSearchExtReq {
+    pub tag: String,
+    pub status: Option<String>,  // 当前状态
+    pub rel_state: Option<FlowInstStateKind>, // 审批状态
+    pub rel_transition_state_name: Option<String>, // 审批节点名
 }

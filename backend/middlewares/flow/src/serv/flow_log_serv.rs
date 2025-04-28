@@ -24,7 +24,7 @@ use super::{
 pub struct FlowLogServ;
 
 impl FlowLogServ {
-    pub async fn add_start_log_sync_task(
+    pub async fn add_start_log_async_task(
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
@@ -37,7 +37,7 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let create_vars_cp = create_vars.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
+        ctx.add_async_task(Box::new(
             || {
                 Box::pin(async move {
                     let task_handle = tardis::tokio::spawn(async move {
@@ -66,7 +66,7 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
@@ -114,7 +114,7 @@ impl FlowLogServ {
             log_content.detail = start_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
-        FlowLogClient::add_ctx_task(
+        FlowLogClient::addv2_item(
             LogParamTag::ApprovalFlow,
             Some(flow_inst_detail.id.clone()),
             log_content,
@@ -122,7 +122,7 @@ impl FlowLogServ {
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Start.into()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
+            funs,
             ctx,
             false,
         )
@@ -130,7 +130,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_start_dynamic_log_sync_task(
+    pub async fn add_start_dynamic_log_async_task(
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
@@ -143,7 +143,7 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let create_vars_cp = create_vars.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
+        ctx.add_async_task(Box::new(
             || {
                 Box::pin(async move {
                     let task_handle = tardis::tokio::spawn(async move {
@@ -172,7 +172,7 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
@@ -221,7 +221,7 @@ impl FlowLogServ {
             log_content.detail = start_req.log_text.clone();
             log_ext.include_detail = Some(true);
         }
-        FlowLogClient::add_ctx_task(
+        FlowLogClient::add_item(
             LogParamTag::DynamicLog,
             Some(flow_inst_detail.id.clone()),
             log_content,
@@ -229,7 +229,7 @@ impl FlowLogServ {
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Start.into()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            false,
+            funs,
             ctx,
             false,
         )
@@ -237,7 +237,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_start_business_log_sync_task(
+    pub async fn add_start_business_log_async_task(
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
@@ -250,7 +250,7 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let create_vars_cp = create_vars.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
+        ctx.add_async_task(Box::new(
             || {
                 Box::pin(async move {
                     let task_handle = tardis::tokio::spawn(async move {
@@ -279,7 +279,7 @@ impl FlowLogServ {
         _start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         _create_vars: &HashMap<String, Value>,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
@@ -315,7 +315,7 @@ impl FlowLogServ {
         //     log_content.detail = start_req.log_text.clone();
         //     log_ext.include_detail = Some(true);
         // }
-        FlowLogClient::add_ctx_task(
+        FlowLogClient::add_item(
             LogParamTag::DynamicLog,
             Some(flow_inst_detail.rel_business_obj_id.clone()),
             log_content,
@@ -323,7 +323,7 @@ impl FlowLogServ {
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Start.into()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            false,
+            funs,
             ctx,
             false,
         )
@@ -331,7 +331,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_operate_log_sync_task(
+    pub async fn add_operate_log_async_task(
         operate_req: &FlowInstOperateReq,
         flow_inst_detail: &FlowInstDetailResp,
         op_kind: LogParamOp,
@@ -344,7 +344,7 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let op_kind_cp = op_kind.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
+        ctx.add_async_task(Box::new(
             || {
                 Box::pin(async move {
                     let task_handle = tardis::tokio::spawn(async move {
@@ -436,7 +436,7 @@ impl FlowLogServ {
         if operate_req.output_message.is_some() {
             log_ext.include_detail = Some(true);
         }
-        FlowLogClient::add_ctx_task(
+        FlowLogClient::addv2_item(
             LogParamTag::ApprovalFlow,
             Some(flow_inst_detail.id.clone()),
             log_content,
@@ -444,7 +444,7 @@ impl FlowLogServ {
             Some("dynamic_log_approval_flow".to_string()),
             Some(op_kind.into()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
+            funs,
             ctx,
             false,
         )
@@ -452,7 +452,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_operate_dynamic_log_sync_task(
+    pub async fn add_operate_dynamic_log_async_task(
         operate_req: &FlowInstOperateReq,
         flow_inst_detail: &FlowInstDetailResp,
         op_kind: LogParamOp,
@@ -465,7 +465,7 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let op_kind_cp = op_kind.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
+        ctx.add_async_task(Box::new(
             || {
                 Box::pin(async move {
                     let task_handle = tardis::tokio::spawn(async move {
@@ -567,7 +567,7 @@ impl FlowLogServ {
         if operate_req.output_message.is_some() {
             log_ext.include_detail = Some(true);
         }
-        FlowLogClient::add_ctx_task(
+        FlowLogClient::add_item(
             LogParamTag::DynamicLog,
             Some(flow_inst_detail.id.clone()),
             log_content,
@@ -575,7 +575,7 @@ impl FlowLogServ {
             Some("dynamic_log_approval_flow".to_string()),
             Some(op_kind.into()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            false,
+            funs,
             ctx,
             false,
         )
@@ -583,7 +583,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_finish_log_sync_task(
+    pub async fn add_finish_log_async_task(
         flow_inst_detail: &FlowInstDetailResp,
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -592,7 +592,7 @@ impl FlowLogServ {
         let curr_inst_cp = flow_inst_detail.clone();
         let curr_inst_id = flow_inst_detail.id.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
+        ctx.add_async_task(Box::new(
             || {
                 Box::pin(async move {
                     let task_handle = tardis::tokio::spawn(async move {
@@ -614,7 +614,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
             return Ok(());
         }
@@ -640,7 +640,7 @@ impl FlowLogServ {
         if !artifacts.his_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) && !artifacts.curr_operators.as_ref().unwrap_or(&vec![]).contains(&ctx.owner) {
             log_content.sub_id = None;
         }
-        FlowLogClient::add_ctx_task(
+        FlowLogClient::addv2_item(
             LogParamTag::ApprovalFlow,
             Some(flow_inst_detail.id.clone()),
             log_content,
@@ -648,7 +648,7 @@ impl FlowLogServ {
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Finish.into()),
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
+            funs,
             ctx,
             false,
         )

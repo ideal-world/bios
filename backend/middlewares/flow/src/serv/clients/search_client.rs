@@ -1,4 +1,4 @@
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, fmt::Display, str::FromStr, vec};
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
@@ -9,18 +9,15 @@ use bios_sdk_invoke::{
     },
 };
 use itertools::Itertools;
-use serde_json::{json, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::debug,
-    tokio,
-    web::{poem_openapi::types::ToJSON, web_resp::TardisPage},
-    TardisFunsInst,
+    basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult}, log::debug, tokio, web::{poem_openapi::types::ToJSON, web_resp::TardisPage}, TardisFuns, TardisFunsInst
 };
 
 use crate::{
     dto::{
-        flow_inst_dto::FlowInstFilterReq, flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq}, flow_state_dto::FlowGuardConf
+        flow_inst_dto::{FlowInstFilterReq, ModifyObjSearchExtReq}, flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq}, flow_state_dto::FlowGuardConf
     },
     flow_constants,
     serv::{flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ},
@@ -29,9 +26,102 @@ use crate::{
 const SEARCH_MODEL_TAG: &str = "flow_model";
 const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 
+/// 日志任务类型
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum FlowSearchTaskKind {
+    /// 修改业务
+    ModifyBusinessObj,
+    /// 添加或修改工作流实例
+    ModifyInstance,
+    /// 添加或修改工作流模型
+    ModifyModel,
+    /// 删除工作流模型
+    DeleteModel,
+}
+
+impl Display for FlowSearchTaskKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlowSearchTaskKind::ModifyBusinessObj => write!(f, "ModifyBusinessObj"),
+            FlowSearchTaskKind::ModifyInstance => write!(f, "ModifyInstance"),
+            FlowSearchTaskKind::ModifyModel => write!(f, "ModifyModel"),
+            FlowSearchTaskKind::DeleteModel => write!(f, "DeleteModel"),
+        }
+    }
+}
+
+impl FromStr for FlowSearchTaskKind {
+    type Err = TardisError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ModifyBusinessObj" => Ok(Self::ModifyBusinessObj),
+            "ModifyInstance" => Ok(Self::ModifyInstance),
+            "ModifyModel" => Ok(Self::ModifyModel),
+            "DeleteModel" => Ok(Self::DeleteModel),
+            _ => Err(TardisError::bad_request(&format!("invalid FlowSearchTaskKind: {}", s), "400-operator-invalid-param")),
+        }
+    }
+}
+
+
 pub struct FlowSearchClient;
 
 impl FlowSearchClient {
+    pub async fn add_search_task(kind: &FlowSearchTaskKind, key: &str, val: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let task_key = format!("{}_{}_{}", flow_constants::DOMAIN_CODE, kind, key);
+        let val = match *kind {
+            FlowSearchTaskKind::ModifyInstance => { val.to_string() },
+            FlowSearchTaskKind::ModifyModel => { val.to_string() },
+            FlowSearchTaskKind::DeleteModel => { val.to_string() },
+            FlowSearchTaskKind::ModifyBusinessObj => {
+                let mut req = ctx.get_ext(&task_key).await?.map_or(ModifyObjSearchExtReq::default(), |s| TardisFuns::json.str_to_obj(&s).unwrap_or_default());
+                let modify_req = TardisFuns::json.str_to_obj::<ModifyObjSearchExtReq>(val)?;
+                req.tag = modify_req.tag;
+                if modify_req.status.is_some() {
+                    req.status = modify_req.status;
+                }
+                if modify_req.rel_state.is_some() {
+                    req.rel_state = modify_req.rel_state;
+                }
+                if modify_req.rel_transition_state_name.is_some() {
+                    req.rel_transition_state_name = modify_req.rel_transition_state_name;
+                }
+                TardisFuns::json.obj_to_string(&req)?
+            },
+        };
+        ctx.remove_ext(&task_key).await?;
+        ctx.add_ext(&task_key, &val).await?;
+        Ok(())
+    }
+
+    pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
+        let funs = flow_constants::get_tardis_inst();
+        let ext = ctx.ext.read().await;
+        for (whole_key, val) in ext.iter() {
+            if let Some((prefix, key)) = whole_key.split_once('_') {
+                if prefix == flow_constants::DOMAIN_CODE {
+                    let (kind, id) = key.split_once('_').unwrap_or_default();
+                    match FlowSearchTaskKind::from_str(kind)? {
+                        FlowSearchTaskKind::ModifyInstance => {
+                            Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
+                        },
+                        FlowSearchTaskKind::ModifyModel => {
+                            Self::async_add_or_modify_model_search(id, Box::new(true), &funs, ctx).await?;
+                        },
+                        FlowSearchTaskKind::DeleteModel => {
+                            Self::async_delete_model_search(id, &funs, ctx).await?;
+                        },
+                        FlowSearchTaskKind::ModifyBusinessObj => {
+                            let req = TardisFuns::json.str_to_obj::<ModifyObjSearchExtReq>(val)?;
+                            Self::async_modify_business_obj_search_ext(id, &req, &funs, ctx).await?;
+                        },
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
     pub async fn refresh_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let (rel_state, rel_transition_state_name) = FlowInstServ::find_detail_items(&FlowInstFilterReq {
             rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
@@ -39,15 +129,85 @@ impl FlowSearchClient {
             finish: Some(false),
             ..Default::default()
         }, funs, ctx).await?.pop().map(|inst| (inst.artifacts.unwrap_or_default().state, inst.current_state_name)).unwrap_or_default();
-        let ext = json!({
-            "rel_state": rel_state, // 审批状态
-            "rel_transition_state_name": rel_transition_state_name, // 审批节点名
-        });
-        Self::modify_business_obj_search_ext(rel_business_obj_id, tag, ext, funs, ctx).await
+        let req = ModifyObjSearchExtReq {
+            tag: tag.to_string(),
+            rel_state,
+            rel_transition_state_name,
+            ..Default::default()
+        };
+        let val = TardisFuns::json.obj_to_string(&req)?;
+        Self::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &val, funs, ctx).await
     }
-    pub async fn modify_business_obj_search_ext(rel_business_obj_id: &str, tag: &str, ext: Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+
+    pub async fn modify_business_obj_search_ext_status(rel_business_obj_id: &str, tag: &str, status: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag_search_map = Self::get_tag_search_map();
         if let Some((table, _kind)) = tag_search_map.get(tag) {
+            let ext = json!({
+                "status": status,
+            });
+            SpiSearchClient::modify_item_and_name(
+                table,
+                rel_business_obj_id,
+                &SearchItemModifyReq {
+                    kind: None,
+                    title: None,
+                    name: None,
+                    content: None,
+                    owner: None,
+                    own_paths: None,
+                    create_time: None,
+                    update_time: None,
+                    ext: Some(ext),
+                    ext_override: Some(false),
+                    visit_keys: None,
+                    kv_disable: None,
+                },
+                funs,
+                ctx,
+            )
+            .await
+            .unwrap_or_default();
+        }
+
+        Ok(())
+    }
+
+    pub async fn async_modify_business_obj_search_ext(rel_business_obj_id: &str, req: &ModifyObjSearchExtReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let rel_business_obj_id_cp = rel_business_obj_id.to_string();
+        let req_cp = req.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::modify_business_obj_search_ext(&rel_business_obj_id_cp, &req_cp, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    pub async fn modify_business_obj_search_ext(rel_business_obj_id: &str, req: &ModifyObjSearchExtReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tag_search_map = Self::get_tag_search_map();
+        if let Some((table, _kind)) = tag_search_map.get(&req.tag) {
+            let mut ext = json!({});
+            if let Some(status) = &req.status {
+                if let Some(ext_mut) = ext.as_object_mut() {
+                    ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
+                }
+            }
+            if let Some(rel_state) = &req.rel_state {
+                if let Some(ext_mut) = ext.as_object_mut() {
+                    ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap());
+                }
+            }
+            if let Some(rel_transition_state_name) = &req.rel_transition_state_name {
+                if let Some(ext_mut) = ext.as_object_mut() {
+                    ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap());
+                }
+            }
             SpiSearchClient::modify_item_and_name(
                 table,
                 rel_business_obj_id,
@@ -109,13 +269,14 @@ impl FlowSearchClient {
         .await
     }
 
-    pub async fn async_delete_model_search(model_id: String, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn async_delete_model_search(model_id: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
+        let model_id_cp = model_id.to_string();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
-                    let _ = Self::delete_model_search(&model_id, &funs, &ctx_clone).await;
+                    let _ = Self::delete_model_search(&model_id_cp, &funs, &ctx_clone).await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
@@ -125,7 +286,7 @@ impl FlowSearchClient {
     }
 
     // flow model 全局搜索埋点方法
-    pub async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
         // 数据共享权限处理
         let mut visit_tenants = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).map(|tenant| vec![tenant]).unwrap_or_default();
@@ -201,9 +362,25 @@ impl FlowSearchClient {
     }
 
     // model 全局搜索删除埋点方法
-    pub async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn delete_model_search(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         SpiSearchClient::delete_item_and_name(SEARCH_MODEL_TAG, model_id, funs, ctx).await?;
         Ok(())
+    }
+
+    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let inst_id_cp = inst_id.to_string();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_instance_search(&inst_id_cp, is_modify, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
     }
 
     // flow inst 全局搜索埋点方法
