@@ -9,6 +9,7 @@ use bios_basic::rbum::{
     rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
+use bios_sdk_invoke::dto::search_item_dto::{SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchSortKind, SearchItemSearchSortReq};
 use itertools::Itertools;
 use serde_json::Value;
 use tardis::{
@@ -2368,6 +2369,44 @@ impl FlowModelServ {
                 ctx,
             )
             .await?;
+        }
+        Ok(())
+    }
+
+    // 同步模型到search
+    pub async fn sync_model_template(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let search_models = FlowSearchClient::search(&SearchItemSearchReq {
+            tag: "flow_model".to_string(),
+            ctx: SearchItemSearchCtxReq { ..Default::default() },
+            query: SearchItemQueryReq {
+                kinds: Some(vec!["flow_model".to_string()]),
+                ..Default::default()
+            },
+            adv_by_or: None,
+            adv_query: None,
+            sort: Some(vec![SearchItemSearchSortReq {
+                field: "create_time".to_string(),
+                order: SearchItemSearchSortKind::Desc,
+            }]),
+            page: SearchItemSearchPageReq {
+                number: 1,
+                size: 999,
+                fetch_total: false,
+            },
+        }, funs, ctx).await?.map(|resp| resp.records).unwrap_or_default().into_iter().map(|item| item.key).collect_vec();
+        let flow_model_ids = Self::find_id_items(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            kinds: Some(vec![FlowModelKind::AsTemplate]),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for flow_model_id in flow_model_ids {
+            if !search_models.contains(&flow_model_id) {
+                FlowSearchClient::async_add_or_modify_model_search(&flow_model_id, Box::new(false), funs, ctx).await?;
+            }
         }
         Ok(())
     }

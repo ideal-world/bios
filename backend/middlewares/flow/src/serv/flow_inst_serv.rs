@@ -782,8 +782,7 @@ impl FlowInstServ {
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             }
-            
-            FlowSearchClient::add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
             if let Some(main_inst_id) = Self::find_ids(&FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
@@ -3043,25 +3042,6 @@ impl FlowInstServ {
 
     pub async fn batch_operate(inst_id: &str, batch_operate_req: &HashMap<String, FlowInstOperateReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
-        FlowLogServ::add_operate_log_async_task(
-            &FlowInstOperateReq {
-                operate: FlowStateOperatorKind::Submit,
-                vars: None,
-                all_vars: None,
-                output_message: None,
-                operator: None,
-                log_text: None,
-            },
-            &inst,
-            if inst.current_state_kind == Some(FlowStateKind::Approval) {
-                LogParamOp::Approval
-            } else {
-                LogParamOp::Form
-            },
-            funs,
-            ctx,
-        )
-        .await?;
         let approve_inst = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![inst.rel_business_obj_id.clone()]),
@@ -3082,6 +3062,25 @@ impl FlowInstServ {
                 "404-flow-inst-not-found",
             )
         })?;
+        FlowLogServ::add_operate_log_async_task(
+            &FlowInstOperateReq {
+                operate: FlowStateOperatorKind::Submit,
+                vars: None,
+                all_vars: None,
+                output_message: None,
+                operator: None,
+                log_text: None,
+            },
+            &approve_inst,
+            if approve_inst.current_state_kind == Some(FlowStateKind::Approval) {
+                LogParamOp::Approval
+            } else {
+                LogParamOp::Form
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let rel_business_obj_ids = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 with_sub: Some(true),

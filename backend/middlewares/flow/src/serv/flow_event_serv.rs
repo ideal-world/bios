@@ -5,13 +5,10 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use rust_decimal::Decimal;
 use serde_json::{json, Value};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    chrono::{SecondsFormat, Utc},
-    db::sea_orm::{
+    basic::{dto::TardisContext, result::TardisResult}, chrono::{SecondsFormat, Utc}, db::sea_orm::{
         self,
         sea_query::{Expr, Query},
-    },
-    TardisFunsInst,
+    }, log::warn, TardisFunsInst
 };
 
 use crate::{
@@ -50,6 +47,9 @@ impl FlowEventServ {
     ) -> TardisResult<()> {
         if !flow_inst_detail.main {
             return Ok(());
+        }
+        if flow_inst_detail.id == *"qavuDnbGw8WlcegfjD-cI" {
+            warn!("flow_inst_detail: {:?}", flow_inst_detail);
         }
         let flow_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
