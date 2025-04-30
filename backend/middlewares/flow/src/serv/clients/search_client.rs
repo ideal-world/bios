@@ -31,7 +31,9 @@ const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 pub enum FlowSearchTaskKind {
     /// 修改业务
     ModifyBusinessObj,
-    /// 添加或修改工作流实例
+    /// 添加工作流实例
+    AddInstance,
+    /// 修改工作流实例
     ModifyInstance,
     /// 添加或修改工作流模型
     ModifyModel,
@@ -43,6 +45,7 @@ impl Display for FlowSearchTaskKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FlowSearchTaskKind::ModifyBusinessObj => write!(f, "ModifyBusinessObj"),
+            FlowSearchTaskKind::AddInstance => write!(f, "AddInstance"),
             FlowSearchTaskKind::ModifyInstance => write!(f, "ModifyInstance"),
             FlowSearchTaskKind::ModifyModel => write!(f, "ModifyModel"),
             FlowSearchTaskKind::DeleteModel => write!(f, "DeleteModel"),
@@ -56,6 +59,7 @@ impl FromStr for FlowSearchTaskKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "ModifyBusinessObj" => Ok(Self::ModifyBusinessObj),
+            "AddInstance" => Ok(Self::AddInstance),
             "ModifyInstance" => Ok(Self::ModifyInstance),
             "ModifyModel" => Ok(Self::ModifyModel),
             "DeleteModel" => Ok(Self::DeleteModel),
@@ -72,6 +76,7 @@ impl FlowSearchClient {
         let task_key = format!("{}_{}_{}", flow_constants::DOMAIN_CODE, kind, key);
         let val = match *kind {
             FlowSearchTaskKind::ModifyInstance => { val.to_string() },
+            FlowSearchTaskKind::AddInstance => { val.to_string() },
             FlowSearchTaskKind::ModifyModel => { val.to_string() },
             FlowSearchTaskKind::DeleteModel => { val.to_string() },
             FlowSearchTaskKind::ModifyBusinessObj => {
@@ -103,6 +108,9 @@ impl FlowSearchClient {
                 if prefix == flow_constants::DOMAIN_CODE {
                     let (kind, id) = key.split_once('_').unwrap_or_default();
                     match FlowSearchTaskKind::from_str(kind)? {
+                        FlowSearchTaskKind::AddInstance => {
+                            Self::async_add_or_modify_instance_search(id, Box::new(false), &funs, ctx).await?;
+                        },
                         FlowSearchTaskKind::ModifyInstance => {
                             Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
                         },

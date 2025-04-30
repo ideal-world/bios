@@ -2226,7 +2226,7 @@ impl FlowModelServ {
                         name: "结束评审".to_string(),
                         double_check: None,
                         action_by_front_changes: vec![FlowTransitionFrontActionInfo {
-                            relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation::Gt,
+                            relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation::Lt,
                             relevance_label: "".to_string(),
                             left_value: "review_end_time".to_string(),
                             left_label: "".to_string(),

@@ -392,6 +392,7 @@ impl FlowCiInstApi {
                 tardis::tokio::spawn(async move {
                     let curr_inst = inst.clone();
                     let inst_ctx = TardisContext {
+                        owner: curr_inst.create_ctx.owner.clone(),
                         own_paths: curr_inst.own_paths.clone(),
                         ..Default::default()
                     };

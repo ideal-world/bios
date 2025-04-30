@@ -1445,7 +1445,7 @@ impl FlowInstServ {
         }
 
         if !flow_inst_detail.main && flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-            FlowSearchClient::add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
         }
 
         if flow_inst_detail.main {
@@ -3441,7 +3441,7 @@ impl FlowInstServ {
                 }
             }
         }
-        FlowSearchClient::add_or_modify_instance_search(&inst.id, Box::new(true), funs, ctx).await?;
+        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &inst.id, "", funs, ctx).await?;
         Ok(())
     }
 

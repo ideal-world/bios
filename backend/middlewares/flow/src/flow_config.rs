@@ -17,6 +17,8 @@ pub struct FlowConfig {
     pub search_url: String,
     pub log_url: String,
     pub iam_url: String,
+
+    pub cache_key_sync_modify_state: String,
 }
 
 impl Default for FlowConfig {
@@ -28,6 +30,7 @@ impl Default for FlowConfig {
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             iam_url: "http://127.0.0.1:8080/iam".to_string(),
+            cache_key_sync_modify_state: "iam:cache:sync:ldap:status".to_string(),
         }
     }
 }
@@ -92,6 +95,7 @@ impl FlowBasicInfoManager {
 pub trait FlowBasicConfigApi {
     fn flow_basic_kind_state_id(&self) -> String;
     fn flow_basic_kind_model_id(&self) -> String;
+    fn flow_basic_kind_model_version_id(&self) -> String;
     fn flow_basic_domain_flow_id(&self) -> String;
 }
 
@@ -101,6 +105,9 @@ impl FlowBasicConfigApi for TardisFunsInst {
     }
     fn flow_basic_kind_model_id(&self) -> String {
         FlowBasicInfoManager::get_config(|conf| conf.kind_model_id.clone())
+    }
+    fn flow_basic_kind_model_version_id(&self) -> String {
+        FlowBasicInfoManager::get_config(|conf| conf.kind_model_version_id.clone())
     }
     fn flow_basic_domain_flow_id(&self) -> String {
         FlowBasicInfoManager::get_config(|conf| conf.domain_flow_id.clone())
