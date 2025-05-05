@@ -51,14 +51,7 @@ use crate::{
 };
 
 use super::{
-    clients::{log_client::LogParamOp, search_client::{FlowSearchClient, FlowSearchTaskKind}},
-    flow_config_serv::FlowConfigServ,
-    flow_event_serv::FlowEventServ,
-    flow_external_serv::FlowExternalServ,
-    flow_log_serv::FlowLogServ,
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_transition_serv::FlowTransitionServ,
+    clients::{log_client::LogParamOp, search_client::{FlowSearchClient, FlowSearchTaskKind}}, flow_cache_serv::FlowCacheServ, flow_config_serv::FlowConfigServ, flow_event_serv::FlowEventServ, flow_external_serv::FlowExternalServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowInstServ;
@@ -683,6 +676,12 @@ impl FlowInstServ {
         let mut query = Query::select();
         Self::package_ext_query(&mut query, filter, funs, ctx).await?;
         Ok(funs.db().find_dtos::<FlowInstSummaryResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
+    }
+
+    pub async fn find_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstSummaryResult>> {
+        let mut query = Query::select();
+        Self::package_ext_query(&mut query, filter, funs, ctx).await?;
+        funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
     }
 
     pub async fn find_detail_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
@@ -1325,6 +1324,9 @@ impl FlowInstServ {
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowInstTransferResp> {
+        if FlowCacheServ::exist_sync_modify_inst(&flow_inst_detail.own_paths, &flow_inst_detail.tag, &flow_inst_detail.id, funs).await? {
+            return Err(funs.err().not_found("flow_inst", "transfer", "instance is locked", "500-flow-inst-tranfer-lock"));
+        }
         let mut modified_instance_transations_cp = modified_instance_transations.clone();
         if !modified_instance_transations_cp.check(flow_inst_detail.id.clone(), transfer_req.flow_transition_id.clone()) {
             return Self::gen_transfer_resp(flow_inst_detail, &flow_inst_detail.current_state_id, ctx, funs).await;
@@ -2148,7 +2150,7 @@ impl FlowInstServ {
     }
 
     pub async fn unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let insts = Self::find_detail_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
+        let insts = Self::find_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
         let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
@@ -2156,65 +2158,96 @@ impl FlowInstServ {
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(inst_ids));
 
         funs.db().execute(&update_statement).await?;
+
         join_all(
             insts
-                .iter()
-                .map(|inst| async {
-                    if let (Ok(original_flow_state), Ok(next_flow_state)) = (
-                        FlowStateServ::get_item(
-                            &inst.current_state_id,
-                            &FlowStateFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    own_paths: Some("".to_string()),
-                                    with_sub_own_paths: true,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await,
-                        FlowStateServ::get_item(
-                            state_id,
-                            &FlowStateFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    own_paths: Some("".to_string()),
-                                    with_sub_own_paths: true,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await,
-                    ) {
-                        FlowExternalServ::do_notify_changes(
-                            &inst.tag,
-                            &inst.id,
-                            &inst.rel_business_obj_id,
-                            next_flow_state.name.clone(),
-                            next_flow_state.sys_state,
-                            original_flow_state.name.clone(),
-                            original_flow_state.sys_state,
-                            "UPDATE".to_string(),
-                            false,
-                            Some(false),
-                            Some(FlowExternalCallbackOp::Auto),
-                            ctx,
-                            funs,
-                        )
-                        .await
-                    } else {
-                        Err(funs.err().not_found("flow_inst", "unsafe_modify_state", "flow state not found", "404-flow-state-not-found"))
-                    }
-                })
-                .collect_vec(),
-        )
-        .await
+            .iter()
+            .map(|inst| async {
+                FlowCacheServ::add_sync_modify_inst(&inst.own_paths, &inst.tag, &inst.id, funs).await
+            })
+            .collect_vec()
+        ).await
         .into_iter()
         .collect::<TardisResult<Vec<_>>>()?;
+
+        let state_id_cp = state_id.to_string();
+        let ctx_cp = ctx.clone();
+        tardis::tokio::spawn(async move {
+            let funs = flow_constants::get_tardis_inst();
+            let page_size = 2000;
+            let inst_len = insts.len();
+            let page_num = inst_len / page_size;
+            for page in 0..page_num {
+                let start = page* page_size;
+                let end = std::cmp::min(start + page_size, inst_len);
+                let page_insts = &insts[start..end];
+                join_all(
+                    page_insts
+                    .iter()
+                    .map(|inst| async {
+                        if let (Ok(original_flow_state), Ok(next_flow_state)) = (
+                            FlowStateServ::get_item(
+                                &inst.current_state_id,
+                                &FlowStateFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        own_paths: Some("".to_string()),
+                                        with_sub_own_paths: true,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                &funs,
+                                &ctx_cp,
+                            )
+                            .await,
+                            FlowStateServ::get_item(
+                                &state_id_cp,
+                                &FlowStateFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        own_paths: Some("".to_string()),
+                                        with_sub_own_paths: true,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                &funs,
+                                &ctx_cp,
+                            )
+                            .await,
+                        ) {
+                            match FlowExternalServ::do_notify_changes(
+                                &inst.tag,
+                                &inst.id,
+                                &inst.rel_business_obj_id,
+                                next_flow_state.name.clone(),
+                                next_flow_state.sys_state,
+                                original_flow_state.name.clone(),
+                                original_flow_state.sys_state,
+                                "UPDATE".to_string(),
+                                false,
+                                Some(false),
+                                Some(FlowExternalCallbackOp::Auto),
+                                &ctx_cp,
+                                &funs,
+                            )
+                            .await {
+                                Ok(_) => {}
+                                Err(e) => error!("Flow Instance {} modify state error:{:?}", inst.id, e),
+                            }
+                        } else {
+                            error!("Flow Instance {}: flow state not found", inst.id);
+                        }
+                        match FlowCacheServ::del_sync_modify_inst(&inst.own_paths, &inst.tag, &inst.id, &funs).await {
+                            Ok(_) => {}
+                            Err(e) => error!("Flow Instance {} del_sync_modify_inst error:{:?}", inst.id, e),
+                        }
+                        
+                    })
+                    .collect_vec()
+                ).await;
+            }
+        });
+
         Ok(())
     }
 
