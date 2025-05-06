@@ -591,6 +591,52 @@ impl IamResCacheServ {
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
+    pub async fn refresh_res_rel(item_code: &str, action: &str, add_or_modify_req: IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        let res_auth = IamCacheResAuth {
+            accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
+            roles: format!("#{}#", add_or_modify_req.roles.join("#")),
+            groups: format!("#{}#", add_or_modify_req.groups.join("#")),
+            apps: format!("#{}#", add_or_modify_req.apps.join("#")),
+            tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            aks: format!("#{}#", add_or_modify_req.aks.join("#")),
+            ..Default::default()
+        };
+        let mut res_dto = IamCacheResRelAddOrModifyDto {
+            auth: None,
+            need_crypto_req: false,
+            need_crypto_resp: false,
+            need_double_auth: false,
+            need_login: false,
+        };
+        if let Some(need_crypto_req) = add_or_modify_req.need_crypto_req {
+            res_dto.need_crypto_req = need_crypto_req
+        }
+        if let Some(need_crypto_resp) = add_or_modify_req.need_crypto_resp {
+            res_dto.need_crypto_resp = need_crypto_resp
+        }
+        if let Some(need_double_auth) = add_or_modify_req.need_double_auth {
+            res_dto.need_double_auth = need_double_auth
+        }
+        if let Some(need_login) = add_or_modify_req.need_login {
+            res_dto.need_login = need_login
+        }
+        if (res_auth.accounts == "#" || res_auth.accounts == "##")
+            && (res_auth.roles == "#" || res_auth.roles == "##")
+            && (res_auth.groups == "#" || res_auth.groups == "##")
+            && (res_auth.apps == "#" || res_auth.apps == "##")
+            && (res_auth.tenants == "#" || res_auth.tenants == "##")
+            && (res_auth.aks == "#" || res_auth.aks == "##")
+        {
+            res_dto.auth = None;
+        } else {
+            res_dto.auth = Some(res_auth);
+        }
+        log::trace!("refresh res rel: uri_mixed={}", uri_mixed);
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
+    }
+
     pub async fn delete_res_rel(item_code: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("delete res rel: uri_mixed={}", uri_mixed);
