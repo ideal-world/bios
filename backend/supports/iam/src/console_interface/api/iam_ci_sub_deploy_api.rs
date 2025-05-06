@@ -1,7 +1,9 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem::web::{Json, Query};
 use tardis::web::poem_openapi;
@@ -13,7 +15,10 @@ use tardis::web::{
     web_resp::{TardisApiResult, TardisResp},
 };
 
-use crate::basic::dto::iam_sub_deploy_dto::{IamSubDeployOneExportAggResp, IamSubDeployOneImportReq, IamSubDeployTowExportAggResp, IamSubDeployTowImportReq};
+use crate::basic::dto::iam_filer_dto::IamSubDeployFilterReq;
+use crate::basic::dto::iam_sub_deploy_dto::{
+    IamSubDeployDetailResp, IamSubDeployOneExportAggResp, IamSubDeployOneImportReq, IamSubDeployTowExportAggResp, IamSubDeployTowImportReq,
+};
 use crate::basic::serv::iam_sub_deploy_serv::IamSubDeployServ;
 use crate::iam_constants;
 
@@ -25,6 +30,29 @@ pub struct IamCiSubDeployApi;
 /// 接口控制台二级部署API
 #[poem_openapi::OpenApi(prefix_path = "/ci/sub_deploy", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCiSubDeployApi {
+    /// get sub deploy
+    #[oai(path = "/:id", method = "get")]
+    async fn get(&self, id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamSubDeployDetailResp> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let result = IamSubDeployServ::get_item(
+            &id.0,
+            &IamSubDeployFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// One Deploy Export Data
     ///
     /// 一级部署导出数据,提供给二级部署导入数据
