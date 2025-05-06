@@ -782,6 +782,10 @@ impl FlowInstServ {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             }
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
+        }
+        // 携带子审批流的审批流
+        if !flow_inst_detail.main 
+            && flow_inst_detail.artifacts.as_ref().is_some_and(|artifacts|artifacts.rel_child_objs.is_some()) {
             // 更新业务主流程的artifact的状态为审批拒绝
             if let Some(main_inst_id) = Self::find_ids(&FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
