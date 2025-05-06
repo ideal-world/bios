@@ -18,9 +18,7 @@ use crate::{
     },
     flow_constants,
     serv::{
-        flow_inst_serv::FlowInstServ,
-        flow_model_serv::FlowModelServ,
-        flow_rel_serv::{FlowRelKind, FlowRelServ},
+        clients::search_client::FlowSearchClient, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}
     },
 };
 
@@ -87,6 +85,7 @@ impl FlowCtModelApi {
             result.insert(rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -153,6 +152,7 @@ impl FlowCtModelApi {
             result.insert(from_model.rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -168,6 +168,7 @@ impl FlowCtModelApi {
             FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }

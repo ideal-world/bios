@@ -125,13 +125,12 @@ impl FlowLogClient {
                     if is_v2 {
                         let _ = Self::addv2_item(
                             tag,
+                            key.clone(),
                             content,
                             ext,
                             kind,
-                            key.clone(),
                             op_kind,
                             rel_key,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
                             &ctx_clone,
                             push_clone, // 使用克隆的 push 变量
@@ -140,13 +139,12 @@ impl FlowLogClient {
                     } else {
                         let _ = Self::add_item(
                             tag,
+                            key.clone(),
                             content,
                             ext,
                             kind,
-                            key.clone(),
                             op_kind,
                             rel_key,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
                             &ctx_clone,
                             push_clone, // 使用克隆的 push 变量
@@ -163,17 +161,17 @@ impl FlowLogClient {
 
     pub async fn add_item(
         tag: LogParamTag,
+        key: Option<String>,
         content: LogParamContent,
         ext: Option<Value>,
         kind: Option<String>,
-        key: Option<String>,
         op: Option<String>,
         rel_key: Option<String>,
-        ts: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
         _push: bool,
     ) -> TardisResult<()> {
+        let ts = tardis::chrono::Utc::now().to_rfc3339();
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
@@ -188,7 +186,7 @@ impl FlowLogClient {
             key,
             op,
             rel_key,
-            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            ts: Some(DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,
             data_source: None,
@@ -199,17 +197,17 @@ impl FlowLogClient {
 
     pub async fn addv2_item(
         tag: LogParamTag,
+        key: Option<String>,
         content: LogParamContent,
         ext: Option<Value>,
         kind: Option<String>,
-        key: Option<String>,
         op: Option<String>,
         rel_key: Option<String>,
-        ts: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
         push: bool,
     ) -> TardisResult<()> {
+        let ts = tardis::chrono::Utc::now().to_rfc3339();
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
@@ -228,7 +226,7 @@ impl FlowLogClient {
             op,
             rel_key,
             idempotent_id: None,
-            ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            ts: Some(DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
             owner,
             own_paths,
             msg: None,
