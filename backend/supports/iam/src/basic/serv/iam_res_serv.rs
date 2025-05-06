@@ -664,6 +664,44 @@ impl IamResServ {
         }
         Self::delete_item_with_all_rels(id, funs, ctx).await
     }
+
+    pub async fn refresh_res_cache(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let res = Self::find_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Api),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for item in res {
+            let item = item.decoding();
+            let rel_role_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
+            let rel_req = IamCacheResRelAddOrModifyReq {
+                st: None,
+                et: None,
+                accounts: vec![],
+                roles: rel_role_ids,
+                groups: vec![],
+                apps: vec![],
+                tenants: vec![],
+                aks: vec![],
+                need_crypto_req: Some(item.crypto_req),
+                need_crypto_resp: Some(item.crypto_resp),
+                need_double_auth: Some(item.double_auth),
+                need_login: Some(item.need_login),
+            };
+            IamResCacheServ::refresh_res_rel(&item.code, &item.method, rel_req, funs).await?;
+        }
+        Ok(())
+    }
 }
 
 impl IamMenuServ {

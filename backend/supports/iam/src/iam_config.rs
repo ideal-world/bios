@@ -74,6 +74,7 @@ pub struct IamConfig {
     pub crypto_conf: CryptoConf,
 
     pub gateway_openapi_path: String,
+    pub crypto_pri_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -176,6 +177,7 @@ impl Default for IamConfig {
             iam_base_url: "http://127.0.0.1:8080/iam".to_string(),
             spi: Default::default(),
             strict_security_mode: false,
+            crypto_pri_key: "".to_string(),
             crypto_conf: CryptoConf::default(),
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),

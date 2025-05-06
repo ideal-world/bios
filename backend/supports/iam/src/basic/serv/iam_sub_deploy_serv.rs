@@ -37,7 +37,7 @@ use crate::basic::dto::iam_sub_deploy_dto::{
 use crate::basic::dto::iam_sub_deploy_host_dto::{IamSubDeployHostAddReq, IamSubDeployHostDetailResp, IamSubDeployHostModifyReq};
 use crate::basic::dto::iam_sub_deploy_license_dto::{IamSubDeployLicenseAddReq, IamSubDeployLicenseDetailResp, IamSubDeployLicenseModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants::RBUM_ITEM_ID_SUB_ROLE_LEN;
 use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamCertKernelKind, IamConfigDataTypeKind, IamConfigKind, IamRelKind, IamRoleKind, IamSetKind, IamSubDeployHostKind};
 
@@ -1418,14 +1418,34 @@ impl IamSubDeployLicenseServ {
             ctx,
         )
         .await?;
-        // let private_key = TardisFuns::crypto.sm2.new_private_key_from_str(&license)?;
 
-        let license_data = serde_json::json!({
-            "license": license,
-            "start_time": iam_sub_deploy_license.start_time,
-            "end_time": iam_sub_deploy_license.end_time,
-            "allowed_hosts": white_host.iter().map(|host| host.host.clone()).collect::<Vec<String>>(),
+        let pri_key = TardisFuns::crypto.sm2.new_private_key_from_str(&funs.conf::<IamConfig>().crypto_pri_key)?;
+        // let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key)?;
+        let license_data = if white_host.is_empty() {
+            serde_json::json!({
+                "mid_info": license,
+                // "start_time": iam_sub_deploy_license.start_time,
+                "expire": iam_sub_deploy_license.end_time,
+            })
+        } else {
+            serde_json::json!({
+                "mid_info": license,
+                // "start_time": iam_sub_deploy_license.start_time,
+                "expire": iam_sub_deploy_license.end_time,
+                "ip_white_list": white_host.iter().map(|host| host.host.clone()).collect::<Vec<String>>(),
+            })
+        };
+
+        let info = serde_json::to_string(&license_data).unwrap_or_default();
+        let signature = pri_key.sign(&info).unwrap_or_default();
+        let certification = serde_json::json!({
+            "info": info,
+            "signature": signature,
         });
-        Ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&license_data)?))
+        let cert_base64 = TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&certification)?);
+        // 80 char per line
+        let cert_base64_chunks: Vec<_> = cert_base64.as_bytes().chunks(80).map(|chunk| std::str::from_utf8(chunk).unwrap()).collect();
+        let cert_base64 = cert_base64_chunks.join("\n");
+        Ok(format!("-----BEGIN BIOS-CERTIFICATION-----\n{cert_base64}\n-----END BIOS-CERTIFICATION-----"))
     }
 }
