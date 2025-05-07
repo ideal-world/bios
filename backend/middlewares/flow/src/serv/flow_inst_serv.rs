@@ -1341,10 +1341,11 @@ impl FlowInstServ {
         Self::auto_transfer(&flow_inst_detail.id, modified_instance_transations_cp.clone(), funs, ctx).await?;
 
         let artifacts = new_inst_detail.artifacts.clone().unwrap_or_default();
-        // 若存在关联的审批流动作
+        // 若当前处理的是状态流
         if artifacts.rel_transition_id.is_some() && flow_inst_detail.main {
             // 触发开始动作，则创建对应业务的审批流，同时创建子审批流
-            if flow_inst_detail.current_state_sys_kind == Some(FlowSysStateKind::Start) {
+            if flow_inst_detail.current_state_sys_kind == Some(FlowSysStateKind::Start) 
+                && new_inst_detail.current_state_sys_kind != Some(FlowSysStateKind::Finish) {
                 let approve_model_version = FlowModelVersionServ::get_item(
                     &artifacts.rel_model_version_id.clone().unwrap_or_default(),
                     &FlowModelVersionFilterReq {
@@ -1442,7 +1443,7 @@ impl FlowInstServ {
                 }
             } else {
                 // 不存在审批流则按照关联的工作项刷新对应的search
-                if let Some(rel_child_objs) = new_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs {
+                if let Some(rel_child_objs) = artifacts.rel_child_objs {
                     for rel_child_obj in rel_child_objs {
                         FlowSearchClient::refresh_business_obj_search(&rel_child_obj.obj_id, &rel_child_obj.tag, funs, ctx).await?;
                     }
