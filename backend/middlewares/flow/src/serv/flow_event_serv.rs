@@ -48,9 +48,6 @@ impl FlowEventServ {
         if !flow_inst_detail.main {
             return Ok(());
         }
-        if flow_inst_detail.id == *"qavuDnbGw8WlcegfjD-cI" {
-            warn!("flow_inst_detail: {:?}", flow_inst_detail);
-        }
         let flow_version = FlowModelVersionServ::get_item(
             &flow_inst_detail.rel_flow_version_id,
             &FlowModelVersionFilterReq {

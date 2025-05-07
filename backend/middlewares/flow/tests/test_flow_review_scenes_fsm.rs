@@ -381,12 +381,12 @@ pub async fn test(
             }],
         )
         .await;
-    let review_start_transition_id = state_and_next_transitions[0].next_flow_transitions[0].next_flow_transition_id.clone();
+    let review_end_transition_id = state_and_next_transitions[0].next_flow_transitions.iter().find(|tran| tran.next_flow_transition_name == *"结束评审").unwrap().next_flow_transition_id.clone();
     let resp: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", review_inst_id),
             &FlowInstTransferReq {
-                flow_transition_id: review_start_transition_id,
+                flow_transition_id: review_end_transition_id,
                 message: None,
                 vars: None,
             },
