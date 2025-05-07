@@ -30,7 +30,7 @@ impl Default for FlowConfig {
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             iam_url: "http://127.0.0.1:8080/iam".to_string(),
-            cache_key_sync_modify_state: "iam:cache:sync:ldap:status".to_string(),
+            cache_key_sync_modify_state: "flow:cache:sync:modify:status".to_string(),
         }
     }
 }

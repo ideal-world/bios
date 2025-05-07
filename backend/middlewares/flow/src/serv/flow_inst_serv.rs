@@ -22,7 +22,7 @@ use tardis::{
         JoinType, Order, Set,
     },
     futures_util::future::join_all,
-    log::error,
+    log::{error, warn},
     serde_json::Value,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -2177,6 +2177,7 @@ impl FlowInstServ {
         let state_id_cp = state_id.to_string();
         let ctx_cp = ctx.clone();
         tardis::tokio::spawn(async move {
+            warn!("start notify change status");
             let funs = flow_constants::get_tardis_inst();
             let page_size = 2000;
             let inst_len = insts.len();

@@ -914,6 +914,12 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                     ..Default::default()
                 },
                 FlowTransitionInitInfo {
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
+                    name: "结束评审".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
                     from_flow_state_id: bind_states[1].clone(),
                     to_flow_state_id: bind_states[2].clone(),
                     name: "结束评审".to_string(),
