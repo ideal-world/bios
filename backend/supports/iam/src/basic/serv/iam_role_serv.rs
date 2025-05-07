@@ -401,6 +401,10 @@ impl IamRoleServ {
         )
         .await?;
         for base_role in base_roles {
+            // 过滤掉内置的只读角色
+            if base_role.id == funs.iam_basic_role_app_read_id() {
+                continue;
+            }
             Self::add_role_agg(
                 &mut IamRoleAggAddReq {
                     role: IamRoleAddReq {
