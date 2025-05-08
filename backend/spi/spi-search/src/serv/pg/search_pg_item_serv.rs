@@ -1,10 +1,10 @@
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, fmt::format, vec};
 
 use itertools::Itertools;
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::{DateTime, Utc},
+    chrono::{DateTime, Duration, Utc},
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
@@ -1421,10 +1421,43 @@ pub async fn export_data(export_req: &SearchExportDataReq, funs: &TardisFunsInst
     let bs_inst = inst.inst::<TardisRelDBClient>();
     for tag in &export_req.tags {
         let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+        let mut params = vec![Value::from(format!("{}%", ctx.own_paths.clone()))];
+        let start_time = export_req.start_time.clone().unwrap_or_else(|| Utc::now() - Duration::days(365 * 2));
+        let end_time = export_req.end_time.clone().unwrap_or_else(|| Utc::now());
+        params.push(Value::from(start_time));
+        params.push(Value::from(end_time));
+        let kind_sql = if let Some(tag_kind) = &export_req.tag_kind {
+            if tag_kind.contains_key(tag) && !tag_kind[tag].is_empty() {
+                let kinds = tag_kind[tag].clone();
+                for kind in &kinds {
+                    params.push(Value::from(kind));
+                }
+                format!(
+                    "AND kind IN ({})",
+                    (0..kinds.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                )
+            } else {
+                "".to_string()
+            }
+        } else {
+            "".to_string()
+        };
         let result = conn
             .query_all(
-                &format!("SELECT key, kind, title, content, data_source, owner, own_paths, create_time, update_time, ext, visit_keys FROM {table_name} WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2)) and own_paths like $3 order by create_time desc"),
-                vec![Value::from(export_req.start_time.clone()), Value::from(export_req.end_time.clone()), Value::from(format!("{}%", ctx.own_paths.clone()))],
+                &format!(
+                    "
+                SELECT key, kind, title, content, data_source, owner, own_paths, create_time, update_time, ext, visit_keys 
+                FROM {table_name} 
+                WHERE 
+                    own_paths like $1
+                    and (
+                        (create_time > $2 and create_time < $3)
+                     or (update_time > $2 and update_time <= $3)
+                    )
+                    {kind_sql}
+                order by create_time desc",
+                ),
+                params,
             )
             .await?;
         let result = result

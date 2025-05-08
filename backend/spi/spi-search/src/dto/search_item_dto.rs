@@ -536,8 +536,9 @@ pub struct SearchQueryMetricsResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchExportDataReq {
     pub tags: Vec<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub tag_kind: Option<HashMap<String, Vec<String>>>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
