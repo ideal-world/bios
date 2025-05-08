@@ -284,7 +284,7 @@ impl IamSubDeployServ {
                     ..Default::default()
                 },
                 rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: false,
+                    rel_by_from: true,
                     tag: Some(IamRelKind::IamSubDeployAccount.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
                     rel_item_ids: Some(vec![sub_deploy.id.to_string()]),
