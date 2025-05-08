@@ -2368,6 +2368,7 @@ impl FlowModelServ {
         Ok(())
     }
 
+    // 初始化复制模型（脚本）
     pub async fn init_copy_model(req: &FlowModelInitCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rel_main_model = Self::find_one_detail_item(
             &FlowModelFilterReq {

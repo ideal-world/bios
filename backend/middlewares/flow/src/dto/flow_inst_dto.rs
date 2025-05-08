@@ -313,6 +313,8 @@ pub enum FlowApprovalResultKind {
     Overrule,
     /// 录入
     Form,
+    /// 评审
+    Review,
 }
 
 impl Display for FlowApprovalResultKind {
@@ -321,6 +323,7 @@ impl Display for FlowApprovalResultKind {
             FlowApprovalResultKind::Pass => write!(f, "PASS"),
             FlowApprovalResultKind::Overrule => write!(f, "OVERRULE"),
             FlowApprovalResultKind::Form => write!(f, "FORM"),
+            FlowApprovalResultKind::Review => write!(f, "REVIEW"),
         }
     }
 }
@@ -333,6 +336,7 @@ impl FromStr for FlowApprovalResultKind {
             "PASS" => Ok(Self::Pass),
             "OVERRULE" => Ok(Self::Overrule),
             "FORM" => Ok(Self::Form),
+            "REVIEW" => Ok(Self::Review),
             _ => Err(TardisError::bad_request(&format!("invalid FlowApprovalResultKind: {}", s), "400-operator-invalid-param")),
         }
     }

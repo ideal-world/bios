@@ -3183,6 +3183,16 @@ impl FlowInstServ {
         if req_business_obj_ids != rel_business_obj_ids {
             return Err(funs.err().not_found("flow_inst", "batch_operate", "some flow instances not found", "404-flow-inst-not-found"));
         }
+        Self::modify_inst_artifacts(
+            &approve_inst.id,
+            &FlowInstArtifactsModifyReq {
+                add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Review)),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let ctx_cp = ctx.clone();
         let batch_operate_req_cp = batch_operate_req.clone();
         tardis::tokio::spawn(async move {
