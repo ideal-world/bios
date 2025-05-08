@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -15,11 +17,12 @@ use crate::dto::flow_inst_dto::{
     FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::dto::flow_model_dto::FlowModelDetailResp;
-use crate::dto::flow_state_dto::FlowSysStateKind;
+use crate::dto::flow_state_dto::{FlowStateFilterReq, FlowSysStateKind};
 use crate::flow_constants;
 use crate::helper::loop_check_helper;
 use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_inst_serv::FlowInstServ;
+use crate::serv::flow_state_serv::FlowStateServ;
 #[derive(Clone)]
 pub struct FlowCcInstApi;
 
@@ -92,7 +95,48 @@ impl FlowCcInstApi {
     async fn abort(&self, flow_inst_id: Path<String>, abort_req: Json<FlowInstAbortReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
+
+        let flow_inst_detail = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        if !flow_inst_detail.main
+            && flow_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default().is_empty() {
+                FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
+        } else {
+            // 若为携带子审批流的数据，则直接触发状态流流转至结束
+            let next_trans = FlowInstServ::find_next_transitions(&flow_inst_detail, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0).await?;
+            for next_tran in next_trans {
+                let next_state = FlowStateServ::get_item(
+                    &next_tran.next_flow_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    &funs,
+                    &ctx.0,
+                )
+                .await?;
+                if next_state.sys_state == FlowSysStateKind::Finish {
+                    FlowInstServ::transfer(
+                        &flow_inst_detail,
+                        &FlowInstTransferReq {
+                            flow_transition_id: next_tran.next_flow_transition_id,
+                            message: None,
+                            vars: None,
+                        },
+                        false,
+                        FlowExternalCallbackOp::Auto,
+                        loop_check_helper::InstancesTransition::default(),
+                        &ctx.0,
+                        &funs,
+                    )
+                    .await?;
+                    break;
+                }
+            }
+        }
         funs.commit().await?;
         FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

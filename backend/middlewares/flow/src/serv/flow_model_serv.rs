@@ -2185,10 +2185,13 @@ impl FlowModelServ {
                 ctx,
             )
             .await?;
-            let start_state_id = bind_states.iter().find(|state| state.name == *"待开始").map(|state| state.id.clone()).unwrap_or_default();
-            let progress_state_id = bind_states.iter().find(|state| state.name == *"进行中").map(|state| state.id.clone()).unwrap_or_default();
-            let finish_state_id = bind_states.iter().find(|state| state.name == *"已结束").map(|state| state.id.clone()).unwrap_or_default();
-            let review_state_ids = vec![start_state_id.clone(), progress_state_id.clone(), finish_state_id.clone()];
+            let mut review_state_ids = vec![];
+            review_state_ids.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
+            review_state_ids.push(FlowStateServ::init_state("TC", "评审中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            review_state_ids.push(FlowStateServ::init_state("TC", "评审结束", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            let start_state_id = review_state_ids[0].clone();
+            let progress_state_id = review_state_ids[2].clone();
+            let finish_state_id = review_state_ids[0].clone();
             Self::init_model(
                 "REVIEW",
                 start_state_id.clone(),
@@ -2282,42 +2285,12 @@ impl FlowModelServ {
         .pop();
         if tc_init_model.is_none() {
             let mut bind_states = vec![];
-            // bind_states.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
-            // bind_states.push(FlowStateServ::init_state("TC", "评审通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            // bind_states.push(FlowStateServ::init_state("TC", "评审不通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            // let start_state = bind_states[0].clone();
-            // let pass_state = bind_states[1].clone();
-            // let unpass_state = bind_states[2].clone();
-            let start_state = FlowStateServ::find_one_item(&FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    scope_level: Some(RbumScopeLevelKind::Root),
-                    name: Some("待评审".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }, funs, ctx).await?.ok_or_else(|| funs.err().not_found("flow_model_serv", "init_tc_model", "start state not found", "404-flow-state-not-found"))?.id;
-            bind_states.push(start_state.clone());
-            let pass_state = FlowStateServ::find_one_item(&FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    scope_level: Some(RbumScopeLevelKind::Root),
-                    name: Some("评审通过".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }, funs, ctx).await?.ok_or_else(|| funs.err().not_found("flow_model_serv", "init_tc_model", "pass state not found", "404-flow-state-not-found"))?.id;
-            bind_states.push(pass_state.clone());
-            let unpass_state = FlowStateServ::find_one_item(&FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    scope_level: Some(RbumScopeLevelKind::Root),
-                    name: Some("评审不通过".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }, funs, ctx).await?.ok_or_else(|| funs.err().not_found("flow_model_serv", "init_tc_model", "unpass state not found", "404-flow-state-not-found"))?.id;
-            bind_states.push(unpass_state.clone());
+            bind_states.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
+            bind_states.push(FlowStateServ::init_state("TC", "评审通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            bind_states.push(FlowStateServ::init_state("TC", "评审不通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            let start_state = bind_states[0].clone();
+            let pass_state = bind_states[1].clone();
+            let unpass_state = bind_states[2].clone();
             let close_state = FlowStateServ::find_one_item(&FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
