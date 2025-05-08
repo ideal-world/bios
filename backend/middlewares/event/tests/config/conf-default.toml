@@ -6,7 +6,10 @@ cluster = "singleton"
 durable = true
 [csm.event.invoke]
 spi_app_id = "test"
-
+[csm.event.invoke.module_urls]
+event = "http://127.0.0.1:8080/event"
+[csm.event.invoke.module_configs.stats]
+in_event = true
 
 [fw.web_server]
 port = 8080
