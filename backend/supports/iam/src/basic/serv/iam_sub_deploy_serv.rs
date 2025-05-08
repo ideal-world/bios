@@ -22,9 +22,9 @@ use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelM
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
-use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountAggAddReq, IamAccountDetailResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp};
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppModifyReq};
-use crate::basic::dto::iam_config_dto::{IamConfigAddReq, IamConfigAggOrModifyReq, IamConfigDetailResp};
+use crate::basic::dto::iam_config_dto::{IamConfigAggOrModifyReq, IamConfigDetailResp};
 use crate::basic::dto::iam_filer_dto::{
     IamAccountFilterReq, IamAppFilterReq, IamConfigFilterReq, IamRoleFilterReq, IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq,
 };
@@ -70,11 +70,15 @@ impl RbumItemCrudOperation<iam_sub_deploy::ActiveModel, IamSubDeployAddReq, IamS
 
     async fn package_item_add(add_req: &IamSubDeployAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         let id = if let Some(extend_sub_deploy_id) = &add_req.extend_sub_deploy_id {
-            Some(TrimString::from(format!(
-                "{}:{}",
-                extend_sub_deploy_id.clone(),
-                TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
-            )))
+            if extend_sub_deploy_id.is_empty() {
+                None
+            } else {
+                Some(TrimString::from(format!(
+                    "{}:{}",
+                    extend_sub_deploy_id.clone(),
+                    TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
+                )))
+            }
         } else {
             None
         };
