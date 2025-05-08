@@ -77,24 +77,24 @@ impl IamCpAccountServ {
             });
         }
 
-        if ctx.own_paths != "" {
-            let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
-            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
-            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?;
-            let mut app_role_read = HashMap::new();
-            app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
-            for (app_id, app_name) in app_items {
-                if old_app_ids.contains(&app_id) {
-                    continue;
-                }
-                apps.push(IamCpAccountAppInfoResp {
-                    app_id: app_id.clone(),
-                    app_name: app_name.clone(),
-                    app_icon: "".to_string(),
-                    roles: app_role_read.clone(),
-                });
-            }
-        }
+        // if ctx.own_paths != "" {
+        //     let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
+        //     let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        //     let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?;
+        //     let mut app_role_read = HashMap::new();
+        //     app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+        //     for (app_id, app_name) in app_items {
+        //         if old_app_ids.contains(&app_id) {
+        //             continue;
+        //         }
+        //         apps.push(IamCpAccountAppInfoResp {
+        //             app_id: app_id.clone(),
+        //             app_name: app_name.clone(),
+        //             app_icon: "".to_string(),
+        //             roles: app_role_read.clone(),
+        //         });
+        //     }
+        // }
 
         let tenant_name = if ctx.own_paths.is_empty() {
             None
