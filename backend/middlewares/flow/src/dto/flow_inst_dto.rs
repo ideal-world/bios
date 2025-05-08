@@ -596,7 +596,7 @@ pub struct FlowInstFilterReq {
     pub with_sub: Option<bool>,
 }
 
-#[derive(sea_orm::FromQueryResult)]
+#[derive(sea_orm::FromQueryResult, Debug)]
 pub struct FlowInstSummaryResult {
     pub id: String,
     pub code: String,

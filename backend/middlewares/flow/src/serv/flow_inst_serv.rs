@@ -111,6 +111,13 @@ impl FlowInstServ {
             } else {
                 let inst_id = Self::start_secondary_flow(start_req, false, &rel_model, None, funs, ctx).await?;
                 FlowSearchClient::add_or_modify_instance_search(&inst_id, Box::new(false), funs, ctx).await?;
+                let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                    tag: start_req.tag.clone(),
+                    status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
+                    rel_state: Some(FlowInstStateKind::Form.to_string()),
+                    rel_transition_state_name: Some("".to_string()),
+                })?;
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 Ok(inst_id)
             }
         } else {
@@ -781,11 +788,6 @@ impl FlowInstServ {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             }
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
-        }
-        // 携带子审批流的审批流
-        if !flow_inst_detail.main 
-            && flow_inst_detail.artifacts.as_ref().is_some_and(|artifacts|artifacts.rel_child_objs.is_some()) {
-            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
             if let Some(main_inst_id) = Self::find_ids(&FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
@@ -797,6 +799,11 @@ impl FlowInstServ {
                     ..Default::default()
                 }, funs, ctx).await?;
             }
+        }
+        // 携带子审批流的审批流
+        if !flow_inst_detail.main 
+            && flow_inst_detail.artifacts.as_ref().is_some_and(|artifacts|artifacts.rel_child_objs.is_some()) {
+            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             // 主审批流中止时，流转对应业务的状态流为结束
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 if let Some(main_inst) = Self::find_detail_items(
@@ -1445,7 +1452,23 @@ impl FlowInstServ {
                 // 不存在审批流则按照关联的工作项刷新对应的search
                 if let Some(rel_child_objs) = new_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs {
                     for rel_child_obj in rel_child_objs {
-                        FlowSearchClient::refresh_business_obj_search(&rel_child_obj.obj_id, &rel_child_obj.tag, funs, ctx).await?;
+                        if let Some(main_inst) = Self::find_items(&FlowInstFilterReq {
+                            rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
+                            main: Some(true),
+                            ..Default::default()
+                        }, funs, ctx).await?.pop() {
+                            Self::modify_inst_artifacts(&main_inst.id, &FlowInstArtifactsModifyReq {
+                                state: Some(FlowInstStateKind::Overrule),
+                                ..Default::default()
+                            }, funs, ctx).await?;
+                            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                                tag: rel_child_obj.tag.clone(),
+                                status: Some(main_inst.current_state_name.clone()),
+                                rel_state: Some("".to_string()),
+                                rel_transition_state_name: Some("".to_string()),
+                            })?;
+                            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                        }
                     }
                 }
             }
@@ -1457,6 +1480,7 @@ impl FlowInstServ {
 
         if flow_inst_detail.main {
             let flow_inst_cp = flow_inst_detail.clone();
+            let new_inst_detail_cp = new_inst_detail.clone();
             let flow_transition_id = transfer_req.flow_transition_id.clone();
             let ctx_cp = ctx.clone();
             tardis::tokio::spawn(async move {
@@ -1465,7 +1489,7 @@ impl FlowInstServ {
                     Ok(_) => {}
                     Err(e) => error!("Flow Instance {} do_post_change error:{:?}", flow_inst_cp.id, e),
                 }
-                match FlowEventServ::do_front_change(&flow_inst_cp, modified_instance_transations_cp.clone(), &ctx_cp, &funs).await {
+                match FlowEventServ::do_front_change(&new_inst_detail_cp, modified_instance_transations_cp.clone(), &ctx_cp, &funs).await {
                     Ok(_) => {}
                     Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
                 }
@@ -2250,11 +2274,11 @@ impl FlowInstServ {
         let state_id_cp = state_id.to_string();
         let ctx_cp = ctx.clone();
         tardis::tokio::spawn(async move {
-            warn!("start notify change status");
+            warn!("start notify change status: {:?}", insts);
             let funs = flow_constants::get_tardis_inst();
             let page_size = 2000;
             let inst_len = insts.len();
-            let page_num = inst_len / page_size;
+            let page_num = (inst_len / page_size) + 1;
             for page in 0..page_num {
                 let start = page* page_size;
                 let end = std::cmp::min(start + page_size, inst_len);
@@ -2707,6 +2731,27 @@ impl FlowInstServ {
             )
         })?;
         let inst_detail = Self::get(&inst_id, funs, ctx).await?;
+        // 流程结束时，更新对应的主审批流的search状态
+        if let Some(main_inst) = Self::find_detail_items(
+            &FlowInstFilterReq {
+                rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .pop() {
+            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                tag: main_inst.tag.to_string(),
+                status: main_inst.current_state_name.clone(),
+                rel_state: Some("".to_string()),
+                rel_transition_state_name: Some("".to_string()),
+            })?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+        }
+        
         match FlowModelRelTransitionKind::from(rel_transition) {
             FlowModelRelTransitionKind::Edit => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);
@@ -3176,6 +3221,7 @@ impl FlowInstServ {
         )
         .await?
         .into_iter()
+        .filter(|inst| inst.artifacts.as_ref().is_some_and(|artifacts| artifacts.state == Some(FlowInstStateKind::Approval)))
         .map(|inst| inst.rel_business_obj_id)
         .sorted()
         .collect_vec();
@@ -3183,18 +3229,24 @@ impl FlowInstServ {
         if req_business_obj_ids != rel_business_obj_ids {
             return Err(funs.err().not_found("flow_inst", "batch_operate", "some flow instances not found", "404-flow-inst-not-found"));
         }
-        Self::modify_inst_artifacts(
-            &approve_inst.id,
-            &FlowInstArtifactsModifyReq {
-                add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Review)),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
+        let curr_operators = approve_inst.artifacts.clone().unwrap_or_default().curr_operators.unwrap_or_default();
+        if curr_operators.contains(&ctx.owner) {
+            Self::modify_inst_artifacts(
+                &approve_inst.id,
+                &FlowInstArtifactsModifyReq {
+                    curr_operators: Some(curr_operators.into_iter().filter(|account_id| *account_id != ctx.owner.clone()).collect_vec()),
+                    add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Review)),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+
         let ctx_cp = ctx.clone();
         let batch_operate_req_cp = batch_operate_req.clone();
+        let approve_inst_id = approve_inst.id.clone();
         tardis::tokio::spawn(async move {
             let funs_cp = flow_constants::get_tardis_inst(); 
             for (rel_business_obj_id, operate_req) in batch_operate_req_cp {
@@ -3202,7 +3254,7 @@ impl FlowInstServ {
                     &FlowInstFilterReq {
                         with_sub: Some(true),
                         rel_business_obj_ids: Some(vec![rel_business_obj_id.clone()]),
-                        rel_inst_ids: Some(vec![approve_inst.id.clone()]),
+                        rel_inst_ids: Some(vec![approve_inst_id.clone()]),
                         ..Default::default()
                     },
                     &funs_cp,
@@ -3227,7 +3279,7 @@ impl FlowInstServ {
                 }
             }
         });
-        
+        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &approve_inst.id, "", funs, ctx).await?;
         Ok(())
     }
 
