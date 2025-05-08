@@ -777,7 +777,6 @@ impl FlowInstServ {
         Self::abort_child_inst(flow_inst_id, funs, ctx).await?;
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
-            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             }
@@ -786,6 +785,7 @@ impl FlowInstServ {
         // 携带子审批流的审批流
         if !flow_inst_detail.main 
             && flow_inst_detail.artifacts.as_ref().is_some_and(|artifacts|artifacts.rel_child_objs.is_some()) {
+            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
             if let Some(main_inst_id) = Self::find_ids(&FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
@@ -1433,7 +1433,7 @@ impl FlowInstServ {
                         )
                         .await?;
                         if next_state.sys_state == FlowSysStateKind::Finish {
-                            Self::transfer_root_inst(&approve_inst.id, funs, ctx).await?;
+                            Self::transfer_root_inst(&approve_inst.id, true, funs, ctx).await?;
                         } else {
                             Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                         }
@@ -3449,7 +3449,7 @@ impl FlowInstServ {
                         )
                         .await?;
                         if let Some(rel_inst_id) = &inst.rel_inst_id {
-                            Self::transfer_root_inst(rel_inst_id, funs, ctx).await?;
+                            Self::transfer_root_inst(rel_inst_id, false, funs, ctx).await?;
                         } else {
                             Self::transfer(
                                 inst,
@@ -3536,7 +3536,7 @@ impl FlowInstServ {
                     .await?;
                     Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                     if let Some(rel_inst_id) = &inst.rel_inst_id {
-                        Self::transfer_root_inst(rel_inst_id, funs, ctx).await?;
+                        Self::transfer_root_inst(rel_inst_id, false, funs, ctx).await?;
                     }
                 }
             }
@@ -3545,7 +3545,7 @@ impl FlowInstServ {
         Ok(())
     }
 
-    async fn transfer_root_inst(root_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn transfer_root_inst(root_inst_id: &str, end: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let root_inst = Self::get(root_inst_id, funs, ctx).await?;
         let all_child_insts = Self::find_detail_items(
             &FlowInstFilterReq {
@@ -3568,12 +3568,26 @@ impl FlowInstServ {
                 .iter()
                 .filter(|child| child.artifacts.as_ref().is_some_and(|artifacts| artifacts.state.unwrap_or_default() == FlowInstStateKind::Pass))
                 .collect_vec();
-            // 若所有子审批流都拒绝则直接中断
-            if pass_child_inst.is_empty() {
-                Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
-                return Ok(());
-            }
             if let Some(next_transition) = Self::find_next_transitions(&root_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
+                let next_state = FlowStateServ::get_item(
+                    &next_transition.next_flow_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                // 若所有子审批流都拒绝且当前流转不是结束时，直接中断
+                if pass_child_inst.is_empty() && next_state.sys_state != FlowSysStateKind::Finish {
+                    Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+                    return Ok(());
+                }
                 for child_inst in pass_child_inst {
                     Self::transfer(
                         child_inst,
@@ -3606,7 +3620,9 @@ impl FlowInstServ {
                 .await?;
             }
         } else {
-            Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+            if end {
+                Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+            }
         }
         Ok(())
     }
