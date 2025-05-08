@@ -1335,9 +1335,9 @@ impl FlowInstServ {
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowInstTransferResp> {
-        // if FlowCacheServ::exist_sync_modify_inst(&flow_inst_detail.own_paths, &flow_inst_detail.tag, &flow_inst_detail.id, funs).await? {
-        //     return Err(funs.err().not_found("flow_inst", "transfer", "instance is locked", "500-flow-inst-tranfer-lock"));
-        // }
+        if flow_inst_detail.main && FlowCacheServ::exist_sync_modify_inst(&flow_inst_detail.own_paths, &flow_inst_detail.tag, &flow_inst_detail.id, funs).await? {
+            return Err(funs.err().not_found("flow_inst", "transfer", "instance is locked", "500-flow-inst-tranfer-lock"));
+        }
         let mut modified_instance_transations_cp = modified_instance_transations.clone();
         if !modified_instance_transations_cp.check(flow_inst_detail.id.clone(), transfer_req.flow_transition_id.clone()) {
             return Self::gen_transfer_resp(flow_inst_detail, &flow_inst_detail.current_state_id, ctx, funs).await;
@@ -1447,8 +1447,7 @@ impl FlowInstServ {
                     } else {
                         Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                     }
-                }
-            } else {
+                } else {
                 // 不存在审批流则按照关联的工作项刷新对应的search
                 if let Some(rel_child_objs) = new_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs {
                     for rel_child_obj in rel_child_objs {
@@ -1469,6 +1468,14 @@ impl FlowInstServ {
                             })?;
                             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
                         }
+                    }
+                }
+                }
+            } else {
+                // 不存在审批流则按照关联的工作项刷新对应的search
+                if let Some(rel_child_objs) = new_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs {
+                    for rel_child_obj in rel_child_objs {
+                        FlowSearchClient::refresh_business_obj_search(&rel_child_obj.obj_id, &rel_child_obj.tag, funs, ctx).await?;
                     }
                 }
             }
