@@ -696,6 +696,7 @@ impl Display for FlowInstStateKind {
 #[derive(Debug)]
 pub struct FlowInstDetailInSearch {
     pub id: String,
+    pub code: String,
     pub title: Option<String>,
     pub name: Option<String>,
     pub content: Option<String>,
