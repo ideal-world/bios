@@ -195,7 +195,7 @@ pub struct IamAccountSummaryAggResp {
     pub orgs: Vec<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountDetailAggResp {
     pub id: String,
     pub name: String,
@@ -227,7 +227,7 @@ pub struct IamAccountDetailAggResp {
     pub apps: Vec<IamAccountAppInfoResp>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountAttrResp {
     pub name: String,
     pub label: String,
@@ -252,7 +252,7 @@ pub struct IamAccountInfoWithUserPwdAkResp {
     pub status: String,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,
