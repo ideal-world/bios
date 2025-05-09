@@ -618,9 +618,6 @@ impl FlowLogServ {
     }
 
     async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
-            return Ok(());
-        }
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let subject_text = rel_transition.log_text();

@@ -784,6 +784,7 @@ impl FlowInstServ {
         Self::abort_child_inst(flow_inst_id, funs, ctx).await?;
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
+            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             }
@@ -799,11 +800,30 @@ impl FlowInstServ {
                     ..Default::default()
                 }, funs, ctx).await?;
             }
+            // 流程结束时，更新对应的主审批流的search状态
+            if let Some(main_inst) = Self::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
+                    main: Some(true),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .pop() {
+                let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                    tag: main_inst.tag.to_string(),
+                    status: main_inst.current_state_name.clone(),
+                    rel_state: Some("".to_string()),
+                    rel_transition_state_name: Some("".to_string()),
+                })?;
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+            }
         }
         // 携带子审批流的审批流
         if !flow_inst_detail.main 
             && flow_inst_detail.artifacts.as_ref().is_some_and(|artifacts|artifacts.rel_child_objs.is_some()) {
-            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             // 主审批流中止时，流转对应业务的状态流为结束
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 if let Some(main_inst) = Self::find_detail_items(
@@ -2675,7 +2695,7 @@ impl FlowInstServ {
                         ctx,
                     )
                     .await?;
-                    FlowLogServ::add_finish_log_async_task(&flow_inst_detail, None, funs, ctx).await?;
+                    FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
                 }
             }
             _ => {}

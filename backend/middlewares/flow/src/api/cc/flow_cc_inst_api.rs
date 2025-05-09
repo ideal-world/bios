@@ -45,12 +45,30 @@ impl FlowCcInstApi {
 
     /// Start Instance(Return Instance ID)
     ///
-    /// 启动实例(返回实例ID)
+    /// 尝试启动实例(返回实例ID)
     #[oai(path = "/try", method = "post")]
     async fn try_start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowInstServ::try_start(&add_req.0, None, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Start Instance(Return Instance ID)
+    ///
+    /// 批量尝试启动实例(返回实例ID)
+    #[oai(path = "/batch/try", method = "post")]
+    async fn batch_try_start(&self, add_req: Json<Vec<FlowInstStartReq>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, String>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let mut result = HashMap::new();
+        for req in add_req.0 {
+            let inst_id = FlowInstServ::try_start(&req, None, &funs, &ctx.0).await?;
+            result.insert(req.rel_business_obj_id.clone(), inst_id);
+        }
         funs.commit().await?;
         FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
