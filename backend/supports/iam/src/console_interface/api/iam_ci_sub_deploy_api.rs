@@ -89,8 +89,8 @@ impl IamCiSubDeployApi {
     #[oai(path = "/sub/export", method = "get")]
     async fn sub_deploy_export(
         &self,
-        start_time: Query<DateTime<Utc>>,
-        end_time: Query<DateTime<Utc>>,
+        start_time: Query<Option<DateTime<Utc>>>,
+        end_time: Query<Option<DateTime<Utc>>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<IamSubDeployTowExportAggResp> {
