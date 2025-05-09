@@ -12,7 +12,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult}, log::{debug, warn}, tokio, web::{poem_openapi::types::ToJSON, web_resp::TardisPage}, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, error::TardisError, field::TrimString, result::TardisResult}, tokio, web::{poem_openapi::types::ToJSON, web_resp::TardisPage}, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -31,7 +31,9 @@ const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
 pub enum FlowSearchTaskKind {
     /// 修改业务
     ModifyBusinessObj,
-    /// 添加或修改工作流实例
+    /// 添加工作流实例
+    AddInstance,
+    /// 修改工作流实例
     ModifyInstance,
     /// 添加或修改工作流模型
     ModifyModel,
@@ -43,6 +45,7 @@ impl Display for FlowSearchTaskKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FlowSearchTaskKind::ModifyBusinessObj => write!(f, "ModifyBusinessObj"),
+            FlowSearchTaskKind::AddInstance => write!(f, "AddInstance"),
             FlowSearchTaskKind::ModifyInstance => write!(f, "ModifyInstance"),
             FlowSearchTaskKind::ModifyModel => write!(f, "ModifyModel"),
             FlowSearchTaskKind::DeleteModel => write!(f, "DeleteModel"),
@@ -56,6 +59,7 @@ impl FromStr for FlowSearchTaskKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "ModifyBusinessObj" => Ok(Self::ModifyBusinessObj),
+            "AddInstance" => Ok(Self::AddInstance),
             "ModifyInstance" => Ok(Self::ModifyInstance),
             "ModifyModel" => Ok(Self::ModifyModel),
             "DeleteModel" => Ok(Self::DeleteModel),
@@ -72,6 +76,7 @@ impl FlowSearchClient {
         let task_key = format!("{}_{}_{}", flow_constants::DOMAIN_CODE, kind, key);
         let val = match *kind {
             FlowSearchTaskKind::ModifyInstance => { val.to_string() },
+            FlowSearchTaskKind::AddInstance => { val.to_string() },
             FlowSearchTaskKind::ModifyModel => { val.to_string() },
             FlowSearchTaskKind::DeleteModel => { val.to_string() },
             FlowSearchTaskKind::ModifyBusinessObj => {
@@ -91,7 +96,6 @@ impl FlowSearchClient {
             },
         };
         ctx.remove_ext(&task_key).await?;
-        warn!("task_key:{}, val: {}", task_key, val);
         ctx.add_ext(&task_key, &val).await?;
         Ok(())
     }
@@ -104,6 +108,9 @@ impl FlowSearchClient {
                 if prefix == flow_constants::DOMAIN_CODE {
                     let (kind, id) = key.split_once('_').unwrap_or_default();
                     match FlowSearchTaskKind::from_str(kind)? {
+                        FlowSearchTaskKind::AddInstance => {
+                            Self::async_add_or_modify_instance_search(id, Box::new(false), &funs, ctx).await?;
+                        },
                         FlowSearchTaskKind::ModifyInstance => {
                             Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
                         },
@@ -179,11 +186,15 @@ impl FlowSearchClient {
         let req_cp = req.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
+                let rel_business_obj_id_cp2 = rel_business_obj_id_cp.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     let _ = Self::modify_business_obj_search_ext(&rel_business_obj_id_cp, &req_cp, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} async_modify_business_obj_search_ext error:{:?}", rel_business_obj_id_cp2, e),
+                }
                 Ok(())
             })
         }))
@@ -201,12 +212,12 @@ impl FlowSearchClient {
             }
             if let Some(rel_state) = &req.rel_state {
                 if let Some(ext_mut) = ext.as_object_mut() {
-                    ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap());
+                    ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap_or_default());
                 }
             }
             if let Some(rel_transition_state_name) = &req.rel_transition_state_name {
                 if let Some(ext_mut) = ext.as_object_mut() {
-                    ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap());
+                    ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap_or_default());
                 }
             }
             SpiSearchClient::modify_item_and_name(
@@ -246,7 +257,6 @@ impl FlowSearchClient {
             model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ignore_scope: true,
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
@@ -257,13 +267,17 @@ impl FlowSearchClient {
             &mock_ctx,
         )
         .await?;
+        let model_id_cp = model_id.to_string();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     let _ = Self::add_or_modify_model_search(&model_resp, is_modify, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow model {} async_add_or_modify_model_search error:{:?}", model_id_cp, e),
+                }
                 Ok(())
             })
         }))
@@ -275,11 +289,15 @@ impl FlowSearchClient {
         let model_id_cp = model_id.to_string();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
+                let model_id_cp2 = model_id_cp.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     let _ = Self::delete_model_search(&model_id_cp, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow model {} async_delete_model_search error:{:?}", model_id_cp2, e),
+                }
                 Ok(())
             })
         }))
@@ -373,11 +391,15 @@ impl FlowSearchClient {
         let inst_id_cp = inst_id.to_string();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
+                let inst_id_cp2 = inst_id_cp.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
                     let _ = Self::add_or_modify_instance_search(&inst_id_cp, is_modify, &funs, &ctx_clone).await;
                 });
-                task_handle.await.unwrap();
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_or_modify_instance_search error:{:?}", inst_id_cp2, e),
+                }
                 Ok(())
             })
         }))
@@ -487,7 +509,6 @@ impl FlowSearchClient {
 
     pub async fn search_guard_accounts(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         if guard_conf.guard_by_spec_account_ids.is_empty() && guard_conf.guard_by_spec_org_ids.is_empty() && guard_conf.guard_by_spec_role_ids.is_empty() {
-            debug!("flow search_guard_account_num result : 0");
             return Ok(vec![]);
         }
         let mut query = SearchItemQueryReq::default();
@@ -556,7 +577,6 @@ impl FlowSearchClient {
         .await?
         .map(|result| result.records.into_iter().map(|record| record.key).collect_vec())
         .unwrap_or_default();
-        debug!("flow search_guard_account_num result : {:?}", result);
         Ok(result)
     }
 

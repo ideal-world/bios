@@ -585,10 +585,12 @@ impl FlowLogServ {
 
     pub async fn add_finish_log_async_task(
         flow_inst_detail: &FlowInstDetailResp,
+        msg: Option<String>,
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let ctx_cp = ctx.clone();
+        let msg_cp = msg.clone();
         let curr_inst_cp = flow_inst_detail.clone();
         let curr_inst_id = flow_inst_detail.id.clone();
         let funs_cp = flow_constants::get_tardis_inst();
@@ -598,6 +600,7 @@ impl FlowLogServ {
                     let task_handle = tardis::tokio::spawn(async move {
                         let _ = Self::add_finish_log(
                             &curr_inst_cp,
+                            msg_cp,
                             &funs_cp,
                             &ctx_cp,
                         ).await;
@@ -614,7 +617,7 @@ impl FlowLogServ {
         Ok(())
     }
 
-    async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
             return Ok(());
         }
@@ -632,6 +635,7 @@ impl FlowLogServ {
             name: Some(flow_inst_detail.code.clone()),
             sub_id: Some(flow_inst_detail.id.clone()),
             sub_kind: Some(FlowLogClient::get_junp_kind(&flow_inst_detail.tag)),
+            flow_message: msg,
             old_content: None,
             new_content: None,
             ..Default::default()

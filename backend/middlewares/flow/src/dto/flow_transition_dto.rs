@@ -641,7 +641,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             let left_values = TardisFuns::json.str_to_obj::<Vec<Value>>(&left_value).unwrap_or_default();
             if left_values.len() == 1 {
                 left_value = left_values.first().cloned().unwrap_or_default().as_str().unwrap_or("").to_string();
-            } else {
+            } else if left_values.len() > 1 {
                 return false;
             }
         }

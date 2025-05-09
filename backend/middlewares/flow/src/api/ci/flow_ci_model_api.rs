@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq,
+    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelSyncModifiedFieldReq
 };
 use crate::flow_constants;
 use crate::serv::clients::search_client::FlowSearchClient;
@@ -308,6 +308,32 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::init_tc_model(&funs, &ctx.0).await?;
+        funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// 同步模型到search（脚本）
+    #[oai(path = "/sync_model_template", method = "post")]
+    async fn sync_model_template(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::sync_model_template(&funs, &ctx.0).await?;
+        funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// 初始化复制模型（脚本）
+    #[oai(path = "/init_copy_model", method = "post")]
+    async fn init_copy_model(&self, req: Json<FlowModelInitCopyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::init_copy_model(&req, &funs, &ctx.0).await?;
         funs.commit().await?;
         FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

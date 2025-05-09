@@ -22,7 +22,7 @@ use tardis::{
         JoinType, Order, Set,
     },
     futures_util::future::join_all,
-    log::error,
+    log::{error, warn},
     serde_json::Value,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -51,14 +51,7 @@ use crate::{
 };
 
 use super::{
-    clients::{log_client::LogParamOp, search_client::{FlowSearchClient, FlowSearchTaskKind}},
-    flow_config_serv::FlowConfigServ,
-    flow_event_serv::FlowEventServ,
-    flow_external_serv::FlowExternalServ,
-    flow_log_serv::FlowLogServ,
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_transition_serv::FlowTransitionServ,
+    clients::{log_client::LogParamOp, search_client::{FlowSearchClient, FlowSearchTaskKind}}, flow_cache_serv::FlowCacheServ, flow_config_serv::FlowConfigServ, flow_event_serv::FlowEventServ, flow_external_serv::FlowExternalServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowInstServ;
@@ -118,6 +111,13 @@ impl FlowInstServ {
             } else {
                 let inst_id = Self::start_secondary_flow(start_req, false, &rel_model, None, funs, ctx).await?;
                 FlowSearchClient::add_or_modify_instance_search(&inst_id, Box::new(false), funs, ctx).await?;
+                let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                    tag: start_req.tag.clone(),
+                    status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
+                    rel_state: Some(FlowInstStateKind::Form.to_string()),
+                    rel_transition_state_name: Some("".to_string()),
+                })?;
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 Ok(inst_id)
             }
         } else {
@@ -685,6 +685,12 @@ impl FlowInstServ {
         Ok(funs.db().find_dtos::<FlowInstSummaryResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
     }
 
+    pub async fn find_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstSummaryResult>> {
+        let mut query = Query::select();
+        Self::package_ext_query(&mut query, filter, funs, ctx).await?;
+        funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
+    }
+
     pub async fn find_detail_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
         let flow_inst_ids = Self::find_ids(filter, funs, ctx).await?;
         if !flow_inst_ids.is_empty() {
@@ -778,12 +784,10 @@ impl FlowInstServ {
         Self::abort_child_inst(flow_inst_id, funs, ctx).await?;
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
-            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
             }
-            
-            FlowSearchClient::add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
             if let Some(main_inst_id) = Self::find_ids(&FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
@@ -795,6 +799,11 @@ impl FlowInstServ {
                     ..Default::default()
                 }, funs, ctx).await?;
             }
+        }
+        // 携带子审批流的审批流
+        if !flow_inst_detail.main 
+            && flow_inst_detail.artifacts.as_ref().is_some_and(|artifacts|artifacts.rel_child_objs.is_some()) {
+            FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             // 主审批流中止时，流转对应业务的状态流为结束
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 if let Some(main_inst) = Self::find_detail_items(
@@ -1326,6 +1335,9 @@ impl FlowInstServ {
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowInstTransferResp> {
+        if flow_inst_detail.main && FlowCacheServ::exist_sync_modify_inst(&flow_inst_detail.own_paths, &flow_inst_detail.tag, &flow_inst_detail.id, funs).await? {
+            return Err(funs.err().not_found("flow_inst", "transfer", "instance is locked", "500-flow-inst-tranfer-lock"));
+        }
         let mut modified_instance_transations_cp = modified_instance_transations.clone();
         if !modified_instance_transations_cp.check(flow_inst_detail.id.clone(), transfer_req.flow_transition_id.clone()) {
             return Self::gen_transfer_resp(flow_inst_detail, &flow_inst_detail.current_state_id, ctx, funs).await;
@@ -1336,10 +1348,11 @@ impl FlowInstServ {
         Self::auto_transfer(&flow_inst_detail.id, modified_instance_transations_cp.clone(), funs, ctx).await?;
 
         let artifacts = new_inst_detail.artifacts.clone().unwrap_or_default();
-        // 若存在关联的审批流动作
+        // 若当前处理的是状态流
         if artifacts.rel_transition_id.is_some() && flow_inst_detail.main {
             // 触发开始动作，则创建对应业务的审批流，同时创建子审批流
-            if flow_inst_detail.current_state_sys_kind == Some(FlowSysStateKind::Start) {
+            if flow_inst_detail.current_state_sys_kind == Some(FlowSysStateKind::Start) 
+                && new_inst_detail.current_state_sys_kind != Some(FlowSysStateKind::Finish) {
                 let approve_model_version = FlowModelVersionServ::get_item(
                     &artifacts.rel_model_version_id.clone().unwrap_or_default(),
                     &FlowModelVersionFilterReq {
@@ -1427,13 +1440,36 @@ impl FlowInstServ {
                         )
                         .await?;
                         if next_state.sys_state == FlowSysStateKind::Finish {
-                            Self::transfer_root_inst(&approve_inst.id, funs, ctx).await?;
+                            Self::transfer_root_inst(&approve_inst.id, true, funs, ctx).await?;
                         } else {
                             Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                         }
                     } else {
                         Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                     }
+                } else {
+                // 不存在审批流则按照关联的工作项刷新对应的search
+                if let Some(rel_child_objs) = new_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs {
+                    for rel_child_obj in rel_child_objs {
+                        if let Some(main_inst) = Self::find_items(&FlowInstFilterReq {
+                            rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
+                            main: Some(true),
+                            ..Default::default()
+                        }, funs, ctx).await?.pop() {
+                            Self::modify_inst_artifacts(&main_inst.id, &FlowInstArtifactsModifyReq {
+                                state: Some(FlowInstStateKind::Overrule),
+                                ..Default::default()
+                            }, funs, ctx).await?;
+                            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                                tag: rel_child_obj.tag.clone(),
+                                status: Some(main_inst.current_state_name.clone()),
+                                rel_state: Some("".to_string()),
+                                rel_transition_state_name: Some("".to_string()),
+                            })?;
+                            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                        }
+                    }
+                }
                 }
             } else {
                 // 不存在审批流则按照关联的工作项刷新对应的search
@@ -1446,11 +1482,12 @@ impl FlowInstServ {
         }
 
         if !flow_inst_detail.main && flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-            FlowSearchClient::add_or_modify_instance_search(&flow_inst_detail.id, Box::new(true), funs, ctx).await?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
         }
 
         if flow_inst_detail.main {
             let flow_inst_cp = flow_inst_detail.clone();
+            let new_inst_detail_cp = new_inst_detail.clone();
             let flow_transition_id = transfer_req.flow_transition_id.clone();
             let ctx_cp = ctx.clone();
             tardis::tokio::spawn(async move {
@@ -1459,7 +1496,7 @@ impl FlowInstServ {
                     Ok(_) => {}
                     Err(e) => error!("Flow Instance {} do_post_change error:{:?}", flow_inst_cp.id, e),
                 }
-                match FlowEventServ::do_front_change(&flow_inst_cp, modified_instance_transations_cp.clone(), &ctx_cp, &funs).await {
+                match FlowEventServ::do_front_change(&new_inst_detail_cp, modified_instance_transations_cp.clone(), &ctx_cp, &funs).await {
                     Ok(_) => {}
                     Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
                 }
@@ -2083,7 +2120,7 @@ impl FlowInstServ {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             if let Some(update_states) = &update_states {
                 for (old_state, new_state) in update_states {
-                    Self::unsafe_modify_state(
+                    Self::async_unsafe_modify_state(
                         &FlowInstFilterReq {
                             main: Some(true),
                             tags: Some(vec![new_model.tag.clone()]),
@@ -2097,7 +2134,7 @@ impl FlowInstServ {
                     .await?;
                 }
             } else {
-                Self::unsafe_modify_state(
+                Self::async_unsafe_modify_state(
                     &FlowInstFilterReq {
                         main: Some(true),
                         tags: Some(vec![new_model.tag.clone()]),
@@ -2149,7 +2186,7 @@ impl FlowInstServ {
     }
 
     pub async fn unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let insts = Self::find_detail_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
+        let insts = Self::find_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
         let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
@@ -2157,65 +2194,169 @@ impl FlowInstServ {
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(inst_ids));
 
         funs.db().execute(&update_statement).await?;
+
         join_all(
             insts
-                .iter()
-                .map(|inst| async {
-                    if let (Ok(original_flow_state), Ok(next_flow_state)) = (
-                        FlowStateServ::get_item(
-                            &inst.current_state_id,
-                            &FlowStateFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    own_paths: Some("".to_string()),
-                                    with_sub_own_paths: true,
-                                    ..Default::default()
-                                },
+            .iter()
+            .map(|inst| async {
+                if let (Ok(original_flow_state), Ok(next_flow_state)) = (
+                    FlowStateServ::get_item(
+                        &inst.current_state_id,
+                        &FlowStateFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
                                 ..Default::default()
                             },
-                            funs,
-                            ctx,
-                        )
-                        .await,
-                        FlowStateServ::get_item(
-                            state_id,
-                            &FlowStateFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    own_paths: Some("".to_string()),
-                                    with_sub_own_paths: true,
-                                    ..Default::default()
-                                },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await,
+                    FlowStateServ::get_item(
+                        state_id,
+                        &FlowStateFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
                                 ..Default::default()
                             },
-                            funs,
-                            ctx,
-                        )
-                        .await,
-                    ) {
-                        FlowExternalServ::do_notify_changes(
-                            &inst.tag,
-                            &inst.id,
-                            &inst.rel_business_obj_id,
-                            next_flow_state.name.clone(),
-                            next_flow_state.sys_state,
-                            original_flow_state.name.clone(),
-                            original_flow_state.sys_state,
-                            "UPDATE".to_string(),
-                            false,
-                            Some(false),
-                            Some(FlowExternalCallbackOp::Auto),
-                            ctx,
-                            funs,
-                        )
-                        .await
-                    } else {
-                        Err(funs.err().not_found("flow_inst", "unsafe_modify_state", "flow state not found", "404-flow-state-not-found"))
-                    }
-                })
-                .collect_vec(),
-        )
-        .await
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await,
+                ) {
+                    FlowExternalServ::do_notify_changes(
+                        &inst.tag,
+                        &inst.id,
+                        &inst.rel_business_obj_id,
+                        next_flow_state.name.clone(),
+                        next_flow_state.sys_state,
+                        original_flow_state.name.clone(),
+                        original_flow_state.sys_state,
+                        "UPDATE".to_string(),
+                        false,
+                        Some(false),
+                        Some(FlowExternalCallbackOp::Auto),
+                        ctx,
+                        funs,
+                    )
+                    .await
+                } else {
+                    Err(funs.err().not_found("flow_inst", "unsafe_modify_state", "flow state is not found", "404-flow-state-not-found"))
+                }
+            })
+            .collect_vec()
+        ).await
         .into_iter()
         .collect::<TardisResult<Vec<_>>>()?;
+
+        Ok(())
+    }
+
+    pub async fn async_unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let insts = Self::find_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
+        let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
+        let mut update_statement = Query::update();
+        update_statement.table(flow_inst::Entity);
+        update_statement.value(flow_inst::Column::CurrentStateId, state_id);
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(inst_ids));
+
+        funs.db().execute(&update_statement).await?;
+
+        join_all(
+            insts
+            .iter()
+            .map(|inst| async {
+                FlowCacheServ::add_sync_modify_inst(&inst.own_paths, &inst.tag, &inst.id, funs).await
+            })
+            .collect_vec()
+        ).await
+        .into_iter()
+        .collect::<TardisResult<Vec<_>>>()?;
+
+        let state_id_cp = state_id.to_string();
+        let ctx_cp = ctx.clone();
+        tardis::tokio::spawn(async move {
+            warn!("start notify change status: {:?}", insts);
+            let funs = flow_constants::get_tardis_inst();
+            let page_size = 2000;
+            let inst_len = insts.len();
+            let page_num = (inst_len / page_size) + 1;
+            for page in 0..page_num {
+                let start = page* page_size;
+                let end = std::cmp::min(start + page_size, inst_len);
+                let page_insts = &insts[start..end];
+                join_all(
+                    page_insts
+                    .iter()
+                    .map(|inst| async {
+                        if let (Ok(original_flow_state), Ok(next_flow_state)) = (
+                            FlowStateServ::get_item(
+                                &inst.current_state_id,
+                                &FlowStateFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        own_paths: Some("".to_string()),
+                                        with_sub_own_paths: true,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                &funs,
+                                &ctx_cp,
+                            )
+                            .await,
+                            FlowStateServ::get_item(
+                                &state_id_cp,
+                                &FlowStateFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        own_paths: Some("".to_string()),
+                                        with_sub_own_paths: true,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                &funs,
+                                &ctx_cp,
+                            )
+                            .await,
+                        ) {
+                            match FlowExternalServ::do_notify_changes(
+                                &inst.tag,
+                                &inst.id,
+                                &inst.rel_business_obj_id,
+                                next_flow_state.name.clone(),
+                                next_flow_state.sys_state,
+                                original_flow_state.name.clone(),
+                                original_flow_state.sys_state,
+                                "UPDATE".to_string(),
+                                false,
+                                Some(false),
+                                Some(FlowExternalCallbackOp::Auto),
+                                &ctx_cp,
+                                &funs,
+                            )
+                            .await {
+                                Ok(_) => {}
+                                Err(e) => error!("Flow Instance {} modify state error:{:?}", inst.id, e),
+                            }
+                        } else {
+                            error!("Flow Instance {}: flow state not found", inst.id);
+                        }
+                        match FlowCacheServ::del_sync_modify_inst(&inst.own_paths, &inst.tag, &inst.id, &funs).await {
+                            Ok(_) => {}
+                            Err(e) => error!("Flow Instance {} del_sync_modify_inst error:{:?}", inst.id, e),
+                        }
+                        
+                    })
+                    .collect_vec()
+                ).await;
+            }
+        });
+
         Ok(())
     }
 
@@ -2533,7 +2674,8 @@ impl FlowInstServ {
                         funs,
                         ctx,
                     )
-                    .await?
+                    .await?;
+                    FlowLogServ::add_finish_log_async_task(&flow_inst_detail, None, funs, ctx).await?;
                 }
             }
             _ => {}
@@ -2597,6 +2739,27 @@ impl FlowInstServ {
             )
         })?;
         let inst_detail = Self::get(&inst_id, funs, ctx).await?;
+        // 流程结束时，更新对应的主审批流的search状态
+        if let Some(main_inst) = Self::find_detail_items(
+            &FlowInstFilterReq {
+                rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .pop() {
+            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                tag: main_inst.tag.to_string(),
+                status: main_inst.current_state_name.clone(),
+                rel_state: Some("".to_string()),
+                rel_transition_state_name: Some("".to_string()),
+            })?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+        }
+        
         match FlowModelRelTransitionKind::from(rel_transition) {
             FlowModelRelTransitionKind::Edit => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);
@@ -2616,9 +2779,9 @@ impl FlowInstServ {
                     Some(FlowExternalCallbackOp::Auto),
                     None,
                     Some("审批通过".to_string()),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
                     params,
                     ctx,
@@ -2663,72 +2826,44 @@ impl FlowInstServ {
                         .await?;
                         for child_inst in child_insts {
                             let artifacts = child_inst.artifacts.clone().unwrap_or_default();
-                            if child_inst.current_state_kind == Some(FlowStateKind::Finish) {
-                                if let Some(conf) = FlowConfigServ::get_root_config_by_tag(&root_config, &child_inst.tag)? {
-                                    if let Some(child_main_inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![child_inst.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop() {
-                                        if artifacts.state == Some(FlowInstStateKind::Pass) {
-                                            // 更新业务主流程的artifact的状态为审批通过
-                                            Self::modify_inst_artifacts(&child_main_inst_id, &FlowInstArtifactsModifyReq {
-                                                state: Some(FlowInstStateKind::Pass),
+                            if let Some(conf) = FlowConfigServ::get_root_config_by_tag(&root_config, &child_inst.tag)? {
+                                if let Some(child_main_inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![child_inst.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop() {
+                                    if artifacts.state == Some(FlowInstStateKind::Pass) {
+                                        // 更新业务主流程的artifact的状态为审批通过
+                                        Self::modify_inst_artifacts(&child_main_inst_id, &FlowInstArtifactsModifyReq {
+                                            state: Some(FlowInstStateKind::Pass),
+                                            ..Default::default()
+                                        }, funs, ctx).await?;
+                                        Self::unsafe_modify_state(
+                                            &FlowInstFilterReq {
+                                                ids: Some(vec![child_main_inst_id.clone()]),
+                                                with_sub: Some(true),
                                                 ..Default::default()
-                                            }, funs, ctx).await?;
-                                            Self::unsafe_modify_state(
-                                                &FlowInstFilterReq {
-                                                    ids: Some(vec![child_main_inst_id.clone()]),
-                                                    with_sub: Some(true),
-                                                    ..Default::default()
-                                                },
-                                                &conf.pass_status,
-                                                funs,
-                                                ctx,
-                                            )
-                                            .await?;
-                                        }
-                                        if artifacts.state == Some(FlowInstStateKind::Overrule) {
-                                            // 更新业务主流程的artifact的状态为审批拒绝
-                                            Self::modify_inst_artifacts(&child_main_inst_id, &FlowInstArtifactsModifyReq {
-                                                state: Some(FlowInstStateKind::Overrule),
+                                            },
+                                            &conf.pass_status,
+                                            funs,
+                                            ctx,
+                                        )
+                                        .await?;
+                                    } else {
+                                        // 更新业务主流程的artifact的状态为审批拒绝
+                                        Self::modify_inst_artifacts(&child_main_inst_id, &FlowInstArtifactsModifyReq {
+                                            state: Some(FlowInstStateKind::Overrule),
+                                            ..Default::default()
+                                        }, funs, ctx).await?;
+                                        Self::unsafe_modify_state(
+                                            &FlowInstFilterReq {
+                                                ids: Some(vec![child_main_inst_id.clone()]),
+                                                with_sub: Some(true),
                                                 ..Default::default()
-                                            }, funs, ctx).await?;
-                                            Self::unsafe_modify_state(
-                                                &FlowInstFilterReq {
-                                                    ids: Some(vec![child_main_inst_id.clone()]),
-                                                    with_sub: Some(true),
-                                                    ..Default::default()
-                                                },
-                                                &conf.unpass_status,
-                                                funs,
-                                                ctx,
-                                            )
-                                            .await?;
-                                        }
+                                            },
+                                            &conf.unpass_status,
+                                            funs,
+                                            ctx,
+                                        )
+                                        .await?;
                                     }
                                 }
-                            } else {
-                                // 子流程未结束，直接中止
-                                Self::abort(&child_inst.id, &FlowInstAbortReq {
-                                    message: "".to_string(),
-                                }, funs, ctx).await?;
-                                let current_state_name = FlowInstServ::find_detail_items(&FlowInstFilterReq {
-                                    rel_business_obj_ids: Some(vec![child_inst.rel_business_obj_id.clone()]),
-                                    tags: Some(vec![child_inst.tag.clone()]),
-                                    main: Some(true),
-                                    ..Default::default()
-                                }, funs, ctx).await?.pop().map(|inst| inst.current_state_name.unwrap_or_default());
-                                let (rel_state, rel_transition_state_name) = FlowInstServ::find_detail_items(&FlowInstFilterReq {
-                                    rel_business_obj_ids: Some(vec![child_inst.rel_business_obj_id.clone()]),
-                                    main: Some(false),
-                                    finish: Some(false),
-                                    ..Default::default()
-                                }, funs, ctx).await?.pop().map(|inst| (inst.artifacts.unwrap_or_default().state, inst.current_state_name)).unwrap_or_default();
-                                let modify_ext_req = ModifyObjSearchExtReq {
-                                    tag: child_inst.tag.clone(),
-                                    status: current_state_name,
-                                    rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
-                                    rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
-                                };
-                                let modify_serach_ext = TardisFuns::json.obj_to_string(&modify_ext_req)?;
-                                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                             }
                         }
                     } else {
@@ -2811,9 +2946,9 @@ impl FlowInstServ {
                     None,
                     None,
                     Some("审批通过".to_string()),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
                     params,
                     ctx,
@@ -3043,25 +3178,6 @@ impl FlowInstServ {
 
     pub async fn batch_operate(inst_id: &str, batch_operate_req: &HashMap<String, FlowInstOperateReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
-        FlowLogServ::add_operate_log_async_task(
-            &FlowInstOperateReq {
-                operate: FlowStateOperatorKind::Submit,
-                vars: None,
-                all_vars: None,
-                output_message: None,
-                operator: None,
-                log_text: None,
-            },
-            &inst,
-            if inst.current_state_kind == Some(FlowStateKind::Approval) {
-                LogParamOp::Approval
-            } else {
-                LogParamOp::Form
-            },
-            funs,
-            ctx,
-        )
-        .await?;
         let approve_inst = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![inst.rel_business_obj_id.clone()]),
@@ -3082,6 +3198,25 @@ impl FlowInstServ {
                 "404-flow-inst-not-found",
             )
         })?;
+        FlowLogServ::add_operate_log_async_task(
+            &FlowInstOperateReq {
+                operate: FlowStateOperatorKind::Submit,
+                vars: None,
+                all_vars: None,
+                output_message: None,
+                operator: None,
+                log_text: None,
+            },
+            &approve_inst,
+            if approve_inst.current_state_kind == Some(FlowStateKind::Approval) {
+                LogParamOp::Approval
+            } else {
+                LogParamOp::Form
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let rel_business_obj_ids = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 with_sub: Some(true),
@@ -3094,6 +3229,7 @@ impl FlowInstServ {
         )
         .await?
         .into_iter()
+        .filter(|inst| inst.artifacts.as_ref().is_some_and(|artifacts| artifacts.state == Some(FlowInstStateKind::Approval)))
         .map(|inst| inst.rel_business_obj_id)
         .sorted()
         .collect_vec();
@@ -3101,24 +3237,57 @@ impl FlowInstServ {
         if req_business_obj_ids != rel_business_obj_ids {
             return Err(funs.err().not_found("flow_inst", "batch_operate", "some flow instances not found", "404-flow-inst-not-found"));
         }
-        for (rel_business_obj_id, operate_req) in batch_operate_req {
-            if let Some(child_inst_id) = FlowInstServ::find_ids(
-                &FlowInstFilterReq {
-                    with_sub: Some(true),
-                    rel_business_obj_ids: Some(vec![rel_business_obj_id.clone()]),
-                    rel_inst_ids: Some(vec![approve_inst.id.clone()]),
+        let curr_operators = approve_inst.artifacts.clone().unwrap_or_default().curr_operators.unwrap_or_default();
+        if curr_operators.contains(&ctx.owner) {
+            Self::modify_inst_artifacts(
+                &approve_inst.id,
+                &FlowInstArtifactsModifyReq {
+                    curr_operators: Some(curr_operators.into_iter().filter(|account_id| *account_id != ctx.owner.clone()).collect_vec()),
+                    add_approval_result: Some((ctx.owner.clone(), FlowApprovalResultKind::Review)),
                     ..Default::default()
                 },
                 funs,
                 ctx,
             )
-            .await?
-            .pop()
-            {
-                let inst = FlowInstServ::get(&child_inst_id, funs, ctx).await?;
-                FlowInstServ::operate(&inst, operate_req, funs, ctx).await?;
-            }
+            .await?;
         }
+
+        let ctx_cp = ctx.clone();
+        let batch_operate_req_cp = batch_operate_req.clone();
+        let approve_inst_id = approve_inst.id.clone();
+        tardis::tokio::spawn(async move {
+            let funs_cp = flow_constants::get_tardis_inst(); 
+            for (rel_business_obj_id, operate_req) in batch_operate_req_cp {
+                if let Some(child_inst_id) = FlowInstServ::find_ids(
+                    &FlowInstFilterReq {
+                        with_sub: Some(true),
+                        rel_business_obj_ids: Some(vec![rel_business_obj_id.clone()]),
+                        rel_inst_ids: Some(vec![approve_inst_id.clone()]),
+                        ..Default::default()
+                    },
+                    &funs_cp,
+                    &ctx_cp,
+                )
+                .await.unwrap_or_default()
+                .pop()
+                {                    
+                    if let Ok(inst) = FlowInstServ::get(&child_inst_id, &funs_cp, &ctx_cp).await {
+                        let mut funs_cp2 = flow_constants::get_tardis_inst();
+                        funs_cp2.begin().await.unwrap_or_default();
+                        let result = FlowInstServ::operate(&inst, &operate_req, &funs_cp2, &ctx_cp).await;
+                        match result {
+                            Ok(_) => {
+                                funs_cp2.commit().await.unwrap_or_default();
+                                FlowSearchClient::execute_async_task(&ctx_cp).await.unwrap_or_default();
+                                ctx_cp.execute_task().await.unwrap_or_default();
+                            },
+                            Err(e) => error!("Flow Instance {} batch_operate error:{:?}", inst.id, e),
+                        }
+                    }
+                }
+            }
+        });
+        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &approve_inst.id, "", funs, ctx).await?;
         Ok(())
     }
 
@@ -3350,7 +3519,7 @@ impl FlowInstServ {
                         )
                         .await?;
                         if let Some(rel_inst_id) = &inst.rel_inst_id {
-                            Self::transfer_root_inst(rel_inst_id, funs, ctx).await?;
+                            Self::transfer_root_inst(rel_inst_id, false, funs, ctx).await?;
                         } else {
                             Self::transfer(
                                 inst,
@@ -3437,16 +3606,16 @@ impl FlowInstServ {
                     .await?;
                     Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                     if let Some(rel_inst_id) = &inst.rel_inst_id {
-                        Self::transfer_root_inst(rel_inst_id, funs, ctx).await?;
+                        Self::transfer_root_inst(rel_inst_id, false, funs, ctx).await?;
                     }
                 }
             }
         }
-        FlowSearchClient::add_or_modify_instance_search(&inst.id, Box::new(true), funs, ctx).await?;
+        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &inst.id, "", funs, ctx).await?;
         Ok(())
     }
 
-    async fn transfer_root_inst(root_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn transfer_root_inst(root_inst_id: &str, end: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let root_inst = Self::get(root_inst_id, funs, ctx).await?;
         let all_child_insts = Self::find_detail_items(
             &FlowInstFilterReq {
@@ -3469,12 +3638,26 @@ impl FlowInstServ {
                 .iter()
                 .filter(|child| child.artifacts.as_ref().is_some_and(|artifacts| artifacts.state.unwrap_or_default() == FlowInstStateKind::Pass))
                 .collect_vec();
-            // 若所有子审批流都拒绝则直接中断
-            if pass_child_inst.is_empty() {
-                Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
-                return Ok(());
-            }
             if let Some(next_transition) = Self::find_next_transitions(&root_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
+                let next_state = FlowStateServ::get_item(
+                    &next_transition.next_flow_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                // 若所有子审批流都拒绝且当前流转不是结束时，直接中断
+                if pass_child_inst.is_empty() && next_state.sys_state != FlowSysStateKind::Finish {
+                    Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+                    return Ok(());
+                }
                 for child_inst in pass_child_inst {
                     Self::transfer(
                         child_inst,
@@ -3505,6 +3688,10 @@ impl FlowInstServ {
                     funs,
                 )
                 .await?;
+            }
+        } else {
+            if end {
+                Self::abort(root_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
             }
         }
         Ok(())
