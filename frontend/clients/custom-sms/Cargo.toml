@@ -1,0 +1,29 @@
+[package]
+name = "bios-client-custom-sms"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[lib]
+name = "bios_client_custom_sms"
+path = "src/lib.rs"
+
+[features]
+default = ["reach"]
+reach = ["bios-reach"]
+[dependencies]
+serde.workspace = true
+# lazy_static.workspace = true
+# itertools.workspace = true
+tardis = { workspace = true, features = ["web-server"] }
+bios-reach = { optional = true, version = "0.2.0", path = "../../../backend/supports/reach" }
+[dev-dependencies]
+tardis = { workspace = true, features = ["test"] }
+url = { version = "*", features = ["serde"] }
+toml = { version = "*" }
