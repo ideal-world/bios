@@ -2674,7 +2674,8 @@ impl FlowInstServ {
                         funs,
                         ctx,
                     )
-                    .await?
+                    .await?;
+                    FlowLogServ::add_finish_log_async_task(&flow_inst_detail, None, funs, ctx).await?;
                 }
             }
             _ => {}
@@ -2778,9 +2779,9 @@ impl FlowInstServ {
                     Some(FlowExternalCallbackOp::Auto),
                     None,
                     Some("审批通过".to_string()),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
                     params,
                     ctx,
@@ -2945,9 +2946,9 @@ impl FlowInstServ {
                     None,
                     None,
                     Some("审批通过".to_string()),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
-                    Some(inst_detail.current_state_id.clone()),
+                    inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
                     params,
                     ctx,
