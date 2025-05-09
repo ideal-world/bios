@@ -36,6 +36,7 @@ tardis = { workspace = true, features = [
     "web-server",
     "web-client",
     "mail",
+    "crypto-with-sm"
 ] }
 bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [

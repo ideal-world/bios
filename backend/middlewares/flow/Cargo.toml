@@ -26,11 +26,11 @@ lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-client"] }
 bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default", "reach"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }
 bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default", "reach"] }
 bios-spi-kv = { version = "0.2.0", path = "../../spi/spi-kv" }
 bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search" }
 bios-iam = { version = "0.2.0", path = "../../supports/iam" }

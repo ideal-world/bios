@@ -22,3 +22,4 @@
 500-flow-transition-endless-loop	状态流转出现死循环
 500-flow-inst-operate-prohibited	实例当前操作被禁止
 500-flow-inst-auto-finish	实例自动结束
+500-flow-inst-tranfer-lock	当前实例已被锁定

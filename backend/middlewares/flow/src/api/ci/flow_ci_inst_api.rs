@@ -353,9 +353,15 @@ impl FlowCiInstApi {
     /// sync instance status to search
     ///
     /// 自动触发前置条件(脚本)
-    #[oai(path = "/auto_front_change", method = "post")]
-    async fn auto_front_change(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    #[oai(path = "/auto_front_change", method = "get")]
+    async fn auto_front_change(
+        &self,
+        tags: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        _request: &Request
+    ) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
+        let tags = tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec());
         let trans_with_front_changes = FlowTransitionServ::find_detail_items(
             &FlowTransitionFilterReq {
                 is_empty_front_changes: Some(false),
@@ -368,9 +374,11 @@ impl FlowCiInstApi {
         for trans_with_front_change in trans_with_front_changes {
             let insts = FlowInstServ::find_detail_items(
                 &FlowInstFilterReq {
+                    with_sub: Some(true),
                     flow_version_id: Some(trans_with_front_change.rel_flow_model_version_id.clone()),
                     current_state_id: Some(trans_with_front_change.from_flow_state_id),
                     main: Some(true),
+                    tags: tags.clone(),
                     ..Default::default()
                 },
                 &funs,
@@ -378,32 +386,36 @@ impl FlowCiInstApi {
             )
             .await?;
             for inst in insts {
-                ctx.0
-                    .add_async_task(Box::new(|| {
-                        Box::pin(async move {
-                            let curr_inst = inst.clone();
-                            let inst_ctx = TardisContext {
-                                own_paths: curr_inst.own_paths.clone(),
-                                ..Default::default()
-                            };
-                            let task_handle = tardis::tokio::spawn(async move {
-                                let mut funs = flow_constants::get_tardis_inst();
-                                funs.begin().await.unwrap_or_default();
-                                let _ = FlowEventServ::do_front_change(&curr_inst, loop_check_helper::InstancesTransition::default(), &inst_ctx, &funs).await;
-                                funs.commit().await.unwrap_or_default();
-                            });
-                            match task_handle.await {
-                                Ok(_) => {}
-                                Err(e) => tardis::log::error!("Flow Instance {} do_front_change error:{:?}", inst.id, e),
-                            }
-                            Ok(())
-                        })
-                    }))
-                    .await?;
+                if inst.finish_abort.unwrap_or(false) {
+                    continue;
+                }
+                tardis::tokio::spawn(async move {
+                    let curr_inst = inst.clone();
+                    let inst_ctx = TardisContext {
+                        owner: curr_inst.create_ctx.owner.clone(),
+                        own_paths: curr_inst.own_paths.clone(),
+                        ..Default::default()
+                    };
+                    let task_handle = tardis::tokio::spawn(async move {
+                        let mut funs = flow_constants::get_tardis_inst();
+                        funs.begin().await.unwrap_or_default();
+                        let result = FlowEventServ::do_front_change(&curr_inst, loop_check_helper::InstancesTransition::default(), &inst_ctx, &funs).await;
+                        if result.is_ok() {
+                            funs.commit().await.unwrap_or_default();
+                            let _ = FlowSearchClient::execute_async_task(&inst_ctx).await;
+                            let _ = inst_ctx.execute_task().await;
+                        } else {
+                            funs.rollback().await.unwrap_or_default();
+                        }
+                        
+                    });
+                    match task_handle.await {
+                        Ok(_) => {}
+                        Err(e) => tardis::log::error!("Flow Instance {} do_front_change error:{:?}", inst.id, e),
+                    }
+                });
             }
         }
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
-        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
