@@ -2820,6 +2820,10 @@ impl FlowInstServ {
                     let root_config = FlowConfigServ::get_root_config(&main_inst.tag, funs, ctx).await?;
                     let rel_child_objs = main_inst.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default();
                     if let Some(root_inst_id) = root_inst_id {
+                         Self::modify_inst_artifacts(&root_inst_id, &FlowInstArtifactsModifyReq {
+                            state: Some(FlowInstStateKind::Pass),
+                            ..Default::default()
+                        }, funs, ctx).await?;
                         let child_insts = Self::find_detail_items(
                             &FlowInstFilterReq {
                                 rel_business_obj_ids: Some(rel_child_objs.iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect_vec()),
