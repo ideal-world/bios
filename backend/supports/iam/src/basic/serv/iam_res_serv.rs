@@ -683,7 +683,7 @@ impl IamResServ {
         .await?;
         for item in res {
             let item = item.decoding();
-            let rel_role_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
+            let rel_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
             let rel_req = IamCacheResRelAddOrModifyReq {
                 st: None,
                 et: None,
