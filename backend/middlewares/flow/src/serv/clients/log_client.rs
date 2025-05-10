@@ -33,6 +33,7 @@ pub struct LogParamContent {
     pub flow_message: Option<String>,
     pub flow_result: Option<String>,
     pub flow_referral: Option<String>,
+    pub jump: Option<bool>,
 }
 
 #[derive(Serialize, Default, Debug, Clone)]
@@ -88,6 +89,14 @@ pub enum LogParamOp {
     FormTransfer,
     // 结束
     Finish,
+    // 编辑
+    Update,
+    // 关联
+    FeedRel,
+    // 评审
+    Review,
+    // 删除
+    Delete,
 }
 
 impl From<LogParamOp> for String {
@@ -99,6 +108,10 @@ impl From<LogParamOp> for String {
             LogParamOp::Form => "FLOW_FORM".to_string(),
             LogParamOp::FormTransfer => "FLOW_FORM_TRANSFER".to_string(),
             LogParamOp::Finish => "FLOW_FINISH".to_string(),
+            LogParamOp::Update => "UPDATE".to_string(),
+            LogParamOp::FeedRel => "FEED_REL".to_string(),
+            LogParamOp::Review => "REVIEW".to_string(),
+            LogParamOp::Delete => "DELETE".to_string(),
         }
     }
 }
