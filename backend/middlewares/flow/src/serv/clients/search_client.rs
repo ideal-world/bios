@@ -434,6 +434,7 @@ impl FlowSearchClient {
                 create_time: inst_resp.create_time,
                 update_time: inst_resp.update_time,
                 ext: Some(json!({
+                    "code": inst_resp.code,
                     "tag": inst_resp.tag,
                     "current_state_id": &inst_resp.current_state_id,
                     "rel_business_obj_name": inst_resp.rel_business_obj_name,

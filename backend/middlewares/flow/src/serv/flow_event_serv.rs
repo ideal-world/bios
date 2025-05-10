@@ -8,7 +8,7 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult}, chrono::{SecondsFormat, Utc}, db::sea_orm::{
         self,
         sea_query::{Expr, Query},
-    }, log::warn, TardisFunsInst
+    }, TardisFunsInst
 };
 
 use crate::{
