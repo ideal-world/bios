@@ -1427,15 +1427,16 @@ pub async fn export_data(export_req: &SearchExportDataReq, funs: &TardisFunsInst
         params.push(Value::from(start_time));
         params.push(Value::from(end_time));
         let kind_sql = if let Some(tag_kind) = &export_req.tag_kind {
-            if tag_kind.contains_key(tag) && !tag_kind[tag].is_empty() {
-                let kinds = tag_kind[tag].clone();
+            if tag_kind.contains_key(tag) && !tag_kind.get(tag).unwrap_or(&vec![]).is_empty() {
+                let kinds = tag_kind.get(tag).unwrap_or(&vec![]).clone();
+                let kind_sql = format!(
+                    "AND kind IN ({})",
+                    (0..kinds.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                );
                 for kind in &kinds {
                     params.push(Value::from(kind));
                 }
-                format!(
-                    "AND kind IN ({})",
-                    (0..kinds.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
-                )
+                kind_sql
             } else {
                 "".to_string()
             }
