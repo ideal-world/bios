@@ -2170,9 +2170,9 @@ impl FlowModelServ {
         .pop();
         if review_init_model.is_none() {
             let mut review_state_ids = vec![];
-            review_state_ids.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
-            review_state_ids.push(FlowStateServ::init_state("TC", "评审中", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            review_state_ids.push(FlowStateServ::init_state("TC", "评审结束", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            review_state_ids.push(FlowStateServ::init_state("REVIEW", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
+            review_state_ids.push(FlowStateServ::init_state("REVIEW", "评审中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+            review_state_ids.push(FlowStateServ::init_state("REVIEW", "评审结束", FlowSysStateKind::Progress, "", funs, ctx).await?);
             let start_state_id = review_state_ids[0].clone();
             let progress_state_id = review_state_ids[2].clone();
             let finish_state_id = review_state_ids[0].clone();
