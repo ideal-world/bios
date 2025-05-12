@@ -95,6 +95,9 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
+    let Some(fact_conf) = get(fact_conf_key, &conn, ctx).await? else {
+        return Err(funs.err().not_found("starsys_stats_conf_fact", "find", "fact conf not found", "404-fact-conf-not-found"));
+    };
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_conf_key.to_string())];
     // todo cancel online check
@@ -163,7 +166,7 @@ WHERE key = $1
     ScheduleClient::add_or_modify_sync_task(
         AddOrModifySyncTaskReq {
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key),
-            enable: modify_req.is_sync.unwrap_or_default(),
+            enable: fact_conf.is_sync.unwrap_or_default(),
             cron: modify_req.sync_cron.clone().unwrap_or("".to_string()),
             callback_url: format!("{}/ci/fact/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
             callback_method: "PUT".to_string(),
