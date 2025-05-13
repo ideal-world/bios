@@ -732,7 +732,7 @@ impl RbumSetCateServ {
     /// Fetch the sys_code of the parent node
     ///
     /// 获取父级节点的sys_code集合
-    fn get_parent_sys_codes(sys_code: &str, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
+    pub fn get_parent_sys_codes(sys_code: &str, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let mut level = sys_code.len() / set_cate_sys_code_node_len - 1;
         if level == 0 {

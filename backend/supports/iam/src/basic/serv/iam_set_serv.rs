@@ -8,6 +8,7 @@ use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDet
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -495,7 +496,7 @@ impl IamSetServ {
         let mut rbum_item_ids = vec![account_id.to_string()];
         let app_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamAccountApp, true, account_id, None, None, funs, ctx).await?;
         rbum_item_ids.extend(app_ids);
-        let tree_with_account = Self::get_tree(
+        let tree_with_item = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
@@ -508,20 +509,42 @@ impl IamSetServ {
             ctx,
         )
         .await?;
-        let mut account_rel_sys_codes = vec![];
-        if let Some(tree_ext) = tree_with_account.ext.as_ref() {
-            account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
+        let mut item_rel_sys_codes = vec![];
+        if let Some(tree_ext) = tree_with_item.ext.as_ref() {
+            item_rel_sys_codes = tree_with_item.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
         }
-        if account_rel_sys_codes.is_empty() {
+        if item_rel_sys_codes.is_empty() {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
 
+        let tree_sub = Self::get_tree(
+            set_id,
+            &mut RbumSetTreeFilterReq {
+                fetch_cate_item: true,
+                sys_codes: Some(item_rel_sys_codes),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        //  补全所有的 parent
+        let mut all_sys_codes = vec![];
+        for cate in tree_sub.main.iter() {
+            let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(&cate.sys_code, funs)?;
+            all_sys_codes.extend(parent_sys_codes);
+            all_sys_codes.push(cate.sys_code.clone());
+        }
+        if all_sys_codes.is_empty() {
+            return Ok(RbumSetTreeResp { main: vec![], ext: None });
+        }
         Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
-                sys_codes: Some(account_rel_sys_codes),
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                sys_codes: Some(all_sys_codes),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
                 ..Default::default()
             },
             funs,
