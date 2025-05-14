@@ -74,10 +74,13 @@ impl IamCtAppApi {
 
     /// Find Apps
     /// 查找应用
+    /// ids: 应用ID列表，逗号分隔
+    /// id 和ids 是相互冲突的 id优先
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
         id: Query<Option<String>>,
+        ids: Query<Option<String>>,
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
@@ -88,11 +91,18 @@ impl IamCtAppApi {
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
+        let ids = if let Some(id) = id.0 {
+            Some(vec![id])
+        } else if let Some(ids) = ids.0 {
+            Some(ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>())
+        } else {
+            None
+        };
 
         let result = IamAppServ::paginate_items(
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: id.0.map(|id| vec![id]),
+                    ids,
                     name: name.0,
                     with_sub_own_paths: true,
                     enabled: Some(true),
