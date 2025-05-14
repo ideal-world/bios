@@ -45,7 +45,7 @@ impl FlowConfigServ {
         let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
         let key = if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_paths, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
         {
-            format!("__tag__:{}:_:{}:{}_config", tenant_paths, template_id, root_tag.to_ascii_lowercase())
+            format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
         } else {
             format!("__tag__:{}:{}:_:{}_config", tenant_paths, app_paths, root_tag.to_ascii_lowercase())
         };

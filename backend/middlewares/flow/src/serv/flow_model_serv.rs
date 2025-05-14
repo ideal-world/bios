@@ -13,7 +13,7 @@ use bios_sdk_invoke::dto::search_item_dto::{SearchItemQueryReq, SearchItemSearch
 use itertools::Itertools;
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, Set,
     }, futures::future::join_all, log::error, serde_json::json, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
@@ -32,11 +32,11 @@ use crate::{
             FlowModelVesionState,
         },
         flow_state_dto::{
-            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
+            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
         },
         flow_transition_dto::{
-            FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeKind, FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq,
-            FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation, FlowTransitionFrontActionRightValue, FlowTransitionInitInfo, FlowTransitionModifyReq,
+            FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq,
+            FlowTransitionInitInfo, FlowTransitionModifyReq,
             FlowTransitionPostActionInfo, FlowTransitionSortStatesReq,
         },
     },
@@ -74,7 +74,13 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn package_item_add(add_req: &FlowModelAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        let id = if let Some(id) = &add_req.id {
+            id.clone()
+        } else {
+            TardisFuns::field.nanoid()
+        };
         Ok(RbumItemKernelAddReq {
+            id: Some(TrimString(id)),
             name: add_req.name.clone(),
             disabled: add_req.disabled,
             scope_level: add_req.scope_level.clone(),
@@ -146,6 +152,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             add_version
         } else if add_req.main {
             FlowModelVersionAddReq {
+                id: None,
                 name: add_req.name.clone(),
                 rel_model_id: Some(flow_model_id.to_string()),
                 bind_states: None,
@@ -157,6 +164,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             let start_state_id = TardisFuns::field.nanoid();
             let finish_state_id = TardisFuns::field.nanoid();
             FlowModelVersionAddReq {
+                id: None,
                 name: add_req.name.clone(),
                 rel_model_id: Some(flow_model_id.to_string()),
                 // 初始化时增加开始结束两个节点
@@ -636,6 +644,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         if let Some(status) = filter.status.clone() {
             query.and_where(Expr::col(flow_model::Column::Status).eq(status));
         }
+        if let Some(data_source) = filter.data_source.clone() {
+            query.and_where(Expr::col(flow_model::Column::DataSource).eq(data_source));
+        }
         if let Some(rel_template_id) = filter.rel_template_id.clone() {
             let rel_model_ids =
                 FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
@@ -851,10 +862,12 @@ impl FlowModelServ {
         // add model
         let model_id = Self::add_item(
             &mut FlowModelAddReq {
+                id: None,
                 name: model_name.into(),
                 kind: FlowModelKind::AsTemplateAndAsModel,
                 status: FlowModelStatus::Enabled,
                 add_version: Some(FlowModelVersionAddReq {
+                    id: None,
                     name: model_name.into(),
                     rel_model_id: None,
                     bind_states: Some(bind_states),
@@ -1200,6 +1213,7 @@ impl FlowModelServ {
                         kind,
                         rel_template_ids: None,
                         add_version: Some(FlowModelVersionAddReq {
+                            id: None,
                             name: rel_model.name.clone().into(),
                             rel_model_id: None,
                             bind_states: Some(states),
@@ -2151,185 +2165,6 @@ impl FlowModelServ {
         Ok(result)
     }
 
-    pub async fn init_review_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let review_init_model = Self::paginate_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq { ..Default::default() },
-                tags: Some(vec!["REVIEW".to_string()]),
-                ..Default::default()
-            },
-            1,
-            1,
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?
-        .records
-        .pop();
-        if review_init_model.is_none() {
-            let mut review_state_ids = vec![];
-            review_state_ids.push(FlowStateServ::init_state("REVIEW", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
-            review_state_ids.push(FlowStateServ::init_state("REVIEW", "评审中", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            review_state_ids.push(FlowStateServ::init_state("REVIEW", "评审结束", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            let start_state_id = review_state_ids[0].clone();
-            let progress_state_id = review_state_ids[2].clone();
-            let finish_state_id = review_state_ids[0].clone();
-            Self::init_model(
-                "REVIEW",
-                start_state_id.clone(),
-                review_state_ids,
-                "评审通用工作流",
-                vec![
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: start_state_id.clone(),
-                        to_flow_state_id: progress_state_id.clone(),
-                        name: "发起评审".to_string(),
-                        action_by_front_changes: vec![
-                            FlowTransitionFrontActionInfo {
-                                relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation::Lt,
-                                relevance_label: "".to_string(),
-                                left_value: "review_start_time".to_string(),
-                                left_label: "".to_string(),
-                                right_value: FlowTransitionFrontActionRightValue::RealTime,
-                                select_field: None,
-                                select_field_label: None,
-                                change_content: None,
-                                change_content_label: None,
-                            },
-                        ],
-                        ..Default::default()
-                    },
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: start_state_id.clone(),
-                        to_flow_state_id: finish_state_id.clone(),
-                        name: "结束评审".to_string(),
-                        ..Default::default()
-                    },
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: progress_state_id.clone(),
-                        to_flow_state_id: finish_state_id.clone(),
-                        name: "结束评审".to_string(),
-                        double_check: None,
-                        action_by_front_changes: vec![FlowTransitionFrontActionInfo {
-                            relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation::Lt,
-                            relevance_label: "".to_string(),
-                            left_value: "review_end_time".to_string(),
-                            left_label: "".to_string(),
-                            right_value: FlowTransitionFrontActionRightValue::RealTime,
-                            select_field: None,
-                            select_field_label: None,
-                            change_content: None,
-                            change_content_label: None,
-                        }],
-                        action_by_post_changes: vec![FlowTransitionPostActionInfo {
-                            kind: FlowTransitionActionChangeKind::Var,
-                            describe: "".to_string(),
-                            obj_tag: None,
-                            obj_tag_rel_kind: None,
-                            obj_current_state_id: None,
-                            change_condition: None,
-                            changed_state_id: "".to_string(),
-                            current: false,
-                            var_name: "review_end_time".to_string(),
-                            changed_val: None,
-                            changed_kind: Some(FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime),
-                            is_edit: None,
-                        }],
-                        ..Default::default()
-                    },
-                ],
-                funs,
-                ctx,
-            )
-            .await?;
-        }
-        Ok(())
-    }
-    pub async fn init_tc_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let tc_init_model = Self::paginate_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq { 
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                tags: Some(vec!["TC".to_string()]),
-                ..Default::default()
-            },
-            1,
-            1,
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?
-        .records
-        .pop();
-        if tc_init_model.is_none() {
-            let mut bind_states = vec![];
-            bind_states.push(FlowStateServ::init_state("TC", "待评审", FlowSysStateKind::Start, "", funs, ctx).await?);
-            bind_states.push(FlowStateServ::init_state("TC", "评审通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            bind_states.push(FlowStateServ::init_state("TC", "评审不通过", FlowSysStateKind::Progress, "", funs, ctx).await?);
-            let start_state = bind_states[0].clone();
-            let pass_state = bind_states[1].clone();
-            let unpass_state = bind_states[2].clone();
-            let close_state = FlowStateServ::find_one_item(&FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    scope_level: Some(RbumScopeLevelKind::Root),
-                    name: Some("已关闭".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }, funs, ctx).await?.ok_or_else(|| funs.err().not_found("flow_model_serv", "init_tc_model", "close state not found", "404-flow-state-not-found"))?.id;
-            bind_states.push(close_state.clone());
-            Self::init_model(
-                "TC",
-                start_state.clone(),
-                bind_states.clone(),
-                "用例通用工作流",
-                vec![
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: start_state.clone(),
-                        to_flow_state_id: pass_state.clone(),
-                        name: "通过".to_string(),
-                        ..Default::default()
-                    },
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: start_state.clone(),
-                        to_flow_state_id: unpass_state.clone(),
-                        name: "拒绝".to_string(),
-                        ..Default::default()
-                    },
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: pass_state.clone(),
-                        to_flow_state_id: close_state.clone(),
-                        name: "关闭".to_string(),
-                        ..Default::default()
-                    },
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: unpass_state.clone(),
-                        to_flow_state_id: close_state.clone(),
-                        name: "关闭".to_string(),
-                        ..Default::default()
-                    },
-                    FlowTransitionInitInfo {
-                        from_flow_state_id: close_state.clone(),
-                        to_flow_state_id: start_state.clone(),
-                        name: "激活".to_string(),
-                        ..Default::default()
-                    },
-                ],
-                funs,
-                ctx,
-            )
-            .await?;
-        }
-        Ok(())
-    }
-
     // 同步模型到search
     pub async fn sync_model_template(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let search_models = FlowSearchClient::search(&SearchItemSearchReq {
@@ -2363,71 +2198,6 @@ impl FlowModelServ {
         for flow_model_id in flow_model_ids {
             if !search_models.contains(&flow_model_id) {
                 FlowSearchClient::async_add_or_modify_model_search(&flow_model_id, Box::new(false), funs, ctx).await?;
-            }
-        }
-        Ok(())
-    }
-
-    // 初始化复制模型（脚本）
-    pub async fn init_copy_model(req: &FlowModelInitCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rel_main_model = Self::find_one_detail_item(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(vec![req.rel_model_id.clone()]),
-                    enabled: Some(true),
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                main: Some(true),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?.ok_or_else(|| {
-            funs.err().not_found(
-                &Self::get_obj_name(),
-                "init_copy_model",
-                "flow model is not found",
-                "404-model-not-found",
-            )
-        })?;
-        for rel_template_id in &req.rel_template_ids {
-            let new_model = FlowModelServ::copy_or_reference_model(
-                &rel_main_model.id,
-                &FlowModelAssociativeOperationKind::ReferenceOrCopy,
-                FlowModelKind::AsTemplateAndAsModel,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            FlowRelServ::add_simple_rel(
-                &FlowRelKind::FlowModelTemplate,
-                &new_model.id,
-                rel_template_id,
-                None,
-                None,
-                false,
-                true,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            if req.sync_inst {
-                FlowInstServ::batch_update_when_switch_model(&new_model, Some(rel_template_id.to_string()), None, funs, ctx).await?;
-            }
-        }
-        for own_path in &req.own_path {
-            let mock_ctx = TardisContext {
-                own_paths: own_path.clone(),
-                ..ctx.clone()
-            };
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &FlowModelAssociativeOperationKind::Copy, FlowModelKind::AsModel, None, funs, &mock_ctx).await?;
-            if req.sync_inst {
-                FlowInstServ::batch_update_when_switch_model(&new_model, None, None, funs, &mock_ctx).await?;
             }
         }
         Ok(())

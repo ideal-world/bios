@@ -1,4 +1,5 @@
 use std::{collections::HashMap, str::FromStr};
+use itertools::Itertools;
 use strum::Display;
 
 use bios_basic::rbum::{
@@ -324,6 +325,30 @@ pub struct FlowStateDetailResp {
 impl FlowStateDetailResp {
     pub fn kind_conf(&self) -> Option<FLowStateKindConf> {
         self.kind_conf.clone().map(|kind_conf| TardisFuns::json.json_to_obj(kind_conf.clone()).unwrap_or_default())
+    }
+}
+
+impl From<FlowStateDetailResp> for FlowStateAddReq {
+    fn from(value: FlowStateDetailResp) -> Self {
+        let kind_conf = value.kind_conf();
+        let tags = value.tags.split(',').map(|s| s.to_string()).collect_vec();
+        Self {
+            id: None,
+            id_prefix: None,
+            name: Some(TrimString::from(value.name)),
+            icon: Some(value.icon),
+            color: Some(value.color),
+            sys_state: value.sys_state,
+            info: Some(value.info),
+            state_kind: Some(value.state_kind),
+            kind_conf,
+            template: Some(value.template),
+            main: Some(value.main),
+            rel_state_id: Some(value.rel_state_id),
+            tags: Some(tags),
+            scope_level: Some(value.scope_level),
+            disabled: Some(value.disabled),
+        }
     }
 }
 

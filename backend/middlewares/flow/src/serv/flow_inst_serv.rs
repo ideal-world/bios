@@ -247,20 +247,20 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        // if !Self::find_ids(
-        //     &FlowInstFilterReq {
-        //         rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
-        //         main: Some(true),
-        //         ..Default::default()
-        //     },
-        //     funs,
-        //     ctx,
-        // )
-        // .await?
-        // .is_empty()
-        // {
-        //     return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
-        // }
+        if !Self::find_ids(
+            &FlowInstFilterReq {
+                rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .is_empty()
+        {
+            return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
+        }
         let inst_id = TardisFuns::field.nanoid();
         let current_state_id = if let Some(current_state_name) = &current_state_name {
             if current_state_name.is_empty() {
@@ -291,7 +291,7 @@ impl FlowInstServ {
             own_paths: Set(ctx.own_paths.clone()),
             main: Set(true),
             update_time: Set(Some(Utc::now())),
-            data_source: Set(start_req.data_source.clone().unwrap_or_default()),
+            data_source: Set(flow_model.data_source.clone().unwrap_or_default()),
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
@@ -383,7 +383,7 @@ impl FlowInstServ {
             own_paths: Set(ctx.own_paths.clone()),
             main: Set(false),
             rel_inst_id: Set(start_req.rel_inst_id.clone()),
-            data_source: Set(start_req.data_source.clone().unwrap_or_default()),
+            data_source: Set(flow_model.data_source.clone().unwrap_or_default()),
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
@@ -546,7 +546,7 @@ impl FlowInstServ {
                     create_ctx: Set(FlowOperationContext::from_ctx(&current_ctx)),
 
                     own_paths: Set(rel_business_obj.own_paths.clone().unwrap_or_default()),
-                    data_source: Set(batch_bind_req.data_source.clone().unwrap_or_default()),
+                    data_source: Set(flow_model.data_source.clone().unwrap_or_default()),
                     ..Default::default()
                 };
                 funs.db().insert_one(flow_inst, &current_ctx).await?;
@@ -675,6 +675,13 @@ impl FlowInstServ {
         }
         if let Some(data_source) = &filter.data_source {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::DataSource)).eq(data_source));
+        }
+
+        if let Some(create_time_start) = &filter.create_time_start {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CreateTime)).gte(create_time_start.to_string()));
+        }
+        if let Some(create_time_end) = &filter.create_time_end {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CreateTime)).lte(create_time_end.to_string()));
         }
 
         Ok(())
@@ -4089,5 +4096,26 @@ impl FlowInstServ {
             update_time: inst.update_time,
             rel_inst_id: inst.rel_inst_id.clone(),
         })
+    }
+
+    pub async fn stat_inst_count(app_ids: &[String], filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<HashMap<String, u64>> {
+        let mut result = HashMap::new();
+        for app_id in app_ids {
+            let mock_ctx = TardisContext {
+                own_paths: format!("{}/{}", ctx.own_paths, app_id),
+                ..ctx.clone()
+            };
+            let mut query = Query::select();
+            Self::package_ext_query(
+                &mut query,
+                filter,
+                funs,
+                &mock_ctx,
+            )
+            .await?;
+            let total_size = funs.db().count(&query).await?;
+            result.insert(app_id.clone(), total_size);
+        }
+        Ok(result)
     }
 }
