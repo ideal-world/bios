@@ -493,35 +493,58 @@ impl IamSetServ {
     }
 
     pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
-        let mut rbum_item_ids = vec![account_id.to_string()];
+        let account_ids = vec![account_id.to_string()];
         let app_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamAccountApp, true, account_id, None, None, funs, ctx).await?;
-        rbum_item_ids.extend(app_ids);
-        let tree_with_item = Self::get_tree(
-            set_id,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: true,
-                hide_item_with_disabled: true,
-                rel_rbum_item_ids: Some(rbum_item_ids),
-                // rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
+
+        let account_cate = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.to_string()),
+                rel_rbum_item_ids: Some(account_ids.clone()),
                 ..Default::default()
             },
+            Some(true),
+            None,
             funs,
             ctx,
         )
         .await?;
-        let mut item_rel_sys_codes = vec![];
-        if let Some(tree_ext) = tree_with_item.ext.as_ref() {
-            item_rel_sys_codes = tree_with_item.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
-        }
-        if item_rel_sys_codes.is_empty() {
+        let app_cate = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.to_string()),
+                rel_rbum_item_ids: Some(app_ids),
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let app_cate_sys_codes =
+            app_cate.iter().filter(|r| r.rel_rbum_set_cate_sys_code.is_some()).map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        let account_cate_sys_codes =
+            account_cate.iter().filter(|r| r.rel_rbum_set_cate_sys_code.is_some()).map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        if account_cate_sys_codes.is_empty() && app_cate_sys_codes.is_empty() {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
 
-        let tree_sub = Self::get_tree(
+        let account_tree_sub = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
-                sys_codes: Some(item_rel_sys_codes),
+                sys_codes: Some(account_cate_sys_codes),
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 ..Default::default()
             },
@@ -529,16 +552,34 @@ impl IamSetServ {
             ctx,
         )
         .await?;
-        //  补全所有的 parent
+        //  补全 account cate 的 parent node
         let mut all_sys_codes = vec![];
-        for cate in tree_sub.main.iter() {
+        for cate in account_tree_sub.main.iter() {
+            if cate.sys_code.is_empty() {
+                continue;
+            }
             let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(&cate.sys_code, funs)?;
-            all_sys_codes.extend(parent_sys_codes);
+            if !parent_sys_codes.is_empty() {
+                all_sys_codes.extend(parent_sys_codes);
+            }
             all_sys_codes.push(cate.sys_code.clone());
+        }
+        //  补全 app cate 的 parent node
+        for cate_sys_code in app_cate_sys_codes.iter() {
+            if cate_sys_code.is_empty() {
+                continue;
+            }
+            let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(&cate_sys_code.clone(), funs)?;
+            if !parent_sys_codes.is_empty() {
+                all_sys_codes.extend(parent_sys_codes);
+            }
+            all_sys_codes.push(cate_sys_code.to_string());
         }
         if all_sys_codes.is_empty() {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
+        let all_sys_codes = all_sys_codes.iter().map(|r| r.to_string()).collect::<Vec<String>>().into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
+
         Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
