@@ -13,6 +13,7 @@ use super::{flow_cond_dto::BasicQueryCondInfo, flow_state_dto::FlowSysStateKind,
 /// 添加动作
 #[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
 pub struct FlowTransitionAddReq {
+    pub id: Option<String>,
     /// 修改前状态
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
@@ -250,6 +251,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
         let action_by_front_changes = value.action_by_front_changes();
         let double_check = value.double_check();
         FlowTransitionAddReq {
+            id: None,
             from_flow_state_id: value.from_flow_state_id,
             to_flow_state_id: value.to_flow_state_id,
             name: Some(value.name.into()),
@@ -502,6 +504,7 @@ impl From<TagRelKind> for String {
 
 #[derive(Default)]
 pub struct FlowTransitionInitInfo {
+    pub id: Option<String>,
     pub from_flow_state_id: String,
     pub to_flow_state_id: String,
     pub name: String,
@@ -533,6 +536,7 @@ impl TryFrom<FlowTransitionInitInfo> for FlowTransitionAddReq {
 
     fn try_from(value: FlowTransitionInitInfo) -> Result<Self, Self::Error> {
         Ok(FlowTransitionAddReq {
+            id: value.id,
             from_flow_state_id: value.from_flow_state_id,
             to_flow_state_id: value.to_flow_state_id,
             name: Some(value.name.into()),

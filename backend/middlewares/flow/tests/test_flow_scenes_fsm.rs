@@ -102,10 +102,12 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsTemplate,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: Some(FlowModelVersionAddReq {
+                    id: None,
                     name: "测试需求模板1".into(),
                     rel_model_id: None,
                     bind_states: None,
@@ -225,6 +227,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 name: "测试需求默认模板1".into(),
                 info: Some("xxx".to_string()),
                 kind: FlowModelKind::AsTemplate,
@@ -270,6 +273,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 name: "测试需求未初始化模板1".into(),
                 info: Some("xxx".to_string()),
                 rel_template_ids: Some(vec![req_template_id1.to_string(), req_template_id2.to_string()]),
@@ -673,6 +677,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsModel,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: Some(vec!["__DELETE__".to_string()]),
@@ -708,6 +713,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsModel,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: Some(vec!["__EDIT__".to_string()]),
@@ -927,6 +933,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsModel,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: Some(vec!["__REVIEW__".to_string()]),

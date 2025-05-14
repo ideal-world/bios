@@ -186,6 +186,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsModel,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: Some(vec!["__REVIEW__".to_string()]),

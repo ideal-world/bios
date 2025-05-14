@@ -9,7 +9,7 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::Utc,
     db::sea_orm::{
         prelude::Expr,
@@ -70,7 +70,13 @@ impl
     }
 
     async fn package_item_add(add_req: &FlowModelVersionAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        let id = if let Some(id) = &add_req.id {
+            id.clone()
+        } else {
+            TardisFuns::field.nanoid()
+        };
         Ok(RbumItemKernelAddReq {
+            id: Some(TrimString(id)),
             name: add_req.name.clone(),
             disabled: add_req.disabled,
             scope_level: add_req.scope_level.clone(),
@@ -557,6 +563,7 @@ impl FlowModelVersionServ {
         }
         let editind_version_id = FlowModelVersionServ::add_item(
             &mut FlowModelVersionAddReq {
+                id: None,
                 name: version.name.into(),
                 rel_model_id: Some(version.rel_model_id.clone()),
                 bind_states: Some(

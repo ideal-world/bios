@@ -26,6 +26,7 @@ use super::{
 /// 添加请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelAddReq {
+    pub id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -85,6 +86,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
         let rel_transition_ids = value.rel_transitions().clone().map(|rel_transitions| rel_transitions.into_iter().map(|tran| tran.id).collect_vec());
         let front_conds = value.front_conds();
         Self {
+            id: None,
             name: value.name.as_str().into(),
             icon: Some(value.icon.clone()),
             info: Some(value.info.clone()),
@@ -93,6 +95,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             rel_transition_ids,
             rel_template_ids: Some(value.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
+                id: None,
                 name: value.name.as_str().into(),
                 rel_model_id: None,
                 bind_states: Some(states),
@@ -336,6 +339,60 @@ impl FlowModelDetailResp {
     pub fn front_conds(&self) -> Option<Vec<Vec<BasicQueryCondInfo>>> {
         self.front_conds.clone().map(|front_conds| TardisFuns::json.json_to_obj(front_conds).unwrap_or_default())
     }
+
+    pub fn clone_model(self) -> FlowModelAddReq {
+        let mut add_transitions = vec![];
+        for transition in self.transitions() {
+            let mut add_transitions_req = FlowTransitionAddReq::from(transition.clone());
+            add_transitions_req.id = Some(transition.id.clone());
+            add_transitions.push(add_transitions_req);
+        }
+        let states = self
+            .states()
+            .into_iter()
+            .map(|state| FlowModelVersionBindState {
+                exist_state: Some(FlowModelBindStateReq {
+                    state_id: state.id.clone(),
+                    ext: state.ext,
+                }),
+                bind_new_state: None,
+                add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state.id).collect_vec()),
+                modify_transitions: None,
+                delete_transitions: None,
+                is_init: self.init_state_id == state.id,
+            })
+            .collect_vec();
+        let rel_transition_ids = self.rel_transitions().clone().map(|rel_transitions| rel_transitions.into_iter().map(|tran| tran.id).collect_vec());
+        let front_conds = self.front_conds();
+        FlowModelAddReq {
+            id: Some(self.id.clone()),
+            name: self.name.as_str().into(),
+            icon: Some(self.icon.clone()),
+            info: Some(self.info.clone()),
+            kind: self.kind,
+            status: self.status,
+            rel_transition_ids,
+            rel_template_ids: Some(self.rel_template_ids.clone()),
+            add_version: Some(FlowModelVersionAddReq {
+                id: Some(self.current_version_id.clone()),
+                name: self.name.as_str().into(),
+                rel_model_id: Some(self.id.clone()),
+                bind_states: Some(states),
+                status: FlowModelVesionState::Enabled,
+                scope_level: Some(self.scope_level.clone()),
+                disabled: Some(self.disabled),
+            }),
+            current_version_id: Some(self.current_version_id.clone()),
+            template: self.template,
+            main: self.main,
+            front_conds,
+            rel_model_id: Some(self.rel_model_id.clone()),
+            tag: Some(self.tag.clone()),
+            scope_level: Some(self.scope_level),
+            disabled: Some(self.disabled),
+            data_source: self.data_source,
+        }
+    }
 }
 
 /// 工作流模型过滤器
@@ -354,6 +411,7 @@ pub struct FlowModelFilterReq {
     /// 是否是主流程
     pub main: Option<bool>,
     pub own_paths: Option<Vec<String>>,
+    pub data_source: Option<String>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
     /// 关联模型ID
