@@ -55,8 +55,8 @@ impl FlowSubDeployServ {
     pub(crate) async fn sub_deploy_import(import_req: FlowSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         for import_state in import_req.states {
             let mock_ctx = TardisContext {
-                own_paths: import_state.own_paths,
-                owner: import_state.owner,
+                own_paths: import_state.own_paths.clone(),
+                owner: import_state.owner.clone(),
                 ..Default::default()
             };
             if FlowStateServ::get_item(&import_state.id, &FlowStateFilterReq {
@@ -75,8 +75,8 @@ impl FlowSubDeployServ {
         }
         for model in import_req.models {
             let mock_ctx = TardisContext {
-                own_paths: import_state.own_paths,
-                owner: import_state.owner,
+                own_paths: model.own_paths.clone(),
+                owner: model.owner.clone(),
                 ..Default::default()
             };
             if FlowModelServ::get_item(&model.id, &FlowModelFilterReq {
