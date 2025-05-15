@@ -772,7 +772,9 @@ impl IamSetServ {
             .await;
             IamCertServ::package_tardis_account_context_and_resp(&add_req.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
             let _ = IamSearchClient::async_add_or_modify_account_search(&add_req.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
-            IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), funs, ctx).await?;
+            if !set_cate_id.is_empty() {
+                IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), funs, ctx).await?;
+            }
         }
 
         result
