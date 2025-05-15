@@ -829,7 +829,11 @@ impl IamSubDeployServ {
                         code: IamConfigKind::parse(&config.code.clone()).unwrap_or(IamConfigKind::TokenExpire),
                     })
                     .collect::<Vec<_>>();
-                IamConfigServ::add_or_modify_batch(&rel_item_id, iam_config_reqs, funs, ctx).await?;
+                let mock_ctx = TardisContext {
+                    own_paths: rel_item_id.clone(),
+                    ..ctx.clone()
+                };
+                IamConfigServ::add_or_modify_batch(&rel_item_id, iam_config_reqs, funs, &mock_ctx).await?;
             }
         }
         Ok(())
@@ -915,7 +919,7 @@ impl IamSubDeployServ {
                                     icon: Set(cate.icon),
                                     sort: Set(cate.sort),
                                     ext: Set(cate.ext),
-                                    rel_rbum_set_id: Set(cate.rel_rbum_set_id.to_string()),
+                                    rel_rbum_set_id: Set(org_set.id.to_string()),
                                     scope_level: Set(cate.scope_level.to_int()),
                                     ..Default::default()
                                 },
