@@ -37,6 +37,7 @@ pub enum FlowModelVesionState {
 /// 添加请求
 #[derive(Clone, Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelVersionAddReq {
+    pub id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: TrimString,
     /// 关联的模型ID

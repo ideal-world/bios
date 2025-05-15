@@ -594,6 +594,9 @@ pub struct FlowInstFilterReq {
     pub current_state_sys_kind: Option<FlowSysStateKind>,
 
     pub with_sub: Option<bool>,
+
+    pub create_time_start: Option<DateTime<Utc>>,
+    pub create_time_end: Option<DateTime<Utc>>,
 }
 
 #[derive(sea_orm::FromQueryResult, Debug)]
@@ -727,4 +730,11 @@ pub struct ModifyObjSearchExtReq {
     pub status: Option<String>,  // 当前状态
     pub rel_state: Option<String>, // 审批状态
     pub rel_transition_state_name: Option<String>, // 审批节点名
+}
+
+/// 实例统计数量请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
+pub struct FlowInstStatcountReq {
+    pub app_ids: Vec<String>,
+    pub filter: FlowInstFilterReq,
 }
