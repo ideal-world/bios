@@ -995,6 +995,7 @@ impl IamSubDeployServ {
                             basic: RbumBasicFilterReq {
                                 with_sub_own_paths: true,
                                 ids: Some(vec![cate.id.clone()]),
+                                own_paths: Some("".to_string()),
                                 ..Default::default()
                             },
                             rel_rbum_set_id: Some(apps_set.id.clone()),
@@ -1082,6 +1083,19 @@ impl IamSubDeployServ {
                 if let Some(ref account_cert) = account_cert {
                     if let Some(certs) = account_cert.get(&account.id) {
                         for cert in certs {
+                            if funs
+                                .db()
+                                .count(
+                                    Query::select()
+                                        .column(bios_basic::rbum::domain::rbum_cert::Column::Id)
+                                        .from(bios_basic::rbum::domain::rbum_cert::Entity)
+                                        .and_where(Expr::col(bios_basic::rbum::domain::rbum_cert::Column::Id).eq(cert.id.clone())),
+                                )
+                                .await?
+                                > 0
+                            {
+                                continue;
+                            }
                             funs.db()
                                 .insert_one(
                                     bios_basic::rbum::domain::rbum_cert::ActiveModel {
@@ -1123,6 +1137,54 @@ impl IamSubDeployServ {
                     if let Some(ref account_org) = account_org {
                         if let Some(org_ids) = account_org.get(&account.id) {
                             for org_id in org_ids {
+                                let (cate_ids, cate_codes) = if org_id.is_empty() {
+                                    (None, Some(vec!["".to_string()]))
+                                } else {
+                                    (Some(vec![org_id.to_string()]), None)
+                                };
+                                // 不存在 cate 节点，则跳过
+                                if !org_id.is_empty() {
+                                    if RbumSetCateServ::count_rbums(
+                                        &RbumSetCateFilterReq {
+                                            basic: RbumBasicFilterReq {
+                                                with_sub_own_paths: true,
+                                                ids: Some(vec![org_id.clone()]),
+                                                own_paths: Some("".to_string()),
+                                                ..Default::default()
+                                            },
+                                            rel_rbum_set_id: Some(org_set.id.clone()),
+                                            ..Default::default()
+                                        },
+                                        funs,
+                                        ctx,
+                                    )
+                                    .await?
+                                        == 0
+                                    {
+                                        continue;
+                                    }
+                                }
+                                // 已经存在该节点，跳过
+                                if RbumSetItemServ::exist_rbum(
+                                    &RbumSetItemFilterReq {
+                                        basic: RbumBasicFilterReq {
+                                            with_sub_own_paths: true,
+                                            own_paths: Some("".to_owned()),
+                                            ..Default::default()
+                                        },
+                                        rel_rbum_set_cate_ids: cate_ids,
+                                        rel_rbum_set_cate_sys_codes: cate_codes,
+                                        rel_rbum_item_ids: Some(vec![account.id.clone()]),
+                                        rel_rbum_set_id: Some(org_set.id.clone()),
+                                        ..Default::default()
+                                    },
+                                    funs,
+                                    ctx,
+                                )
+                                .await?
+                                {
+                                    continue;
+                                }
                                 IamSetServ::add_set_item(
                                     &IamSetItemAddReq {
                                         set_id: org_set.id.clone(),
@@ -1142,6 +1204,54 @@ impl IamSubDeployServ {
                     if let Some(ref account_apps) = account_apps {
                         if let Some(app_ids) = account_apps.get(&account.id) {
                             for app_id in app_ids {
+                                let (cate_ids, cate_codes) = if app_id.is_empty() {
+                                    (None, Some(vec!["".to_string()]))
+                                } else {
+                                    (Some(vec![app_id.to_string()]), None)
+                                };
+                                // 不存在 cate 节点，则跳过
+                                if !app_id.is_empty() {
+                                    if RbumSetCateServ::count_rbums(
+                                        &RbumSetCateFilterReq {
+                                            basic: RbumBasicFilterReq {
+                                                with_sub_own_paths: true,
+                                                ids: Some(vec![app_id.clone()]),
+                                                own_paths: Some("".to_string()),
+                                                ..Default::default()
+                                            },
+                                            rel_rbum_set_id: Some(apps_set.id.clone()),
+                                            ..Default::default()
+                                        },
+                                        funs,
+                                        ctx,
+                                    )
+                                    .await?
+                                        == 0
+                                    {
+                                        continue;
+                                    }
+                                }
+                                // 已经存在该节点，跳过
+                                if RbumSetItemServ::exist_rbum(
+                                    &RbumSetItemFilterReq {
+                                        basic: RbumBasicFilterReq {
+                                            with_sub_own_paths: true,
+                                            own_paths: Some("".to_owned()),
+                                            ..Default::default()
+                                        },
+                                        rel_rbum_set_cate_ids: cate_ids,
+                                        rel_rbum_set_cate_sys_codes: cate_codes,
+                                        rel_rbum_item_ids: Some(vec![account.id.clone()]),
+                                        rel_rbum_set_id: Some(apps_set.id.clone()),
+                                        ..Default::default()
+                                    },
+                                    funs,
+                                    ctx,
+                                )
+                                .await?
+                                {
+                                    continue;
+                                }
                                 IamSetServ::add_set_item(
                                     &IamSetItemAddReq {
                                         set_id: apps_set.id.clone(),
