@@ -41,7 +41,8 @@ use crate::console_interface::api::{
 };
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
-    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_sub_deploy_api, iam_cs_tenant_api
+    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_sub_deploy_api,
+    iam_cs_tenant_api,
 };
 use crate::console_tenant::api::{
     iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_cert_manage_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api,
@@ -720,6 +721,7 @@ async fn add_res<'a>(
     let res_menu_id = IamResServ::add_res_agg(
         &mut IamResAggAddReq {
             res: IamResAddReq {
+                id: None,
                 code: TrimString(format!("{}/{}", iam_constants::COMPONENT_CODE.to_lowercase(), code)),
                 name: TrimString(name.to_string()),
                 kind: IamResKind::Menu,
@@ -750,6 +752,7 @@ async fn add_res<'a>(
     let res_api_id = IamResServ::add_res_agg(
         &mut IamResAggAddReq {
             res: IamResAddReq {
+                id: None,
                 code: TrimString(format!("{}/{}/**", iam_constants::COMPONENT_CODE.to_lowercase(), code)),
                 name: TrimString(name.to_string()),
                 kind: IamResKind::Api,

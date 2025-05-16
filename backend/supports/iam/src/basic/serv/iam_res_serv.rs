@@ -61,6 +61,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
 
     async fn package_item_add(add_req: &IamResAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
+            id: add_req.id.clone(),
             code: Some(add_req.code.clone()),
             name: add_req.name.clone(),
             disabled: add_req.disabled,
@@ -774,6 +775,7 @@ impl IamMenuServ {
         IamResServ::add_res_agg(
             &mut IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString(code.to_string()),
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Menu,
@@ -807,6 +809,7 @@ impl IamMenuServ {
         IamResServ::add_res_agg(
             &mut IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString(code.to_string()),
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Ele,

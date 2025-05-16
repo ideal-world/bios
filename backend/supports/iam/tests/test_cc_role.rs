@@ -161,6 +161,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     // ----------------------- Rel Res -----------------------
     let res_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("测试资源".to_string()),
             code: TrimString("test_code".to_string()),
             method: Some(TrimString("GET".to_string())),

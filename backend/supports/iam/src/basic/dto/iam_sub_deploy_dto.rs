@@ -15,6 +15,7 @@ use tardis::web::poem_openapi;
 use super::iam_account_dto::IamAccountDetailResp;
 use super::iam_app_dto::IamAppDetailResp;
 use super::iam_config_dto::IamConfigDetailResp;
+use super::iam_res_dto::IamResDetailResp;
 use super::iam_role_dto::IamRoleDetailResp;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -93,6 +94,12 @@ pub struct IamSubDeployOneExportAggResp {
     pub account_role: Option<HashMap<String, Vec<String>>>,
     pub account_org: Option<HashMap<String, Vec<String>>>,
     pub account_apps: Option<HashMap<String, Vec<String>>>,
+    pub res_set: Option<RbumSetDetailResp>,
+    pub res_set_cate: Option<Vec<RbumSetCateDetailResp>>,
+    pub res_items: Option<Vec<IamResDetailResp>>,
+    pub res_set_item: Option<HashMap<String, Vec<String>>>,
+    pub res_api: Option<HashMap<String, Vec<String>>>,
+    pub res_role: Option<HashMap<String, Vec<String>>>,
     pub org_set: Option<RbumSetDetailResp>,
     pub org_set_cate: Option<Vec<RbumSetCateDetailResp>>,
     pub apps_set: Option<RbumSetDetailResp>,
@@ -125,6 +132,12 @@ pub struct IamSubDeployTowImportReq {
     pub account_role: Option<HashMap<String, Vec<String>>>,
     pub account_org: Option<HashMap<String, Vec<String>>>,
     pub account_apps: Option<HashMap<String, Vec<String>>>,
+    pub res_set: Option<RbumSetDetailResp>,
+    pub res_set_cate: Option<Vec<RbumSetCateDetailResp>>,
+    pub res_items: Option<Vec<IamResDetailResp>>,
+    pub res_set_item: Option<HashMap<String, Vec<String>>>,
+    pub res_api: Option<HashMap<String, Vec<String>>>,
+    pub res_role: Option<HashMap<String, Vec<String>>>,
     pub org_set: Option<RbumSetDetailResp>,
     pub org_set_cate: Option<Vec<RbumSetCateDetailResp>>,
     pub apps_set: Option<RbumSetDetailResp>,

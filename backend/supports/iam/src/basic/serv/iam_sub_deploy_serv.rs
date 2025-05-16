@@ -6,6 +6,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp;
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp};
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
@@ -16,20 +17,22 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::prelude::Expr;
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::{self, *};
+use tardis::web::poem_openapi::types::Type;
 use tardis::{chrono, serde_json, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
 use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp};
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppModifyReq};
 use crate::basic::dto::iam_config_dto::{IamConfigAggOrModifyReq, IamConfigDetailResp};
 use crate::basic::dto::iam_filer_dto::{
-    IamAccountFilterReq, IamAppFilterReq, IamConfigFilterReq, IamRoleFilterReq, IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq,
+    IamAccountFilterReq, IamAppFilterReq, IamConfigFilterReq, IamResFilterReq, IamRoleFilterReq, IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq,
 };
+use crate::basic::dto::iam_res_dto::{self, IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
-use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
+use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::dto::iam_sub_deploy_dto::{
     IamSubDeployAddReq, IamSubDeployDetailResp, IamSubDeployModifyReq, IamSubDeployOneExportAggResp, IamSubDeployOneImportReq, IamSubDeploySummaryResp,
     IamSubDeployTowExportAggResp, IamSubDeployTowImportReq,
@@ -41,10 +44,12 @@ use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants::RBUM_ITEM_ID_SUB_ROLE_LEN;
 use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamCertKernelKind, IamConfigDataTypeKind, IamConfigKind, IamRelKind, IamRoleKind, IamSetKind, IamSubDeployHostKind};
 
+use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_app_serv::IamAppServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_config_serv::IamConfigServ;
+use super::iam_res_serv::IamResServ;
 use super::iam_role_serv::IamRoleServ;
 use super::iam_set_serv::IamSetServ;
 
@@ -303,7 +308,7 @@ impl IamSubDeployServ {
 
         let (orgs_set, orgs_set_cate) = Self::export_orgs(id, funs, ctx).await?;
         let (apps_set, apps_set_cate) = Self::export_apps(id, funs, ctx).await?;
-
+        let (res_set, res_set_cate, res_items, res_set_item, res_api_map, res_role_map) = Self::export_res(funs, ctx).await?;
         Ok(IamSubDeployOneExportAggResp {
             accounts: Some(accounts),
             account_cert: Some(Self::export_account_cert(account_ids.clone(), funs, ctx).await?),
@@ -311,11 +316,108 @@ impl IamSubDeployServ {
             account_role: Some(Self::export_account_tenant_role(account_ids.clone(), funs, ctx).await?),
             account_org: Some(Self::export_account_org(account_ids.clone(), funs, ctx).await?),
             account_apps: Some(Self::export_account_apps(account_ids.clone(), funs, ctx).await?),
+            res_set: Some(res_set),
+            res_set_cate: Some(res_set_cate),
+            res_set_item: Some(res_set_item),
+            res_items: Some(res_items),
+            res_api: Some(res_api_map),
+            res_role: Some(res_role_map),
             org_set: Some(orgs_set),
             org_set_cate: Some(orgs_set_cate),
             apps_set: Some(apps_set),
             apps_set_cate: Some(apps_set_cate),
         })
+    }
+
+    async fn export_res(
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<(
+        RbumSetDetailResp,
+        Vec<RbumSetCateDetailResp>,
+        Vec<IamResDetailResp>,
+        HashMap<String, Vec<String>>,
+        HashMap<String, Vec<String>>,
+        HashMap<String, Vec<String>>,
+    )> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let res_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &global_ctx).await?;
+        let res_set = RbumSetServ::get_rbum(
+            &res_set_id,
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?;
+        let res_set_cate = RbumSetCateServ::find_detail_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_set_id: Some(res_set_id.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?;
+
+        let res_items = IamResServ::find_detail_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?;
+        let mut res_role_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut res_api_map = HashMap::new();
+        let mut res_set_item = HashMap::new();
+        for res in res_items.clone().into_iter() {
+            let apis = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &res.id.clone(), None, None, funs, &global_ctx).await?;
+            res_api_map.insert(res.id.clone(), apis);
+            let roles = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &res.id.clone(), None, None, funs, &global_ctx).await?;
+            res_role_map.insert(res.id.clone(), roles);
+            let res_cate_ids = RbumSetItemServ::find_rbums(
+                &RbumSetItemFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    rel_rbum_set_id: Some(res_set_id.clone()),
+                    rel_rbum_item_ids: Some(vec![res.id.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .iter()
+            .map(|org| org.rel_rbum_set_cate_id.clone().unwrap_or_default())
+            .collect::<Vec<_>>();
+            res_set_item.insert(res.id.clone(), res_cate_ids);
+        }
+        Ok((res_set, res_set_cate, res_items, res_set_item, res_api_map, res_role_map))
     }
 
     async fn export_apps(sub_deploy_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(RbumSetDetailResp, Vec<RbumSetCateDetailResp>)> {
@@ -606,7 +708,7 @@ impl IamSubDeployServ {
                             contact_phone: Some(app.contact_phone.clone()),
                         },
                         funs,
-                        ctx,
+                        &app_ctx,
                     )
                     .await?;
                 } else {
@@ -621,14 +723,14 @@ impl IamSubDeployServ {
                             contact_phone: Some(app.contact_phone),
                         },
                         funs,
-                        ctx,
+                        &app_ctx,
                     )
                     .await?;
                 }
                 // 同步项目的项目组
                 if let Some(app_apps) = import_req.app_apps.clone() {
                     if let Some(app_set_cate) = app_apps.get(&app.id) {
-                        let set_items = IamSetServ::find_set_items(Some(app_set_id.clone()), None, Some(app.id.to_owned()), None, true, Some(true), funs, &app_ctx).await?;
+                        let set_items = IamSetServ::find_set_items(Some(app_set_id.clone()), None, Some(app.id.to_owned()), None, true, Some(true), funs, &ctx).await?;
                         for set_item in set_items {
                             IamSetServ::delete_set_item(&set_item.id, funs, &ctx).await?;
                         }
@@ -810,6 +912,17 @@ impl IamSubDeployServ {
             ctx,
         )
         .await?;
+        Self::import_res(
+            import_req.res_set,
+            import_req.res_set_cate,
+            import_req.res_items,
+            import_req.res_set_item,
+            import_req.res_api,
+            import_req.res_role,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 
@@ -834,6 +947,233 @@ impl IamSubDeployServ {
                     ..ctx.clone()
                 };
                 IamConfigServ::add_or_modify_batch(&rel_item_id, iam_config_reqs, funs, &mock_ctx).await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn import_res(
+        res_set: Option<RbumSetDetailResp>,
+        res_set_cate: Option<Vec<RbumSetCateDetailResp>>,
+        res_items: Option<Vec<IamResDetailResp>>,
+        res_set_item: Option<HashMap<String, Vec<String>>>,
+        res_api: Option<HashMap<String, Vec<String>>>,
+        res_role: Option<HashMap<String, Vec<String>>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        if let Some(res_set) = res_set {
+            if RbumSetServ::count_rbums(
+                &RbumSetFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ids: Some(vec![res_set.id.clone()]),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                &global_ctx,
+            )
+            .await?
+                == 0
+            {
+                RbumSetServ::add_rbum(
+                    &mut RbumSetAddReq {
+                        id: Some(TrimString::from(res_set.id.clone())),
+                        code: TrimString::from(res_set.code),
+                        kind: TrimString::from(res_set.kind),
+                        name: TrimString::from(res_set.name),
+                        note: Some(res_set.note),
+                        icon: Some(res_set.icon),
+                        sort: Some(res_set.sort),
+                        ext: Some(res_set.ext),
+                        scope_level: Some(res_set.scope_level),
+                        disabled: Some(res_set.disabled),
+                    },
+                    funs,
+                    &global_ctx,
+                )
+                .await?;
+            }
+            if let Some(res_set_cate) = res_set_cate {
+                let new_res_set_cate_ids = res_set_cate.iter().map(|cate| cate.id.clone()).collect::<Vec<_>>();
+                let old_res_set_cate = RbumSetCateServ::find_detail_rbums(
+                    &RbumSetCateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        rel_rbum_set_id: Some(res_set.id.clone()),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    &global_ctx,
+                )
+                .await?;
+                let delete_old_res_set_cate = old_res_set_cate.iter().filter(|cate| !new_res_set_cate_ids.contains(&cate.id)).collect::<Vec<_>>();
+                for cate in res_set_cate {
+                    if RbumSetCateServ::count_rbums(
+                        &RbumSetCateFilterReq {
+                            basic: RbumBasicFilterReq {
+                                with_sub_own_paths: true,
+                                ids: Some(vec![cate.id.clone()]),
+                                ..Default::default()
+                            },
+                            rel_rbum_set_id: Some(res_set.id.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        &global_ctx,
+                    )
+                    .await?
+                        == 0
+                    {
+                        funs.db()
+                            .insert_one(
+                                bios_basic::rbum::domain::rbum_set_cate::ActiveModel {
+                                    id: Set(cate.id.clone()),
+                                    sys_code: Set(cate.sys_code.clone()),
+                                    bus_code: Set(cate.bus_code.to_string()),
+                                    name: Set(cate.name.to_string()),
+                                    icon: Set(cate.icon),
+                                    sort: Set(cate.sort),
+                                    ext: Set(cate.ext),
+                                    rel_rbum_set_id: Set(res_set.id.to_string()),
+                                    scope_level: Set(cate.scope_level.to_int()),
+                                    ..Default::default()
+                                },
+                                &global_ctx,
+                            )
+                            .await?;
+                    }
+                }
+                for cate in delete_old_res_set_cate {
+                    RbumSetCateServ::delete_with_all_rels(&cate.id, funs, &global_ctx).await?;
+                }
+            }
+            if let Some(res_items) = res_items {
+                let old_res_item_ids = IamResServ::find_id_items(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                let new_res_ids = res_items.iter().map(|res| res.id.clone()).collect::<Vec<_>>();
+                let delete_old_res_ids = old_res_item_ids.iter().filter(|res_id| !new_res_ids.contains(&res_id)).collect::<Vec<_>>();
+                for res_item in res_items.clone() {
+                    let bind_api_res = if let Some(res_api) = res_api.clone() {
+                        if res_api.contains_key(&res_item.id.clone()) {
+                            Some(res_api[&res_item.id.clone()].clone())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+                    if old_res_item_ids.contains(&res_item.id.clone()) {
+                        IamResServ::modify_item(
+                            &res_item.id.clone(),
+                            &mut IamResModifyReq {
+                                name: Some(TrimString(res_item.name)),
+                                code: Some(TrimString(res_item.code)),
+                                method: Some(TrimString(res_item.method)),
+                                icon: Some(res_item.icon),
+                                sort: Some(res_item.sort),
+                                hide: Some(res_item.hide),
+                                action: Some(res_item.action),
+                                ext: Some(res_item.ext),
+                                scope_level: Some(res_item.scope_level),
+                                disabled: Some(res_item.disabled),
+                                crypto_req: Some(res_item.crypto_req),
+                                crypto_resp: Some(res_item.crypto_resp),
+                                double_auth: Some(res_item.double_auth),
+                                double_auth_msg: Some(res_item.double_auth_msg),
+                                need_login: Some(res_item.need_login),
+                                bind_api_res,
+                            },
+                            funs,
+                            &global_ctx,
+                        )
+                        .await?;
+                    } else {
+                        if let Some(res_set_item) = res_set_item.clone() {
+                            if res_set_item.contains_key(&res_item.id.clone()) && !res_set_item[&res_item.id].is_empty() {
+                                let set_cate_id = res_set_item[&res_item.id][0].clone();
+                                IamResServ::add_res_agg(
+                                    &mut IamResAggAddReq {
+                                        res: IamResAddReq {
+                                            id: Some(TrimString(res_item.id.clone())),
+                                            code: TrimString(res_item.code),
+                                            name: TrimString(res_item.name),
+                                            kind: res_item.kind,
+                                            icon: Some(res_item.icon),
+                                            sort: Some(res_item.sort),
+                                            method: Some(TrimString(res_item.method)),
+                                            hide: Some(res_item.hide),
+                                            action: Some(res_item.action),
+                                            ext: Some(res_item.ext),
+                                            scope_level: Some(res_item.scope_level),
+                                            disabled: Some(res_item.disabled),
+                                            crypto_req: Some(res_item.crypto_req),
+                                            crypto_resp: Some(res_item.crypto_resp),
+                                            double_auth: Some(res_item.double_auth),
+                                            double_auth_msg: Some(res_item.double_auth_msg),
+                                            need_login: Some(res_item.need_login),
+                                            bind_api_res,
+                                        },
+                                        set: IamSetItemAggAddReq { set_cate_id },
+                                    },
+                                    &res_set.id,
+                                    funs,
+                                    &global_ctx,
+                                )
+                                .await?;
+                            }
+                        }
+                    }
+                    if let Some(res_role) = res_role.clone() {
+                        if res_role.contains_key(&res_item.id.clone()) && !res_role[&res_item.id.clone()].is_empty() {
+                            for role_id in res_role[&res_item.id.clone()].clone() {
+                                if IamRoleServ::count_items(
+                                    &IamRoleFilterReq {
+                                        basic: RbumBasicFilterReq {
+                                            with_sub_own_paths: true,
+                                            ids: Some(vec![role_id.clone()]),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    funs,
+                                    &global_ctx,
+                                )
+                                .await?
+                                    > 0
+                                {
+                                    IamRelServ::add_simple_rel(&IamRelKind::IamResRole, &res_item.id, &role_id, None, None, true, false, funs, ctx).await?;
+                                }
+                            }
+                        }
+                    }
+                }
+                for delete_res_id in delete_old_res_ids {
+                    IamResServ::delete_item_with_all_rels(&delete_res_id, funs, ctx).await?;
+                }
             }
         }
         Ok(())
@@ -1047,6 +1387,10 @@ impl IamSubDeployServ {
     ) -> TardisResult<()> {
         if let Some(accounts) = accounts {
             for account in accounts {
+                let account_ctx = TardisContext {
+                    own_paths: account.own_paths,
+                    ..ctx.clone()
+                };
                 if IamAccountServ::count_items(
                     &IamAccountFilterReq {
                         basic: RbumBasicFilterReq {
@@ -1076,7 +1420,7 @@ impl IamSubDeployServ {
                             disabled: Some(account.disabled),
                         },
                         funs,
-                        ctx,
+                        &account_ctx,
                     )
                     .await?;
                 }
@@ -1267,6 +1611,7 @@ impl IamSubDeployServ {
                         }
                     }
                 }
+                let _ = IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(false), "", funs, ctx).await?;
             }
         }
         Ok(())
