@@ -573,6 +573,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("work_spaces".to_string()),
                     name: TrimString("工作台页面".to_string()),
                     kind: IamResKind::Menu,
@@ -604,6 +605,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("work_spaces#btn1".to_string()),
                     name: TrimString("xx按钮".to_string()),
                     kind: IamResKind::Ele,
@@ -633,6 +635,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("work_spaces#btn2".to_string()),
                     name: TrimString("yy按钮".to_string()),
                     kind: IamResKind::Ele,
@@ -667,6 +670,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("cs-test/**".to_string()),
                     name: TrimString("系统控制台功能".to_string()),
                     kind: IamResKind::Api,
