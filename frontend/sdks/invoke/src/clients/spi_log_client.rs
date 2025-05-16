@@ -55,8 +55,7 @@ pub struct LogItemFindReq {
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct LogItemFindResp {
-    #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Value,
     pub kind: String,
     pub ext: Value,
     pub owner: String,

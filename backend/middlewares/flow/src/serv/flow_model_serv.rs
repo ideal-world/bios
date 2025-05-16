@@ -25,14 +25,14 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
             FlowModelVesionState,
         },
         flow_state_dto::{
-            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
+            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind
         },
         flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq,
@@ -49,12 +49,7 @@ use super::{
     clients::{
         log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    },
-    flow_inst_serv::FlowInstServ,
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_state_serv::FlowStateServ,
-    flow_transition_serv::FlowTransitionServ,
+    }, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowModelServ;
@@ -75,7 +70,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
     async fn package_item_add(add_req: &FlowModelAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         let id = if let Some(id) = &add_req.id {
-            id.clone()
+            if id.is_empty() {
+                TardisFuns::field.nanoid()    
+            } else {
+                id.clone()
+            }
         } else {
             TardisFuns::field.nanoid()
         };
@@ -794,8 +793,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     &flow_model.current_version_id,
                     &FlowModelVersionFilterReq {
                         basic: RbumBasicFilterReq {
-                            ids: None,
-                            ..filter.basic.clone()
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -2089,7 +2089,7 @@ impl FlowModelServ {
         }
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            FlowInstServ::unsafe_modify_state(
+            FlowInstServ::async_unsafe_modify_state(
                 &FlowInstFilterReq {
                     main: Some(true),
                     tags: Some(vec![flow_model.tag.clone()]),
@@ -2115,6 +2115,24 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
+
+        let original_state = FlowStateServ::get_item(&req.state_id, &FlowStateFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }, funs, ctx).await?;
+        let target_state = FlowStateServ::get_item(&req.new_state_id, &FlowStateFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }, funs, ctx).await?;
+        FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
         Ok(())
     }
 
@@ -2131,9 +2149,11 @@ impl FlowModelServ {
             let default_models = Self::find_detail_items(&FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
+                    ignore_scope: true,
                     scope_level: Some(RbumScopeLevelKind::Root),
                     ..Default::default()
                 },
+                main: Some(true),
                 tags: Some(req.tags.clone()),
                 ..Default::default()
             }, None, None, funs, ctx).await?;

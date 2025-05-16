@@ -95,7 +95,7 @@ pub(crate) async fn find_task(
         };
         if let Some(end_log) = log_iter.next() {
             task.end = Some(end_log.ts);
-            task.err_msg = Some(end_log.content);
+            task.err_msg = Some(end_log.content.to_string());
         }
         records.push(task)
     }

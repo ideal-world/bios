@@ -340,7 +340,7 @@ impl FlowModelDetailResp {
         self.front_conds.clone().map(|front_conds| TardisFuns::json.json_to_obj(front_conds).unwrap_or_default())
     }
 
-    pub fn clone_model(self) -> FlowModelAddReq {
+    pub fn create_add_req(self) -> FlowModelAddReq {
         let mut add_transitions = vec![];
         for transition in self.transitions() {
             let mut add_transitions_req = FlowTransitionAddReq::from(transition.clone());
