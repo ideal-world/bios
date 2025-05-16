@@ -68,7 +68,7 @@ pub struct FlowModelVersionBindState {
     pub is_init: bool,
 }
 
-/// 模型绑定状态节点
+/// 模型更新状态节点
 #[derive(Clone, Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelVersionModifyState {
     /// 若存在则表示，绑定已有状态节点

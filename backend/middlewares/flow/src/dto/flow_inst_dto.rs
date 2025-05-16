@@ -597,6 +597,9 @@ pub struct FlowInstFilterReq {
 
     pub create_time_start: Option<DateTime<Utc>>,
     pub create_time_end: Option<DateTime<Utc>>,
+
+    pub update_time_start: Option<DateTime<Utc>>,
+    pub update_time_end: Option<DateTime<Utc>>,
 }
 
 #[derive(sea_orm::FromQueryResult, Debug)]

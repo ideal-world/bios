@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemFindReq, LogItemFindResp};
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, TardisFuns, TardisFunsInst
 };
 
 use crate::{dto::{
     flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
-    flow_model_dto::FlowModelRelTransitionKind,
-    flow_state_dto::{FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
+    flow_model_dto::{FlowModelDetailResp, FlowModelRelTransitionKind},
+    flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
 }, flow_constants};
 
 use super::{
@@ -746,5 +746,84 @@ impl FlowLogServ {
         )
         .await?;
         Ok(())
+    }
+
+    pub async fn add_model_delete_state_log_async_task(
+        flow_model: &FlowModelDetailResp, 
+        original_state: &FlowStateDetailResp, 
+        target_state: &FlowStateDetailResp,
+        _funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let ctx_cp = ctx.clone();
+        let flow_model_cp = flow_model.clone();
+        let original_state_cp = original_state.clone();
+        let target_state_cp = target_state.clone();
+        let flow_model_id = flow_model.id.clone();
+        let funs_cp = flow_constants::get_tardis_inst();
+        ctx.add_sync_task(Box::new(
+            || {
+                Box::pin(async move {
+                    let task_handle = tardis::tokio::spawn(async move {
+                        let _ = Self::add_model_delete_state_log(
+                            &flow_model_cp,
+                            &original_state_cp,
+                            &target_state_cp,
+                            &funs_cp,
+                            &ctx_cp,
+                        ).await;
+                    });
+                    match task_handle.await {
+                        Ok(_) => {}
+                        Err(e) => tardis::log::error!("Flow model {} add_model_delete_state_log error:{:?}", flow_model_id, e),
+                    }
+                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                    Ok(())
+                })
+            }
+        )).await?;
+        Ok(())
+    }
+
+    async fn add_model_delete_state_log(flow_model: &FlowModelDetailResp, original_state: &FlowStateDetailResp, target_state: &FlowStateDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_content = LogParamContent {
+            subject: Some("状态".to_string()),
+            sub_id: Some(original_state.id.clone()),
+            name: Some(original_state.name.clone()),
+            sub_kind: Some(original_state.sys_state.to_string()),
+            operand: Some("状态".to_string()),
+            operand_id: Some(target_state.id.clone()),
+            operand_name: Some(target_state.name.clone()),
+            operand_kind: Some(target_state.sys_state.to_string()),
+            ..Default::default()
+        };
+        FlowLogClient::addv2_item(
+            LogParamTag::FlowModel,
+            Some(flow_model.current_version_id.clone()),
+            log_content,
+            None,
+            Some("dynamic_log_flow_model".to_string()),
+            Some(LogParamOp::Delete.into()),
+            rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            funs,
+            ctx,
+            false,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn find_model_delete_state_log(flow_model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<LogItemFindResp>>> {
+        let find_req = LogItemFindReq {
+            tag: LogParamTag::FlowModel.into(),
+            kinds: Some(vec![TrimString("dynamic_log_flow_model")]),
+            ops: Some(vec![LogParamOp::Delete.into()]),
+            keys: Some(vec![TrimString(flow_model.current_version_id.clone())]),
+            page_number: 1,
+            page_size: 9999,
+            ..Default::default()
+        };
+
+        Ok(FlowLogClient::findv2(find_req, funs, ctx).await?.map(|p| p.records))
     }
 }

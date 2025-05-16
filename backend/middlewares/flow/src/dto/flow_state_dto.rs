@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 use itertools::Itertools;
 use strum::Display;
 
@@ -366,6 +366,16 @@ pub enum FlowSysStateKind {
     Progress,
     #[sea_orm(string_value = "finish")]
     Finish,
+}
+
+impl Display for FlowSysStateKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlowSysStateKind::Start => write!(f, "start"),
+            FlowSysStateKind::Progress => write!(f, "progress"),
+            FlowSysStateKind::Finish => write!(f, "finish"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
