@@ -340,35 +340,6 @@ impl FlowModelDetailResp {
         self.front_conds.clone().map(|front_conds| TardisFuns::json.json_to_obj(front_conds).unwrap_or_default())
     }
 
-    pub fn create_modify_req(self) -> FlowModelModifyReq {
-        let front_conds = self.front_conds();
-        FlowModelModifyReq {
-            name: Some(self.name.as_str().into()),
-            icon: Some(self.icon.clone()),
-            info: Some(self.info.clone()),
-            status: Some(self.status),
-            template: Some(self.template),
-            rel_template_ids: Some(self.rel_template_ids.clone()),
-            modify_version: Some(FlowModelVersionModifyReq {
-                name: Some(self.name.as_str().into()),
-                bind_states: None, // todo
-                unbind_states: None, // todo
-                delete_states: None, // todo
-                modify_states: None, // todo
-                status: None,
-                init_state_id: Some(self.init_state_id),
-                scope_level: Some(self.scope_level.clone()),
-                disabled: Some(self.disabled),
-            }),
-            current_version_id: Some(self.current_version_id.clone()),
-            front_conds,
-            rel_model_id: Some(self.rel_model_id.clone()),
-            tag: Some(self.tag.clone()),
-            scope_level: Some(self.scope_level),
-            disabled: Some(self.disabled),
-        }
-    }
-
     pub fn create_add_req(self) -> FlowModelAddReq {
         let mut add_transitions = vec![];
         for transition in self.transitions() {
