@@ -1,22 +1,21 @@
 use std::collections::HashMap;
+use tardis::web::poem_openapi;
 
 use bios_sdk_invoke::clients::{
     iam_client::IamClient,
-    spi_log_client::{LogItemAddReq, LogItemAddV2Req, SpiLogClient},
+    spi_log_client::{LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, SpiLogClient},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    chrono::{DateTime, Utc},
-    tokio, TardisFuns, TardisFunsInst,
+    basic::{dto::TardisContext, result::TardisResult}, chrono::{DateTime, Utc}, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use crate::{flow_config::FlowConfig, flow_constants};
 pub struct FlowLogClient;
 
-#[derive(Serialize, Default, Debug, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, Clone, poem_openapi::Object)]
 pub struct LogParamContent {
     pub subject: Option<String>,
     pub name: Option<String>,
@@ -64,6 +63,7 @@ impl From<LogParamExtSceneKind> for String {
 pub enum LogParamTag {
     DynamicLog,
     ApprovalFlow,
+    FlowModel,
 }
 
 impl From<LogParamTag> for String {
@@ -71,6 +71,7 @@ impl From<LogParamTag> for String {
         match val {
             LogParamTag::DynamicLog => "dynamic_log".to_string(),
             LogParamTag::ApprovalFlow => "approval_flow".to_string(),
+            LogParamTag::FlowModel => "flow_model".to_string(),
         }
     }
 }
@@ -251,6 +252,10 @@ impl FlowLogClient {
         };
         SpiLogClient::addv2(req, funs, ctx).await?;
         Ok(())
+    }
+
+    pub async fn findv2(find_req: LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<LogItemFindResp>>> {
+        SpiLogClient::findv2(find_req, funs, ctx).await
     }
 
     pub fn get_flow_kind_text(tag: &str) -> String {

@@ -555,6 +555,7 @@ impl FlowInstServ {
                     id: Set(id.clone()),
                     create_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
                     current_vars: Set(Some(TardisFuns::json.obj_to_json(&create_vars).unwrap_or(json!("")))),
+                    update_time: Set(Some(Utc::now())),
                     ..Default::default()
                 };
                 funs.db().update_one(flow_inst, ctx).await?;
@@ -682,6 +683,12 @@ impl FlowInstServ {
         }
         if let Some(create_time_end) = &filter.create_time_end {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CreateTime)).lte(create_time_end.to_string()));
+        }
+        if let Some(update_time_start) = &filter.update_time_start {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::UpdateTime)).gte(update_time_start.to_string()));
+        }
+        if let Some(update_time_end) = &filter.update_time_end {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::UpdateTime)).lte(update_time_end.to_string()));
         }
 
         Ok(())
@@ -3934,6 +3941,7 @@ impl FlowInstServ {
         let flow_inst = flow_inst::ActiveModel {
             id: Set(flow_inst_detail.id.clone()),
             comments: Set(Some(comments.clone())),
+            update_time: Set(Some(Utc::now())),
             ..Default::default()
         };
         funs.db().update_one(flow_inst, ctx).await?;

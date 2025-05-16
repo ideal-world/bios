@@ -71,7 +71,11 @@ impl
 
     async fn package_item_add(add_req: &FlowModelVersionAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         let id = if let Some(id) = &add_req.id {
-            id.clone()
+            if id.is_empty() {
+                TardisFuns::field.nanoid()    
+            } else {
+                id.clone()
+            }
         } else {
             TardisFuns::field.nanoid()
         };
