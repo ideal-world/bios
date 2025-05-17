@@ -17,6 +17,7 @@ pub struct IamResAggAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug)]
 pub struct IamResAddReq {
+    pub id: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -132,7 +133,7 @@ impl IamResSummaryResp {
     }
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct IamResDetailResp {
     pub id: String,
     pub code: String,

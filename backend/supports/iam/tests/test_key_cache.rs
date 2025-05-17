@@ -862,6 +862,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Add res, expected two res records");
     let res_cs_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             code: TrimString("iam/cs-2/**".to_string()),
             name: TrimString("系统控制台".to_string()),
             kind: IamResKind::Api,
@@ -886,6 +887,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     .await?;
     let res_ca_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             code: TrimString("iam/ca-2/**".to_string()),
             name: TrimString("应用控制台".to_string()),
             kind: IamResKind::Api,

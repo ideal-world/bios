@@ -57,6 +57,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     info!("【test_cc_res】 : test_single_level : Add Res");
     let res_id1 = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("测试资源1".to_string()),
             code: TrimString("test_code1".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -82,6 +83,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
 
     let _res_id2 = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("测试资源2".to_string()),
             code: TrimString("test_code2".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -222,6 +224,7 @@ async fn test_multi_level_add<'a>(
 
     let res_sys_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_sys".to_string()),
             code: TrimString("res_sys_id".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -247,6 +250,7 @@ async fn test_multi_level_add<'a>(
 
     let res_sys_global_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_sys_global".to_string()),
             code: TrimString("res_sys_global_id".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -272,6 +276,7 @@ async fn test_multi_level_add<'a>(
 
     let res_t1_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_t1".to_string()),
             code: TrimString("res_t1_id".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -297,6 +302,7 @@ async fn test_multi_level_add<'a>(
 
     let res_t2_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_t2".to_string()),
             code: TrimString("res_t2_id".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -322,6 +328,7 @@ async fn test_multi_level_add<'a>(
 
     let res_t2_tenant_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_t2_tenant".to_string()),
             code: TrimString("res_t2_tenant_id".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -347,6 +354,7 @@ async fn test_multi_level_add<'a>(
 
     let res_t2_a1_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_t2_a1".to_string()),
             code: TrimString("res_t2_a1_id".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -372,6 +380,7 @@ async fn test_multi_level_add<'a>(
 
     let res_t2_a2_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("res_t2_a2".to_string()),
             code: TrimString("res_t2_a2_id".to_string()),
             method: Some(TrimString("GET".to_string())),

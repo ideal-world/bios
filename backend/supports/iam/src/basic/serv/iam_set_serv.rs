@@ -540,18 +540,23 @@ impl IamSetServ {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
 
-        let account_tree_sub = Self::get_tree(
-            set_id,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: true,
-                sys_codes: Some(account_cate_sys_codes),
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
+        let account_tree_sub = if account_cate_sys_codes.is_empty() {
+            RbumSetTreeResp { main: vec![], ext: None }
+        } else {
+            //  获取 account cate 的树
+            Self::get_tree(
+                set_id,
+                &mut RbumSetTreeFilterReq {
+                    fetch_cate_item: true,
+                    sys_codes: Some(account_cate_sys_codes.clone()),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        };
         //  补全 account cate 的 parent node
         let mut all_sys_codes = vec![];
         for cate in account_tree_sub.main.iter() {

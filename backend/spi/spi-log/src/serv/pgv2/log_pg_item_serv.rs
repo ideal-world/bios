@@ -48,6 +48,10 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     conn.begin().await?;
     let ref_fields = get_ref_fields_by_table_name(&conn, &get_schema_name_from_ext(&inst.ext).expect("ignore"), &table_name).await?;
     if let Some(key) = add_req.key.as_ref() {
+        // 如果存在上一次记录，则跳过
+        if check(&add_req.tag, key, &id, funs, ctx, inst).await? {
+            return Ok(id);
+        }
         let get_last_record = conn
             .query_one(
                 &format!(
@@ -58,10 +62,6 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
                 vec![Value::from(key.to_string())],
             )
             .await?;
-        //如果没有上次的记录
-        if check(&add_req.tag, key, &id, funs, ctx, inst).await? {
-            return Ok(id);
-        }
         if let Some(last_record) = get_last_record {
             let mut last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;

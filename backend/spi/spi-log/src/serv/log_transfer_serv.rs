@@ -148,12 +148,13 @@ pub async fn import_log_v1(data_source: &str, tag_data: HashMap<String, Vec<LogI
     for (tag, tag_data) in &tag_data {
         let max_size = tag_data.len();
         let mut page = 0;
-        let page_size = 2000;
+        let page_size = 100;
         loop {
             let current_result = &tag_data[((page * page_size).min(max_size))..(((page + 1) * page_size).min(max_size))];
             if current_result.is_empty() {
                 break;
             }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             join_all(
                 current_result
                     .iter()
@@ -199,12 +200,13 @@ pub async fn import_log_v2(
     for (tag, tag_data) in &tag_data {
         let max_size = tag_data.len();
         let mut page = 0;
-        let page_size = 2000;
+        let page_size = 100;
         loop {
             let current_result = &tag_data[((page * page_size).min(max_size))..(((page + 1) * page_size).min(max_size))];
             if current_result.is_empty() {
                 break;
             }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             join_all(
                 current_result
                     .iter()
