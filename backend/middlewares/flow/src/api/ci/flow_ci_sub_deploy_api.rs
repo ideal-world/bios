@@ -1,7 +1,6 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 
-use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem::web::{Json, Query};
 use tardis::web::poem_openapi;
 
@@ -57,15 +56,15 @@ impl FlowCiSubDeployApi {
     #[oai(path = "/sub/export", method = "get")]
     async fn sub_deploy_export(
         &self,
-        start_time: Query<DateTime<Utc>>,
-        end_time: Query<DateTime<Utc>>,
+        // start_time: Query<String>,
+        // end_time: Query<String>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<FlowSubDeployTowExportAggResp> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let result = FlowSubDeployServ::sub_deploy_export(start_time.0, end_time.0, &funs, &ctx.0).await?;
+        let result = FlowSubDeployServ::sub_deploy_export(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
