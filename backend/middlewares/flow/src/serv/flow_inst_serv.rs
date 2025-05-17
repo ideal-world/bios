@@ -14,7 +14,7 @@ use bios_sdk_invoke::dto::search_item_dto::{
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Datelike, Utc},
     db::sea_orm::{
         self,
@@ -4124,6 +4124,125 @@ impl FlowInstServ {
             let total_size = funs.db().count(&query).await?;
             result.insert(app_id.clone(), total_size);
         }
+        Ok(result)
+    }
+
+    pub async fn sync_deleted_instances(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let tag_search_map = FlowSearchClient::get_tag_search_map();
+        let mut result = vec![];
+        let unfinished_insts = Self::find_items(&FlowInstFilterReq {
+            finish: Some(false),
+            ..Default::default()
+        }, funs, ctx).await?;
+        let max_size = unfinished_insts.len();
+        let mut page = 0;
+        let page_size = 500;
+        loop {
+            let current_insts = &unfinished_insts[((page * page_size).min(max_size))..(((page+1) * page_size).min(max_size))];
+            if current_insts.is_empty() {
+                break;
+            }
+            let mut inst_group_by_tag = HashMap::new();
+            for current_inst in current_insts {
+                inst_group_by_tag.entry(current_inst.tag.clone()).and_modify(| inst_ids: &mut Vec<FlowInstSummaryResult>| inst_ids.push(current_inst.clone())).or_insert(vec![current_inst.clone()]);
+            }
+            for (tag, insts) in inst_group_by_tag {
+                if let Some((table, kind)) = tag_search_map.get(&tag) {
+                    let exist_obj_ids = FlowSearchClient::search(&SearchItemSearchReq {
+                        tag: table.clone(),
+                        ctx: SearchItemSearchCtxReq { ..Default::default() },
+                        query: SearchItemQueryReq {
+                            keys: Some(insts.iter().map(|inst| TrimString(inst.rel_business_obj_id.clone())).collect_vec()),
+                            kinds: Some(vec![kind.clone()]),
+                            ..Default::default()
+                        },
+                        adv_by_or: None,
+                        adv_query: None,
+                        sort: None,
+                        page: SearchItemSearchPageReq {
+                            number: 1,
+                            size: 100,
+                            fetch_total: false,
+                        },
+                    }, funs, ctx).await?.map(|resp| resp.records).unwrap_or_default().into_iter().map(|item| item.key).collect_vec();
+                    let deleted_insts = insts.into_iter().filter(|inst| !exist_obj_ids.contains(&inst.rel_business_obj_id)).collect_vec();
+                    result.extend(deleted_insts.iter().map(|inst| inst.id.clone()).collect_vec());
+                    join_all(
+                        deleted_insts
+                            .iter()
+                            .map(|inst| async {
+                                FlowInstServ::abort(&inst.id, &FlowInstAbortReq {
+                                    message: "".to_string(),
+                                }, funs, ctx).await
+                            })
+                            .collect_vec(),
+                    )
+                    .await
+                    .into_iter()
+                    .collect::<TardisResult<Vec<()>>>()?;
+                }
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            page += 1;
+        }
+
+        let unabort_insts = Self::find_items(&FlowInstFilterReq {
+            finish: Some(true),
+            finish_abort: Some(false),
+            ..Default::default()
+        }, funs, ctx).await?;
+        let max_size = unabort_insts.len();
+        let mut page = 0;
+        let page_size = 500;
+        loop {
+            let current_insts = &unabort_insts[((page * page_size).min(max_size))..(((page+1) * page_size).min(max_size))];
+            if current_insts.is_empty() {
+                break;
+            }
+            let mut inst_group_by_tag = HashMap::new();
+            for current_inst in current_insts {
+                inst_group_by_tag.entry(current_inst.tag.clone()).and_modify(| inst_ids: &mut Vec<FlowInstSummaryResult>| inst_ids.push(current_inst.clone())).or_insert(vec![current_inst.clone()]);
+            }
+            for (tag, insts) in inst_group_by_tag {
+                if let Some((table, kind)) = tag_search_map.get(&tag) {
+                    let exist_obj_ids = FlowSearchClient::search(&SearchItemSearchReq {
+                        tag: table.clone(),
+                        ctx: SearchItemSearchCtxReq { ..Default::default() },
+                        query: SearchItemQueryReq {
+                            keys: Some(insts.iter().map(|inst| TrimString(inst.rel_business_obj_id.clone())).collect_vec()),
+                            kinds: Some(vec![kind.clone()]),
+                            ..Default::default()
+                        },
+                        adv_by_or: None,
+                        adv_query: None,
+                        sort: None,
+                        page: SearchItemSearchPageReq {
+                            number: 1,
+                            size: 100,
+                            fetch_total: false,
+                        },
+                    }, funs, ctx).await?.map(|resp| resp.records).unwrap_or_default().into_iter().map(|item| item.key).collect_vec();
+                    let deleted_insts = insts.into_iter().filter(|inst| !exist_obj_ids.contains(&inst.rel_business_obj_id)).collect_vec();
+                    result.extend(deleted_insts.iter().map(|inst| inst.id.clone()).collect_vec());
+                    join_all(
+                        deleted_insts
+                            .iter()
+                            .map(|inst| async {
+                                FlowInstServ::abort(&inst.id, &FlowInstAbortReq {
+                                    message: "".to_string(),
+                                }, funs, ctx).await
+                            })
+                            .collect_vec(),
+                    )
+                    .await
+                    .into_iter()
+                    .collect::<TardisResult<Vec<()>>>()?;
+                }
+            }
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            page += 1;
+        }
+
         Ok(result)
     }
 }

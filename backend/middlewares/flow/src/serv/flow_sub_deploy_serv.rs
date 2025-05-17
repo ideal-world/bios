@@ -123,8 +123,8 @@ impl FlowSubDeployServ {
                 let original_model_states = original_model.states();
                 let new_model_states = new_model.states();
                 // update bind states
-                let bind_states = new_model_states.iter().filter(|new_state| original_model_states.iter().any(|original_state| original_state.id != new_state.id)).collect_vec();
-                for bind_state in bind_states {
+                let bind_states = new_model_states.iter().filter(|new_state| !original_model_states.iter().any(|original_state| original_state.id == new_state.id)).collect_vec();
+                for bind_state in bind_states.iter() {
                     FlowModelServ::modify_model(
                         &original_model.id,
                         &mut FlowModelModifyReq {
@@ -144,6 +144,8 @@ impl FlowSubDeployServ {
                         &mock_ctx,
                     )
                     .await?;
+                }
+                for bind_state in bind_states {
                     let add_transitions = bind_state.transitions.clone().into_iter().map(|transition| {
                         let transition_id = transition.id.clone();
                         let mut add_req = FlowTransitionAddReq::from(transition);
@@ -153,7 +155,7 @@ impl FlowSubDeployServ {
                     FlowTransitionServ::add_transitions(&original_model.current_version_id, &bind_state.id, &add_transitions, funs, ctx).await?;
                 }
                 // update unbind states
-                let unbind_states = original_model_states.iter().filter(|original_state| new_model_states.iter().any(|new_state| new_state.id != original_state.id)).collect_vec();
+                let unbind_states = original_model_states.iter().filter(|original_state| !new_model_states.iter().any(|new_state| new_state.id == original_state.id)).collect_vec();
                 for unbind_state in unbind_states {
                     FlowModelServ::modify_model(
                         &original_model.id,
@@ -165,7 +167,7 @@ impl FlowSubDeployServ {
                             ..Default::default()
                         },
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?;
                 }
@@ -193,7 +195,7 @@ impl FlowSubDeployServ {
                         ..Default::default()
                     },
                     funs,
-                    ctx,
+                    &mock_ctx,
                 )
                 .await?;
                 // add or modify transitions
@@ -246,7 +248,7 @@ impl FlowSubDeployServ {
                     name: Some(TrimString(original_model.name.clone())),
                     front_conds: original_model.front_conds(),
                     ..Default::default()
-                }, funs, ctx).await?;
+                }, funs, &mock_ctx).await?;
 
                 // update instances state
                 if let Some(delete_logs) = import_req.delete_logs.get(&original_model.id).cloned() {
@@ -326,7 +328,7 @@ impl FlowSubDeployServ {
             let mut page = 0;
             let page_size = 100;
             loop {
-                let current_insts = &insts[(page * page_size.min(max_size))..((page+1) * page_size.min(max_size))];
+                let current_insts = &insts[((page * page_size).min(max_size))..(((page+1) * page_size).min(max_size))];
                 if current_insts.is_empty() {
                     break;
                 }

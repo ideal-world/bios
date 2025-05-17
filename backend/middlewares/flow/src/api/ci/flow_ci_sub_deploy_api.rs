@@ -1,7 +1,7 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 
-use tardis::web::poem::web::{Json, Query};
+use tardis::web::poem::web::Json;
 use tardis::web::poem_openapi;
 
 use tardis::web::poem_openapi::param::Path;
