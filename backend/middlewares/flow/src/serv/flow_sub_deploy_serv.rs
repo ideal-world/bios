@@ -5,7 +5,7 @@ use bios_sdk_invoke::clients::spi_log_client::LogItemFindResp;
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, chrono::{DateTime, Utc}, db::sea_orm::Set, futures::future::join_all, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::Set, futures::future::join_all, TardisFuns, TardisFunsInst
 };
 
 use crate::{domain::flow_inst, dto::{flow_inst_dto::FlowInstFilterReq, flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq}, flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState}, flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelModifyReq}, flow_sub_deploy_dto::{FlowSubDeployOneExportAggResp, FlowSubDeployOneImportReq, FlowSubDeployTowExportAggResp, FlowSubDeployTowImportReq}, flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq}}};
@@ -123,8 +123,8 @@ impl FlowSubDeployServ {
                 let original_model_states = original_model.states();
                 let new_model_states = new_model.states();
                 // update bind states
-                let bind_states = new_model_states.iter().filter(|new_state| original_model_states.iter().any(|original_state| original_state.id != new_state.id)).collect_vec();
-                for bind_state in bind_states {
+                let bind_states = new_model_states.iter().filter(|new_state| !original_model_states.iter().any(|original_state| original_state.id == new_state.id)).collect_vec();
+                for bind_state in bind_states.iter() {
                     FlowModelServ::modify_model(
                         &original_model.id,
                         &mut FlowModelModifyReq {
@@ -144,6 +144,8 @@ impl FlowSubDeployServ {
                         &mock_ctx,
                     )
                     .await?;
+                }
+                for bind_state in bind_states {
                     let add_transitions = bind_state.transitions.clone().into_iter().map(|transition| {
                         let transition_id = transition.id.clone();
                         let mut add_req = FlowTransitionAddReq::from(transition);
@@ -153,7 +155,7 @@ impl FlowSubDeployServ {
                     FlowTransitionServ::add_transitions(&original_model.current_version_id, &bind_state.id, &add_transitions, funs, ctx).await?;
                 }
                 // update unbind states
-                let unbind_states = original_model_states.iter().filter(|original_state| new_model_states.iter().any(|new_state| new_state.id != original_state.id)).collect_vec();
+                let unbind_states = original_model_states.iter().filter(|original_state| !new_model_states.iter().any(|new_state| new_state.id == original_state.id)).collect_vec();
                 for unbind_state in unbind_states {
                     FlowModelServ::modify_model(
                         &original_model.id,
@@ -165,7 +167,7 @@ impl FlowSubDeployServ {
                             ..Default::default()
                         },
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?;
                 }
@@ -193,7 +195,7 @@ impl FlowSubDeployServ {
                         ..Default::default()
                     },
                     funs,
-                    ctx,
+                    &mock_ctx,
                 )
                 .await?;
                 // add or modify transitions
@@ -246,7 +248,7 @@ impl FlowSubDeployServ {
                     name: Some(TrimString(original_model.name.clone())),
                     front_conds: original_model.front_conds(),
                     ..Default::default()
-                }, funs, ctx).await?;
+                }, funs, &mock_ctx).await?;
 
                 // update instances state
                 if let Some(delete_logs) = import_req.delete_logs.get(&original_model.id).cloned() {
@@ -304,15 +306,15 @@ impl FlowSubDeployServ {
     }
 
     pub(crate) async fn sub_deploy_export(
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
+        // _start_time: String,
+        // _end_time: String,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowSubDeployTowExportAggResp> {
         let insts = FlowInstServ::find_detail_items(&FlowInstFilterReq {
             with_sub: Some(true),
-            update_time_start: Some(start_time),
-            update_time_end: Some(end_time),
+            // update_time_start: Some(start_time),
+            // update_time_end: Some(end_time),
             ..Default::default()
         }, funs, ctx).await?;
         Ok(FlowSubDeployTowExportAggResp {
@@ -322,56 +324,67 @@ impl FlowSubDeployServ {
 
     pub(crate) async fn one_deploy_import(import_req: FlowSubDeployOneImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(insts) = import_req.insts {
-            join_all(
-                insts
-                    .iter()
-                    .map(|inst| async {
-                        let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
-                            id: Set(inst.id.clone()),
-                            code: Set(Some(inst.code.clone())),
-                            tag: Set(Some(inst.tag.clone())),
-                            rel_flow_version_id: Set(inst.rel_flow_version_id.clone()),
-                            rel_business_obj_id: Set(inst.rel_business_obj_id.clone()),
-                            rel_transition_id: Set(inst.rel_transition_id.clone()),
-                
-                            current_state_id: Set(inst.current_state_id.clone()),
-                
-                            create_vars: Set(inst.create_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
-                            current_vars: Set(inst.current_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
-                
-                            create_ctx: Set(inst.create_ctx.clone()),
-    
-                            finish_ctx: Set(inst.finish_ctx.clone()),
-                            finish_time: Set(inst.finish_time),
-                            finish_abort: Set(inst.finish_abort),
-                            output_message: Set(inst.output_message.clone()),
-                            
-                            transitions: Set(inst.transitions.clone()),
-                            artifacts: Set(inst.artifacts.clone()),
-                            comments: Set(inst.comments.clone()),
-    
-                            own_paths: Set(inst.own_paths.clone()),
-                            main: Set(inst.main),
-                            rel_inst_id: Set(inst.rel_inst_id.clone()),
-                            data_source: Set(inst.data_source.clone()),
-    
-                            create_time: Set(inst.create_time),
-                            update_time: Set(inst.update_time),
-                        };
-                        match FlowInstServ::get(&inst.id, funs, ctx).await {
-                            Ok(_) => {
-                                funs.db().update_one(flow_inst, ctx).await
-                            },
-                            Err(_e) => {
-                                funs.db().insert_one(flow_inst, ctx).await.map(|_| ())
+            let max_size = insts.len();
+            let mut page = 0;
+            let page_size = 100;
+            loop {
+                let current_insts = &insts[((page * page_size).min(max_size))..(((page+1) * page_size).min(max_size))];
+                if current_insts.is_empty() {
+                    break;
+                }
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                join_all(
+                    current_insts
+                        .iter()
+                        .map(|inst| async {
+                            let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
+                                id: Set(inst.id.clone()),
+                                code: Set(Some(inst.code.clone())),
+                                tag: Set(Some(inst.tag.clone())),
+                                rel_flow_version_id: Set(inst.rel_flow_version_id.clone()),
+                                rel_business_obj_id: Set(inst.rel_business_obj_id.clone()),
+                                rel_transition_id: Set(inst.rel_transition_id.clone()),
+                    
+                                current_state_id: Set(inst.current_state_id.clone()),
+                    
+                                create_vars: Set(inst.create_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
+                                current_vars: Set(inst.current_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
+                    
+                                create_ctx: Set(inst.create_ctx.clone()),
+        
+                                finish_ctx: Set(inst.finish_ctx.clone()),
+                                finish_time: Set(inst.finish_time),
+                                finish_abort: Set(inst.finish_abort),
+                                output_message: Set(inst.output_message.clone()),
+                                
+                                transitions: Set(inst.transitions.clone()),
+                                artifacts: Set(inst.artifacts.clone()),
+                                comments: Set(inst.comments.clone()),
+        
+                                own_paths: Set(inst.own_paths.clone()),
+                                main: Set(inst.main),
+                                rel_inst_id: Set(inst.rel_inst_id.clone()),
+                                data_source: Set(inst.data_source.clone()),
+        
+                                create_time: Set(inst.create_time),
+                                update_time: Set(inst.update_time),
+                            };
+                            match FlowInstServ::get(&inst.id, funs, ctx).await {
+                                Ok(_) => {
+                                    funs.db().update_one(flow_inst, ctx).await
+                                },
+                                Err(_e) => {
+                                    funs.db().insert_one(flow_inst, ctx).await.map(|_| ())
+                                }
                             }
-                        }
-                    })
-                    .collect_vec(),
-            )
-            .await
-            .into_iter()
-            .collect::<TardisResult<Vec<_>>>()?;
+                        })
+                        .collect_vec(),
+                )
+                .await
+                .into_iter()
+                .collect::<TardisResult<Vec<_>>>()?;
+                page += 1;
+            }
         }
         Ok(())
     }

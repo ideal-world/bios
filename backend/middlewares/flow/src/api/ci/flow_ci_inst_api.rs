@@ -480,4 +480,17 @@ impl FlowCiInstApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// 同步已删除的实例（脚本）
+    #[oai(path = "/sync_deleted_instances", method = "post")]
+    async fn sync_deleted_instances(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        let result = FlowInstServ::sync_deleted_instances(&funs, &ctx.0).await?;
+        funs.commit().await?;
+        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
 }
