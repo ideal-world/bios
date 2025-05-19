@@ -771,7 +771,8 @@ impl IamResCacheServ {
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;
         }
-        Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel", "404-iam-cache-res-rel-not-exist"))
+        // Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel", "404-iam-cache-res-rel-not-exist"))
+        Ok(())
     }
 
     async fn add_change_trigger(uri: &str, funs: &TardisFunsInst) -> TardisResult<()> {
