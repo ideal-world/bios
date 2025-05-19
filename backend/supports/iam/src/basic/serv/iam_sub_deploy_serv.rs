@@ -409,7 +409,7 @@ impl IamSubDeployServ {
                 None,
                 None,
                 funs,
-                ctx,
+                &global_ctx,
             )
             .await?
             .iter()
