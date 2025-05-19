@@ -21,16 +21,12 @@ pub async fn export_data(export_req: &KvExportDataReq, funs: &TardisFunsInst, ct
             &format!(
                 r#"SELECT k AS key, v AS value, info, owner, own_paths, disable, scope_level, create_time, update_time
 FROM {}
-WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2)) and own_paths like $3
+WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2))
 ORDER BY create_time DESC
 "#,
                 table_name
             ),
-            vec![
-                Value::from(export_req.start_time.clone()),
-                Value::from(export_req.end_time.clone()),
-                Value::from(format!("{}%", ctx.own_paths.clone())),
-            ],
+            vec![Value::from(export_req.start_time.clone()), Value::from(export_req.end_time.clone())],
         )
         .await?;
     Ok(KvExportDataResp { kv_data })
