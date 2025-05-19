@@ -336,36 +336,37 @@ impl FlowStateServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowStateNameResp>> {
-        let mut flow_version_ids = None;
-        if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
-            if let Some(mut app_ids) = app_ids {
-                if let Some(app_own_paths) = app_ids.pop().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)) {
+        let mut flow_version_ids = vec![];
+        if let Some(app_ids) = app_ids {
+            for app_id in app_ids {
+                if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
                     let mock_ctx = TardisContext {
-                        own_paths: app_own_paths,
+                        own_paths: format!("{}/{}", &tenant_own_path, &app_id),
                         ..ctx.clone()
                     };
-                    flow_version_ids = Some(
-                        FlowModelServ::find_rel_model_map(None, true, funs, &mock_ctx)
-                            .await?
-                            .into_iter()
-                            .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
-                            .map(|(_tag, model)| model.current_version_id)
-                            .collect_vec(),
-                    );
+                    let app_flow_version_ids = FlowModelServ::find_rel_model_map(None, true, funs, &mock_ctx)
+                    .await?
+                    .into_iter()
+                    .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
+                    .map(|(_tag, model)| model.current_version_id)
+                    .collect_vec();
+
+                    flow_version_ids.extend(app_flow_version_ids);
                 }
             }
         }
+        
         let names = Self::find_detail_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids,
+                    ids: ids.clone(),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                tag,
-                main,
-                flow_version_ids,
+                tag: tag.clone(),
+                main: Some(main.unwrap_or(true)),
+                flow_version_ids: if flow_version_ids.is_empty() { None } else { Some(flow_version_ids) },
                 ..Default::default()
             },
             None,
