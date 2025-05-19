@@ -17,6 +17,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
+use tardis::log::info;
 use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -775,7 +776,7 @@ impl IamSetServ {
                 ctx,
             )
             .await;
-            let _ = IamCertServ::package_tardis_account_context_and_resp(&add_req.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
+            let _ = IamCertServ::package_tardis_account_context_and_resp(&add_req.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
             let _ = IamSearchClient::async_add_or_modify_account_search(&add_req.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
             if !set_cate_id.is_empty() {
                 IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), funs, ctx).await?;
@@ -818,7 +819,7 @@ impl IamSetServ {
                     ctx,
                 )
                 .await;
-                let _ = IamCertServ::package_tardis_account_context_and_resp(&item.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
+                let _ = IamCertServ::package_tardis_account_context_and_resp(&item.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
                 let _ = IamSearchClient::async_add_or_modify_account_search(&item.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
             }
         }
