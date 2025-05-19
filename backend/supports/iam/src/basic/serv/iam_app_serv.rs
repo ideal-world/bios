@@ -109,7 +109,8 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
     }
     async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
-            IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
+            // IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
+            IamIdentCacheServ::refresh_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
         }
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_app_kv(id, funs, ctx).await?;

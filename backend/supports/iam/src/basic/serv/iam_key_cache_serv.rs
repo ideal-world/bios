@@ -220,6 +220,88 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn refresh_tokens_and_contexts_by_tenant_or_app(tenant_or_app_id: &str, is_app: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_or_app_id = tenant_or_app_id.to_string();
+        let own_paths = if is_app {
+            IamAppServ::peek_item(
+                &tenant_or_app_id,
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .own_paths
+        } else {
+            tenant_or_app_id.clone()
+        };
+        let ctx_clone = ctx.clone();
+        TaskProcessor::execute_task_with_ctx(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move |_task_id| async move {
+                let funs = iam_constants::get_tardis_inst();
+                let filter = IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(own_paths),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap_or_default() as isize;
+                let mut page_number = 1;
+                while count > 0 {
+                    let mut ids = Vec::new();
+                    if let Ok(page) = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await {
+                        ids = page.records;
+                    }
+                    for id in ids {
+                        let account_context = Self::get_account_context(&id, "", &funs).await;
+                        if let Ok(account_context) = account_context {
+                            if account_context.own_paths == ctx_clone.own_paths {
+                                Self::refresh_account_info_by_account_id(&id, &funs).await?;
+                            }
+                        }
+                    }
+                    page_number += 1;
+                    count -= 100;
+                }
+                if is_app {
+                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
+                    let mut page_number = 1;
+                    while count > 0 {
+                        let mut ids = Vec::new();
+                        if let Ok(page) = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await {
+                            ids = page.records;
+                        }
+                        for id in ids {
+                            let account_context = Self::get_account_context(&id, "", &funs).await;
+                            if let Ok(account_context) = account_context {
+                                if account_context.own_paths == ctx_clone.own_paths {
+                                    Self::refresh_account_info_by_account_id(&id, &funs).await?;
+                                }
+                            }
+                        }
+                        page_number += 1;
+                        count -= 100;
+                    }
+                }
+                Ok(())
+            },
+            &funs.cache(),
+            IAM_AVATAR.to_owned(),
+            Some(vec![format!("account/{}", ctx.owner)]),
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete tokens and contexts: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
