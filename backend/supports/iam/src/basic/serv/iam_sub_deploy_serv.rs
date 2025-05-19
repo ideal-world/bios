@@ -392,8 +392,8 @@ impl IamSubDeployServ {
         let mut res_api_map = HashMap::new();
         let mut res_set_item = HashMap::new();
         for res in res_items.clone().into_iter() {
-            let apis = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &res.id.clone(), None, None, funs, &global_ctx).await?;
-            res_api_map.insert(res.id.clone(), apis);
+            let apis_res_id = IamResServ::find_to_id_rel_roles(&IamRelKind::IamResApi, &res.id.clone(), None, None, funs, &global_ctx).await?;
+            res_api_map.insert(res.id.clone(), apis_res_id);
             let roles = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &res.id.clone(), None, None, funs, &global_ctx).await?;
             res_role_map.insert(res.id.clone(), roles);
             let res_cate_ids = RbumSetItemServ::find_rbums(
@@ -1385,6 +1385,22 @@ impl IamSubDeployServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        // todo disable old account
+        // let old_accounts_ids = IamAccountServ::find_id_items(
+        //     &IamAccountFilterReq {
+        //         basic: RbumBasicFilterReq {
+        //             with_sub_own_paths: true,
+        //             own_paths: Some("".to_string()),
+        //             ..Default::default()
+        //         },
+        //         ..Default::default()
+        //     },
+        //     None,
+        //     None,
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
         if let Some(accounts) = accounts {
             for account in accounts {
                 let account_ctx = TardisContext {
