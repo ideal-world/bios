@@ -1489,6 +1489,23 @@ impl IamSubDeployServ {
                 if let Some(ref account_role) = account_role {
                     if let Some(role_ids) = account_role.get(&account.id) {
                         for role_id in role_ids {
+                            if IamRoleServ::count_items(
+                                &IamRoleFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        with_sub_own_paths: true,
+                                        ids: Some(vec![role_id.clone()]),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                funs,
+                                ctx,
+                            )
+                            .await?
+                                == 0
+                            {
+                                continue;
+                            }
                             IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, &account.id, &role_id, None, None, true, false, funs, ctx).await?;
                         }
                     }
