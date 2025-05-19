@@ -1165,14 +1165,14 @@ impl IamSubDeployServ {
                                 .await?
                                     > 0
                                 {
-                                    IamRelServ::add_simple_rel(&IamRelKind::IamResRole, &res_item.id, &role_id, None, None, true, false, funs, ctx).await?;
+                                    IamRelServ::add_simple_rel(&IamRelKind::IamResRole, &res_item.id, &role_id, None, None, true, false, funs, &global_ctx).await?;
                                 }
                             }
                         }
                     }
                 }
                 for delete_res_id in delete_old_res_ids {
-                    IamResServ::delete_item_with_all_rels(&delete_res_id, funs, ctx).await?;
+                    IamResServ::delete_item_with_all_rels(&delete_res_id, funs, &global_ctx).await?;
                 }
             }
         }
