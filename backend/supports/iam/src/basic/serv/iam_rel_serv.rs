@@ -579,10 +579,10 @@ impl IamRelServ {
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             IamRelKind::IamSubDeployAccount => {
-                IamSearchClient::async_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
+                IamSearchClient::sync_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             IamRelKind::IamSubDeployAuthAccount => {
-                IamSearchClient::async_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
+                IamSearchClient::sync_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             _ => {}
         }
