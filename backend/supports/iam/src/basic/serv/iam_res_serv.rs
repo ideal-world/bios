@@ -218,7 +218,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             ctx,
         )
         .await?;
-        if modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() || modify_req.method.is_some() {
+        if res.kind == IamResKind::Api && (modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() || modify_req.method.is_some()) {
             IamResCacheServ::add_or_modify_res_rel(
                 &res.code,
                 &res.method,
