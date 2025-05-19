@@ -66,7 +66,7 @@ impl IamSearchClient {
         .await
     }
 
-     pub async fn sync_add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn sync_add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -131,8 +131,12 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
-        let sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAccount, account_id, &funs, &ctx).await?;
-        let auth_sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAuthAccount, account_id, &funs, &ctx).await?;
+        let global_ctx = TardisContext {
+            own_paths: "".to_owned(),
+            ..ctx.clone()
+        };
+        let sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAccount, account_id, &funs, &global_ctx).await?;
+        let auth_sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAuthAccount, account_id, &funs, &global_ctx).await?;
         let mock_ctx = TardisContext {
             own_paths: "".to_owned(),
             ..ctx.clone()
