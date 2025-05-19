@@ -602,7 +602,7 @@ pub struct FlowInstFilterReq {
     pub update_time_end: Option<DateTime<Utc>>,
 }
 
-#[derive(sea_orm::FromQueryResult, Debug)]
+#[derive(sea_orm::FromQueryResult, Debug, Clone)]
 pub struct FlowInstSummaryResult {
     pub id: String,
     pub code: String,
