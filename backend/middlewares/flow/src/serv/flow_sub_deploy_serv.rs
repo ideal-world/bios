@@ -154,6 +154,10 @@ impl FlowSubDeployServ {
                     }).collect_vec();
                     FlowTransitionServ::add_transitions(&original_model.current_version_id, &bind_state.id, &add_transitions, funs, ctx).await?;
                 }
+                // update instances state
+                if let Some(delete_logs) = import_req.delete_logs.get(&original_model.id).cloned() {
+                    Self::modify_inst_state(&original_model, delete_logs, funs, &mock_ctx).await?;
+                }
                 // update unbind states
                 let unbind_states = original_model_states.iter().filter(|original_state| !new_model_states.iter().any(|new_state| new_state.id == original_state.id)).collect_vec();
                 for unbind_state in unbind_states {
@@ -249,11 +253,6 @@ impl FlowSubDeployServ {
                     front_conds: original_model.front_conds(),
                     ..Default::default()
                 }, funs, &mock_ctx).await?;
-
-                // update instances state
-                if let Some(delete_logs) = import_req.delete_logs.get(&original_model.id).cloned() {
-                    Self::modify_inst_state(&original_model, delete_logs, funs, &mock_ctx).await?;
-                }
             } else {
                 let mut add_req = new_model.create_add_req();
                 FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;

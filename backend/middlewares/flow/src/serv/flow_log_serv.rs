@@ -703,7 +703,7 @@ impl FlowLogServ {
         let state_text = match artifacts.state.unwrap_or_default() {
             FlowInstStateKind::Pass => { "审批通过".to_string() },
             FlowInstStateKind::Overrule => { "审批拒绝".to_string() },
-            _ => { "".to_string() },
+            _ => { "审批拒绝".to_string() },
         };
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let log_ext = LogParamExt {

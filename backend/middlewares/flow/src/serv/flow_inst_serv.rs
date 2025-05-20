@@ -2509,7 +2509,7 @@ impl FlowInstServ {
         }
         if guard_by_assigned 
             // 当配置了对应的操作人权限则忽略guard_by_assigned规则
-            && flow_inst_detail.artifacts.clone().unwrap_or_default().operator_map.unwrap_or_default().contains_key(&flow_inst_detail.current_state_id) {
+            && !flow_inst_detail.artifacts.clone().unwrap_or_default().operator_map.unwrap_or_default().contains_key(&flow_inst_detail.current_state_id) {
             let _ = flow_inst_detail
                 .create_vars
                 .clone()
