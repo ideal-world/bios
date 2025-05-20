@@ -344,19 +344,14 @@ impl FlowStateServ {
                         own_paths: format!("{}/{}", &tenant_own_path, &app_id),
                         ..ctx.clone()
                     };
-                    let app_flow_version_ids = FlowModelServ::find_rel_model_map(None, true, funs, &mock_ctx)
-                    .await?
-                    .into_iter()
-                    .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
-                    .map(|(_tag, model)| model.current_version_id)
+                    let app_flow_version_ids = FlowModelServ::find_rel_models(None, true, tag.clone().map(|tag| vec![tag]), funs, ctx).await?.into_iter().map(|model| model.current_version_id)
                     .collect_vec();
-
                     flow_version_ids.extend(app_flow_version_ids);
                 }
             }
         }
         
-        let names = Self::find_detail_items(
+        let names = Self::find_id_name_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: ids.clone(),
@@ -377,8 +372,8 @@ impl FlowStateServ {
         .await?
         .into_iter()
         .map(|state_detail| FlowStateNameResp {
-            key: state_detail.name.clone(),
-            name: state_detail.name,
+            key: state_detail.0.clone(),
+            name: state_detail.1,
         })
         .collect_vec();
         Ok(names)
