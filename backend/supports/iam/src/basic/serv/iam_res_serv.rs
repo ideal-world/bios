@@ -683,7 +683,13 @@ impl IamResServ {
         )
         .await?;
         for item in res {
-            let rel_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
+            let mut rel_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
+            let res_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &item.id, None, None, funs, ctx).await?;
+            for res_id in res_ids {
+                let res_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &res_id, None, None, funs, &ctx).await?;
+                rel_role_ids.extend(res_role_ids);
+            }
+            rel_role_ids = rel_role_ids.iter().map(|r| r.to_string()).collect::<Vec<String>>().into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
             let rel_req = IamCacheResRelAddOrModifyReq {
                 st: None,
                 et: None,

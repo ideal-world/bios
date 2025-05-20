@@ -24,7 +24,7 @@ use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelM
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
-use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq};
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppModifyReq};
 use crate::basic::dto::iam_config_dto::{IamConfigAggOrModifyReq, IamConfigDetailResp};
 use crate::basic::dto::iam_filer_dto::{
@@ -45,7 +45,7 @@ use crate::iam_constants::RBUM_ITEM_ID_SUB_ROLE_LEN;
 use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamCertKernelKind, IamConfigDataTypeKind, IamConfigKind, IamRelKind, IamRoleKind, IamSetKind, IamSubDeployHostKind};
 
 use super::clients::iam_search_client::IamSearchClient;
-use super::iam_account_serv::IamAccountServ;
+use super::iam_account_serv::{self, IamAccountServ};
 use super::iam_app_serv::IamAppServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_config_serv::IamConfigServ;
@@ -382,7 +382,7 @@ impl IamSubDeployServ {
                 },
                 ..Default::default()
             },
-            None,
+            Some(false),
             None,
             funs,
             &global_ctx,
@@ -1385,23 +1385,24 @@ impl IamSubDeployServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        // todo disable old account
-        // let old_accounts_ids = IamAccountServ::find_id_items(
-        //     &IamAccountFilterReq {
-        //         basic: RbumBasicFilterReq {
-        //             with_sub_own_paths: true,
-        //             own_paths: Some("".to_string()),
-        //             ..Default::default()
-        //         },
-        //         ..Default::default()
-        //     },
-        //     None,
-        //     None,
-        //     funs,
-        //     ctx,
-        // )
-        // .await?;
         if let Some(accounts) = accounts {
+            let new_account_ids = accounts.iter().map(|account| account.id.clone()).collect::<Vec<_>>();
+            let old_accounts = IamAccountServ::find_items(
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            let delete_old_accounts = old_accounts.iter().filter(|account| !new_account_ids.contains(&account.id)).collect::<Vec<_>>();
             for account in accounts {
                 let account_ctx = TardisContext {
                     own_paths: account.own_paths,
@@ -1645,6 +1646,31 @@ impl IamSubDeployServ {
                     }
                 }
                 let _ = IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(false), "", funs, ctx).await?;
+            }
+            for account in delete_old_accounts {
+                let account_ctx = TardisContext {
+                    own_paths: account.own_paths.clone(),
+                    ..ctx.clone()
+                };
+                IamAccountServ::modify_item(
+                    &account.id,
+                    &mut IamAccountModifyReq {
+                        name: None,
+                        scope_level: None,
+                        disabled: Some(true),
+                        logout_type: None,
+                        labor_type: None,
+                        temporary: None,
+                        lock_status: None,
+                        status: None,
+                        is_auto: None,
+                        icon: None,
+                    },
+                    funs,
+                    &account_ctx,
+                )
+                .await?;
+                IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx).await?;
             }
         }
         Ok(())
