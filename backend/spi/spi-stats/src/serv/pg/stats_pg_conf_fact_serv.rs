@@ -167,7 +167,7 @@ WHERE key = $1
         AddOrModifySyncTaskReq {
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key),
             enable: fact_conf.is_sync.unwrap_or_default(),
-            cron: modify_req.sync_cron.clone().unwrap_or("".to_string()),
+            cron: modify_req.sync_cron.clone().unwrap_or(fact_conf.sync_cron.clone().unwrap_or("".to_string())),
             callback_url: format!("{}/ci/fact/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
             callback_method: "PUT".to_string(),
             callback_body: None,
