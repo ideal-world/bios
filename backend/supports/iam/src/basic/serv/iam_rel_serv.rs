@@ -572,7 +572,9 @@ impl IamRelServ {
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
             }
             IamRelKind::IamAccountApp => {
-                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await?;
+                // TODO reset account cache
+                // IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await?;
+                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             IamRelKind::IamAccountRel => {
