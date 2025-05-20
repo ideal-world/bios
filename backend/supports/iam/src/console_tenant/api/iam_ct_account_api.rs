@@ -351,6 +351,8 @@ impl IamCtAccountApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        // todo: 兼容二级服务
+        let account_ctx = IamAccountServ::is_global_account_context(&id, &funs, &ctx.0).await?;
         IamAccountServ::modify_item(
             &id.0,
             &mut IamAccountModifyReq {
@@ -366,12 +368,12 @@ impl IamCtAccountApi {
                 labor_type: None,
             },
             &funs,
-            &ctx.0,
+            &account_ctx,
         )
         .await?;
-        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &ctx.0).await?;
+        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &account_ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        account_ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -382,10 +384,12 @@ impl IamCtAccountApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAccountServ::unlock_account(&id.0, &funs, &ctx.0).await?;
-        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &ctx.0).await?;
+        // todo: 兼容二级服务
+        let account_ctx = IamAccountServ::is_global_account_context(&id, &funs, &ctx.0).await?;
+        IamAccountServ::unlock_account(&id.0, &funs, &account_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &account_ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        account_ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 

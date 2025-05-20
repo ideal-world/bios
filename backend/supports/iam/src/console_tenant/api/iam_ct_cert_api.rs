@@ -1,13 +1,16 @@
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_cert_dto::IamCertUserPwdRestReq;
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
@@ -36,8 +39,10 @@ impl IamCtCertApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
-        IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
+        // todo: 兼容二级服务
+        let account_ctx = IamAccountServ::is_global_account_context(&account_id, &funs, &ctx).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&account_ctx), &funs).await?;
+        IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &account_ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})
