@@ -1440,6 +1440,25 @@ impl IamSubDeployServ {
                         &account_ctx,
                     )
                     .await?;
+                } else {
+                    IamAccountServ::modify_item(
+                        &account.id,
+                        &mut IamAccountModifyReq {
+                            name: Some(TrimString::from(account.name.clone())),
+                            scope_level: Some(account.scope_level),
+                            disabled: Some(account.disabled),
+                            logout_type: Some(IamAccountLogoutTypeKind::from_str(account.logout_type.as_str()).unwrap_or(IamAccountLogoutTypeKind::NotLogout)),
+                            labor_type: Some(account.labor_type),
+                            temporary: Some(account.temporary),
+                            lock_status: Some(account.lock_status),
+                            status: Some(account.status),
+                            icon: Some(account.icon),
+                            is_auto: None,
+                        },
+                        &funs,
+                        &account_ctx,
+                    )
+                    .await?
                 }
                 if let Some(ref account_cert) = account_cert {
                     if let Some(certs) = account_cert.get(&account.id) {
