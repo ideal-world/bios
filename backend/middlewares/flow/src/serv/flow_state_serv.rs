@@ -12,13 +12,10 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
-    },
-    serde_json::json,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, serde_json::json, TardisFuns, TardisFunsInst
 };
 
 use crate::{
@@ -338,25 +335,46 @@ impl FlowStateServ {
     ) -> TardisResult<Vec<FlowStateNameResp>> {
         let mut flow_version_ids = vec![];
         if let Some(app_ids) = app_ids {
-            for app_id in app_ids {
-                if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
-                    let mock_ctx = TardisContext {
-                        own_paths: format!("{}/{}", &tenant_own_path, &app_id),
-                        ..ctx.clone()
-                    };
-                    let app_flow_version_ids = FlowModelServ::find_rel_model_map(None, true, funs, &mock_ctx)
-                    .await?
-                    .into_iter()
-                    .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
-                    .map(|(_tag, model)| model.current_version_id)
-                    .collect_vec();
-
-                    flow_version_ids.extend(app_flow_version_ids);
-                }
+            let tag_ref = &tag;
+            let flow_version_id_maps = join_all(
+                app_ids
+                    .iter()
+                    .map(|app_id| async move {
+                        let tag_cp = tag_ref;
+                        if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
+                            let mock_ctx = TardisContext {
+                                own_paths: format!("{}/{}", &tenant_own_path, &app_id),
+                                ..ctx.clone()
+                            };
+                            if let Ok(models) = FlowModelServ::find_rel_models(None, true, tag_cp.clone().map(|tag| vec![tag]), funs, &mock_ctx).await {
+                                models.into_iter().map(|model| model.current_version_id).collect_vec()
+                            } else {
+                                vec![]
+                            }
+                        } else {
+                            vec![]
+                        }
+                    })
+                    .collect_vec(),
+            )
+            .await;
+            for app_flow_version_ids in flow_version_id_maps {
+                flow_version_ids.extend(app_flow_version_ids);
             }
+            // for app_id in app_ids {
+            //     if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
+            //         let mock_ctx = TardisContext {
+            //             own_paths: format!("{}/{}", &tenant_own_path, &app_id),
+            //             ..ctx.clone()
+            //         };
+            //         let app_flow_version_ids = FlowModelServ::find_rel_models(None, true, tag.clone().map(|tag| vec![tag]), funs, &mock_ctx).await?.into_iter().map(|model| model.current_version_id)
+            //         .collect_vec();
+            //         flow_version_ids.extend(app_flow_version_ids);
+            //     }
+            // }
         }
         
-        let names = Self::find_detail_items(
+        let names = Self::find_id_name_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: ids.clone(),
@@ -377,8 +395,8 @@ impl FlowStateServ {
         .await?
         .into_iter()
         .map(|state_detail| FlowStateNameResp {
-            key: state_detail.name.clone(),
-            name: state_detail.name,
+            key: state_detail.0.clone(),
+            name: state_detail.1,
         })
         .collect_vec();
         Ok(names)
