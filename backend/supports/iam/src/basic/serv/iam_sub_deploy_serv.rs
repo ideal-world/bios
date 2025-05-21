@@ -697,7 +697,7 @@ impl IamSubDeployServ {
                 .await?
                     > 0
                 {
-                    IamAppServ::modify_item(
+                    let _ = IamAppServ::modify_item(
                         &app.id,
                         &mut IamAppModifyReq {
                             name: Some(TrimString::from(app.name.clone())),
@@ -710,9 +710,9 @@ impl IamSubDeployServ {
                         funs,
                         &app_ctx,
                     )
-                    .await?;
+                    .await;
                 } else {
-                    IamAppServ::add_item(
+                    let _ = IamAppServ::add_item(
                         &mut IamAppAddReq {
                             id: Some(TrimString::from(app.id.clone())),
                             name: TrimString::from(app.name),
@@ -725,17 +725,17 @@ impl IamSubDeployServ {
                         funs,
                         &app_ctx,
                     )
-                    .await?;
+                    .await;
                 }
                 // 同步项目的项目组
                 if let Some(app_apps) = import_req.app_apps.clone() {
                     if let Some(app_set_cate) = app_apps.get(&app.id) {
                         let set_items = IamSetServ::find_set_items(Some(app_set_id.clone()), None, Some(app.id.to_owned()), None, true, Some(true), funs, &ctx).await?;
                         for set_item in set_items {
-                            IamSetServ::delete_set_item(&set_item.id, funs, &ctx).await?;
+                            let _ = IamSetServ::delete_set_item(&set_item.id, funs, &ctx).await;
                         }
                         for cate_id in app_set_cate {
-                            IamSetServ::add_set_item(
+                            let _ = IamSetServ::add_set_item(
                                 &IamSetItemAddReq {
                                     set_id: app_set_id.clone(),
                                     set_cate_id: cate_id.to_string(),
@@ -745,7 +745,7 @@ impl IamSubDeployServ {
                                 funs,
                                 &ctx,
                             )
-                            .await?;
+                            .await;
                         }
                     }
                 }
@@ -753,10 +753,10 @@ impl IamSubDeployServ {
                 if let Some(app_account) = import_req.app_account.clone() {
                     if let Some(account_ids) = app_account.get(&app.id) {
                         for account in IamAppServ::find_rel_account(&app.id, funs, ctx).await? {
-                            IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, &account.rel_id, &app.id, funs, &app_ctx).await?;
+                            let _ = IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, &account.rel_id, &app.id, funs, &app_ctx).await;
                         }
                         for account_id in account_ids {
-                            IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, &app.id, None, None, true, false, funs, &app_ctx).await?;
+                            let _ = IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, &app.id, None, None, true, false, funs, &app_ctx).await;
                         }
                     }
                 }
@@ -781,7 +781,7 @@ impl IamSubDeployServ {
                             .await?
                                 == 0
                             {
-                                IamRoleServ::add_item(
+                                let _ = IamRoleServ::add_item(
                                     &mut IamRoleAddReq {
                                         id: Some(TrimString::from(role.id.clone())),
                                         code: Some(TrimString::from(role.code.clone())),
@@ -798,7 +798,7 @@ impl IamSubDeployServ {
                                     funs,
                                     &app_ctx,
                                 )
-                                .await?;
+                                .await;
                             }
                             // 同步角色的用户
                             if let Some(app_role_account) = import_req.app_role_account.clone() {
@@ -807,7 +807,7 @@ impl IamSubDeployServ {
                                 }
                                 if let Some(role_account_ids) = app_role_account.get(&role.id) {
                                     for account_id in role_account_ids {
-                                        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &role.id, None, None, true, false, funs, &app_ctx).await?;
+                                        let _ = IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &role.id, None, None, true, false, funs, &app_ctx).await;
                                     }
                                 }
                             }
@@ -897,10 +897,10 @@ impl IamSubDeployServ {
     }
 
     pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await?;
-        Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await?;
-        Self::import_iam_config(import_req.iam_config, funs, ctx).await?;
-        Self::import_account(
+        let _ = Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await;
+        let _ = Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await;
+        let _ = Self::import_iam_config(import_req.iam_config, funs, ctx).await;
+        let _ = Self::import_account(
             import_req.accounts,
             import_req.account_cert,
             import_req.account_role,
@@ -911,8 +911,8 @@ impl IamSubDeployServ {
             funs,
             ctx,
         )
-        .await?;
-        Self::import_res(
+        .await;
+        let _ = Self::import_res(
             import_req.res_set,
             import_req.res_set_cate,
             import_req.res_items,
@@ -922,7 +922,7 @@ impl IamSubDeployServ {
             funs,
             ctx,
         )
-        .await?;
+        .await;
         Ok(())
     }
 
@@ -1526,7 +1526,7 @@ impl IamSubDeployServ {
                             {
                                 continue;
                             }
-                            IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, &account.id, &role_id, None, None, true, false, funs, ctx).await?;
+                            let _ = IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, &account.id, &role_id, None, None, true, false, funs, ctx).await;
                         }
                     }
                 }
