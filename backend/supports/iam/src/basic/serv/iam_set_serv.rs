@@ -754,7 +754,7 @@ impl IamSetServ {
     }
 
     pub async fn add_set_item(add_req: &IamSetItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let result: Result<String, tardis::basic::error::TardisError> = RbumSetItemServ::add_rbum(
+        let result = RbumSetItemServ::add_rbum(
             &mut RbumSetItemAddReq {
                 sort: add_req.sort,
                 rel_rbum_set_id: add_req.set_id.clone(),
@@ -766,19 +766,33 @@ impl IamSetServ {
         )
         .await;
 
-        let set_cate_id = add_req.set_cate_id.clone();
-        if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-            let _ = IamLogClient::add_ctx_task(
-                LogParamTag::IamOrg,
-                Some(set_cate_id.clone()),
-                format!("添加部门人员{}", account.name.clone()),
-                Some("AddAccount".to_string()),
+        if let Ok(set_item_id) = &result {
+            let set_item = RbumSetItemServ::get_rbum(
+                set_item_id,
+                &RbumSetItemFilterReq {
+                    basic: Default::default(),
+                    rel_rbum_item_disabled: Some(false),
+                    rel_rbum_item_can_not_exist: Some(true),
+                    ..Default::default()
+                },
+                funs,
                 ctx,
             )
-            .await;
-            let _ = IamCertServ::package_tardis_account_context_and_resp(&add_req.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
-            let _ = IamSearchClient::async_add_or_modify_account_search(&add_req.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
-            if !set_cate_id.is_empty() {
+            .await?;
+            let set_cate_id = add_req.set_cate_id.clone();
+            let set = RbumSetServ::get_rbum(&add_req.set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+
+            if set.kind == IamSetKind::Org.to_string() && set_item.rel_rbum_item_kind_id == funs.iam_basic_kind_account_id() {
+                let _ = IamLogClient::add_ctx_task(
+                    LogParamTag::IamOrg,
+                    Some(set_cate_id.clone()),
+                    format!("添加部门人员{}", set_item.rel_rbum_item_name),
+                    Some("AddAccount".to_string()),
+                    ctx,
+                )
+                .await;
+                IamCertServ::package_tardis_account_context_and_resp(&add_req.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, ctx).await?;
+                let _ = IamSearchClient::async_add_or_modify_account_search(&add_req.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
                 IamStatsClient::async_org_fact_record_load(set_cate_id.clone(), funs, ctx).await?;
             }
         }
@@ -810,16 +824,17 @@ impl IamSetServ {
             if let Some(cate_id) = item.rel_rbum_set_cate_id.clone() {
                 IamStatsClient::async_org_fact_record_load(cate_id, funs, ctx).await?;
             }
-            if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
+            let set = RbumSetServ::get_rbum(&item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
+            if set.kind == IamSetKind::Org.to_string() {
                 let _ = IamLogClient::add_ctx_task(
                     LogParamTag::IamOrg,
                     Some(item.rel_rbum_set_cate_id.unwrap_or_default().clone()),
-                    format!("移除部门人员{}", account.name.clone()),
+                    format!("移除部门人员{}", item.rel_rbum_item_name.clone()),
                     Some("RemoveAccount".to_string()),
                     ctx,
                 )
                 .await;
-                let _ = IamCertServ::package_tardis_account_context_and_resp(&item.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
+                IamCertServ::package_tardis_account_context_and_resp(&item.rel_rbum_item_id.clone(), &ctx.own_paths, "".to_string(), None, funs, ctx).await?;
                 let _ = IamSearchClient::async_add_or_modify_account_search(&item.rel_rbum_item_id, Box::new(true), "", funs, ctx).await;
             }
         }
