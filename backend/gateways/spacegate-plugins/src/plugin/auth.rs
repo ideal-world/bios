@@ -336,7 +336,11 @@ impl AuthPlugin {
         let encrypt_resp = auth_crypto_serv::encrypt_body(&encrypt_req).await.map_err(PluginError::internal_error::<AuthPlugin>)?;
         parts.headers.extend(hashmap_header_to_headermap(encrypt_resp.headers).map_err(PluginError::internal_error::<AuthPlugin>)?);
         parts.headers.remove(hyper::header::TRANSFER_ENCODING);
-        let body = SgBody::full(encrypt_resp.body);
+        let body = SgBody::full(encrypt_resp.body.clone());
+        parts.headers.insert(
+            header::CONTENT_LENGTH,
+            HeaderValue::from_str(&format!("{}", encrypt_resp.body.as_bytes().len())).map_err(PluginError::internal_error::<AuthPlugin>)?,
+        );
         resp = Response::from_parts(parts, body);
         self.cors(&mut resp).map_err(PluginError::internal_error::<AuthPlugin>)?;
 
