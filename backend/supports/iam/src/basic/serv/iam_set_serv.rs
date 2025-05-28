@@ -769,12 +769,7 @@ impl IamSetServ {
         if let Ok(set_item_id) = &result {
             let set_item = RbumSetItemServ::get_rbum(
                 set_item_id,
-                &RbumSetItemFilterReq {
-                    basic: Default::default(),
-                    rel_rbum_item_disabled: Some(false),
-                    rel_rbum_item_can_not_exist: Some(true),
-                    ..Default::default()
-                },
+                &RbumSetItemFilterReq::default(),
                 funs,
                 ctx,
             )
