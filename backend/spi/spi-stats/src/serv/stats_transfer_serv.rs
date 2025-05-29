@@ -7,8 +7,7 @@ use tardis::basic::error::TardisError;
 use bios_basic::spi::spi_funs::{SpiBsInst, SpiBsInstExtractor};
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::{FromQueryResult, Value};
-use tardis::futures::future::join_all;
+use tardis::db::sea_orm::Value;
 use tardis::TardisFunsInst;
 use tardis::{basic::dto::TardisContext, db::reldb_client::TardisRelDBClient};
 
@@ -170,7 +169,12 @@ pub async fn import_data(import_req: &StatsImportDataReq, funs: &TardisFunsInst,
 }
 
 pub async fn import_fact_record(fact_conf_data: HashMap<String, Vec<StatsImportAggReq>>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+    let mut num = 0;
     for (fact_conf_key, fact_records) in &fact_conf_data {
+        num += 1;
+        if num % 100 == 0 {
+            tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
         let load_records = fact_records
             .iter()
             .map(|record| {

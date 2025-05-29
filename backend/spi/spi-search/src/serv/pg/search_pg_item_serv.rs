@@ -1487,9 +1487,14 @@ pub async fn export_data(export_req: &SearchExportDataReq, funs: &TardisFunsInst
 
 pub async fn import_data(import_req: &SearchImportDataReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
+    let mut num = 0;
     for (tag, tag_data) in &import_req.tag_data {
         let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
         for data in tag_data {
+            num += 1;
+            if num % 100 == 0 {
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
             let key = data.key.clone();
             let sql = format!("SELECT * FROM {} WHERE key = $1", table_name);
             let result = conn.query_all(&sql, vec![Value::from(key.clone())]).await?;

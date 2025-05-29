@@ -155,35 +155,29 @@ pub async fn import_log_v1(data_source: &str, tag_data: HashMap<String, Vec<LogI
                 break;
             }
             tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            join_all(
-                current_result
-                    .iter()
-                    .map(|row| async move {
-                        pg::log_pg_item_serv::add(
-                            &mut LogItemAddReq {
-                                tag: tag.to_string(),
-                                kind: Some(row.kind.clone().into()),
-                                key: Some(row.key.clone().into()),
-                                content: row.content.clone(),
-                                data_source: Some(data_source.to_string()),
-                                owner: Some(row.owner.clone()),
-                                own_paths: Some(row.own_paths.clone()),
-                                ext: Some(row.ext.clone()),
-                                op: Some(row.op.clone()),
-                                rel_key: Some(row.rel_key.clone().into()),
-                                id: Some(row.id.clone()),
-                                ts: Some(row.ts),
-                            },
-                            funs,
-                            ctx,
-                            inst,
-                        )
-                        .await
-                        .expect("modify error")
-                    })
-                    .collect_vec(),
-            )
-            .await;
+            for row in current_result {
+                let _ = pg::log_pg_item_serv::add(
+                    &mut LogItemAddReq {
+                        tag: tag.to_string(),
+                        kind: Some(row.kind.clone().into()),
+                        key: Some(row.key.clone().into()),
+                        content: row.content.clone(),
+                        data_source: Some(data_source.to_string()),
+                        owner: Some(row.owner.clone()),
+                        own_paths: Some(row.own_paths.clone()),
+                        ext: Some(row.ext.clone()),
+                        op: Some(row.op.clone()),
+                        rel_key: Some(row.rel_key.clone().into()),
+                        id: Some(row.id.clone()),
+                        ts: Some(row.ts),
+                    },
+                    funs,
+                    ctx,
+                    inst,
+                )
+                .await;
+            }
+
             page += 1;
         }
     }
@@ -207,40 +201,33 @@ pub async fn import_log_v2(
                 break;
             }
             tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            join_all(
-                current_result
-                    .iter()
-                    .map(|row| async move {
-                        pgv2::log_pg_item_serv::addv2(
-                            &mut LogItemAddV2Req {
-                                tag: tag.to_string(),
-                                kind: Some(row.kind.clone().into()),
-                                key: Some(row.key.clone().into()),
-                                content: row.content.clone(),
-                                data_source: Some(data_source.to_string()),
-                                owner: Some(row.owner.clone()),
-                                own_paths: Some(row.own_paths.clone()),
-                                ext: Some(row.ext.clone()),
-                                op: Some(row.op.clone()),
-                                rel_key: Some(row.rel_key.clone().into()),
-                                ts: Some(row.ts),
-                                idempotent_id: Some(row.idempotent_id.clone()),
-                                owner_name: Some(row.owner_name.clone()),
-                                disable: Some(row.disable),
-                                push: row.push,
-                                msg: Some(row.msg.clone()),
-                                ignore_push: Some(true),
-                            },
-                            funs,
-                            ctx,
-                            inst,
-                        )
-                        .await
-                        .expect("modify error")
-                    })
-                    .collect_vec(),
-            )
-            .await;
+            for row in current_result {
+                let _ = pgv2::log_pg_item_serv::addv2(
+                    &mut LogItemAddV2Req {
+                        tag: tag.to_string(),
+                        kind: Some(row.kind.clone().into()),
+                        key: Some(row.key.clone().into()),
+                        content: row.content.clone(),
+                        data_source: Some(data_source.to_string()),
+                        owner: Some(row.owner.clone()),
+                        own_paths: Some(row.own_paths.clone()),
+                        ext: Some(row.ext.clone()),
+                        op: Some(row.op.clone()),
+                        rel_key: Some(row.rel_key.clone().into()),
+                        ts: Some(row.ts),
+                        idempotent_id: Some(row.idempotent_id.clone()),
+                        owner_name: Some(row.owner_name.clone()),
+                        disable: Some(row.disable),
+                        push: row.push,
+                        msg: Some(row.msg.clone()),
+                        ignore_push: Some(true),
+                    },
+                    funs,
+                    ctx,
+                    inst,
+                )
+                .await;
+            }
             page += 1;
         }
     }
