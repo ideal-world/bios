@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
-use bios_sdk_invoke::clients::spi_log_client::LogItemFindResp;
+use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
+use bios_sdk_invoke::clients::{spi_kv_client::SpiKvClient, spi_log_client::LogItemFindResp};
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
@@ -19,6 +19,8 @@ impl FlowSubDeployServ {
         let mut states = HashMap::new();
         let mut main_models = HashMap::new();
         let mut delete_logs = HashMap::new();
+        let mut kv_config = HashMap::new();
+        let mut rel_template_ids = vec![];
         for main_model in FlowModelServ::find_detail_items(&FlowModelFilterReq {
             basic: RbumBasicFilterReq {
                 own_paths: Some("".to_string()),
@@ -31,6 +33,11 @@ impl FlowSubDeployServ {
         }, Some(true), None, funs, ctx).await? {
             if main_models.contains_key(&main_model.tag) {
                 continue;
+            }
+            for rel_template_id in &main_model.rel_template_ids {
+                if !rel_template_ids.contains(rel_template_id) {
+                    rel_template_ids.push(rel_template_id.clone());
+                }
             }
             let model_states = FlowStateServ::find_detail_items(&FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
@@ -78,10 +85,19 @@ impl FlowSubDeployServ {
 
             models.push(approve_model);
         }
+
+        for rel_template_id in rel_template_ids {
+            let key = format!("__tag__:_:_:{}:review_config", rel_template_id);
+            if let Some(config) = SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value) {
+                kv_config.insert(key, config);
+            }
+        }
+        
         Ok(FlowSubDeployOneExportAggResp {
             states: states.values().cloned().collect_vec(),
             models,
             delete_logs,
+            rel_kv_config: if kv_config.is_empty() { None } else { Some(kv_config) },
         })
     }
 
@@ -256,6 +272,23 @@ impl FlowSubDeployServ {
             } else {
                 let mut add_req = new_model.create_add_req();
                 FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;
+            }
+        }
+
+        if let Some(rel_kv_config) = import_req.rel_kv_config {
+            for (key, val) in rel_kv_config {
+                if SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value).is_none() {
+                    SpiKvClient::add_or_modify_item(
+                        &key,
+                        &val,
+                        None,
+                        None,
+                        Some(RbumScopeLevelKind::Root.to_int()),
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                }
             }
         }
         Ok(())

@@ -817,26 +817,27 @@ impl IamSubDeployServ {
                         }
                     }
                 }
-                // 同步项目绑定工作流模板
-                if let Some(app_flow_template) = import_req.app_flow_template.clone() {
-                    for (app_id, rel_template_id) in app_flow_template {
-                        if RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx).await?.is_empty() {
-                            RbumRelServ::add_rel(&mut RbumRelAggAddReq {
-                                rel: RbumRelAddReq {
-                                    tag: "FlowAppTemplate".to_string(),
-                                    note: None,
-                                    from_rbum_kind: RbumRelFromKind::Item,
-                                    from_rbum_id: app_id.clone(),
-                                    to_rbum_item_id: rel_template_id.clone(),
-                                    to_own_paths: app_ctx.own_paths.clone(),
-                                    ext: None,
-                                    to_is_outside: true,
-                                },
-                                attrs: vec![],
-                                envs: vec![],
-                            }, funs, &app_ctx).await?;
-                        }
-                    }
+            }
+        }
+        // 同步项目绑定工作流模板
+        if let Some(app_flow_template) = import_req.app_flow_template.clone() {
+            for (app_id, rel_template_id) in app_flow_template {
+                let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &app_id)?;
+                if !rel_template_id.is_empty() && RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx).await?.is_empty() {
+                    RbumRelServ::add_rel(&mut RbumRelAggAddReq {
+                        rel: RbumRelAddReq {
+                            tag: "FlowAppTemplate".to_string(),
+                            note: None,
+                            from_rbum_kind: RbumRelFromKind::Item,
+                            from_rbum_id: app_id.clone(),
+                            to_rbum_item_id: rel_template_id.clone(),
+                            to_own_paths: app_ctx.own_paths.clone(),
+                            ext: None,
+                            to_is_outside: true,
+                        },
+                        attrs: vec![],
+                        envs: vec![],
+                    }, funs, &app_ctx).await?;
                 }
             }
         }
