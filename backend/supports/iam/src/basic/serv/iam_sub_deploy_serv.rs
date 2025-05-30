@@ -1696,31 +1696,32 @@ impl IamSubDeployServ {
                 }
                 let _ = IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(false), "", funs, ctx).await?;
             }
-            for account in delete_old_accounts {
-                let account_ctx = TardisContext {
-                    own_paths: account.own_paths.clone(),
-                    ..ctx.clone()
-                };
-                IamAccountServ::modify_item(
-                    &account.id,
-                    &mut IamAccountModifyReq {
-                        name: None,
-                        scope_level: None,
-                        disabled: Some(true),
-                        logout_type: None,
-                        labor_type: None,
-                        temporary: None,
-                        lock_status: None,
-                        status: None,
-                        is_auto: None,
-                        icon: None,
-                    },
-                    funs,
-                    &account_ctx,
-                )
-                .await?;
-                IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx).await?;
-            }
+            // todo remove 
+            // for account in delete_old_accounts {
+            //     let account_ctx = TardisContext {
+            //         own_paths: account.own_paths.clone(),
+            //         ..ctx.clone()
+            //     };
+            //     IamAccountServ::modify_item(
+            //         &account.id,
+            //         &mut IamAccountModifyReq {
+            //             name: None,
+            //             scope_level: None,
+            //             disabled: Some(true),
+            //             logout_type: None,
+            //             labor_type: None,
+            //             temporary: None,
+            //             lock_status: None,
+            //             status: None,
+            //             is_auto: None,
+            //             icon: None,
+            //         },
+            //         funs,
+            //         &account_ctx,
+            //     )
+            //     .await?;
+            //     IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx).await?;
+            // }
         }
         Ok(())
     }
