@@ -65,6 +65,7 @@ impl FlowSubDeployServ {
                 ..Default::default()
             },
             main: Some(false),
+            data_source: Some(id.to_string()),
             ..Default::default()
         }, Some(true), None, funs, ctx).await? {
             let model_states = FlowStateServ::find_detail_items(&FlowStateFilterReq {
