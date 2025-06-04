@@ -184,4 +184,50 @@ impl IamCtAppApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Find all relevant apps (i.e. apps owned by the account)
+    ///
+    /// 查找关联应用（账号关联的应用）
+    #[oai(path = "/rel", method = "get")]
+    async fn find_rel_apps(
+        &self,
+        name: Query<Option<String>>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let mut apps_page = IamAppServ::paginate_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    name: name.0,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    optional: false,
+                    tag: Some(IamRelKind::IamAccountApp.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(ctx.owner.clone()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        TardisResp::ok(apps_page)
+    }
 }
