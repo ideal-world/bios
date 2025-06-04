@@ -395,7 +395,7 @@ impl FlowStateServ {
         .await?
         .into_iter()
         .map(|state_detail| FlowStateNameResp {
-            key: state_detail.0.clone(),
+            key: state_detail.1.clone(),
             name: state_detail.1,
         })
         .collect_vec();

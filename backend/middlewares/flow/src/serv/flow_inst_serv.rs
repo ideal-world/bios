@@ -2205,6 +2205,7 @@ impl FlowInstServ {
         let insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 main: Some(false),
+                finish_abort: Some(false),
                 flow_version_id: Some(rel_flow_version_id.to_string()),
                 ..Default::default()
             },
@@ -2214,7 +2215,19 @@ impl FlowInstServ {
         .await?
         .into_iter()
         .collect_vec();
-        join_all(insts.iter().map(|inst| async { Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await }).collect_vec())
+        join_all(insts.iter().map(|inst| async {
+            let ctx_cp = ctx.clone();
+            let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, &ctx_cp).await;
+            match FlowSearchClient::execute_async_task(&ctx_cp).await {
+                Ok(_) => {}
+                Err(e) => error!("flow Instance {} add search task error:{:?}", inst.id, e),
+            }
+            match ctx_cp.execute_task().await {
+                Ok(_) => {}
+                Err(e) => error!("flow Instance {} execute_task error:{:?}", inst.id, e),
+            }
+            result
+        }).collect_vec())
             .await
             .into_iter()
             .collect::<TardisResult<Vec<_>>>()?;
