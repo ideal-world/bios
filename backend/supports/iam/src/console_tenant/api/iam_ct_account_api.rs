@@ -109,6 +109,7 @@ impl IamCtAccountApi {
         role_ids: Query<Option<String>>,
         app_ids: Query<Option<String>>,
         cate_ids: Query<Option<String>>,
+        sys_code_query_depth: Query<Option<i16>>,
         sub_deploy_ids: Query<Option<String>>,
         auth_sub_deploy_ids: Query<Option<String>>,
         status: Query<Option<bool>>,
@@ -178,6 +179,7 @@ impl IamCtAccountApi {
                         ids: Some(cate_ids),
                         ..Default::default()
                     },
+                    sys_code_query_depth: sys_code_query_depth.0,
                     ..Default::default()
                 },
                 None,

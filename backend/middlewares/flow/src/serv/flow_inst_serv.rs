@@ -129,7 +129,7 @@ impl FlowInstServ {
         let mut create_vars = if start_req.transition_id.is_some() {
             Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.clone(), funs, ctx).await?
         } else {
-            HashMap::default()
+            start_req.create_vars.clone().unwrap_or_default()
         };
         if let Some(check_vars) = &start_req.check_vars {
             create_vars.extend(check_vars.clone());
@@ -2205,6 +2205,7 @@ impl FlowInstServ {
         let insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 main: Some(false),
+                finish_abort: Some(false),
                 flow_version_id: Some(rel_flow_version_id.to_string()),
                 ..Default::default()
             },
@@ -2214,7 +2215,19 @@ impl FlowInstServ {
         .await?
         .into_iter()
         .collect_vec();
-        join_all(insts.iter().map(|inst| async { Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await }).collect_vec())
+        join_all(insts.iter().map(|inst| async {
+            let ctx_cp = ctx.clone();
+            let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, &ctx_cp).await;
+            match FlowSearchClient::execute_async_task(&ctx_cp).await {
+                Ok(_) => {}
+                Err(e) => error!("flow Instance {} add search task error:{:?}", inst.id, e),
+            }
+            match ctx_cp.execute_task().await {
+                Ok(_) => {}
+                Err(e) => error!("flow Instance {} execute_task error:{:?}", inst.id, e),
+            }
+            result
+        }).collect_vec())
             .await
             .into_iter()
             .collect::<TardisResult<Vec<_>>>()?;
