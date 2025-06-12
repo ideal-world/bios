@@ -347,9 +347,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 "404-flow-model-not-found",
             ));
         }
-        if let Some(mut modify_version) = modify_req.modify_version.clone() {
-            FlowModelVersionServ::modify_item(&current_model.current_version_id, &mut modify_version, funs, ctx).await?;
-        }
         if modify_req.status == Some(FlowModelStatus::Enabled) && current_model.current_version_id.is_empty() {
             modify_req.current_version_id = FlowModelVersionServ::find_id_items(
                 &FlowModelVersionFilterReq {
@@ -381,6 +378,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             ctx,
         )
         .await?;
+        if let Some(mut modify_version) = modify_req.modify_version.clone() {
+            FlowModelVersionServ::modify_item(&model_detail.current_version_id, &mut modify_version, funs, ctx).await?;
+        }
         if modify_req.name.is_some() {
             // 同步修改名称到版本
             for model_id in FlowModelVersionServ::find_id_items(
@@ -1829,27 +1829,25 @@ impl FlowModelServ {
                         }
                     }
                     if let Some(delete_transitions) = &mut modify_state.delete_transitions {
-                        let mut child_delete_transitions = vec![];
-                        for delete_transition_id in delete_transitions.iter_mut() {
+                        let delete_transitions_cp = delete_transitions.clone();
+                        delete_transitions.clear();
+                        for delete_transition_id in delete_transitions_cp {
                             if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()) {
-                                child_delete_transitions.push(
-                                    child_model_transitions
-                                        .iter()
-                                        .find(|child_tran| {
-                                            child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
-                                                && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                        })
-                                        .map(|trans| trans.id.clone())
-                                        .unwrap_or_default(),
-                                );
+                                if let Some(trans_id) = child_model_transitions
+                                .iter()
+                                .find(|child_tran| {
+                                    child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                        && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                })
+                                .map(|trans| trans.id.clone()) {
+                                    delete_transitions.push(trans_id);
+                                };
                             }
                         }
-                        modify_state.delete_transitions = Some(child_delete_transitions);
                     }
                 }
             }
         }
-
         let child_model_clone = child_model.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {

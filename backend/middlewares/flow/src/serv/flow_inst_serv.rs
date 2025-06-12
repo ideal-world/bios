@@ -129,7 +129,7 @@ impl FlowInstServ {
         let mut create_vars = if start_req.transition_id.is_some() {
             Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.clone(), funs, ctx).await?
         } else {
-            HashMap::default()
+            start_req.create_vars.clone().unwrap_or_default()
         };
         if let Some(check_vars) = &start_req.check_vars {
             create_vars.extend(check_vars.clone());
