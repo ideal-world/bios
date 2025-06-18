@@ -115,9 +115,8 @@ impl FlowCcInstApi {
         funs.begin().await?;
 
         let flow_inst_detail = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        if !flow_inst_detail.main
-            && flow_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default().is_empty() {
-                FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
+        if !flow_inst_detail.main && flow_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default().is_empty() {
+            FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         } else {
             // 若为携带子审批流的数据，则直接触发状态流流转至结束
             let next_trans = FlowInstServ::find_next_transitions(&flow_inst_detail, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0).await?;

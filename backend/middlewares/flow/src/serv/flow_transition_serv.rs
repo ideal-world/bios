@@ -77,11 +77,7 @@ impl FlowTransitionServ {
         let flow_transitions = add_req
             .iter()
             .map(|req| flow_transition::ActiveModel {
-                id: Set(if let Some(id) = &req.id {
-                    id.clone()
-                } else {
-                    TardisFuns::field.nanoid()
-                }),
+                id: Set(if let Some(id) = &req.id { id.clone() } else { TardisFuns::field.nanoid() }),
                 name: Set(req.name.as_ref().map(|name| name.to_string()).unwrap_or("".to_string())),
 
                 from_flow_state_id: Set(from_flow_state_id.to_string()),

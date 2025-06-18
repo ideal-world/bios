@@ -730,8 +730,8 @@ pub struct FlowInstDetailInSearch {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ModifyObjSearchExtReq {
     pub tag: String,
-    pub status: Option<String>,  // 当前状态
-    pub rel_state: Option<String>, // 审批状态
+    pub status: Option<String>,                    // 当前状态
+    pub rel_state: Option<String>,                 // 审批状态
     pub rel_transition_state_name: Option<String>, // 审批节点名
 }
 

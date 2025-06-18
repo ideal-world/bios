@@ -4,14 +4,18 @@ use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_sco
 use bios_sdk_invoke::clients::spi_log_client::{LogItemFindReq, LogItemFindResp};
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    TardisFuns, TardisFunsInst,
 };
 
-use crate::{dto::{
-    flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
-    flow_model_dto::{FlowModelDetailResp, FlowModelRelTransitionKind},
-    flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
-}, flow_constants};
+use crate::{
+    dto::{
+        flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
+        flow_model_dto::{FlowModelDetailResp, FlowModelRelTransitionKind},
+        flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
+    },
+    flow_constants,
+};
 
 use super::{
     clients::{
@@ -37,27 +41,20 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let create_vars_cp = create_vars.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_start_log(
-                            &start_req_cp,
-                            &curr_inst_cp,
-                            &create_vars_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_start_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_start_log(&start_req_cp, &curr_inst_cp, &create_vars_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_start_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -143,27 +140,20 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let create_vars_cp = create_vars.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_start_dynamic_log(
-                            &start_req_cp,
-                            &curr_inst_cp,
-                            &create_vars_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_start_dynamic_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_start_dynamic_log(&start_req_cp, &curr_inst_cp, &create_vars_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_start_dynamic_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -250,27 +240,20 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let create_vars_cp = create_vars.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_async_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_start_business_log(
-                            &start_req_cp,
-                            &curr_inst_cp,
-                            &create_vars_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_start_business_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_start_business_log(&start_req_cp, &curr_inst_cp, &create_vars_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_start_business_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -344,27 +327,20 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let op_kind_cp = op_kind.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_operate_log(
-                            &operate_req_cp,
-                            &curr_inst_cp,
-                            op_kind_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_operate_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_operate_log(&operate_req_cp, &curr_inst_cp, op_kind_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_operate_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -465,27 +441,20 @@ impl FlowLogServ {
         let curr_inst_id = flow_inst_detail.id.clone();
         let op_kind_cp = op_kind.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_operate_dynamic_log(
-                            &operate_req_cp,
-                            &curr_inst_cp,
-                            op_kind_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_operate_dynamic_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_operate_dynamic_log(&operate_req_cp, &curr_inst_cp, op_kind_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_operate_dynamic_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -583,37 +552,26 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_finish_log_async_task(
-        flow_inst_detail: &FlowInstDetailResp,
-        msg: Option<String>,
-        _funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn add_finish_log_async_task(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_cp = ctx.clone();
         let msg_cp = msg.clone();
         let curr_inst_cp = flow_inst_detail.clone();
         let curr_inst_id = flow_inst_detail.id.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_finish_log(
-                            &curr_inst_cp,
-                            msg_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_finish_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_finish_log(&curr_inst_cp, msg_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_finish_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -660,37 +618,26 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_finish_business_log_async_task(
-        flow_inst_detail: &FlowInstDetailResp,
-        msg: Option<String>,
-        _funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn add_finish_business_log_async_task(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_cp = ctx.clone();
         let msg_cp = msg.clone();
         let curr_inst_cp = flow_inst_detail.clone();
         let curr_inst_id = flow_inst_detail.id.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_finish_business_log(
-                            &curr_inst_cp,
-                            msg_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow Instance {} add_finish_log error:{:?}", curr_inst_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_finish_business_log(&curr_inst_cp, msg_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow Instance {} add_finish_log error:{:?}", curr_inst_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
@@ -701,9 +648,9 @@ impl FlowLogServ {
         };
         let artifacts = flow_inst_detail.artifacts.clone().unwrap_or_default();
         let state_text = match artifacts.state.unwrap_or_default() {
-            FlowInstStateKind::Pass => { "审批通过".to_string() },
-            FlowInstStateKind::Overrule => { "审批拒绝".to_string() },
-            _ => { "审批拒绝".to_string() },
+            FlowInstStateKind::Pass => "审批通过".to_string(),
+            FlowInstStateKind::Overrule => "审批拒绝".to_string(),
+            _ => "审批拒绝".to_string(),
         };
         let rel_transition = FlowModelRelTransitionKind::from(flow_inst_detail.rel_transition.clone().unwrap_or_default());
         let log_ext = LogParamExt {
@@ -749,8 +696,8 @@ impl FlowLogServ {
     }
 
     pub async fn add_model_delete_state_log_async_task(
-        flow_model: &FlowModelDetailResp, 
-        original_state: &FlowStateDetailResp, 
+        flow_model: &FlowModelDetailResp,
+        original_state: &FlowStateDetailResp,
         target_state: &FlowStateDetailResp,
         _funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -761,31 +708,30 @@ impl FlowLogServ {
         let target_state_cp = target_state.clone();
         let flow_model_id = flow_model.id.clone();
         let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(
-            || {
-                Box::pin(async move {
-                    let task_handle = tardis::tokio::spawn(async move {
-                        let _ = Self::add_model_delete_state_log(
-                            &flow_model_cp,
-                            &original_state_cp,
-                            &target_state_cp,
-                            &funs_cp,
-                            &ctx_cp,
-                        ).await;
-                    });
-                    match task_handle.await {
-                        Ok(_) => {}
-                        Err(e) => tardis::log::error!("Flow model {} add_model_delete_state_log error:{:?}", flow_model_id, e),
-                    }
-                    tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                    Ok(())
-                })
-            }
-        )).await?;
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tardis::tokio::spawn(async move {
+                    let _ = Self::add_model_delete_state_log(&flow_model_cp, &original_state_cp, &target_state_cp, &funs_cp, &ctx_cp).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow model {} add_model_delete_state_log error:{:?}", flow_model_id, e),
+                }
+                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
+                Ok(())
+            })
+        }))
+        .await?;
         Ok(())
     }
 
-    async fn add_model_delete_state_log(flow_model: &FlowModelDetailResp, original_state: &FlowStateDetailResp, target_state: &FlowStateDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_model_delete_state_log(
+        flow_model: &FlowModelDetailResp,
+        original_state: &FlowStateDetailResp,
+        target_state: &FlowStateDetailResp,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let log_content = LogParamContent {
             subject: Some("状态".to_string()),
             sub_id: Some(original_state.id.clone()),

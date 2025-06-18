@@ -12,10 +12,14 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    db::sea_orm::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
-    }, futures::future::join_all, serde_json::json, TardisFuns, TardisFunsInst
+    },
+    futures::future::join_all,
+    serde_json::json,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -362,7 +366,7 @@ impl FlowStateServ {
                 flow_version_ids.extend(app_flow_version_ids);
             }
         }
-        
+
         let names = Self::find_id_name_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {

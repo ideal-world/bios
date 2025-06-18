@@ -19,9 +19,7 @@ async fn main() -> TardisResult<()> {
         // analysis task
         loop {
             let current_time = tardis::chrono::Utc::now().to_rfc3339();
-            let _profiler = dhat::Profiler::builder()
-                .file_name(format!("/report/dhat-{hostname}-[{current_time}].json"))
-                .build();
+            let _profiler = dhat::Profiler::builder().file_name(format!("/report/dhat-{hostname}-[{current_time}].json")).build();
             std::thread::sleep(tokio::time::Duration::from_secs(60));
             drop(_profiler);
         }

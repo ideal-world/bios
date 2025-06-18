@@ -919,7 +919,7 @@ impl RbumSetCateServ {
 
         result
     }
-    
+
     #[async_recursion]
     pub async fn delete_with_all_rels(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let set_cate = Self::get_rbum(

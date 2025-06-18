@@ -15,7 +15,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq, FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext
+    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
+    FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
+    FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
 };
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
@@ -352,12 +354,7 @@ impl FlowCiInstApi {
     ///
     /// 自动触发前置条件(脚本)
     #[oai(path = "/auto_front_change", method = "get")]
-    async fn auto_front_change(
-        &self,
-        tags: Query<Option<String>>,
-        ctx: TardisContextExtractor,
-        _request: &Request
-    ) -> TardisApiResult<Void> {
+    async fn auto_front_change(&self, tags: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
         let tags = tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec());
         let trans_with_front_changes = FlowTransitionServ::find_detail_items(
@@ -405,7 +402,6 @@ impl FlowCiInstApi {
                         } else {
                             funs.rollback().await.unwrap_or_default();
                         }
-                        
                     });
                     match task_handle.await {
                         Ok(_) => {}
@@ -466,16 +462,10 @@ impl FlowCiInstApi {
     /// 获取实例列表
     #[oai(path = "/stat_inst_count", method = "post")]
     #[allow(clippy::too_many_arguments)]
-    async fn stat_inst_count(&self, req: Json<FlowInstStatcountReq>, mut ctx: TardisContextExtractor, request: &Request,) -> TardisApiResult<HashMap<String, u64>> {
+    async fn stat_inst_count(&self, req: Json<FlowInstStatcountReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, u64>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let result = FlowInstServ::stat_inst_count(
-            &req.0.app_ids,
-            &req.0.filter,
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        let result = FlowInstServ::stat_inst_count(&req.0.app_ids, &req.0.filter, &funs, &ctx.0).await?;
         FlowSearchClient::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

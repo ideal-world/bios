@@ -10,8 +10,8 @@ use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp;
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -823,21 +823,28 @@ impl IamSubDeployServ {
         if let Some(app_flow_template) = import_req.app_flow_template.clone() {
             for (app_id, rel_template_id) in app_flow_template {
                 let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &app_id)?;
-                if !rel_template_id.is_empty() && RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx).await?.is_empty() {
-                    RbumRelServ::add_rel(&mut RbumRelAggAddReq {
-                        rel: RbumRelAddReq {
-                            tag: "FlowAppTemplate".to_string(),
-                            note: None,
-                            from_rbum_kind: RbumRelFromKind::Item,
-                            from_rbum_id: app_id.clone(),
-                            to_rbum_item_id: rel_template_id.clone(),
-                            to_own_paths: app_ctx.own_paths.clone(),
-                            ext: None,
-                            to_is_outside: true,
+                if !rel_template_id.is_empty()
+                    && RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx).await?.is_empty()
+                {
+                    RbumRelServ::add_rel(
+                        &mut RbumRelAggAddReq {
+                            rel: RbumRelAddReq {
+                                tag: "FlowAppTemplate".to_string(),
+                                note: None,
+                                from_rbum_kind: RbumRelFromKind::Item,
+                                from_rbum_id: app_id.clone(),
+                                to_rbum_item_id: rel_template_id.clone(),
+                                to_own_paths: app_ctx.own_paths.clone(),
+                                ext: None,
+                                to_is_outside: true,
+                            },
+                            attrs: vec![],
+                            envs: vec![],
                         },
-                        attrs: vec![],
-                        envs: vec![],
-                    }, funs, &app_ctx).await?;
+                        funs,
+                        &app_ctx,
+                    )
+                    .await?;
                 }
             }
         }
@@ -913,7 +920,11 @@ impl IamSubDeployServ {
             let app_account_vec = IamAppServ::find_rel_account(&app_id.clone(), funs, &app_ctx).await?.iter().map(|r| r.rel_id.clone()).collect::<Vec<_>>();
             app_account.insert(app_id.clone(), app_account_vec);
 
-            let rel_template_id = RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx).await?.pop().map(|rel| rel.rel_id).unwrap_or_default();
+            let rel_template_id = RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx)
+                .await?
+                .pop()
+                .map(|rel| rel.rel_id)
+                .unwrap_or_default();
             app_flow_template.insert(app_id.clone(), rel_template_id);
         }
         Ok(IamSubDeployTowExportAggResp {
@@ -1696,7 +1707,7 @@ impl IamSubDeployServ {
                 }
                 let _ = IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(false), "", funs, ctx).await?;
             }
-            // todo remove 
+            // todo remove
             // for account in delete_old_accounts {
             //     let account_ctx = TardisContext {
             //         own_paths: account.own_paths.clone(),

@@ -5,12 +5,28 @@ use bios_sdk_invoke::clients::{spi_kv_client::SpiKvClient, spi_log_client::LogIt
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::Set, futures::future::join_all, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    db::sea_orm::Set,
+    futures::future::join_all,
+    TardisFuns, TardisFunsInst,
 };
 
-use crate::{domain::flow_inst, dto::{flow_inst_dto::FlowInstFilterReq, flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq}, flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState}, flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelModifyReq}, flow_sub_deploy_dto::{FlowSubDeployOneExportAggResp, FlowSubDeployOneImportReq, FlowSubDeployTowExportAggResp, FlowSubDeployTowImportReq}, flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq}}};
+use crate::{
+    domain::flow_inst,
+    dto::{
+        flow_inst_dto::FlowInstFilterReq,
+        flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq},
+        flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState},
+        flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelModifyReq},
+        flow_sub_deploy_dto::{FlowSubDeployOneExportAggResp, FlowSubDeployOneImportReq, FlowSubDeployTowExportAggResp, FlowSubDeployTowImportReq},
+        flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq},
+    },
+};
 
-use super::{clients::log_client::LogParamContent, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ};
+use super::{
+    clients::log_client::LogParamContent, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ,
+    flow_transition_serv::FlowTransitionServ,
+};
 
 pub struct FlowSubDeployServ;
 
@@ -21,16 +37,24 @@ impl FlowSubDeployServ {
         let mut delete_logs = HashMap::new();
         let mut kv_config = HashMap::new();
         let mut rel_template_ids = vec![];
-        for main_model in FlowModelServ::find_detail_items(&FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
+        for main_model in FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                main: Some(true),
+                data_source: Some(id.to_string()),
                 ..Default::default()
             },
-            main: Some(true),
-            data_source: Some(id.to_string()),
-            ..Default::default()
-        }, Some(true), None, funs, ctx).await? {
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        {
             if main_models.contains_key(&main_model.tag) {
                 continue;
             }
@@ -39,15 +63,22 @@ impl FlowSubDeployServ {
                     rel_template_ids.push(rel_template_id.clone());
                 }
             }
-            let model_states = FlowStateServ::find_detail_items(&FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(main_model.states().into_iter().map(|state| state.id).collect_vec()),
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
+            let model_states = FlowStateServ::find_detail_items(
+                &FlowStateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(main_model.states().into_iter().map(|state| state.id).collect_vec()),
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            }, None, None, funs, ctx).await?;
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             for model_state in model_states {
                 if !states.contains_key(&model_state.id) {
                     states.insert(model_state.id.clone(), model_state);
@@ -58,25 +89,40 @@ impl FlowSubDeployServ {
             main_models.insert(main_model.tag.clone(), main_model);
         }
         let mut models = main_models.values().cloned().collect_vec();
-        for approve_model in FlowModelServ::find_detail_items(&FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
-                ..Default::default()
-            },
-            main: Some(false),
-            data_source: Some(id.to_string()),
-            ..Default::default()
-        }, Some(true), None, funs, ctx).await? {
-            let model_states = FlowStateServ::find_detail_items(&FlowStateFilterReq {
+        for approve_model in FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(approve_model.states().into_iter().map(|state| state.id).collect_vec()),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
+                main: Some(false),
+                data_source: Some(id.to_string()),
                 ..Default::default()
-            }, None, None, funs, ctx).await?;
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            let model_states = FlowStateServ::find_detail_items(
+                &FlowStateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(approve_model.states().into_iter().map(|state| state.id).collect_vec()),
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             for model_state in model_states {
                 if !states.contains_key(&model_state.id) {
                     states.insert(model_state.id.clone(), model_state);
@@ -92,7 +138,7 @@ impl FlowSubDeployServ {
                 kv_config.insert(key, config);
             }
         }
-        
+
         Ok(FlowSubDeployOneExportAggResp {
             states: states.values().cloned().collect_vec(),
             models,
@@ -108,14 +154,22 @@ impl FlowSubDeployServ {
                 owner: import_state.owner.clone(),
                 ..Default::default()
             };
-            if FlowStateServ::get_item(&import_state.id, &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
+            if FlowStateServ::get_item(
+                &import_state.id,
+                &FlowStateFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            }, funs, &mock_ctx).await.is_ok() {
+                funs,
+                &mock_ctx,
+            )
+            .await
+            .is_ok()
+            {
                 continue;
             }
             let mut add_req: FlowStateAddReq = import_state.clone().into();
@@ -128,14 +182,21 @@ impl FlowSubDeployServ {
                 owner: new_model.owner.clone(),
                 ..Default::default()
             };
-            if let Ok(original_model) = FlowModelServ::get_item(&new_model.id, &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
+            if let Ok(original_model) = FlowModelServ::get_item(
+                &new_model.id,
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            }, funs, &mock_ctx).await {
+                funs,
+                &mock_ctx,
+            )
+            .await
+            {
                 let original_model_states = original_model.states();
                 let new_model_states = new_model.states();
                 // update bind states
@@ -148,7 +209,7 @@ impl FlowSubDeployServ {
                                 bind_states: Some(vec![FlowModelVersionBindState {
                                     exist_state: Some(FlowModelBindStateReq {
                                         state_id: bind_state.id.clone(),
-                                        ext: bind_state.ext.clone()
+                                        ext: bind_state.ext.clone(),
                                     }),
                                     ..Default::default()
                                 }]),
@@ -162,12 +223,17 @@ impl FlowSubDeployServ {
                     .await?;
                 }
                 for bind_state in bind_states {
-                    let add_transitions = bind_state.transitions.clone().into_iter().map(|transition| {
-                        let transition_id = transition.id.clone();
-                        let mut add_req = FlowTransitionAddReq::from(transition);
-                        add_req.id = Some(transition_id);
-                        add_req
-                    }).collect_vec();
+                    let add_transitions = bind_state
+                        .transitions
+                        .clone()
+                        .into_iter()
+                        .map(|transition| {
+                            let transition_id = transition.id.clone();
+                            let mut add_req = FlowTransitionAddReq::from(transition);
+                            add_req.id = Some(transition_id);
+                            add_req
+                        })
+                        .collect_vec();
                     FlowTransitionServ::add_transitions(&original_model.current_version_id, &bind_state.id, &add_transitions, funs, ctx).await?;
                 }
                 // update instances state
@@ -194,8 +260,9 @@ impl FlowSubDeployServ {
 
                 // modify exists states
                 let exist_states = new_model_states.iter().filter(|new_state| original_model_states.iter().any(|original_state| new_state.id == original_state.id)).collect_vec();
-                let modify_states_req = exist_states.iter().map(|exist_state| {
-                    FlowModelVersionModifyState {
+                let modify_states_req = exist_states
+                    .iter()
+                    .map(|exist_state| FlowModelVersionModifyState {
                         id: Some(exist_state.id.clone()),
                         modify_rel: Some(FlowStateRelModelModifyReq {
                             id: exist_state.id.clone(),
@@ -203,8 +270,8 @@ impl FlowSubDeployServ {
                             show_btns: exist_state.ext.show_btns.clone(),
                         }),
                         ..Default::default()
-                    }
-                }).collect_vec();
+                    })
+                    .collect_vec();
                 FlowModelServ::modify_model(
                     &original_model.id,
                     &mut FlowModelModifyReq {
@@ -219,14 +286,21 @@ impl FlowSubDeployServ {
                 )
                 .await?;
                 // add or modify transitions
-                let original_transitions = FlowModelServ::get_item(&new_model.id, &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        own_paths: Some("".to_string()),
-                        with_sub_own_paths: true,
+                let original_transitions = FlowModelServ::get_item(
+                    &new_model.id,
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                }, funs, &mock_ctx).await?.transitions();
+                    funs,
+                    &mock_ctx,
+                )
+                .await?
+                .transitions();
                 let mut modify_transitions_req = vec![];
                 for new_transition in new_model.transitions() {
                     if original_transitions.iter().any(|transition| transition.id == new_transition.id) {
@@ -264,11 +338,17 @@ impl FlowSubDeployServ {
                     }
                 }
                 FlowTransitionServ::modify_transitions(&original_model.current_version_id, &modify_transitions_req, funs, ctx).await?;
-                FlowModelServ::modify_model(&original_model.id, &mut FlowModelModifyReq {
-                    name: Some(TrimString(original_model.name.clone())),
-                    front_conds: original_model.front_conds(),
-                    ..Default::default()
-                }, funs, &mock_ctx).await?;
+                FlowModelServ::modify_model(
+                    &original_model.id,
+                    &mut FlowModelModifyReq {
+                        name: Some(TrimString(original_model.name.clone())),
+                        front_conds: original_model.front_conds(),
+                        ..Default::default()
+                    },
+                    funs,
+                    &mock_ctx,
+                )
+                .await?;
             } else {
                 let mut add_req = new_model.create_add_req();
                 FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;
@@ -278,16 +358,7 @@ impl FlowSubDeployServ {
         if let Some(rel_kv_config) = import_req.rel_kv_config {
             for (key, val) in rel_kv_config {
                 if SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value).is_none() {
-                    SpiKvClient::add_or_modify_item(
-                        &key,
-                        &val,
-                        None,
-                        None,
-                        Some(RbumScopeLevelKind::Root.to_int()),
-                        funs,
-                        ctx,
-                    )
-                    .await?;
+                    SpiKvClient::add_or_modify_item(&key, &val, None, None, Some(RbumScopeLevelKind::Root.to_int()), funs, ctx).await?;
                 }
             }
         }
@@ -325,12 +396,18 @@ impl FlowSubDeployServ {
                 if orginal_state_id == new_state_id {
                     continue;
                 }
-                FlowInstServ::async_unsafe_modify_state(&FlowInstFilterReq {
-                    flow_version_id: Some(flow_model.current_version_id.clone()),
-                    current_state_id: Some(orginal_state_id.clone()),
-                    with_sub: Some(true),
-                    ..Default::default()
-                }, &new_state_id, funs, &global_ctx).await?;
+                FlowInstServ::async_unsafe_modify_state(
+                    &FlowInstFilterReq {
+                        flow_version_id: Some(flow_model.current_version_id.clone()),
+                        current_state_id: Some(orginal_state_id.clone()),
+                        with_sub: Some(true),
+                        ..Default::default()
+                    },
+                    &new_state_id,
+                    funs,
+                    &global_ctx,
+                )
+                .await?;
             }
         }
 
@@ -343,15 +420,18 @@ impl FlowSubDeployServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<FlowSubDeployTowExportAggResp> {
-        let insts = FlowInstServ::find_detail_items(&FlowInstFilterReq {
-            with_sub: Some(true),
-            // update_time_start: Some(start_time),
-            // update_time_end: Some(end_time),
-            ..Default::default()
-        }, funs, ctx).await?;
-        Ok(FlowSubDeployTowExportAggResp {
-            insts, 
-        })
+        let insts = FlowInstServ::find_detail_items(
+            &FlowInstFilterReq {
+                with_sub: Some(true),
+                // update_time_start: Some(start_time),
+                // update_time_end: Some(end_time),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(FlowSubDeployTowExportAggResp { insts })
     }
 
     pub(crate) async fn one_deploy_import(import_req: FlowSubDeployOneImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -360,7 +440,7 @@ impl FlowSubDeployServ {
             let mut page = 0;
             let page_size = 100;
             loop {
-                let current_insts = &insts[((page * page_size).min(max_size))..(((page+1) * page_size).min(max_size))];
+                let current_insts = &insts[((page * page_size).min(max_size))..(((page + 1) * page_size).min(max_size))];
                 if current_insts.is_empty() {
                     break;
                 }
@@ -376,38 +456,34 @@ impl FlowSubDeployServ {
                                 rel_flow_version_id: Set(inst.rel_flow_version_id.clone()),
                                 rel_business_obj_id: Set(inst.rel_business_obj_id.clone()),
                                 rel_transition_id: Set(inst.rel_transition_id.clone()),
-                    
+
                                 current_state_id: Set(inst.current_state_id.clone()),
-                    
+
                                 create_vars: Set(inst.create_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
                                 current_vars: Set(inst.current_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
-                    
+
                                 create_ctx: Set(inst.create_ctx.clone()),
-        
+
                                 finish_ctx: Set(inst.finish_ctx.clone()),
                                 finish_time: Set(inst.finish_time),
                                 finish_abort: Set(inst.finish_abort),
                                 output_message: Set(inst.output_message.clone()),
-                                
+
                                 transitions: Set(inst.transitions.clone()),
                                 artifacts: Set(inst.artifacts.clone()),
                                 comments: Set(inst.comments.clone()),
-        
+
                                 own_paths: Set(inst.own_paths.clone()),
                                 main: Set(inst.main),
                                 rel_inst_id: Set(inst.rel_inst_id.clone()),
                                 data_source: Set(inst.data_source.clone()),
-        
+
                                 create_time: Set(inst.create_time),
                                 update_time: Set(inst.update_time),
                             };
                             match FlowInstServ::get(&inst.id, funs, ctx).await {
-                                Ok(_) => {
-                                    funs.db().update_one(flow_inst, ctx).await
-                                },
-                                Err(_e) => {
-                                    funs.db().insert_one(flow_inst, ctx).await.map(|_| ())
-                                }
+                                Ok(_) => funs.db().update_one(flow_inst, ctx).await,
+                                Err(_e) => funs.db().insert_one(flow_inst, ctx).await.map(|_| ()),
                             }
                         })
                         .collect_vec(),
@@ -420,5 +496,4 @@ impl FlowSubDeployServ {
         }
         Ok(())
     }
-    
 }

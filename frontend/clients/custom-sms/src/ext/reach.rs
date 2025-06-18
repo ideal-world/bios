@@ -1,10 +1,10 @@
 use std::sync::{Arc, OnceLock};
 
-use bios_reach::reach_config::ReachConfig;
 use bios_reach::dto::ReachChannelKind;
-use bios_reach::reach_send_channel::{SendChannel, GenericTemplate};
-use tardis::TardisFuns;
+use bios_reach::reach_config::ReachConfig;
+use bios_reach::reach_send_channel::{GenericTemplate, SendChannel};
 use tardis::basic::{error::TardisError, result::TardisResult};
+use tardis::TardisFuns;
 
 use crate::client::Client;
 use crate::model::*;
@@ -22,7 +22,6 @@ impl Default for CustomSmsReachChannel {
         Self::from(config.as_ref())
     }
 }
-
 
 impl CustomSmsReachChannel {
     pub fn from_reach_config() -> Arc<Self> {
@@ -57,12 +56,7 @@ impl SendChannel for CustomSmsReachChannel {
     fn kind(&self) -> ReachChannelKind {
         ReachChannelKind::Sms
     }
-    async fn send(
-        &self,
-        template: GenericTemplate<'_>,
-        content: &bios_reach::dto::ContentReplace,
-        to: &std::collections::HashSet<&str>,
-    ) -> TardisResult<()> {
+    async fn send(&self, template: GenericTemplate<'_>, content: &bios_reach::dto::ContentReplace, to: &std::collections::HashSet<&str>) -> TardisResult<()> {
         let content = content.render_final_content::<20>(template.content);
         let req = crate::model::SendCommonMessageBuilder::default()
             .app_id(&self.app_id)
@@ -75,10 +69,7 @@ impl SendChannel for CustomSmsReachChannel {
         let resp = self.inner.send_message(&req).await?;
         if let Some(resp) = resp.data {
             if !resp.is_ok() {
-                return Err(TardisError::internal_error(
-                    &resp.desc.unwrap_or_default(),
-                    "500-reach-send-failed",
-                ));
+                return Err(TardisError::internal_error(&resp.desc.unwrap_or_default(), "500-reach-send-failed"));
             }
         } else {
             return Err(TardisError::internal_error(

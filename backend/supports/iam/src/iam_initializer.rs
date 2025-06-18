@@ -610,6 +610,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
+    //TODO 把所有的System菜单关联给admin角色
+
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
         kind_app_id,

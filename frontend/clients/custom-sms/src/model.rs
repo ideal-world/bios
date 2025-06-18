@@ -173,11 +173,7 @@ impl SendCommonMessageBuilder {
             return Err("content cannot be empty");
         }
         // check ack
-        if matches!(
-            self.ack,
-            Some(AckType::NeedReply) | Some(AckType::NeedReceiptAndReply)
-        ) && self.reply.is_none()
-        {
+        if matches!(self.ack, Some(AckType::NeedReply) | Some(AckType::NeedReceiptAndReply)) && self.reply.is_none() {
             return Err("missing reply");
         }
         // check ser no
