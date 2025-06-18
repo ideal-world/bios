@@ -296,6 +296,8 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             admin_ids: Some(vec![account_id.clone()]),
             set_cate_id: None,
+            kind: None,
+            sync_apps_group: None,
         },
         &funs,
         &tenant_admin_context,

@@ -330,3 +330,24 @@ pub struct AccountTenantInfo {
     pub groups: HashMap<String, String>,
     pub apps: Vec<IamAccountAppInfoResp>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountLogoutEvent {
+    pub id: String,
+}
+
+pub mod event {
+    use bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject};
+    use tardis::chrono::{Duration, Utc};
+
+    impl EventAttribute for super::IamAccountLogoutEvent {
+        const SUBJECT: Subject = Subject::const_new("iam/account/logout");
+        fn durable_config() -> Option<MessageDurableConfig> {
+            Some(MessageDurableConfig {
+                // 两个月后过期
+                expire: Utc::now() + Duration::days(60),
+                max_receiver: Some(1),
+            })
+        }
+    }
+}

@@ -20,7 +20,7 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -66,6 +66,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
+            kind: Set(add_req.kind.clone().unwrap_or(IamAppKind::Product)),
             ..Default::default()
         })
     }
@@ -125,6 +126,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         query.column((iam_app::Entity, iam_app::Column::Icon));
         query.column((iam_app::Entity, iam_app::Column::Sort));
+        query.column((iam_app::Entity, iam_app::Column::Kind));
         if let Some(contact_phone) = &filter.contact_phone {
             query.and_where(Expr::col(iam_app::Column::ContactPhone).eq(contact_phone.as_str()));
         }
@@ -173,6 +175,8 @@ impl IamAppServ {
                 contact_phone: add_req.app_contact_phone.clone(),
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                kind: add_req.kind.clone(),
+                sync_apps_group: add_req.sync_apps_group,
             },
             funs,
             &app_ctx,
@@ -193,18 +197,20 @@ impl IamAppServ {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
         let _ = IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
 
-        let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &ctx).await?;
-        IamSetServ::add_set_item(
-            &IamSetItemAddReq {
-                set_id: apps_set_id.clone(),
-                set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-                sort: add_req.app_sort.unwrap_or(0),
-                rel_rbum_item_id: app_id.to_string(),
-            },
-            funs,
-            &ctx,
-        )
-        .await?;
+        if add_req.sync_apps_group.unwrap_or(true) {
+            let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &ctx).await?;
+            IamSetServ::add_set_item(
+                &IamSetItemAddReq {
+                    set_id: apps_set_id.clone(),
+                    set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+                    sort: add_req.app_sort.unwrap_or(0),
+                    rel_rbum_item_id: app_id.to_string(),
+                },
+                funs,
+                &ctx,
+            )
+            .await?;
+        }
         app_ctx.execute_task().await?;
 
         Ok(app_id)
