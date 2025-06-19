@@ -22,7 +22,7 @@ use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use crate::basic::domain::{iam_account, iam_app, iam_config, iam_res, iam_role, iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license, iam_tenant};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, InitResItemIds, JsonMenu};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -312,7 +312,17 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
-    init_menu_by_file(&set_res_id, &cate_menu_id, &funs.conf::<IamConfig>().init_menu_json_path, funs, &ctx).await?;
+    let InitResItemIds {
+        mut system_res_ids,
+        mut tenant_res_ids,
+        mut app_res_ids,
+    } = init_menu_by_file(&set_res_id, &cate_menu_id, &funs.conf::<IamConfig>().init_menu_json_path, funs, &ctx).await?;
+    system_res_ids.push(set_menu_cs_id);
+    system_res_ids.push(set_api_cs_id);
+    tenant_res_ids.push(set_menu_ct_id.clone());
+    tenant_res_ids.push(set_api_ct_id.clone());
+    app_res_ids.push(set_menu_ca_id.clone());
+    app_res_ids.push(set_api_ca_id.clone());
 
     // Init kernel certs
     IamCertServ::init_default_ident_conf(
@@ -383,7 +393,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 in_embed: Some(true),
                 in_base: Some(true),
             },
-            res_ids: Some(vec![set_menu_cs_id, set_api_cs_id]),
+            res_ids: Some(system_res_ids),
         },
         funs,
         &ctx,
@@ -427,7 +437,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 in_embed: Some(true),
                 in_base: Some(true),
             },
-            res_ids: Some(vec![set_menu_ct_id.clone(), set_api_ct_id.clone()]),
+            res_ids: Some(tenant_res_ids),
         },
         funs,
         &ctx,
@@ -471,7 +481,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 in_embed: Some(true),
                 in_base: Some(true),
             },
-            res_ids: Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+            res_ids: Some(app_res_ids),
         },
         funs,
         &ctx,
@@ -610,8 +620,6 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
-    //TODO 把所有的System菜单关联给admin角色
-
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
         kind_app_id,
@@ -705,10 +713,13 @@ async fn add_role<'a>(
     Ok(role_id)
 }
 
-async fn init_menu_by_file(set_id: &str, parent_cate_id: &str, file_path: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+/// init menu by file
+/// # Returns
+/// - init res ids
+async fn init_menu_by_file(set_id: &str, parent_cate_id: &str, file_path: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<InitResItemIds> {
     let json_menu = TardisFuns::json.file_to_obj::<JsonMenu, &str>(file_path)?;
-    IamMenuServ::parse_menu(set_id, parent_cate_id, json_menu, funs, ctx).await?;
-    Ok(())
+    let result = IamMenuServ::parse_menu(set_id, parent_cate_id, json_menu, funs, ctx).await?;
+    Ok(result)
 }
 
 async fn add_res<'a>(

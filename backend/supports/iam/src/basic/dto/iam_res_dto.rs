@@ -192,3 +192,10 @@ pub struct IamResAppReq {
     pub app_ids: Vec<String>,
     pub res_codes: Vec<String>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct InitResItemIds {
+    pub system_res_ids: Vec<String>,
+    pub tenant_res_ids: Vec<String>,
+    pub app_res_ids: Vec<String>,
+}
