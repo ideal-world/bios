@@ -7,10 +7,10 @@ use bios_basic::rbum::{
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::{
-    serde_json::json,
     basic::field::TrimString,
     chrono::{DateTime, Utc},
     db::sea_orm::{self, prelude::*},
+    serde_json::json,
     serde_json::Value,
     web::poem_openapi,
     TardisFuns,
@@ -351,7 +351,7 @@ impl FlowModelDetailResp {
             rel_template_ids: Some(self.rel_template_ids.clone()),
             modify_version: Some(FlowModelVersionModifyReq {
                 name: Some(self.name.as_str().into()),
-                bind_states: None, // todo
+                bind_states: None,   // todo
                 unbind_states: None, // todo
                 delete_states: None, // todo
                 modify_states: None, // todo

@@ -382,7 +382,8 @@ pub async fn test(
             }],
         )
         .await;
-    let review_end_transition_id = state_and_next_transitions[0].next_flow_transitions.iter().find(|tran| tran.next_flow_transition_name == *"结束评审").unwrap().next_flow_transition_id.clone();
+    let review_end_transition_id =
+        state_and_next_transitions[0].next_flow_transitions.iter().find(|tran| tran.next_flow_transition_name == *"结束评审").unwrap().next_flow_transition_id.clone();
     let resp: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", review_inst_id),
@@ -395,48 +396,55 @@ pub async fn test(
         .await;
     // 开始评审
     let _: Void = flow_client
-    .post(
-        &format!("/ci/inst/{}/batch_operate", review_inst_id),
-        &HashMap::from([
-            (req_a_obj_id.to_string(), FlowInstOperateReq {
-                operate:FlowStateOperatorKind::Pass,
-                vars:None,
-                all_vars:None,
-                output_message:None,
-                operator:None,
-                log_text:None,
-            }),
-            (req_b_obj_id.to_string(), FlowInstOperateReq {
-                operate:FlowStateOperatorKind::Overrule,
-                vars:None,
-                all_vars:None,
-                output_message:None,
-                operator:None,
-                log_text:None,
-            })
-        ]),
-    )
-    .await;
+        .post(
+            &format!("/ci/inst/{}/batch_operate", review_inst_id),
+            &HashMap::from([
+                (
+                    req_a_obj_id.to_string(),
+                    FlowInstOperateReq {
+                        operate: FlowStateOperatorKind::Pass,
+                        vars: None,
+                        all_vars: None,
+                        output_message: None,
+                        operator: None,
+                        log_text: None,
+                    },
+                ),
+                (
+                    req_b_obj_id.to_string(),
+                    FlowInstOperateReq {
+                        operate: FlowStateOperatorKind::Overrule,
+                        vars: None,
+                        all_vars: None,
+                        output_message: None,
+                        operator: None,
+                        log_text: None,
+                    },
+                ),
+            ]),
+        )
+        .await;
     ctx.owner = t1_account_b_id.clone();
     ctx.own_paths = format!("{}/{}", t1_tenant_id, t1_app_id).to_string();
     flow_client.set_auth(&ctx)?;
     kv_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
     let _: Void = flow_client
-    .post(
-        &format!("/ci/inst/{}/batch_operate", review_inst_id),
-        &HashMap::from([
-            (req_a_obj_id.to_string(), FlowInstOperateReq {
-                operate:FlowStateOperatorKind::Pass,
-                vars:None,
-                all_vars:None,
-                output_message:None,
-                operator:None,
-                log_text:None,
-            })
-        ]),
-    )
-    .await;
+        .post(
+            &format!("/ci/inst/{}/batch_operate", review_inst_id),
+            &HashMap::from([(
+                req_a_obj_id.to_string(),
+                FlowInstOperateReq {
+                    operate: FlowStateOperatorKind::Pass,
+                    vars: None,
+                    all_vars: None,
+                    output_message: None,
+                    operator: None,
+                    log_text: None,
+                },
+            )]),
+        )
+        .await;
     // 评审自动结束
     Ok(())
 }

@@ -9,5 +9,5 @@ pub mod flow_model_serv;
 pub mod flow_model_version_serv;
 pub mod flow_rel_serv;
 pub mod flow_state_serv;
-pub mod flow_transition_serv;
 pub mod flow_sub_deploy_serv;
+pub mod flow_transition_serv;

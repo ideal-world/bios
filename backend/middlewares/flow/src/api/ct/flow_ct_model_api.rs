@@ -18,7 +18,10 @@ use crate::{
     },
     flow_constants,
     serv::{
-        clients::search_client::FlowSearchClient, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}
+        clients::search_client::FlowSearchClient,
+        flow_inst_serv::FlowInstServ,
+        flow_model_serv::FlowModelServ,
+        flow_rel_serv::{FlowRelKind, FlowRelServ},
     },
 };
 

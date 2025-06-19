@@ -23,16 +23,11 @@ async fn send_common_msg() -> TardisResult<()> {
         revicer,
         content,
     } = {
-        let toml_file =
-            std::env::var("CUSTOM_SMS_CONFIG").unwrap_or("./tests/config/custom_sms.toml".to_string());
+        let toml_file = std::env::var("CUSTOM_SMS_CONFIG").unwrap_or("./tests/config/custom_sms.toml".to_string());
         let content = std::fs::read_to_string(toml_file).expect("fail to open config file");
         toml::from_str::<CustomSmsConfig>(&content).expect("invalid config")
     };
-    let client = bios_client_custom_sms::Client::init(
-        base_url,
-        app_id.parse().expect("not valid header value"),
-        app_pwd.parse().expect("not valid header value"),
-    )?;
+    let client = bios_client_custom_sms::Client::init(base_url, app_id.parse().expect("not valid header value"), app_pwd.parse().expect("not valid header value"))?;
 
     let mut req = SendCommonMessageRequest::build()
         .need_report(false)

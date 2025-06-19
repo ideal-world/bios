@@ -9,7 +9,11 @@ use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult}, chrono::{DateTime, Utc}, tokio, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
+    basic::{dto::TardisContext, result::TardisResult},
+    chrono::{DateTime, Utc},
+    tokio,
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{flow_config::FlowConfig, flow_constants};
@@ -260,7 +264,7 @@ impl FlowLogClient {
 
     pub fn get_flow_kind_text(tag: &str) -> String {
         let flow_tag_map = HashMap::from([
-            ("PROJ", "项目"),
+            ("PRODUCT", "产品"),
             ("MS", "里程碑"),
             ("ITER", "迭代"),
             ("TICKET", "工单"),

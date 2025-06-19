@@ -1,5 +1,5 @@
-use std::{collections::HashMap, fmt::Display, str::FromStr};
 use itertools::Itertools;
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 use strum::Display;
 
 use bios_basic::rbum::{
