@@ -8,3 +8,7 @@ pub mod log_constants;
 pub mod log_initializer;
 pub(crate) use crate::log_initializer::get_tardis_inst;
 mod serv;
+
+// fix instrument tracing error
+use tardis::tracing::*;
+extern crate self as tracing;

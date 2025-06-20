@@ -26,7 +26,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, JsonMenu, MenuItem};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, InitResItemIds, JsonMenu, MenuItem};
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -711,29 +711,48 @@ impl IamResServ {
 }
 
 impl IamMenuServ {
-    pub fn parse_menu<'a>(set_id: &'a str, parent_cate_id: &'a str, json_menu: JsonMenu, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
+    pub fn parse_menu<'a>(
+        set_id: &'a str,
+        parent_cate_id: &'a str,
+        json_menu: JsonMenu,
+        funs: &'a TardisFunsInst,
+        ctx: &'a TardisContext,
+    ) -> BoxFuture<'a, TardisResult<InitResItemIds>> {
         async move {
-            let new_cate_id = Self::add_cate_menu(
-                set_id,
-                parent_cate_id,
-                &json_menu.name,
-                &json_menu.bus_code,
-                &IamSetCateKind::parse(&json_menu.ext)?,
-                funs,
-                ctx,
-            )
-            .await?;
+            let mut system_res_ids = vec![];
+            let mut tenant_res_ids = vec![];
+            let mut app_res_ids = vec![];
+            let cate_kind = IamSetCateKind::parse(&json_menu.ext)?;
+            let new_cate_id = Self::add_cate_menu(set_id, parent_cate_id, &json_menu.name, &json_menu.bus_code, &cate_kind, funs, ctx).await?;
             if let Some(items) = json_menu.items {
                 for item in items {
-                    Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+                    let item_id = Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+                    if cate_kind == IamSetCateKind::System {
+                        system_res_ids.push(item_id);
+                    } else if cate_kind == IamSetCateKind::Tenant {
+                        tenant_res_ids.push(item_id);
+                    } else if cate_kind == IamSetCateKind::App {
+                        app_res_ids.push(item_id);
+                    }
                 }
             };
             if let Some(children_menus) = json_menu.children {
                 for children_menu in children_menus {
-                    Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    let InitResItemIds {
+                        system_res_ids: children_system_res_ids,
+                        tenant_res_ids: children_tenant_res_ids,
+                        app_res_ids: children_app_res_ids,
+                    } = Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    system_res_ids.extend(children_system_res_ids);
+                    tenant_res_ids.extend(children_tenant_res_ids);
+                    app_res_ids.extend(children_app_res_ids);
                 }
             };
-            Ok(new_cate_id)
+            Ok(InitResItemIds {
+                system_res_ids,
+                tenant_res_ids,
+                app_res_ids,
+            })
         }
         .boxed()
     }
