@@ -475,7 +475,6 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE,
     ];
     
     for role_code in app_roles.iter() {
