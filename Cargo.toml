@@ -64,9 +64,10 @@ testcontainers-modules = { version = "0.11", features = ["redis"] }
 
 csrf = "=0.4.1"
 # tardis
-# tardis = { version = "0.1.0-rc.17" }
-# tardis = { path = "../tardis/tardis" }
-tardis = { git = "https://gitee.com/ideal-world/tardis.git", rev = "2f40c0e" }
+tardis = { version = "0.1.0-rc.18" }
+# tardis = { version = "0.2.0", path = "../tardis/tardis" }
+# tardis = {git = "https://gitee.com/ideal-world/tardis.git", rev = "2f40c0e"}
+
 # asteroid-mq = { git = "https://github.com/4t145/asteroid-mq.git", rev = "f1412ce" }
 # asteroid-mq = { path = "../asteroid/asteroid-mq/server" }
 asteroid-mq = { version = "0.1.0-alpha.16" }
