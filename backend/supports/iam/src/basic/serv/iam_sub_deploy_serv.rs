@@ -1147,6 +1147,7 @@ impl IamSubDeployServ {
                                 double_auth_msg: Some(res_item.double_auth_msg),
                                 need_login: Some(res_item.need_login),
                                 bind_api_res,
+                                bind_data_guards: None, // @TODO 需支持导入数据权限
                             },
                             funs,
                             &global_ctx,
@@ -1177,6 +1178,7 @@ impl IamSubDeployServ {
                                             double_auth_msg: Some(res_item.double_auth_msg),
                                             need_login: Some(res_item.need_login),
                                             bind_api_res,
+                                            bind_data_guards: None, // @TODO 需支持导入数据权限
                                         },
                                         set: IamSetItemAggAddReq { set_cate_id },
                                     },

@@ -100,6 +100,7 @@ pub enum IamRelKind {
     IamResRole,
     IamAccountApp,
     IamResApi,
+    IamResDataGuard,
     IamAccountRel,
     IamCertRel,
     IamOrgRel,
@@ -123,6 +124,7 @@ pub enum IamResKind {
     Ele,
     Product,
     Spec,
+    DataGuard,
 }
 
 impl IamResKind {
@@ -133,6 +135,7 @@ impl IamResKind {
             2 => Ok(IamResKind::Ele),
             3 => Ok(IamResKind::Product),
             4 => Ok(IamResKind::Spec),
+            5 => Ok(IamResKind::DataGuard),
             _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
@@ -144,6 +147,7 @@ impl IamResKind {
             IamResKind::Ele => 2,
             IamResKind::Product => 3,
             IamResKind::Spec => 4,
+            IamResKind::DataGuard => 5,
         }
     }
 }
@@ -164,6 +168,7 @@ pub enum IamSetKind {
     Org,
     Res,
     Apps,
+    DataGuard,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]

@@ -398,6 +398,8 @@ impl RbumSetServ {
         .map(|domain| (domain.id.clone(), domain))
         .collect();
 
+        // let item_data_guards = ;
+
         Ok(RbumSetTreeResp {
             main: tree_main,
             ext: Some(RbumSetTreeExtResp {
@@ -405,6 +407,7 @@ impl RbumSetServ {
                 item_number_agg,
                 item_kinds,
                 item_domains,
+                item_data_guards: HashMap::new(),
             }),
         })
     }

@@ -336,6 +336,7 @@ pub struct IamAccountLogoutEvent {
     pub id: String,
 }
 
+#[cfg(feature = "event")]
 pub mod event {
     use bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject};
     use tardis::chrono::{Duration, Utc};

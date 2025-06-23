@@ -34,7 +34,7 @@ pub struct IamSetCateModifyReq {
     pub ext: Option<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamSetItemAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_cate_id: String,

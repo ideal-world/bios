@@ -178,6 +178,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
             double_auth_msg: None,
             need_login: None,
             bind_api_res: None,
+            bind_data_guards: None,
             ext: None,
         },
         &funs,

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
+use crate::basic::dto::iam_res_dto::{IamResAggAddAndBindReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
@@ -42,6 +42,30 @@ impl IamCsResApi {
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamResServ::add_res_agg(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Add And Bind Res
+    /// 添加资源
+    #[oai(path = "/add_and_bind", method = "post")]
+    async fn add_and_bind(&self, add_req: Json<IamResAggAddAndBindReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&add_req.0.set_kind, &funs, &ctx.0).await?;
+        let result = IamResServ::add_res_agg(
+            &mut IamResAggAddReq {
+                res: add_req.0.res.clone(),
+                set: add_req.0.set.clone(),
+            },
+            &set_id,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        IamRelServ::add_simple_rel(&add_req.0.bind_res_kind, &result, &add_req.0.bind_res_id, None, None, false, false, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -281,6 +305,18 @@ impl IamCsResApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Data Guard Tree
+    /// 查找数据权限树
+    #[oai(path = "/tree/data_guard", method = "get")]
+    async fn get_data_guard_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

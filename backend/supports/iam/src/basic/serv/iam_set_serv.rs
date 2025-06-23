@@ -17,7 +17,6 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
-use tardis::log::info;
 use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -61,42 +60,62 @@ impl IamSetServ {
             ctx,
         )
         .await?;
-        let cates = if set_kind == IamSetKind::Res {
-            let cate_menu_id = RbumSetCateServ::add_rbum(
-                &mut RbumSetCateAddReq {
-                    name: TrimString("Menus".to_string()),
-                    bus_code: TrimString("__menus__".to_string()),
-                    icon: None,
-                    sort: None,
-                    ext: Some(IamSetCateKind::Root.to_string()),
-                    rbum_parent_cate_id: None,
-                    rel_rbum_set_id: set_id.clone(),
-                    scope_level: Some(scope_level.clone()),
-                    id: None,
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            let cate_api_id = RbumSetCateServ::add_rbum(
-                &mut RbumSetCateAddReq {
-                    name: TrimString("Apis".to_string()),
-                    bus_code: TrimString("__apis__".to_string()),
-                    icon: None,
-                    sort: None,
-                    ext: None,
-                    rbum_parent_cate_id: None,
-                    rel_rbum_set_id: set_id.clone(),
-                    scope_level: Some(scope_level.clone()),
-                    id: None,
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            Some((cate_menu_id, cate_api_id))
-        } else {
-            None
+        let cates = match set_kind {
+            IamSetKind::Res => {
+                let cate_menu_id = RbumSetCateServ::add_rbum(
+                    &mut RbumSetCateAddReq {
+                        name: TrimString("Menus".to_string()),
+                        bus_code: TrimString("__menus__".to_string()),
+                        icon: None,
+                        sort: None,
+                        ext: Some(IamSetCateKind::Root.to_string()),
+                        rbum_parent_cate_id: None,
+                        rel_rbum_set_id: set_id.clone(),
+                        scope_level: Some(scope_level.clone()),
+                        id: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                let cate_api_id = RbumSetCateServ::add_rbum(
+                    &mut RbumSetCateAddReq {
+                        name: TrimString("Apis".to_string()),
+                        bus_code: TrimString("__apis__".to_string()),
+                        icon: None,
+                        sort: None,
+                        ext: None,
+                        rbum_parent_cate_id: None,
+                        rel_rbum_set_id: set_id.clone(),
+                        scope_level: Some(scope_level.clone()),
+                        id: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                Some((cate_menu_id, cate_api_id))
+            }
+            IamSetKind::DataGuard => {
+                let _ = RbumSetCateServ::add_rbum(
+                    &mut RbumSetCateAddReq {
+                        name: TrimString("DataGuards".to_string()),
+                        bus_code: TrimString("__data_guards__".to_string()),
+                        icon: None,
+                        sort: None,
+                        ext: None,
+                        rbum_parent_cate_id: None,
+                        rel_rbum_set_id: set_id.clone(),
+                        scope_level: Some(scope_level.clone()),
+                        id: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                None
+            }
+            _ => None,
         };
         Ok((set_id, cates))
     }

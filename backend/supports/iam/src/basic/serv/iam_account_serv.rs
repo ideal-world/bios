@@ -2,13 +2,12 @@ use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
-use bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::model::{EdgeMessage, Subject, TopicCode};
+
+#[cfg(feature = "event")]
 use bios_sdk_invoke::clients::event_client::{mq_error, EventAttributeExt, SPI_RPC_TOPIC};
-use bios_sdk_invoke::invoke_enumeration::InvokeModuleKind;
+
 use itertools::Itertools;
 use tardis::chrono::Utc;
-use tardis::futures::FutureExt;
-use tardis::log::warn;
 
 use std::collections::HashMap;
 
@@ -170,10 +169,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await?;
         }
         // add event
+        #[cfg(feature = "event")]
         if funs.conf::<IamConfig>().in_event {
-            if modify_req.status == Some(IamAccountStatusKind::Logout) {
-                if let Some(event_node) = bios_sdk_invoke::clients::event_client::mq_client_node_opt() {
+            if let Some(event_node) = bios_sdk_invoke::clients::event_client::mq_client_node_opt() {
+                if modify_req.status == Some(IamAccountStatusKind::Logout) {
                     event_node.send_event(SPI_RPC_TOPIC, IamAccountLogoutEvent { id: id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
+                    // warn!("send event message: logout accout,id: {:?}", id);
                 }
             }
         }
