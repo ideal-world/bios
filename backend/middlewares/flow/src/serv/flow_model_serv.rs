@@ -21,7 +21,7 @@ use tardis::{
         EntityName, Set,
     },
     futures::future::join_all,
-    log::{error, warn},
+    log::error,
     serde_json::json,
     tokio,
     web::web_resp::TardisPage,
@@ -1865,7 +1865,6 @@ impl FlowModelServ {
                 }
             }
         }
-        warn!("sync_child_model modify_req_clone: {:?}", modify_req_clone);
         let child_model_clone = child_model.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {

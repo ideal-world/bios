@@ -174,7 +174,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             if modify_req.status == Some(IamAccountStatusKind::Logout) {
                 if let Some(event_node) = bios_sdk_invoke::clients::event_client::mq_client_node_opt() {
                     event_node.send_event(SPI_RPC_TOPIC, IamAccountLogoutEvent { id: id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
-                    // warn!("send event message:{:?}, ack: {:?}", message, ack.wait().await.map_err(mq_error)?);
                 }
             }
         }
