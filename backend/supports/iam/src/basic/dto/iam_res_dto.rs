@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
@@ -180,11 +182,14 @@ pub struct JsonMenu {
     pub items: Option<Vec<MenuItem>>,
     pub children: Option<Vec<JsonMenu>>,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Clone)]
 pub struct MenuItem {
     pub code: String,
     pub name: String,
     pub kind: String,
+    /// role id bind with res
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role_binds: Option<Vec<String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -195,7 +200,36 @@ pub struct IamResAppReq {
 
 #[derive(Serialize, Deserialize)]
 pub struct InitResItemIds {
-    pub system_res_ids: Vec<String>,
-    pub tenant_res_ids: Vec<String>,
-    pub app_res_ids: Vec<String>,
+    /// key: role code, value: res id list
+    role_res_map: HashMap<String, Vec<String>>
+}
+
+impl InitResItemIds {
+    pub fn new() -> Self {
+        Self {
+            role_res_map: HashMap::new(),
+        }
+    }
+
+    pub fn add_role_res(&mut self, role_code: &str, res_id: &str) {
+        self.role_res_map.entry(role_code.to_string()).or_insert(Vec::new()).push(res_id.to_string());
+    }
+
+    pub fn add_role_res_list(&mut self, role_code: &str, res_ids: &Vec<String>) {
+        self.role_res_map.entry(role_code.to_string()).or_insert(Vec::new()).extend(res_ids.iter().map(|id| id.to_string()));
+    }
+
+    pub fn get_role_res(&self, role_code: &str) -> Option<&Vec<String>> {
+        self.role_res_map.get(role_code)
+    }
+
+    pub fn get_role_res_or_empty(&self, role_code: &str) -> Vec<String> {
+        self.role_res_map.get(role_code).unwrap_or(&vec![]).to_owned()
+    }
+
+    pub fn extend_role_res(&mut self, other: &InitResItemIds) {
+        for (role_code, res_ids) in other.role_res_map.iter() {
+            self.role_res_map.entry(role_code.to_string()).or_insert(Vec::new()).extend(res_ids.iter().map(|id| id.to_string()));
+        }
+    }
 }

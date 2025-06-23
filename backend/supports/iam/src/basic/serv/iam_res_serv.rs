@@ -719,40 +719,26 @@ impl IamMenuServ {
         ctx: &'a TardisContext,
     ) -> BoxFuture<'a, TardisResult<InitResItemIds>> {
         async move {
-            let mut system_res_ids = vec![];
-            let mut tenant_res_ids = vec![];
-            let mut app_res_ids = vec![];
+            let mut res_item_ids = InitResItemIds::new();
             let cate_kind = IamSetCateKind::parse(&json_menu.ext)?;
             let new_cate_id = Self::add_cate_menu(set_id, parent_cate_id, &json_menu.name, &json_menu.bus_code, &cate_kind, funs, ctx).await?;
             if let Some(items) = json_menu.items {
                 for item in items {
-                    let item_id = Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
-                    if cate_kind == IamSetCateKind::System {
-                        system_res_ids.push(item_id);
-                    } else if cate_kind == IamSetCateKind::Tenant {
-                        tenant_res_ids.push(item_id);
-                    } else if cate_kind == IamSetCateKind::App {
-                        app_res_ids.push(item_id);
+                    let item_id = Self::parse_item(set_id, &new_cate_id, item.clone(), funs, ctx).await?;
+                    if let Some(role_binds) = &item.role_binds {
+                        for role_code in role_binds {
+                            res_item_ids.add_role_res(role_code, &item_id);
+                        }
                     }
                 }
             };
             if let Some(children_menus) = json_menu.children {
                 for children_menu in children_menus {
-                    let InitResItemIds {
-                        system_res_ids: children_system_res_ids,
-                        tenant_res_ids: children_tenant_res_ids,
-                        app_res_ids: children_app_res_ids,
-                    } = Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
-                    system_res_ids.extend(children_system_res_ids);
-                    tenant_res_ids.extend(children_tenant_res_ids);
-                    app_res_ids.extend(children_app_res_ids);
+                    let children_res_item_ids = Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    res_item_ids.extend_role_res(&children_res_item_ids);
                 }
             };
-            Ok(InitResItemIds {
-                system_res_ids,
-                tenant_res_ids,
-                app_res_ids,
-            })
+            Ok(res_item_ids)
         }
         .boxed()
     }

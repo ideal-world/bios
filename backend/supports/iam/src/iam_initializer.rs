@@ -312,17 +312,25 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
-    let InitResItemIds {
-        mut system_res_ids,
-        mut tenant_res_ids,
-        mut app_res_ids,
-    } = init_menu_by_file(&set_res_id, &cate_menu_id, &funs.conf::<IamConfig>().init_menu_json_path, funs, &ctx).await?;
-    system_res_ids.push(set_menu_cs_id);
-    system_res_ids.push(set_api_cs_id);
-    tenant_res_ids.push(set_menu_ct_id.clone());
-    tenant_res_ids.push(set_api_ct_id.clone());
-    app_res_ids.push(set_menu_ca_id.clone());
-    app_res_ids.push(set_api_ca_id.clone());
+    let mut init_res_item_ids: InitResItemIds = init_menu_by_file(&set_res_id, &cate_menu_id, &funs.conf::<IamConfig>().init_menu_json_path, funs, &ctx).await?;
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE, &vec![set_menu_cs_id, set_api_cs_id]);
+
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, &vec![set_menu_ct_id.clone(), set_api_ct_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE, &vec![set_menu_ct_id.clone(), set_api_ct_id.clone()]);
+
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE, &vec![set_menu_ca_id, set_api_ca_id]);
 
     // Init kernel certs
     IamCertServ::init_default_ident_conf(
@@ -378,28 +386,18 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     .await?;
 
     // Init some roles
-    let role_sys_admin_id = IamRoleServ::add_role_agg(
-        &mut IamRoleAggAddReq {
-            role: IamRoleAddReq {
-                id: None,
-                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string())),
-                name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
-                icon: None,
-                sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
-                disabled: None,
-                kind: Some(IamRoleKind::System),
-                extend_role_id: None,
-                in_embed: Some(true),
-                in_base: Some(true),
-            },
-            res_ids: Some(system_res_ids),
-        },
+    let role_sys_admin_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE,
+        iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_PRIVATE,
+        &IamRoleKind::System,
+        &init_res_item_ids,
         funs,
         &ctx,
     )
     .await?;
 
+    // Associate system admin role to account
     IamAccountServ::modify_account_agg(
         &default_account_id,
         &IamAccountAggModifyReq {
@@ -422,203 +420,89 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
-    let role_tenant_admin_id = IamRoleServ::add_role_agg(
-        &mut IamRoleAggAddReq {
-            role: IamRoleAddReq {
-                id: None,
-                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string())),
-                name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
-                icon: None,
-                sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
-                disabled: None,
-                kind: Some(IamRoleKind::Tenant),
-                extend_role_id: None,
-                in_embed: Some(true),
-                in_base: Some(true),
-            },
-            res_ids: Some(tenant_res_ids),
-        },
+    let role_tenant_admin_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE,
+        iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        &IamRoleKind::Tenant,
+        &init_res_item_ids,
         funs,
         &ctx,
     )
     .await?;
 
-    let role_tenant_audit_id = IamRoleServ::add_role_agg(
-        &mut IamRoleAggAddReq {
-            role: IamRoleAddReq {
-                id: None,
-                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string())),
-                name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
-                icon: None,
-                sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
-                disabled: None,
-                kind: Some(IamRoleKind::Tenant),
-                extend_role_id: None,
-                in_embed: Some(true),
-                in_base: Some(true),
-            },
-            res_ids: Some(vec![set_menu_ct_id, set_api_ct_id]),
-        },
+    let role_tenant_audit_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE,
+        iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        &IamRoleKind::Tenant,
+        &init_res_item_ids,
         funs,
         &ctx,
     )
     .await?;
 
-    let role_app_admin_id = IamRoleServ::add_role_agg(
-        &mut IamRoleAggAddReq {
-            role: IamRoleAddReq {
-                id: None,
-                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string())),
-                name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
-                icon: None,
-                sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
-                disabled: None,
-                kind: Some(IamRoleKind::App),
-                extend_role_id: None,
-                in_embed: Some(true),
-                in_base: Some(true),
-            },
-            res_ids: Some(app_res_ids),
-        },
+    let role_app_admin_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        &IamRoleKind::App,
+        &init_res_item_ids,
         funs,
         &ctx,
     )
     .await?;
-    let role_app_read_id = IamRoleServ::add_role_agg(
-        &mut IamRoleAggAddReq {
-            role: IamRoleAddReq {
-                id: None,
-                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string())),
-                name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string()),
-                icon: None,
-                sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
-                disabled: None,
-                kind: Some(IamRoleKind::App),
-                extend_role_id: None,
-                in_embed: Some(true),
-                in_base: Some(true),
-            },
-            res_ids: Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        },
+    let role_app_read_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        &IamRoleKind::App,
+        &init_res_item_ids,
         funs,
         &ctx,
     )
     .await?;
 
-    let _ = add_role(
+    let app_roles = [
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
-    let _ = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
-        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
-        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
-        &IamRoleKind::App,
-        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
-        funs,
-        &ctx,
-    )
-    .await?;
+    ];
+    
+    for role_code in app_roles.iter() {
+        let _ = add_role(
+            role_code,
+            role_code,
+            &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            &IamRoleKind::App,
+            &init_res_item_ids,
+            funs,
+            &ctx,
+        ).await?;
+    }
+
+    // add custom role
+    if let Some(init_role_list) = &funs.conf::<IamConfig>().init_role_list {
+        for init_role in init_role_list {
+            let _ = add_role(
+                &init_role.code,
+                &init_role.code,
+                &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+                &init_role.kind,
+                &init_res_item_ids,
+                funs,
+                &ctx,
+            ).await?;
+        }
+    }
 
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
@@ -685,7 +569,7 @@ async fn add_role<'a>(
     name: &str,
     scope_level: &RbumScopeLevelKind,
     kind: &IamRoleKind,
-    res_ids: Option<Vec<String>>,
+    init_res_item_ids: &InitResItemIds,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<String> {
@@ -704,7 +588,7 @@ async fn add_role<'a>(
                 in_embed: Some(true),
                 in_base: Some(true),
             },
-            res_ids,
+            res_ids: Some(init_res_item_ids.get_role_res_or_empty(code)),
         },
         funs,
         ctx,
