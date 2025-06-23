@@ -77,7 +77,7 @@ pub struct LogItemAddV2Req {
     pub owner_name: Option<String>,
     pub own_paths: Option<String>,
     pub disable: Option<bool>,
-    pub push: bool,
+    pub push: Option<bool>,
     pub ignore_push: Option<bool>,
     pub msg: Option<String>,
 }
@@ -158,7 +158,7 @@ pub struct AdvBasicQueryCondInfo {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindResp {
     pub content: Value,
-    pub kind: String,
+    pub kind: Vec<String>,
     pub ext: Value,
     pub data_source: String,
     pub owner: String,

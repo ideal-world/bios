@@ -65,6 +65,9 @@ pub struct IamConfig {
     pub sms_pwd_path: String,
     pub third_integration_config_key: String,
     pub third_integration_schedule_code: String,
+
+    /// init custom role list
+    pub init_role_list: Option<Vec<InitRole>>,
     pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
 
@@ -165,6 +168,7 @@ impl Default for IamConfig {
             phone_template_cert_login_title: "Your account is trying to login, verification code: {vcode}".to_string(),
             phone_template_cert_login_content: "IAM Service Phone Credentials Activation".to_string(),
             init_menu_json_path: "config/init-menu-default.json".to_string(),
+            init_role_list: None,
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
             cache_key_sync_ldap_status: "iam:cache:sync:ldap:status".to_string(),
@@ -221,6 +225,12 @@ pub struct BasicInfo {
     pub role_tenant_audit_id: String,
     pub role_app_admin_id: String,
     pub role_app_read_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InitRole {
+    pub code: String,
+    pub kind: crate::iam_enumeration::IamRoleKind,
 }
 
 lazy_static! {

@@ -8,7 +8,7 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 use tardis::web::poem_openapi;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamRoleKind {
     System,
     Tenant,

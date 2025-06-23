@@ -249,7 +249,7 @@ impl FlowLogClient {
             own_paths,
             msg: None,
             owner_name,
-            push,
+            push: Some(push),
             disable: None,
             data_source: None,
             ignore_push: None,

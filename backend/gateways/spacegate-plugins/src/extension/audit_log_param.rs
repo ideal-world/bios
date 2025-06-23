@@ -111,7 +111,7 @@ fn send_audit_log(spi_app_id: &str, log_url: &str, tag: &str, content: LogParamC
                     owner_name: None,
                     data_source: None,
                     ignore_push: None,
-                    push: false,
+                    push: Some(false),
                     disable: None,
                 },
                 &funs,

@@ -106,7 +106,7 @@ pub struct LogItemAddV2Req {
     pub owner_name: Option<String>,
     pub own_paths: Option<String>,
     pub disable: Option<bool>,
-    pub push: bool,
+    pub push: Option<bool>,
     pub ignore_push: Option<bool>,
     pub msg: Option<String>,
 }
@@ -197,7 +197,7 @@ impl SpiLogClient {
             own_paths: Some(ctx.own_paths.clone()),
             msg: None,
             owner_name,
-            push: false,
+            push: Some(false),
             ignore_push: None,
             disable: None,
         };

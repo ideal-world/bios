@@ -26,7 +26,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, JsonMenu, MenuItem};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, InitResItemIds, JsonMenu, MenuItem};
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -711,29 +711,34 @@ impl IamResServ {
 }
 
 impl IamMenuServ {
-    pub fn parse_menu<'a>(set_id: &'a str, parent_cate_id: &'a str, json_menu: JsonMenu, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
+    pub fn parse_menu<'a>(
+        set_id: &'a str,
+        parent_cate_id: &'a str,
+        json_menu: JsonMenu,
+        funs: &'a TardisFunsInst,
+        ctx: &'a TardisContext,
+    ) -> BoxFuture<'a, TardisResult<InitResItemIds>> {
         async move {
-            let new_cate_id = Self::add_cate_menu(
-                set_id,
-                parent_cate_id,
-                &json_menu.name,
-                &json_menu.bus_code,
-                &IamSetCateKind::parse(&json_menu.ext)?,
-                funs,
-                ctx,
-            )
-            .await?;
+            let mut res_item_ids = InitResItemIds::new();
+            let cate_kind = IamSetCateKind::parse(&json_menu.ext)?;
+            let new_cate_id = Self::add_cate_menu(set_id, parent_cate_id, &json_menu.name, &json_menu.bus_code, &cate_kind, funs, ctx).await?;
             if let Some(items) = json_menu.items {
                 for item in items {
-                    Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+                    let item_id = Self::parse_item(set_id, &new_cate_id, item.clone(), funs, ctx).await?;
+                    if let Some(role_binds) = &item.role_binds {
+                        for role_code in role_binds {
+                            res_item_ids.add_role_res(role_code, &item_id);
+                        }
+                    }
                 }
             };
             if let Some(children_menus) = json_menu.children {
                 for children_menu in children_menus {
-                    Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    let children_res_item_ids = Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    res_item_ids.extend_role_res(&children_res_item_ids);
                 }
             };
-            Ok(new_cate_id)
+            Ok(res_item_ids)
         }
         .boxed()
     }
