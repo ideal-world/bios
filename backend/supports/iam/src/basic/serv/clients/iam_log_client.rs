@@ -151,7 +151,7 @@ impl IamLogClient {
             own_paths,
             msg: None,
             owner_name: None,
-            push: false,
+            push: Some(false),
             ignore_push: None,
             disable: None,
         };

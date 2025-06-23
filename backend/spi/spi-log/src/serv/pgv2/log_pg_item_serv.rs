@@ -116,7 +116,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     add_req.content = insert_content;
     let mut params = vec![
         Value::from(id.clone()),
-        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).split(',').map(|s| s.to_string()).collect::<Vec<String>>()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
@@ -125,7 +125,7 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(add_req.push),
+        Value::from(add_req.push.unwrap_or(false)),
         Value::from(if let Some(ext) = &add_req.ext {
             ext.clone()
         } else {
@@ -152,7 +152,7 @@ VALUES
     .await?;
     conn.commit().await?;
     //if push is true, then push to EDA
-    if add_req.push && !add_req.ignore_push.unwrap_or(false) {
+    if add_req.push.unwrap_or(false) && !add_req.ignore_push.unwrap_or(false) {
         push_to_eda(add_req, &ref_fields, funs, ctx).await?;
     }
     Ok(id)
@@ -213,15 +213,20 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
     let mut sql_vals: Vec<Value> = vec![];
 
     if let Some(kinds) = &find_req.kinds {
-        let place_holder = kinds
-            .iter()
-            .map(|kind| {
-                sql_vals.push(Value::from(kind.to_string()));
-                format!("${}", sql_vals.len())
-            })
-            .collect::<Vec<String>>()
-            .join(",");
-        where_fragments.push(format!("kind IN ({place_holder})"));
+        if kinds.len() == 1 {
+            sql_vals.push(Value::from(kinds[0].to_string()));
+            where_fragments.push(format!("${} = ANY(kind)", sql_vals.len()));
+        } else {
+            let place_holder = kinds
+                .iter()
+                .map(|kind| {
+                    sql_vals.push(Value::from(kind.to_string()));
+                    format!("${}", sql_vals.len())
+                })
+                .collect::<Vec<String>>()
+                .join(",");
+            where_fragments.push(format!("kind && ARRAY[{place_holder}]"));
+        }
     }
     if let Some(owners) = &find_req.owners {
         let place_holder = owners

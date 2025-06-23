@@ -4,7 +4,7 @@ use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use bios_basic::spi_dispatch_service;
 
-use crate::dto::log_item_dto::{LogConfigReq, LogExportDataReq, LogExportDataResp, LogImportDataReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp};
 use crate::log_initializer;
 use tardis::web::web_resp::TardisPage;
 
@@ -26,8 +26,8 @@ spi_dispatch_service! {
         find(find_req: &mut LogItemFindReq) -> TardisResult<TardisPage<LogItemFindResp>>;
         addv2(add_req: &mut LogItemAddV2Req) -> TardisResult<String>;
         findv2(find_req: &mut LogItemFindReq) -> TardisResult<TardisPage<LogItemFindResp>>;
-        modify_ext(tag: &str,key: &str, ext: &mut Value) -> TardisResult<()>;
-        modify_ext_v2(tag: &str,key: &str, ext: &mut Value) -> TardisResult<()>;
+        modify_ext(tag: &str, key: &str, ext: &mut Value) -> TardisResult<()>;
+        modify_ext_v2(tag: &str, key: &str, ext: &mut Value) -> TardisResult<()>;
         add_config(config: &mut LogConfigReq) -> TardisResult<()>;
         delete_config(config: &mut LogConfigReq) -> TardisResult<()>;
     }

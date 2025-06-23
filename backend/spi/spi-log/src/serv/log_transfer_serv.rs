@@ -1,13 +1,10 @@
 use bios_basic::process::task_processor::TaskProcessor;
-use itertools::Itertools;
 use std::collections::HashMap;
-use std::result;
 
 use bios_basic::spi::spi_funs::{SpiBsInst, SpiBsInstExtractor};
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::Value;
-use tardis::futures::future::join_all;
 use tardis::TardisFunsInst;
 use tardis::{basic::dto::TardisContext, db::reldb_client::TardisRelDBClient};
 
@@ -218,7 +215,7 @@ pub async fn import_log_v2(
                         idempotent_id: Some(row.idempotent_id.clone()),
                         owner_name: Some(row.owner_name.clone()),
                         disable: Some(row.disable),
-                        push: row.push,
+                        push: Some(row.push),
                         msg: Some(row.msg.clone()),
                         ignore_push: Some(true),
                     },
