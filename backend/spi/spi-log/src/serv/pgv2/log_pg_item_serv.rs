@@ -225,7 +225,7 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
                 })
                 .collect::<Vec<String>>()
                 .join(",");
-            where_fragments.push(format!("kind && ARRAY[{place_holder}]"));
+            where_fragments.push(format!("kind && ARRAY[{place_holder}]::varchar[]"));
         }
     }
     if let Some(owners) = &find_req.owners {
