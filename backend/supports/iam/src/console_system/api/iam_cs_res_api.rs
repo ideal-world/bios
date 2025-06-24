@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAggAddAndBindReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetTreeResp};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -301,7 +301,7 @@ impl IamCsResApi {
     /// Find Menu Tree
     /// 查找菜单树
     #[oai(path = "/tree/menu", method = "get")]
-    async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
@@ -317,7 +317,7 @@ impl IamCsResApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, &funs, &ctx.0).await?;
-        let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_data_guard_tree(&set_id, exts.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

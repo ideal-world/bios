@@ -363,12 +363,6 @@ pub struct RbumSetTreeExtResp {
     ///
     /// Format: ``domain.id -> domain summary info``
     pub item_domains: HashMap<String, RbumDomainSummaryResp>,
-    /// 资源项与数据权限的关联信息
-    ///
-    /// Resource item and data guard association information
-    ///
-    /// Format: ``item.id -> data guard items``
-    pub item_data_guards: HashMap<String, Vec<RbumSetItemRelInfoResp>>,
 }
 
 /// Resource tree information

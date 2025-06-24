@@ -4,15 +4,15 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeNodeResp, RbumSetTreeResp};
-use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
+use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq, RbumSetItemRelInfoResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -22,7 +22,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetTreeExtResp, IamSetTreeResp};
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
@@ -719,11 +719,11 @@ impl IamSetServ {
         RbumSetServ::get_tree(set_id, &filter, funs, ctx).await
     }
 
-    pub async fn get_menu_tree(set_id: &str, exts: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    pub async fn get_menu_tree(set_id: &str, exts: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
         let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
-        Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await
+        Self::transform_tree(Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?, funs, ctx).await
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
@@ -733,6 +733,13 @@ impl IamSetServ {
         } else {
             Self::get_tree_with_sys_codes(set_id, None, None, funs, ctx).await
         }
+    }
+
+    pub async fn get_data_guard_tree(set_id: &str, exts: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
+        let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
+        let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
+        Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await
     }
 
     pub async fn get_cate_id_with_sys_code(set_id: &str, filter_sys_code: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
@@ -1082,5 +1089,74 @@ impl IamSetServ {
             }
         }
         Ok(())
+    }
+
+    // Transform RbumSetTree to IamSetTreeResp
+    async fn transform_tree(original_tree: RbumSetTreeResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+        let ext = if let Some(value_ext) = original_tree.ext.clone() {
+            Some(IamSetTreeExtResp {
+                items: value_ext.items,
+                item_number_agg: value_ext.item_number_agg,
+                item_kinds: value_ext.item_kinds,
+                item_domains: value_ext.item_domains,
+                item_data_guards: HashMap::new(),
+            })
+        } else {
+            None
+        };
+        let mut result = IamSetTreeResp {
+            main: original_tree.main,
+            ext,
+        };
+        if let Some(ext) = &mut result.ext {
+            let res_set_item_ids = if let Some(ext) = original_tree.ext {
+                let ext_values = ext.items.values().collect_vec().into_iter().cloned().collect_vec();
+                ext_values.concat().into_iter().map(|rbum_set_item| rbum_set_item.rel_rbum_item_id).collect_vec()
+            } else {
+                vec![]
+            };
+            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, ctx).await?;
+            let data_guard_set_items = RbumSetItemServ::find_detail_rbums(
+                &RbumSetItemFilterReq {
+                    rel_rbum_set_id: Some(data_guard_set_id.to_string()),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            let mut data_guard_map = HashMap::new();
+            for res_set_item_id in res_set_item_ids {
+                let rel_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResDataGuard, &res_set_item_id, None, None, funs, ctx).await?;
+                let data_guard = data_guard_set_items
+                    .iter()
+                    .filter(|i| rel_ids.contains(&i.rel_rbum_item_id))
+                    .map(|i| 
+                        RbumSetItemRelInfoResp {
+                            id: i.id.to_string(),
+                            sort: i.sort,
+                            rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
+                            rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
+                            rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
+                            rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
+                            rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
+                            rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
+                            rel_rbum_item_create_time: i.rel_rbum_item_create_time,
+                            rel_rbum_item_update_time: i.rel_rbum_item_update_time,
+                            rel_rbum_item_disabled: i.rel_rbum_item_disabled,
+                            rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
+                            own_paths: i.own_paths.to_string(),
+                            owner: i.owner.to_string(),
+                        }
+                    )
+                    .collect_vec();
+    
+                data_guard_map.insert(res_set_item_id.clone(), data_guard);
+            }
+            ext.item_data_guards = data_guard_map;
+        }
+        Ok(result)
     }
 }
