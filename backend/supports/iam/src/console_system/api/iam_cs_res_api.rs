@@ -9,12 +9,14 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -54,7 +56,18 @@ impl IamCsResApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&add_req.0.set_kind, &funs, &ctx.0).await?;
+        let set_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ids: Some(vec![add_req.0.set.set_cate_id.clone()]),
+                ..Default::default()
+            },
+            ..Default::default()
+        }, &funs, &ctx.0)
+        .await?
+        .map(|s| s.rel_rbum_set_id)
+        .ok_or_else(|| funs.err().not_found("iam_cs_res_api", "add_and_bind", &format!("not found set by set_cate_id {}", add_req.0.set.set_cate_id.clone()), "404-rbum-set-code-not-exist"))?;
         let result = IamResServ::add_res_agg(
             &mut IamResAggAddReq {
                 res: add_req.0.res.clone(),

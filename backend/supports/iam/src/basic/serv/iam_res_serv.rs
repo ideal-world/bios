@@ -282,12 +282,28 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                         ..Default::default()
                     }, funs, ctx).await?;
                 } else if let Some(bind_data_guard_name) = bind_data_guard.name.clone() {
+                    let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, ctx).await?;
+                    let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
+                        rel_rbum_set_id: Some(data_guard_set_id.clone()),
+                        ..Default::default()
+                    }, funs, ctx).await?.map(|s| s.id).unwrap_or_default();
                     let data_guard_id = Self::add_item(&mut IamResAddReq {
                         code: bind_data_guard.code.clone().into(),
                         name: bind_data_guard_name,
                         kind: IamResKind::DataGuard,
                         ..Default::default()
                     }, funs, ctx).await?;
+                    IamSetServ::add_set_item(
+                        &IamSetItemAddReq {
+                            set_id: data_guard_set_id,
+                            set_cate_id: data_guard_set_cate_id.to_string(),
+                            sort: 0,
+                            rel_rbum_item_id: data_guard_id.to_string(),
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                     IamRelServ::add_simple_rel(&IamRelKind::IamResDataGuard, &data_guard_id, id, None, None, false, false, funs, ctx).await?;
                 }
             }
@@ -631,7 +647,7 @@ impl IamResServ {
 
     pub async fn add_and_bind_data_guard_res(id: Option<String>, set_id: &str, set_cate_id: &str, name: &str, code: &str, bind_res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let data_guard_id = Self::add_item(&mut IamResAddReq {
-            id: id.map(|s| TrimString(s)),
+            id: id.map(TrimString),
             code: TrimString(code),
             name: TrimString(name),
             kind: IamResKind::DataGuard,

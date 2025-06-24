@@ -9,7 +9,7 @@ use tardis::web::poem_openapi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
-use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAggAddAndBindReq {
@@ -17,7 +17,6 @@ pub struct IamResAggAddAndBindReq {
     pub set: IamSetItemAggAddReq,
     pub bind_res_id: String,
     pub bind_res_kind: IamRelKind,
-    pub set_kind: IamSetKind,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
