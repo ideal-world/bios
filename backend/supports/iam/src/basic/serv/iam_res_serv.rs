@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
-use bios_basic::rbum::rbum_enumeration::{RbumScopeLevelKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ};
 use itertools::Itertools;
@@ -271,12 +271,12 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 ..Default::default()
             }, None, None, funs, ctx).await?;
             for old_data_guard in &old_data_guards {
-                if bind_data_guards.iter().all(|bind| bind.code != old_data_guard.code) {
+                if bind_data_guards.iter().all(|bind| bind.code.clone().unwrap_or_default().to_string() != old_data_guard.code) {
                     IamRelServ::delete_simple_rel(&IamRelKind::IamResDataGuard, &old_data_guard.id, id, funs, ctx).await?;
                 }
             }
             for bind_data_guard in bind_data_guards {
-                if let Some(exist_data_guard) = old_data_guards.iter().find(|old| old.code == bind_data_guard.code) {
+                if let Some(exist_data_guard) = old_data_guards.iter().find(|old| old.code == bind_data_guard.code.clone().unwrap_or_default().to_string()) {
                     Self::modify_item(&exist_data_guard.id, &mut IamResModifyReq {
                         name: bind_data_guard.name.clone(),
                         ..Default::default()
@@ -292,7 +292,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                         ..Default::default()
                     }, funs, ctx).await?.map(|s| s.id).unwrap_or_default();
                     let data_guard_id = Self::add_item(&mut IamResAddReq {
-                        code: bind_data_guard.code.clone().into(),
+                        code: bind_data_guard.code.clone().unwrap_or_default(),
                         name: bind_data_guard_name,
                         kind: IamResKind::DataGuard,
                         scope_level: Some(res.scope_level.clone()),
@@ -647,22 +647,16 @@ impl IamResServ {
                 rel_rbum_set_id: Some(data_guard_set_id.clone()),
                 ..Default::default()
             }, funs, ctx).await?.map(|s| s.id).unwrap_or_default();
-            for bind_data_guard in bind_data_guards {
-                let _data_guard_id = Self::add_and_bind_data_guard_res(bind_data_guard.id.clone().map(|s| s.to_string()), &data_guard_set_id, &data_guard_set_cate_id, bind_data_guard.name.to_string().as_str(), bind_data_guard.code.to_string().as_str(), add_req.res.scope_level.clone(), &res_id, funs,ctx).await?;
+            for mut bind_data_guard in bind_data_guards.clone() {
+                bind_data_guard.scope_level = add_req.res.scope_level.clone();
+                let _data_guard_id = Self::add_and_bind_data_guard_res(&data_guard_set_id, &data_guard_set_cate_id, &mut bind_data_guard, &res_id, funs,ctx).await?;
             }
         }
         Ok(res_id)
     }
 
-    pub async fn add_and_bind_data_guard_res(id: Option<String>, set_id: &str, set_cate_id: &str, name: &str, code: &str, scope_level: Option<RbumScopeLevelKind>, bind_res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let data_guard_id = Self::add_item(&mut IamResAddReq {
-            id: id.map(TrimString),
-            code: TrimString(code),
-            name: TrimString(name),
-            kind: IamResKind::DataGuard,
-            scope_level,
-            ..Default::default()
-        }, funs, ctx).await?;
+    pub async fn add_and_bind_data_guard_res(set_id: &str, set_cate_id: &str, add_req: &mut IamResAddReq, bind_res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let data_guard_id = Self::add_item(add_req, funs, ctx).await?;
         IamSetServ::add_set_item(
             &IamSetItemAddReq {
                 set_id: set_id.to_string(),

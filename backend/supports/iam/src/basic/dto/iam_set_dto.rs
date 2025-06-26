@@ -69,14 +69,14 @@ pub struct IamSetItemAddReq {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct IamSetTreeResp {
+pub struct IamResSetTreeResp {
     pub main: Vec<RbumSetTreeNodeResp>,
-    pub ext: Option<IamSetTreeExtResp>,
+    pub ext: Option<IamResSetTreeExtResp>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct IamSetTreeExtResp {
+pub struct IamResSetTreeExtResp {
     /// 节点与资源项的关联信息
     ///
     /// Node and resource item association information
@@ -109,10 +109,10 @@ pub struct IamSetTreeExtResp {
     pub item_data_guards: HashMap<String, Vec<RbumSetItemRelInfoResp>>,
 }
 
-impl From<RbumSetTreeResp> for IamSetTreeResp {
+impl From<RbumSetTreeResp> for IamResSetTreeResp {
     fn from(value: RbumSetTreeResp) -> Self {
         let ext = if let Some(value_ext) = value.ext {
-            Some(IamSetTreeExtResp {
+            Some(IamResSetTreeExtResp {
                 items: value_ext.items,
                 item_number_agg: value_ext.item_number_agg,
                 item_kinds: value_ext.item_kinds,
