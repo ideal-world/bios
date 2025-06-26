@@ -367,7 +367,7 @@ impl FlowStateServ {
             }
         }
 
-        let names = Self::find_id_name_items(
+        let mut names = Self::find_id_name_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: ids.clone(),
@@ -392,6 +392,10 @@ impl FlowStateServ {
             name: state_detail.1,
         })
         .collect_vec();
+        names.push(FlowStateNameResp {
+            key: crate::flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(),
+            name: crate::flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(),
+        });
         Ok(names)
     }
 

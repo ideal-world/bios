@@ -583,6 +583,8 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 admin_ids: Some(vec![t1_account_id1.clone(), t1_account_id2.clone()]),
                 disabled: None,
                 set_cate_id: None,
+                kind: None,
+                sync_apps_group: None,
             },
         )
         .await;

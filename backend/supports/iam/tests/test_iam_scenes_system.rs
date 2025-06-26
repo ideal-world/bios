@@ -590,6 +590,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -622,6 +623,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -652,6 +654,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -687,6 +690,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -716,6 +720,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 double_auth_msg: None,
                 need_login: None,
                 bind_api_res: None,
+                bind_data_guards: None,
                 ext: None,
             },
         )

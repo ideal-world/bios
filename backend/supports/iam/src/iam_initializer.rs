@@ -302,6 +302,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
 
     // Init resources
     IamSetServ::init_set(IamSetKind::Org, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
+    IamSetServ::init_set(IamSetKind::DataGuard, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
     let (set_res_id, cate_ids) = IamSetServ::init_set(IamSetKind::Res, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
     if cate_ids.is_none() {
         return Err(funs.err().not_found("iam_initializer", "init_rbum_data", "not found resource", "404-iam-res-not-exist"));
@@ -636,6 +637,7 @@ async fn add_res<'a>(
                 need_login: None,
                 bind_api_res: None,
                 ext: None,
+                bind_data_guards: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -667,6 +669,7 @@ async fn add_res<'a>(
                 need_login: None,
                 bind_api_res: None,
                 ext: None,
+                bind_data_guards: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),

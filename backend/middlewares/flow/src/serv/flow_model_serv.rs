@@ -21,7 +21,7 @@ use tardis::{
         EntityName, Set,
     },
     futures::future::join_all,
-    log::error,
+    log::{error, warn},
     serde_json::json,
     tokio,
     web::web_resp::TardisPage,
@@ -1845,8 +1845,8 @@ impl FlowModelServ {
                         }
                     }
                     if let Some(delete_transitions) = &mut modify_state.delete_transitions {
-                        let delete_transitions_cp = delete_transitions.clone();
                         delete_transitions.clear();
+                        let delete_transitions_cp = delete_transitions.clone();
                         for delete_transition_id in delete_transitions_cp {
                             if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()) {
                                 if let Some(trans_id) = child_model_transitions
@@ -1865,6 +1865,7 @@ impl FlowModelServ {
                 }
             }
         }
+        warn!("sync_child_model modify_req_clone: {:?}", modify_req_clone);
         let child_model_clone = child_model.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {

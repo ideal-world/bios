@@ -144,6 +144,8 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 admin_ids: Some(vec![account_id.clone()]),
                 disabled: None,
                 set_cate_id: None,
+                kind: None,
+                sync_apps_group: None,
             },
         )
         .await;
