@@ -9,7 +9,15 @@ use tardis::web::poem_openapi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
-use crate::iam_enumeration::IamResKind;
+use crate::iam_enumeration::{IamRelKind, IamResKind};
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamResAggAddAndBindReq {
+    pub res: IamResAddReq,
+    pub set: IamSetItemAggAddReq,
+    pub bind_res_id: String,
+    pub bind_res_kind: IamRelKind,
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAggAddReq {
@@ -17,7 +25,7 @@ pub struct IamResAggAddReq {
     pub set: IamSetItemAggAddReq,
 }
 
-#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug, Clone)]
 pub struct IamResAddReq {
     pub id: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -44,6 +52,16 @@ pub struct IamResAddReq {
     pub need_login: Option<bool>,
     pub disabled: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
+    pub bind_data_guards: Option<Vec<IamDataGuardAddReq>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug, Clone)]
+pub struct IamDataGuardAddReq {
+    pub id: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
 }
 
 impl IamResAddReq {
@@ -83,6 +101,14 @@ pub struct IamResModifyReq {
     pub double_auth_msg: Option<String>,
     pub need_login: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
+    pub bind_data_guards: Option<Vec<IamDataGuardModifyReq>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug, Clone)]
+pub struct IamDataGuardModifyReq {
+    pub code: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: Option<TrimString>,
 }
 
 impl IamResModifyReq {

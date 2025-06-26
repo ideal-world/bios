@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm;
+use tardis::db::sea_orm::{self, prelude::*};
 use tardis::web::poem_openapi;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -21,6 +22,9 @@ pub struct IamAppAggAddReq {
 
     pub disabled: Option<bool>,
     pub set_cate_id: Option<String>,
+
+    pub kind: Option<IamAppKind>,
+    pub sync_apps_group: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -38,6 +42,20 @@ pub struct IamAppAddReq {
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
+
+    pub kind: Option<IamAppKind>,
+    pub sync_apps_group: Option<bool>,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
+pub enum IamAppKind {
+    // 项目
+    #[sea_orm(string_value = "Project")]
+    Project,
+    #[sea_orm(string_value = "Product")]
+    // 产品
+    Product,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -89,6 +107,8 @@ pub struct IamAppSummaryResp {
     pub icon: String,
     pub sort: i64,
     pub contact_phone: String,
+
+    pub kind: IamAppKind,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
@@ -108,4 +128,6 @@ pub struct IamAppDetailResp {
     pub icon: String,
     pub sort: i64,
     pub contact_phone: String,
+
+    pub kind: IamAppKind,
 }

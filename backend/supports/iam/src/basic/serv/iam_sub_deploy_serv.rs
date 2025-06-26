@@ -8,7 +8,6 @@ use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp;
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp};
-use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -20,20 +19,19 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::prelude::Expr;
 use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::{self, *};
-use tardis::web::poem_openapi::types::Type;
 use tardis::{chrono, serde_json, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
-use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
 use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq};
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppModifyReq};
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppKind, IamAppModifyReq};
 use crate::basic::dto::iam_config_dto::{IamConfigAggOrModifyReq, IamConfigDetailResp};
 use crate::basic::dto::iam_filer_dto::{
     IamAccountFilterReq, IamAppFilterReq, IamConfigFilterReq, IamResFilterReq, IamRoleFilterReq, IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq,
 };
-use crate::basic::dto::iam_res_dto::{self, IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::dto::iam_sub_deploy_dto::{
@@ -48,7 +46,7 @@ use crate::iam_constants::RBUM_ITEM_ID_SUB_ROLE_LEN;
 use crate::iam_enumeration::{IamAccountLogoutTypeKind, IamCertKernelKind, IamConfigDataTypeKind, IamConfigKind, IamRelKind, IamRoleKind, IamSetKind, IamSubDeployHostKind};
 
 use super::clients::iam_search_client::IamSearchClient;
-use super::iam_account_serv::{self, IamAccountServ};
+use super::iam_account_serv::IamAccountServ;
 use super::iam_app_serv::IamAppServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_config_serv::IamConfigServ;
@@ -724,6 +722,8 @@ impl IamSubDeployServ {
                             icon: Some(app.icon),
                             sort: Some(app.sort),
                             contact_phone: Some(app.contact_phone),
+                            kind: Some(app.kind.clone()),
+                            sync_apps_group: Some(app.kind == IamAppKind::Product),
                         },
                         funs,
                         &app_ctx,
@@ -1147,6 +1147,7 @@ impl IamSubDeployServ {
                                 double_auth_msg: Some(res_item.double_auth_msg),
                                 need_login: Some(res_item.need_login),
                                 bind_api_res,
+                                bind_data_guards: None, // @TODO 需支持导入数据权限
                             },
                             funs,
                             &global_ctx,
@@ -1177,6 +1178,7 @@ impl IamSubDeployServ {
                                             double_auth_msg: Some(res_item.double_auth_msg),
                                             need_login: Some(res_item.need_login),
                                             bind_api_res,
+                                            bind_data_guards: None, // @TODO 需支持导入数据权限
                                         },
                                         set: IamSetItemAggAddReq { set_cate_id },
                                     },

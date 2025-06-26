@@ -17,16 +17,15 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
-use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::Path;
 use tardis::web::poem_openapi;
 
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
+use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 #[derive(Clone, Default)]
 pub struct IamCiAppApi;
 
@@ -265,5 +264,18 @@ impl IamCiAppApi {
         .await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Add App Rel Account
+    /// 添加应用关联账号
+    #[oai(path = "/:id/account/:account_id", method = "put")]
+    async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        IamAppServ::add_rel_account(&id.0, &account_id.0, false, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 }

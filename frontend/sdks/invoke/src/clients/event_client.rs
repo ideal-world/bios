@@ -127,6 +127,7 @@ pub struct EventTopicConfig {
     pub overflow_policy: Option<String>,
     pub overflow_size: i32,
     pub check_auth: bool,
+    pub max_payload_size: i32,
 }
 #[derive(Object, Serialize, Deserialize, Debug, Clone)]
 

@@ -11,10 +11,11 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountBoneResp, IamAccountDetailAggResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 #[cfg(feature = "ldap_client")]
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
@@ -30,11 +31,13 @@ impl IamCcAccountApi {
     /// Find Accounts
     /// 查找账号
     #[oai(path = "/", method = "get")]
+    #[allow(clippy::too_many_arguments)]
     async fn paginate(
         &self,
         ids: Query<Option<String>>,
         name: Query<Option<String>>,
         role_id: Query<Option<String>>,
+        role_code: Query<Option<String>>,
         app_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -46,7 +49,28 @@ impl IamCcAccountApi {
     ) -> TardisApiResult<TardisPage<IamAccountBoneResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
+        let role_id = if let Some(role_code) = role_code.0 {
+            IamRoleServ::find_id_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        code: Some(role_code),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?
+            .pop()
+        } else if let Some(role_id) = role_id.0 {
+            Some(role_id)
+        } else {
+            None
+        };
+        let rel = role_id.map(|role_id| RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountRole.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
