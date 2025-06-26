@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ};
 use itertools::Itertools;
@@ -282,7 +282,11 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                         ..Default::default()
                     }, funs, ctx).await?;
                 } else if let Some(bind_data_guard_name) = bind_data_guard.name.clone() {
-                    let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, ctx).await?;
+                    let global_ctx = TardisContext {
+                        own_paths: "".to_string(),
+                        ..ctx.clone()
+                    };
+                    let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
                     let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
                         rel_rbum_set_id: Some(data_guard_set_id.clone()),
                         ..Default::default()
@@ -291,6 +295,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                         code: bind_data_guard.code.clone().into(),
                         name: bind_data_guard_name,
                         kind: IamResKind::DataGuard,
+                        scope_level: Some(res.scope_level.clone()),
                         ..Default::default()
                     }, funs, ctx).await?;
                     IamSetServ::add_set_item(
@@ -633,24 +638,29 @@ impl IamResServ {
             }
         }
         if let Some(bind_data_guards) = &add_req.res.bind_data_guards {
-            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, ctx).await?;
+            let global_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
             let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
                 rel_rbum_set_id: Some(data_guard_set_id.clone()),
                 ..Default::default()
             }, funs, ctx).await?.map(|s| s.id).unwrap_or_default();
             for bind_data_guard in bind_data_guards {
-                let _data_guard_id = Self::add_and_bind_data_guard_res(bind_data_guard.id.clone().map(|s| s.to_string()), &data_guard_set_id, &data_guard_set_cate_id, bind_data_guard.name.to_string().as_str(), bind_data_guard.code.to_string().as_str(), &res_id, funs,ctx).await?;
+                let _data_guard_id = Self::add_and_bind_data_guard_res(bind_data_guard.id.clone().map(|s| s.to_string()), &data_guard_set_id, &data_guard_set_cate_id, bind_data_guard.name.to_string().as_str(), bind_data_guard.code.to_string().as_str(), add_req.res.scope_level.clone(), &res_id, funs,ctx).await?;
             }
         }
         Ok(res_id)
     }
 
-    pub async fn add_and_bind_data_guard_res(id: Option<String>, set_id: &str, set_cate_id: &str, name: &str, code: &str, bind_res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_and_bind_data_guard_res(id: Option<String>, set_id: &str, set_cate_id: &str, name: &str, code: &str, scope_level: Option<RbumScopeLevelKind>, bind_res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let data_guard_id = Self::add_item(&mut IamResAddReq {
             id: id.map(TrimString),
             code: TrimString(code),
             name: TrimString(name),
             kind: IamResKind::DataGuard,
+            scope_level,
             ..Default::default()
         }, funs, ctx).await?;
         IamSetServ::add_set_item(
@@ -664,7 +674,7 @@ impl IamResServ {
             ctx,
         )
         .await?;
-        IamRelServ::add_simple_rel(&IamRelKind::IamResDataGuard, &data_guard_id, &bind_res_id, None, None, false, false, funs, ctx).await?;
+        IamRelServ::add_simple_rel(&IamRelKind::IamResDataGuard, &data_guard_id, bind_res_id, None, None, false, false, funs, ctx).await?;
         Ok(data_guard_id)
     }
 

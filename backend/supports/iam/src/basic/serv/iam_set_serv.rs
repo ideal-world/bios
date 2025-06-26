@@ -1115,7 +1115,11 @@ impl IamSetServ {
             } else {
                 vec![]
             };
-            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, ctx).await?;
+            let global_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
             let data_guard_set_items = RbumSetItemServ::find_detail_rbums(
                 &RbumSetItemFilterReq {
                     rel_rbum_set_id: Some(data_guard_set_id.to_string()),
@@ -1124,12 +1128,12 @@ impl IamSetServ {
                 None,
                 None,
                 funs,
-                ctx,
+                &ctx,
             )
             .await?;
             let mut data_guard_map = HashMap::new();
             for res_set_item_id in res_set_item_ids {
-                let rel_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResDataGuard, &res_set_item_id, None, None, funs, ctx).await?;
+                let rel_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResDataGuard, &res_set_item_id, None, None, funs, &ctx).await?;
                 let data_guard = data_guard_set_items
                     .iter()
                     .filter(|i| rel_ids.contains(&i.rel_rbum_item_id))
