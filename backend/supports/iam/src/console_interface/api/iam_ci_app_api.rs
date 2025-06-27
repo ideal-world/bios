@@ -278,4 +278,44 @@ impl IamCiAppApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
+
+    /// Add App Rel tenant All
+    /// 添加应用关联租户
+    #[oai(path = "/:id/tenant/:tenant_id", method = "put")]
+    async fn app_rel_tenant_all(&self, id: Path<String>, tenant_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        let tenant_ids = tenant_ids.0.split(',').map(|id| id.to_string()).collect();
+        IamAppServ::add_rel_tenant_all(&id.0, tenant_ids, false, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Add App Rel tenant
+    /// 添加应用关联租户
+    #[oai(path = "/:id/tenant/:tenant_id", method = "put")]
+    async fn app_rel_tenant(&self, id: Path<String>, tenant_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        IamAppServ::add_rel_tenant(&id.0, &tenant_id.0, false, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// delete App Rel tenant
+    /// 删除应用关联租户
+    #[oai(path = "/:id/tenant/:tenant_id", method = "delete")]
+    async fn delete_rel_tenant(&self, id: Path<String>, tenant_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        IamAppServ::delete_rel_tenant(&id.0, &tenant_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
 }

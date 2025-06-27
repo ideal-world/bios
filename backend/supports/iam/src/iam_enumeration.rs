@@ -104,6 +104,7 @@ pub enum IamRelKind {
     IamAccountRel,
     IamCertRel,
     IamOrgRel,
+    IamAppTenant,
 
     IamProductSpec,
     IamCertProduct,
