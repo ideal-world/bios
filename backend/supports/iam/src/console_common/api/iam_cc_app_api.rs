@@ -26,6 +26,7 @@ impl IamCcAppApi {
     async fn paginate(
         &self,
         id: Query<Option<String>>,
+        ids: Query<Option<String>>,
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
@@ -37,10 +38,11 @@ impl IamCcAppApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
 
+        let ids = id.0.map(|id| vec![id]).or(ids.0.map(|ids| ids.split(',').map(|s| s.to_string()).collect()));
         let result = IamAppServ::paginate_items(
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: id.0.map(|id| vec![id]),
+                    ids,
                     name: name.0,
                     with_sub_own_paths: true,
                     enabled: Some(true),
