@@ -317,6 +317,48 @@ impl IamAppServ {
         IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, ctx).await
     }
 
+    pub async fn add_rel_tenant_all(app_id: &str, tenant_ids: Vec<String>, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let original_app_tenant_ids = Self::find_id_rel_tenant(&app_id, None, None, funs, ctx).await?;
+        let original_app_tenant_ids = HashSet::from_iter(original_app_tenant_ids.iter().cloned());
+        for tenant_id in tenant_ids.clone() {
+            if original_app_tenant_ids.contains(&tenant_id) {
+                continue;
+            }
+            Self::add_rel_tenant(app_id, &tenant_id, ignore_exist_error, funs, ctx).await?;
+        }
+        // delete old tenants
+        for tenant_id in original_app_tenant_ids.difference(&tenant_ids.iter().cloned().collect::<HashSet<String>>()) {
+            Self::delete_rel_tenant(&app_id, tenant_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn add_rel_tenant(app_id: &str, tenant_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamAppTenant, app_id, tenant_id, None, None, ignore_exist_error, false, funs, ctx).await
+    }
+
+    pub async fn delete_rel_tenant(app_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAppTenant, app_id, tenant_id, funs, ctx).await
+    }
+
+    pub async fn find_id_rel_tenant(
+        app_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_from_id_rels(&IamRelKind::IamAppTenant, true, app_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    pub async fn count_rel_tenant(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        IamRelServ::count_to_rels(&IamRelKind::IamAppTenant, app_id, funs, &mock_ctx).await
+    }
+
     pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Option<RbumItemRelFilterReq>> {
         Ok(Some(RbumItemRelFilterReq {
             rel_by_from: true,
