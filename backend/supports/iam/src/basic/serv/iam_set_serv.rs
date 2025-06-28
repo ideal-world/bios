@@ -723,7 +723,7 @@ impl IamSetServ {
         let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
-        Self::transform_res_tree(Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?, funs, ctx).await
+        Self::transform_res_tree(Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?, None, funs, ctx).await
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
@@ -1092,7 +1092,22 @@ impl IamSetServ {
     }
 
     // Transform RbumSetTree to IamResSetTreeResp
-    async fn transform_res_tree(original_tree: RbumSetTreeResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResSetTreeResp> {
+    pub async fn transform_res_tree(original_tree: RbumSetTreeResp, role_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResSetTreeResp> {
+        let res_ids = if let Some(role_ids) = role_ids {
+            let mut res_ids = HashSet::new();
+            let mut global_ctx = ctx.clone();
+            global_ctx.own_paths = "".to_string();
+            // TODO default empty res
+            res_ids.insert("".to_string());
+            for role_id in role_ids {
+                let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
+                res_ids.extend(rel_res_ids.into_iter());
+            }
+            Some(res_ids)
+        } else {
+            None
+        };
+        
         let ext = if let Some(value_ext) = original_tree.ext.clone() {
             Some(IamResSetTreeExtResp {
                 items: value_ext.items,
@@ -1122,6 +1137,7 @@ impl IamSetServ {
             let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
             let data_guard_set_items = RbumSetItemServ::find_detail_rbums(
                 &RbumSetItemFilterReq {
+                    rel_rbum_item_ids: res_ids.map(|res_ids| res_ids.into_iter().collect()),
                     rel_rbum_set_id: Some(data_guard_set_id.to_string()),
                     ..Default::default()
                 },

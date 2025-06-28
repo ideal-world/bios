@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResAppReq, IamResSummaryResp};
 use crate::basic::dto::iam_role_dto::IamRoleAggModifyReq;
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemAggAddReq};
+use crate::basic::dto::iam_set_dto::{IamResSetTreeResp, IamSetCateAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::clients::iam_kv_client::IamKvClient;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
@@ -13,7 +13,7 @@ use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetTreeCateResp, RbumSetTreeResp};
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeCateResp;
 use bios_basic::rbum::rbum_enumeration::{RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
@@ -40,13 +40,13 @@ impl IamCcResApi {
     /// Find Menu Tree
     /// 查找菜单树
     #[oai(path = "/tree", method = "get")]
-    async fn get_menu_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_menu_tree(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Res, ""), true, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree_by_roles(&set_id, &ctx.0.roles, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        TardisResp::ok(IamSetServ::transform_res_tree(result, Some(ctx.0.roles.clone()), &funs, &ctx.0).await?)
     }
 
     /// build Menu Tree

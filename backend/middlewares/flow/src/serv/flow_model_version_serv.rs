@@ -211,7 +211,7 @@ impl
         }
         if let Some(unbind_states) = &modify_req.unbind_states {
             for delete_state in unbind_states {
-                Self::unbind_state(id, delete_state, funs, ctx).await?;
+                Self::unbind_state(id, &delete_state.state_id, funs, ctx).await?;
             }
         }
         if let Some(delete_states) = &modify_req.delete_states {
