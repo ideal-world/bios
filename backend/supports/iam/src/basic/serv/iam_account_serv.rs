@@ -579,6 +579,8 @@ impl IamAccountServ {
             apps.push(IamAccountAppInfoResp {
                 app_id: app.id,
                 app_name: app.name,
+                app_kind: app.kind,
+                app_own_paths: app.own_paths.clone(),
                 app_icon: app.icon,
                 roles: roles.iter().filter(|r| r.own_paths == app.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
                 groups: HashMap::default(),

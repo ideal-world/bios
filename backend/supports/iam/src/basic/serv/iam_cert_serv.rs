@@ -3,7 +3,6 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
 use std::sync::Arc;
 use std::time::Duration;
 use std::vec;
@@ -33,6 +32,7 @@ use super::iam_res_serv::IamResServ;
 use super::iam_role_serv::IamRoleServ;
 use super::iam_set_serv::IamSetServ;
 use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountInfoResp};
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
 };
@@ -40,14 +40,16 @@ use crate::basic::dto::iam_cert_dto::{
     IamCertManageAddReq, IamCertManageModifyReq, IamCertModifyVisibilityRequest, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto,
     IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq,
 };
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, IAM_AVATAR, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind, IamSetKind};
@@ -1219,7 +1221,7 @@ impl IamCertServ {
         if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
             return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
-        let old_app_ids = account_agg.apps.iter().map(|app| app.app_id.clone()).collect::<Vec<String>>();
+        let mut old_app_ids = account_agg.apps.iter().map(|app| app.app_id.clone()).collect::<Vec<String>>();
         let mut apps = account_agg.apps;
         if tenant_id != "" {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
@@ -1230,9 +1232,12 @@ impl IamCertServ {
                 if old_app_ids.contains(&app_id) {
                     continue;
                 }
+                old_app_ids.push(app_id.clone());
                 apps.push(IamAccountAppInfoResp {
                     app_id: app_id.clone(),
                     app_name: app_name.clone(),
+                    app_own_paths: format!("{}/{}", tenant_id, app_id),
+                    app_kind: IamAppKind::Product,
                     app_icon: "".to_string(),
                     roles: app_role_read.clone(),
                     groups: HashMap::new(),
@@ -1240,6 +1245,54 @@ impl IamCertServ {
             }
         }
 
+        // todo 拥有全部应用数据权限 则可以查看跨租户的应用，以及当前租户的应用权限 `后续需要优化`
+        if IamResServ::is_res_code_with_context(funs.conf::<IamConfig>().app_res_data_guard_code.clone(), &ctx, funs).await? {
+            let app_ids = IamTenantServ::find_id_rel_app(tenant_id, None, None, funs, ctx).await?;
+            let proj_app = IamAppServ::find_items(
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    kind: Some(IamAppKind::Project),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for app in proj_app {
+                if app_ids.contains(&app.id) && !old_app_ids.contains(&app.id) {
+                    old_app_ids.push(app.id.clone());
+                    apps.push(IamAccountAppInfoResp {
+                        app_id: app.id.clone(),
+                        app_name: app.name.clone(),
+                        app_own_paths: format!("{}/{}", tenant_id, app.id),
+                        app_kind: IamAppKind::Project,
+                        app_icon: app.icon,
+                        roles: HashMap::new(),
+                        groups: HashMap::new(),
+                    });
+                }
+            }
+            for app_id in app_ids {
+                if !old_app_ids.contains(&app_id) {
+                    old_app_ids.push(app_id.clone());
+                    apps.push(IamAccountAppInfoResp {
+                        app_id: app_id.clone(),
+                        app_name: "".to_string(),
+                        app_own_paths: format!("{}/{}", tenant_id, app_id),
+                        app_kind: IamAppKind::Project,
+                        app_icon: "".to_string(),
+                        roles: HashMap::new(),
+                        groups: HashMap::new(),
+                    });
+                }
+            }
+        }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),

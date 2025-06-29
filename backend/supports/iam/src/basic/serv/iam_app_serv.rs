@@ -130,6 +130,9 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         if let Some(contact_phone) = &filter.contact_phone {
             query.and_where(Expr::col(iam_app::Column::ContactPhone).eq(contact_phone.as_str()));
         }
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::col(iam_app::Column::Kind).eq(kind.to_string()));
+        }
         Ok(())
     }
 }

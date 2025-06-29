@@ -12,6 +12,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 use tardis::TardisFuns;
 
 use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -188,6 +189,8 @@ impl IamCiAccountApi {
                 apps.push(IamAccountAppInfoResp {
                     app_id: app_id.clone(),
                     app_name: app_name.clone(),
+                    app_kind:  IamAppKind::Project,
+                    app_own_paths: format!("{}/{}", ctx.own_paths, app_id),
                     app_icon: "".to_string(),
                     roles: app_role_read.clone(),
                     groups: HashMap::default(),
