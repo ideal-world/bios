@@ -351,10 +351,10 @@ impl FlowModelDetailResp {
             rel_template_ids: Some(self.rel_template_ids.clone()),
             modify_version: Some(FlowModelVersionModifyReq {
                 name: Some(self.name.as_str().into()),
-                bind_states: None,   // todo
-                unbind_states: None, // todo
-                delete_states: None, // todo
-                modify_states: None, // todo
+                bind_states: None,
+                unbind_states: None,
+                delete_states: None,
+                modify_states: None,
                 status: None,
                 init_state_id: Some(self.init_state_id),
                 scope_level: Some(self.scope_level.clone()),
@@ -529,14 +529,14 @@ pub struct FlowModelBindNewStateReq {
 }
 
 /// 解绑状态
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelUnbindStateReq {
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub state_id: String,
     /// 新的状态ID
-    pub new_state_id: String,
+    pub new_state_id: Option<String>,
 }
 
 /// 状态排序

@@ -2233,18 +2233,20 @@ impl FlowInstServ {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             if let Some(update_states) = &update_states {
                 for (old_state, new_state) in update_states {
-                    Self::async_unsafe_modify_state(
-                        &FlowInstFilterReq {
-                            main: Some(true),
-                            tags: Some(vec![new_model.tag.clone()]),
-                            current_state_id: Some(old_state.clone()),
-                            ..Default::default()
-                        },
-                        new_state,
-                        funs,
-                        &mock_ctx,
-                    )
-                    .await?;
+                    if old_state != new_state {
+                        Self::async_unsafe_modify_state(
+                            &FlowInstFilterReq {
+                                main: Some(true),
+                                tags: Some(vec![new_model.tag.clone()]),
+                                current_state_id: Some(old_state.clone()),
+                                ..Default::default()
+                            },
+                            new_state,
+                            funs,
+                            &mock_ctx,
+                        )
+                        .await?;
+                    }
                 }
             } else {
                 Self::async_unsafe_modify_state(

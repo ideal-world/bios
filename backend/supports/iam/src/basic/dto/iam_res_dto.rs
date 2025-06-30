@@ -52,16 +52,7 @@ pub struct IamResAddReq {
     pub need_login: Option<bool>,
     pub disabled: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
-    pub bind_data_guards: Option<Vec<IamDataGuardAddReq>>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug, Clone)]
-pub struct IamDataGuardAddReq {
-    pub id: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: TrimString,
+    pub bind_data_guards: Option<Vec<IamResAddReq>>,
 }
 
 impl IamResAddReq {
@@ -101,14 +92,7 @@ pub struct IamResModifyReq {
     pub double_auth_msg: Option<String>,
     pub need_login: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
-    pub bind_data_guards: Option<Vec<IamDataGuardModifyReq>>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug, Clone)]
-pub struct IamDataGuardModifyReq {
-    pub code: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: Option<TrimString>,
+    pub bind_data_guards: Option<Vec<IamResModifyReq>>,
 }
 
 impl IamResModifyReq {

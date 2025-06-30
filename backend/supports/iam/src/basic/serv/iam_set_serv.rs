@@ -22,7 +22,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetTreeExtResp, IamSetTreeResp};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamResSetTreeExtResp, IamResSetTreeResp};
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
@@ -719,11 +719,11 @@ impl IamSetServ {
         RbumSetServ::get_tree(set_id, &filter, funs, ctx).await
     }
 
-    pub async fn get_menu_tree(set_id: &str, exts: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+    pub async fn get_menu_tree(set_id: &str, exts: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResSetTreeResp> {
         let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
-        Self::transform_tree(Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?, funs, ctx).await
+        Self::transform_res_tree(Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?, None, funs, ctx).await
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
@@ -1091,10 +1091,25 @@ impl IamSetServ {
         Ok(())
     }
 
-    // Transform RbumSetTree to IamSetTreeResp
-    async fn transform_tree(original_tree: RbumSetTreeResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+    // Transform RbumSetTree to IamResSetTreeResp
+    pub async fn transform_res_tree(original_tree: RbumSetTreeResp, role_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResSetTreeResp> {
+        let res_ids = if let Some(role_ids) = role_ids {
+            let mut res_ids = HashSet::new();
+            let mut global_ctx = ctx.clone();
+            global_ctx.own_paths = "".to_string();
+            // TODO default empty res
+            res_ids.insert("".to_string());
+            for role_id in role_ids {
+                let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
+                res_ids.extend(rel_res_ids.into_iter());
+            }
+            Some(res_ids)
+        } else {
+            None
+        };
+        
         let ext = if let Some(value_ext) = original_tree.ext.clone() {
-            Some(IamSetTreeExtResp {
+            Some(IamResSetTreeExtResp {
                 items: value_ext.items,
                 item_number_agg: value_ext.item_number_agg,
                 item_kinds: value_ext.item_kinds,
@@ -1104,7 +1119,7 @@ impl IamSetServ {
         } else {
             None
         };
-        let mut result = IamSetTreeResp {
+        let mut result = IamResSetTreeResp {
             main: original_tree.main,
             ext,
         };
@@ -1122,18 +1137,19 @@ impl IamSetServ {
             let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
             let data_guard_set_items = RbumSetItemServ::find_detail_rbums(
                 &RbumSetItemFilterReq {
+                    rel_rbum_item_ids: res_ids.map(|res_ids| res_ids.into_iter().collect()),
                     rel_rbum_set_id: Some(data_guard_set_id.to_string()),
                     ..Default::default()
                 },
                 None,
                 None,
                 funs,
-                &ctx,
+                &global_ctx,
             )
             .await?;
             let mut data_guard_map = HashMap::new();
             for res_set_item_id in res_set_item_ids {
-                let rel_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResDataGuard, &res_set_item_id, None, None, funs, &ctx).await?;
+                let rel_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResDataGuard, &res_set_item_id, None, None, funs, &global_ctx).await?;
                 let data_guard = data_guard_set_items
                     .iter()
                     .filter(|i| rel_ids.contains(&i.rel_rbum_item_id))

@@ -34,7 +34,7 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelInitCopyReq, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
             FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus,
             FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
         },
@@ -1768,7 +1768,10 @@ impl FlowModelServ {
         };
         let parent_model_transitions = parent_model.transitions();
         let child_model_transitions = child_model.transitions();
-        let mut modify_req_clone = modify_req.clone();
+        let mut modify_req_clone = FlowModelModifyReq {
+            rel_template_ids: None,
+            ..modify_req.clone()
+        };
         if let Some(ref mut modify_version) = &mut modify_req_clone.modify_version {
             if let Some(ref mut bind_states) = &mut modify_version.bind_states {
                 for bind_state in bind_states.iter_mut() {
@@ -2088,7 +2091,11 @@ impl FlowModelServ {
 
     pub async fn unbind_state(flow_model_id: &str, req: &FlowModelUnbindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_model = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-
+        let new_state_id = if let Some(new_state_id) = &req.new_state_id {
+            new_state_id.clone()
+        } else {
+            flow_model.init_state_id.clone()
+        };
         let mut own_paths_list = vec![];
         if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
         {
@@ -2103,6 +2110,7 @@ impl FlowModelServ {
         } else {
             own_paths_list.push(ctx.own_paths.clone());
         }
+        
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             FlowInstServ::async_unsafe_modify_state(
@@ -2112,7 +2120,7 @@ impl FlowModelServ {
                     current_state_id: Some(req.state_id.clone()),
                     ..Default::default()
                 },
-                &req.new_state_id,
+                &new_state_id,
                 funs,
                 &mock_ctx,
             )
@@ -2122,7 +2130,7 @@ impl FlowModelServ {
             flow_model_id,
             &mut FlowModelModifyReq {
                 modify_version: Some(FlowModelVersionModifyReq {
-                    unbind_states: Some(vec![req.state_id.clone()]),
+                    unbind_states: Some(vec![req.clone()]),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -2147,7 +2155,7 @@ impl FlowModelServ {
         )
         .await?;
         let target_state = FlowStateServ::get_item(
-            &req.new_state_id,
+            &new_state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
@@ -2274,6 +2282,79 @@ impl FlowModelServ {
         for flow_model_id in flow_model_ids {
             if !search_models.contains(&flow_model_id) {
                 FlowSearchClient::async_add_or_modify_model_search(&flow_model_id, Box::new(false), funs, ctx).await?;
+            }
+        }
+        Ok(())
+    }
+
+    // 初始化复制模型（脚本）
+    pub async fn init_copy_model(req: &FlowModelInitCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_main_model = Self::find_one_detail_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![req.rel_model_id.clone()]),
+                    enabled: Some(true),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?.ok_or_else(|| {
+            funs.err().not_found(
+                &Self::get_obj_name(),
+                "init_copy_model",
+                "flow model is not found",
+                "404-model-not-found",
+            )
+        })?;
+        for rel_template_id in &req.rel_template_ids {
+            let new_model = FlowModelServ::copy_or_reference_model(
+                &rel_main_model.id,
+                &FlowModelAssociativeOperationKind::ReferenceOrCopy,
+                FlowModelKind::AsTemplateAndAsModel,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelTemplate,
+                &new_model.id,
+                rel_template_id,
+                None,
+                None,
+                false,
+                true,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            if req.sync_inst {
+                let mut update_states = HashMap::new();
+                for state in rel_main_model.states() {
+                    update_states.insert(state.id.clone(), state.id.clone());
+                }
+                FlowInstServ::batch_update_when_switch_model(&new_model, Some(rel_template_id.to_string()), Some(update_states), funs, ctx).await?;
+            }
+        }
+        for own_path in &req.own_path {
+            let mock_ctx = TardisContext {
+                own_paths: own_path.clone(),
+                ..ctx.clone()
+            };
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &FlowModelAssociativeOperationKind::Copy, FlowModelKind::AsModel, None, funs, &mock_ctx).await?;
+            if req.sync_inst {
+                let mut update_states = HashMap::new();
+                for state in rel_main_model.states() {
+                    update_states.insert(state.id.clone(), state.id.clone());
+                }
+                FlowInstServ::batch_update_when_switch_model(&new_model, None, Some(update_states), funs, &mock_ctx).await?;
             }
         }
         Ok(())
