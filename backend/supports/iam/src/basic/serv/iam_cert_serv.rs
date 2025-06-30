@@ -1243,53 +1243,56 @@ impl IamCertServ {
                     groups: HashMap::new(),
                 });
             }
-        }
-
-        // todo 拥有全部应用数据权限 则可以查看跨租户的应用，以及当前租户的应用权限 `后续需要优化`
-        if IamResServ::is_res_code_with_context(funs.conf::<IamConfig>().app_res_data_guard_code.clone(), &ctx, funs).await? {
-            let app_ids = IamTenantServ::find_id_rel_app(tenant_id, None, None, funs, ctx).await?;
-            let proj_app = IamAppServ::find_items(
-                &IamAppFilterReq {
-                    basic: RbumBasicFilterReq {
-                        own_paths: Some("".to_string()),
-                        with_sub_own_paths: true,
+            // todo 拥有全部应用数据权限 则可以查看跨租户的应用，以及当前租户的应用权限 `后续需要优化`
+            if IamResServ::is_res_code_with_context(funs.conf::<IamConfig>().app_res_data_guard_code.clone(), &ctx, funs).await? {
+                let mock_global_ctx = TardisContext {
+                    own_paths: "".to_string(),
+                    ..ctx.clone()
+                };
+                let app_ids = IamTenantServ::find_id_rel_app(tenant_id, None, None, funs, &mock_global_ctx).await?;
+                let proj_app = IamAppServ::find_items(
+                    &IamAppFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        kind: Some(IamAppKind::Project),
                         ..Default::default()
                     },
-                    kind: Some(IamAppKind::Project),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for app in proj_app {
-                if app_ids.contains(&app.id) && !old_app_ids.contains(&app.id) {
-                    old_app_ids.push(app.id.clone());
-                    apps.push(IamAccountAppInfoResp {
-                        app_id: app.id.clone(),
-                        app_name: app.name.clone(),
-                        app_own_paths: format!("{}/{}", tenant_id, app.id),
-                        app_kind: IamAppKind::Project,
-                        app_icon: app.icon,
-                        roles: HashMap::new(),
-                        groups: HashMap::new(),
-                    });
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for app in proj_app {
+                    if app_ids.contains(&app.id) && !old_app_ids.contains(&app.id) {
+                        old_app_ids.push(app.id.clone());
+                        apps.push(IamAccountAppInfoResp {
+                            app_id: app.id.clone(),
+                            app_name: app.name.clone(),
+                            app_own_paths: format!("{}/{}", tenant_id, app.id),
+                            app_kind: IamAppKind::Project,
+                            app_icon: app.icon,
+                            roles: app_role_read.clone(),
+                            groups: HashMap::new(),
+                        });
+                    }
                 }
-            }
-            for app_id in app_ids {
-                if !old_app_ids.contains(&app_id) {
-                    old_app_ids.push(app_id.clone());
-                    apps.push(IamAccountAppInfoResp {
-                        app_id: app_id.clone(),
-                        app_name: "".to_string(),
-                        app_own_paths: format!("{}/{}", tenant_id, app_id),
-                        app_kind: IamAppKind::Project,
-                        app_icon: "".to_string(),
-                        roles: HashMap::new(),
-                        groups: HashMap::new(),
-                    });
+                for app_id in app_ids {
+                    if !old_app_ids.contains(&app_id) {
+                        old_app_ids.push(app_id.clone());
+                        apps.push(IamAccountAppInfoResp {
+                            app_id: app_id.clone(),
+                            app_name: "".to_string(),
+                            app_own_paths: format!("{}/{}", tenant_id, app_id),
+                            app_kind: IamAppKind::Project,
+                            app_icon: "".to_string(),
+                            roles: app_role_read.clone(),
+                            groups: HashMap::new(),
+                        });
+                    }
                 }
             }
         }
