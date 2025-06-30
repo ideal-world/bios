@@ -18,6 +18,7 @@ pub struct IamConfig {
     pub rbum: RbumConfig,
     pub in_event: bool,
     pub invoke: InvokeConfig,
+    pub app_res_data_guard_code: String,
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
     pub cache_key_token_info_: String,
@@ -146,6 +147,7 @@ impl Default for IamConfig {
             rbum: Default::default(),
             in_event: false,
             invoke: InvokeConfig::default(),
+            app_res_data_guard_code: "5/*/app*data_guard*all".to_string(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),

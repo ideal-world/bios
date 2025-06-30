@@ -6,6 +6,7 @@ use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
 use crate::basic::serv::iam_cert_ldap_serv::ldap::LdapSearchResp;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountLogoutTypeKind, IamAccountStatusKind};
@@ -256,6 +257,8 @@ pub struct IamAccountInfoWithUserPwdAkResp {
 pub struct IamAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,
+    pub app_kind: IamAppKind,
+    pub app_own_paths: String,
     pub app_icon: String,
     pub roles: HashMap<String, String>,
     pub groups: HashMap<String, String>,
