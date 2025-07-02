@@ -32,6 +32,7 @@ impl ReachMessageTemplateCsApi {
         &self,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
+        name: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
         rel_reach_channel: Query<Option<String>>,
         TardisContextExtractor(ctx): TardisContextExtractor,
@@ -43,6 +44,9 @@ impl ReachMessageTemplateCsApi {
         // filter
         let mut filter = ReachMessageTemplateFilterReq::default();
         filter.base_filter.with_sub_own_paths = true;
+        if let Some(name) = name.0 {
+            filter.base_filter.name = Some(name);
+        }
         if let Some(tenant_id) = tenant_id.0 {
             filter.base_filter.own_paths = Some(tenant_id);
             filter.base_filter.with_sub_own_paths = false;
