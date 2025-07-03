@@ -42,7 +42,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
     //     return Err(funs.err().conflict(
     //         "fact_col_conf",
     //         "add",
-    //         "The fact instance table already exists, please delete it and then modify it.",
+    //         "The fact instance table already exists, please offline it and then modify it.",
     //         "409-spi-stats-fact-inst-exist",
     //     ));
     // }
@@ -214,7 +214,7 @@ pub(crate) async fn modify(
     //     return Err(funs.err().conflict(
     //         "fact_col_conf",
     //         "modify",
-    //         "The fact instance table already exists, please delete it and then modify it.",
+    //         "The fact instance table already exists, please offline it and then modify it.",
     //         "409-spi-stats-fact-inst-exist",
     //     ));
     // }
@@ -325,6 +325,15 @@ pub(crate) async fn delete(
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
+    // todo cancel check if fact_conf_table online
+    // if rel_external_id.is_none() && stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+    //     return Err(funs.err().conflict(
+    //         "fact_col_conf",
+    //         "add",
+    //         "The fact instance table already exists, please offline it and then modify it.",
+    //         "409-spi-stats-fact-inst-exist",
+    //     ));
+    // }
     if rel_external_id.is_none() {
         let fact_col_confs: Vec<StatsConfFactColInfoResp> = if let Some(fact_col_conf_key) = fact_col_conf_key {
             if let Some(fact_col_conf) = find_by_fact_key_and_col_conf_key(fact_conf_key, fact_col_conf_key, funs, ctx, inst).await? {

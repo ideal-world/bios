@@ -111,8 +111,8 @@ impl From<LogItemAddV2Req> for StatsFactRecordLoadReq {
             ct: value.ts.unwrap_or_default(),
             idempotent_id: value.idempotent_id,
             ignore_updates: None,
-            data: value.content,
-            ext: value.ext,
+            data: value.content.clone(),
+            ext: Some(value.ext.unwrap_or(value.content)),
         }
     }
 }

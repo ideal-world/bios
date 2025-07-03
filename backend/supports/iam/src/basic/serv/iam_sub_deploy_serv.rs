@@ -1429,23 +1429,23 @@ impl IamSubDeployServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         if let Some(accounts) = accounts {
-            let new_account_ids = accounts.iter().map(|account| account.id.clone()).collect::<Vec<_>>();
-            let old_accounts = IamAccountServ::find_items(
-                &IamAccountFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        own_paths: Some("".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            let delete_old_accounts = old_accounts.iter().filter(|account| !new_account_ids.contains(&account.id)).collect::<Vec<_>>();
+            // let new_account_ids = accounts.iter().map(|account| account.id.clone()).collect::<Vec<_>>();
+            // let old_accounts = IamAccountServ::find_items(
+            //     &IamAccountFilterReq {
+            //         basic: RbumBasicFilterReq {
+            //             with_sub_own_paths: true,
+            //             own_paths: Some("".to_string()),
+            //             ..Default::default()
+            //         },
+            //         ..Default::default()
+            //     },
+            //     None,
+            //     None,
+            //     funs,
+            //     ctx,
+            // )
+            // .await?;
+            // let delete_old_accounts = old_accounts.iter().filter(|account| !new_account_ids.contains(&account.id)).collect::<Vec<_>>();
             for account in accounts {
                 let account_ctx = TardisContext {
                     own_paths: account.own_paths,
