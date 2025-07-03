@@ -2,11 +2,10 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumBasicFilterReq,
-    serv::{
+    dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    },
+    }
 };
 use bios_sdk_invoke::dto::search_item_dto::{
     SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchSortKind, SearchItemSearchSortReq,
@@ -2219,7 +2218,11 @@ impl FlowInstServ {
                     if FlowModelServ::get_app_id_by_ctx(ctx).is_some() {
                         rel.rel_own_paths
                     } else {
-                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
+                        if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
+                            rel.rel_own_paths
+                        } else {
+                            format!("{}/{}", rel.rel_own_paths, rel.rel_id)
+                        }
                     }
                 })
                 .collect_vec();
@@ -3002,17 +3005,19 @@ impl FlowInstServ {
                                             ctx,
                                         )
                                         .await?;
-                                        Self::unsafe_modify_state(
-                                            &FlowInstFilterReq {
-                                                ids: Some(vec![child_main_inst_id.clone()]),
-                                                with_sub: Some(true),
-                                                ..Default::default()
-                                            },
-                                            &conf.pass_status,
-                                            funs,
-                                            ctx,
-                                        )
-                                        .await?;
+                                        if !conf.pass_status.is_empty() {
+                                            Self::unsafe_modify_state(
+                                                &FlowInstFilterReq {
+                                                    ids: Some(vec![child_main_inst_id.clone()]),
+                                                    with_sub: Some(true),
+                                                    ..Default::default()
+                                                },
+                                                &conf.pass_status,
+                                                funs,
+                                                ctx,
+                                            )
+                                            .await?;
+                                        }
                                     } else {
                                         // 更新业务主流程的artifact的状态为审批拒绝
                                         Self::modify_inst_artifacts(
@@ -3025,17 +3030,19 @@ impl FlowInstServ {
                                             ctx,
                                         )
                                         .await?;
-                                        Self::unsafe_modify_state(
-                                            &FlowInstFilterReq {
-                                                ids: Some(vec![child_main_inst_id.clone()]),
-                                                with_sub: Some(true),
-                                                ..Default::default()
-                                            },
-                                            &conf.unpass_status,
-                                            funs,
-                                            ctx,
-                                        )
-                                        .await?;
+                                        if !conf.pass_status.is_empty() {
+                                            Self::unsafe_modify_state(
+                                                &FlowInstFilterReq {
+                                                    ids: Some(vec![child_main_inst_id.clone()]),
+                                                    with_sub: Some(true),
+                                                    ..Default::default()
+                                                },
+                                                &conf.unpass_status,
+                                                funs,
+                                                ctx,
+                                            )
+                                            .await?;
+                                        }
                                     }
                                 }
                             }
@@ -3861,17 +3868,19 @@ impl FlowInstServ {
                                     ctx,
                                 )
                                 .await?;
-                                Self::unsafe_modify_state(
-                                    &FlowInstFilterReq {
-                                        ids: Some(vec![child_main_inst_id.clone()]),
-                                        with_sub: Some(true),
-                                        ..Default::default()
-                                    },
-                                    &conf.unpass_status,
-                                    funs,
-                                    ctx,
-                                )
-                                .await?;
+                                if !conf.unpass_status.is_empty() {
+                                    Self::unsafe_modify_state(
+                                        &FlowInstFilterReq {
+                                            ids: Some(vec![child_main_inst_id.clone()]),
+                                            with_sub: Some(true),
+                                            ..Default::default()
+                                        },
+                                        &conf.unpass_status,
+                                        funs,
+                                        ctx,
+                                    )
+                                    .await?;
+                                }
                             }
                         }
                     }

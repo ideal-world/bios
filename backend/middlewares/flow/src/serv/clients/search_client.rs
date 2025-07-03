@@ -320,7 +320,7 @@ impl FlowSearchClient {
     async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
         // 数据共享权限处理
-        let mut visit_tenants = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).map(|tenant| vec![tenant]).unwrap_or_default();
+        let mut visit_tenants = vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()];
         let mut visit_apps = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &model_resp.own_paths).map(|app| vec![app]).unwrap_or_default();
         let mut own_paths = Some(model_resp.own_paths.clone());
         if model_resp.scope_level == RbumScopeLevelKind::Root {
@@ -600,6 +600,7 @@ impl FlowSearchClient {
             ("ITER".to_string(), ("idp_product".to_string(), "idp_feed_iter".to_string())),
             ("MS".to_string(), ("idp_product".to_string(), "idp_feed_ms".to_string())),
             ("PRODUCT".to_string(), ("idp_product".to_string(), "idp_product".to_string())),
+            ("PROJ".to_string(), ("idp_project".to_string(), "idp_project".to_string())),
             ("REQ".to_string(), ("idp_product".to_string(), "idp_feed_req".to_string())),
             ("TASK".to_string(), ("idp_product".to_string(), "idp_feed_task".to_string())),
             ("TICKET".to_string(), ("ticket".to_string(), "ticket_inst".to_string())),

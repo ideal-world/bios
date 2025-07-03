@@ -175,7 +175,7 @@ pub struct RelBusObjResp {
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldResp {}
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesResp {}
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]

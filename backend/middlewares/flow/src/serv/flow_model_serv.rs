@@ -59,13 +59,7 @@ use super::{
     clients::{
         log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    },
-    flow_inst_serv::FlowInstServ,
-    flow_log_serv::FlowLogServ,
-    flow_model_version_serv::FlowModelVersionServ,
-    flow_rel_serv::{FlowRelKind, FlowRelServ},
-    flow_state_serv::FlowStateServ,
-    flow_transition_serv::FlowTransitionServ,
+    }, flow_config_serv::FlowConfigServ, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowModelServ;
@@ -2169,6 +2163,7 @@ impl FlowModelServ {
         )
         .await?;
         FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
+        FlowConfigServ::modify_root_config_by_tag("review", &flow_model.tag, &original_state.id, &original_state.name, &target_state.id, &target_state.name, funs, ctx).await?;
         Ok(())
     }
 
