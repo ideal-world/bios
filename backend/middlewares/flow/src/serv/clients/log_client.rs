@@ -265,6 +265,7 @@ impl FlowLogClient {
     pub fn get_flow_kind_text(tag: &str) -> String {
         let flow_tag_map = HashMap::from([
             ("PRODUCT", "产品"),
+            ("PROJ", "合同"),
             ("MS", "里程碑"),
             ("ITER", "迭代"),
             ("TICKET", "工单"),

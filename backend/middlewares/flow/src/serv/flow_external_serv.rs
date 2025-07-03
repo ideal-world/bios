@@ -189,7 +189,7 @@ impl FlowExternalServ {
         if let Some(data) = resp.body {
             Ok(data)
         } else {
-            Err(funs.err().internal_error("flow_external", "do_modify_field", "illegal response", "500-external-illegal-response"))
+            Ok(FlowExternalModifyFieldResp::default())
         }
     }
 
@@ -231,11 +231,11 @@ impl FlowExternalServ {
             sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
-        debug!("do_notify_changes body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> = funs
+        let original_resp = funs
             .web_client()
             .post(&external_url, &body, header)
-            .await?
+            .await?;
+        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> = original_resp
             .body
             .ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
         if resp.code != *"200" {
@@ -244,7 +244,7 @@ impl FlowExternalServ {
         if let Some(data) = resp.body {
             Ok(data)
         } else {
-            Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))
+            Ok(FlowExternalNotifyChangesResp::default())
         }
     }
 
@@ -316,7 +316,7 @@ impl FlowExternalServ {
         if let Some(data) = resp.body {
             Ok(data)
         } else {
-            Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))
+            Ok(FlowExternalDeleteRelObjResp::default())
         }
     }
 
@@ -363,7 +363,7 @@ impl FlowExternalServ {
         if let Some(data) = resp.body {
             Ok(data)
         } else {
-            Err(funs.err().internal_error("flow_external", "do_update_related_obj", "illegal response", "500-external-illegal-response"))
+            Ok(FlowExternalUpdateRelationshipResp::default())
         }
     }
 
