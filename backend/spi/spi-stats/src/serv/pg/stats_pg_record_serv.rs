@@ -168,7 +168,8 @@ pub(crate) async fn fact_record_load(
         )
     })?;
 
-    // 如果存在幂等id 且已经存在对应数据,则根据丢弃数据
+    // 如果存在幂等id 且已经存在对应数据,则丢弃或者进行修改
+    // If there is an idempotent id and the corresponding data already exists, discard or modify it
     if let Some(idempotent_id) = add_req.idempotent_id.clone() {
         let idempotent_data_resp = fact_get_idempotent_record_raw(fact_conf_key, &idempotent_id, &conn, ctx).await?;
         if idempotent_data_resp.is_some() {

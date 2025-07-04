@@ -29,6 +29,7 @@ impl ReachMessageTemplateCtApi {
     #[oai(method = "get", path = "/page")]
     pub async fn paginate_msg_template(
         &self,
+        name: Query<Option<String>>,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
         rel_reach_channel: Query<Option<String>>,
@@ -42,6 +43,9 @@ impl ReachMessageTemplateCtApi {
         let mut filter = ReachMessageTemplateFilterReq::default();
         filter.base_filter.with_sub_own_paths = true;
         filter.rel_reach_channel = rel_reach_channel;
+        if let Some(name) = name.0 {
+            filter.base_filter.name = Some(name);
+        }
         let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, None, None, &funs, &ctx).await?;
         TardisResp::ok(page_resp)
     }
@@ -51,6 +55,7 @@ impl ReachMessageTemplateCtApi {
     #[oai(method = "get", path = "/")]
     pub async fn find_msg_template(
         &self,
+        name: Query<Option<String>>,
         rel_reach_channel: Query<Option<String>>,
         TardisContextExtractor(ctx): TardisContextExtractor,
     ) -> TardisApiResult<Vec<ReachMessageTemplateSummaryResp>> {
@@ -59,6 +64,9 @@ impl ReachMessageTemplateCtApi {
         let rel_reach_channel = rel_reach_channel.0.map(|x| x.parse::<ReachChannelKind>()).transpose()?;
         filter.base_filter.with_sub_own_paths = true;
         filter.rel_reach_channel = rel_reach_channel;
+        if let Some(name) = name.0 {
+            filter.base_filter.name = Some(name);
+        }
         let resp = ReachMessageTemplateServ::find_rbums(&filter, None, None, &funs, &ctx).await?;
         TardisResp::ok(resp)
     }

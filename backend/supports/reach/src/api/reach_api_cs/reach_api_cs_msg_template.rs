@@ -1,6 +1,7 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
+use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -52,6 +53,7 @@ impl ReachMessageTemplateCsApi {
             filter.base_filter.with_sub_own_paths = false;
         }
         filter.rel_reach_channel = rel_reach_channel;
+        info!("paginate_msg_template filter: {:?}", filter);
         let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, None, None, &funs, &ctx).await?;
         TardisResp::ok(page_resp)
     }
@@ -61,6 +63,7 @@ impl ReachMessageTemplateCsApi {
     #[oai(method = "get", path = "/")]
     pub async fn find_msg_template(
         &self,
+        name: Query<Option<String>>,
         rel_reach_channel: Query<Option<String>>,
         TardisContextExtractor(ctx): TardisContextExtractor,
     ) -> TardisApiResult<Vec<ReachMessageTemplateSummaryResp>> {
@@ -69,6 +72,9 @@ impl ReachMessageTemplateCsApi {
         let rel_reach_channel = rel_reach_channel.0.map(|x| x.parse::<ReachChannelKind>()).transpose()?;
         filter.base_filter.with_sub_own_paths = true;
         filter.rel_reach_channel = rel_reach_channel;
+        if let Some(name) = name.0 {
+            filter.base_filter.name = Some(name);
+        }
         let resp = ReachMessageTemplateServ::find_rbums(&filter, None, None, &funs, &ctx).await?;
         TardisResp::ok(resp)
     }
