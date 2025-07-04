@@ -40,6 +40,40 @@ impl IamCsSubDeployApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamSubDeployServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
+        // todo 批量修改extends access_url
+        if let Some(access_url) = modify_req.0.access_url {
+            let sub_deploy_extends_ids = IamSubDeployServ::find_id_items(
+                &IamSubDeployFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    extend_sub_deploy_id: Some(id.0),
+                    ..Default::default()
+                },
+                None,
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            for sub_deploy_extends_id in sub_deploy_extends_ids {
+                IamSubDeployServ::modify_item(
+                    &sub_deploy_extends_id,
+                    &mut IamSubDeployModifyReq {
+                        access_url: Some(access_url.clone()),
+                        name: None,
+                        province: None,
+                        note: None,
+                        scope_level: None,
+                        disabled: None,
+                    },
+                    &funs,
+                    &ctx.0,
+                )
+                .await?;
+            }
+        }
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
