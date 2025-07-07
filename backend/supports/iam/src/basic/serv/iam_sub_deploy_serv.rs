@@ -1455,13 +1455,14 @@ impl IamSubDeployServ {
                     &IamAccountFilterReq {
                         basic: RbumBasicFilterReq {
                             with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
                             ids: Some(vec![account.id.clone()]),
                             ..Default::default()
                         },
                         ..Default::default()
                     },
                     funs,
-                    ctx,
+                    &account_ctx,
                 )
                 .await?
                     == 0
@@ -1519,6 +1520,11 @@ impl IamSubDeployServ {
                             {
                                 continue;
                             }
+                            let cert_ctx = TardisContext {
+                                own_paths: cert.own_paths.clone(),
+                                owner: cert.owner.clone(),
+                                ..account_ctx.clone()
+                            };
                             funs.db()
                                 .insert_one(
                                     bios_basic::rbum::domain::rbum_cert::ActiveModel {
@@ -1543,7 +1549,7 @@ impl IamSubDeployServ {
                                         create_by: Set(cert.owner.clone()),
                                         update_by: Set(cert.owner.clone()),
                                     },
-                                    ctx,
+                                    &cert_ctx,
                                 )
                                 .await?;
                         }
