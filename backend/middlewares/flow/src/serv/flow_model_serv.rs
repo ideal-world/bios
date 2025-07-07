@@ -109,6 +109,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             rel_model_id: Set(add_req.rel_model_id.clone().unwrap_or_default()),
             template: Set(add_req.template),
             main: Set(add_req.main),
+            default: Set(false),
             front_conds: Set(add_req.front_conds.clone().map(|front_conds| json!(front_conds))),
             data_source: Set(add_req.data_source.clone().unwrap_or_default()),
             ..Default::default()
@@ -620,6 +621,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .column((flow_model::Entity, flow_model::Column::Info))
             .column((flow_model::Entity, flow_model::Column::Template))
             .column((flow_model::Entity, flow_model::Column::Main))
+            .column((flow_model::Entity, flow_model::Column::Default))
             .column((flow_model::Entity, flow_model::Column::RelModelId))
             .column((flow_model::Entity, flow_model::Column::Tag))
             .column((flow_model::Entity, flow_model::Column::Kind))
@@ -640,6 +642,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         }
         if let Some(main) = filter.main {
             query.and_where(Expr::col(flow_model::Column::Main).eq(main));
+        }
+        if let Some(default) = filter.default {
+            query.and_where(Expr::col(flow_model::Column::Default).eq(default));
         }
         if let Some(own_paths) = filter.own_paths.clone() {
             query.and_where(Expr::col((flow_model::Entity, flow_model::Column::OwnPaths)).is_in(own_paths));
@@ -1024,6 +1029,7 @@ impl FlowModelServ {
             scope_level: model_detail.scope_level,
             disabled: model_detail.disabled,
             main: model_detail.main,
+            default: model_detail.default,
             status: model_detail.status,
             rel_transitions,
         })
@@ -1434,8 +1440,8 @@ impl FlowModelServ {
     /// 根据own_paths和rel_template_id获取模型ID
     /// 规则1：如果rel_template_id不为空，优先通过rel_template_id查找rel表类型为FlowModelTemplate关联的模型ID，找不到则直接返回默认模板ID
     /// 规则2：如果rel_template_id为空，则通过own_paths获取rel表类型为FlowAppTemplate关联的模型ID
-    /// 规则3：如果按照规则2未找到关联的模型，则通过own_paths直接获取model表中存在的模型ID
-    /// 规则4：如果按照规则3未找到关联的模型，则直接返回默认的模板ID
+    /// 规则2-1：如果按照规则2未找到关联的模型，则通过own_paths直接获取model表中存在的模型ID
+    /// 规则2-2：如果按照规则2-1未找到关联的模型，则直接返回默认的模板ID
     pub async fn get_model_id_by_own_paths_and_rel_template_id(
         tag: &str,
         rel_template_id: Option<String>,
@@ -1487,7 +1493,7 @@ impl FlowModelServ {
             .await?
             .pop();
             if flow_model.is_none() {
-                // 规则3
+                // 规则2-2
                 flow_model = Self::find_detail_items(
                     &FlowModelFilterReq {
                         basic: RbumBasicFilterReq {
@@ -1510,7 +1516,7 @@ impl FlowModelServ {
             }
             flow_model
         };
-        // 规则4
+        // 规则2-3
         if result.is_none() {
             result = Self::find_detail_items(
                 &FlowModelFilterReq {
@@ -1520,6 +1526,7 @@ impl FlowModelServ {
                         ..Default::default()
                     },
                     main: Some(true),
+                    default: Some(true),
                     tags: Some(vec![tag.to_string()]),
                     ..Default::default()
                 },
@@ -2163,7 +2170,7 @@ impl FlowModelServ {
         )
         .await?;
         FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
-        FlowConfigServ::modify_root_config_by_tag("review", &flow_model.tag, &original_state.id, &original_state.name, &target_state.id, &target_state.name, funs, ctx).await?;
+        FlowConfigServ::modify_root_config_by_tag("review", &flow_model.tag, &original_state.id, &original_state.name,  &target_state.id, &target_state.name, funs, ctx).await?;
         Ok(())
     }
 

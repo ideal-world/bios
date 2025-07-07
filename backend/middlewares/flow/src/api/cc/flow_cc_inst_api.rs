@@ -115,43 +115,42 @@ impl FlowCcInstApi {
         funs.begin().await?;
 
         let flow_inst_detail = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        if !flow_inst_detail.main && flow_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default().is_empty() {
+        // 若为状态流或不携带子审批流的实例，直接终止
+        if flow_inst_detail.main || flow_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default().is_empty() {
             FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         } else {
             // 若为携带子审批流的数据，则直接触发状态流流转至结束
-            let next_trans = FlowInstServ::find_next_transitions(&flow_inst_detail, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0).await?;
-            for next_tran in next_trans {
-                let next_state = FlowStateServ::get_item(
-                    &next_tran.next_flow_state_id,
-                    &FlowStateFilterReq {
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some("".to_string()),
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        ..Default::default()
+            let main_inst = FlowInstServ::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
+                    main: Some(true),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?
+            .pop().ok_or_else(|| funs.err().not_found("flow_inst", "abort", &format!("flow inst is not found by {}", flow_inst_detail.rel_business_obj_id), "404-flow-inst-not-found"))?;
+            if let Some(next_finish_tran) = FlowInstServ::find_next_transitions(&main_inst, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0)
+            .await?
+            .into_iter()
+            .find(|next_tran| next_tran.next_flow_state_sys_state == FlowSysStateKind::Finish) {
+                FlowInstServ::transfer(
+                    &main_inst,
+                    &FlowInstTransferReq {
+                        flow_transition_id: next_finish_tran.next_flow_transition_id,
+                        message: None,
+                        vars: None,
                     },
-                    &funs,
+                    false,
+                    FlowExternalCallbackOp::Auto,
+                    loop_check_helper::InstancesTransition::default(),
                     &ctx.0,
+                    &funs,
                 )
                 .await?;
-                if next_state.sys_state == FlowSysStateKind::Finish {
-                    FlowInstServ::transfer(
-                        &flow_inst_detail,
-                        &FlowInstTransferReq {
-                            flow_transition_id: next_tran.next_flow_transition_id,
-                            message: None,
-                            vars: None,
-                        },
-                        false,
-                        FlowExternalCallbackOp::Auto,
-                        loop_check_helper::InstancesTransition::default(),
-                        &ctx.0,
-                        &funs,
-                    )
-                    .await?;
-                    break;
-                }
+            } else {
+                FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
             }
         }
         funs.commit().await?;

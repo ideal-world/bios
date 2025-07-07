@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamResFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResAppReq, IamResSummaryResp};
 use crate::basic::dto::iam_role_dto::IamRoleAggModifyReq;
 use crate::basic::dto::iam_set_dto::{IamResSetTreeResp, IamSetCateAddReq, IamSetItemAggAddReq};
@@ -27,7 +27,7 @@ use tardis::web::poem::web::Json;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
 
 #[derive(Clone, Default)]
@@ -47,6 +47,18 @@ impl IamCcResApi {
         let result = IamSetServ::get_menu_tree_by_roles(&set_id, &ctx.0.roles, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(IamSetServ::transform_res_tree(result, Some(ctx.0.roles.clone()), &funs, &ctx.0).await?)
+    }
+
+    /// Find Menu Tree
+    /// 查找全部菜单树
+    #[oai(path = "/tree/all", method = "get")]
+    async fn get_all_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResSetTreeResp> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Res, ""), true, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// build Menu Tree
@@ -263,11 +275,49 @@ impl IamCcResApi {
         TardisResp::ok(Void {})
     }
 
-    #[oai(path = "/refresh", method = "get")]
-    async fn refresh_res_rel(&self, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    /// Find Res
+    /// 查找资源
+    #[oai(path = "/", method = "get")]
+    async fn paginate(
+        &self,
+        ids: Query<Option<String>>,
+        codes: Query<Option<String>>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<IamResSummaryResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let global_ctx = TardisContext::default();
-        IamResServ::refresh_res_cache(&funs, &global_ctx).await?;
-        TardisResp::ok(Void {})
+
+        let codes = if let Some(codes) = codes.0 {
+            let codes_cp = codes.split(",").into_iter().map(|code| code.to_string()).collect_vec().clone();
+            Some(codes.split(",").into_iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*", code)).chain(codes_cp).collect_vec())
+        } else {
+            None
+        };
+        let result = IamResServ::paginate_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: ids.0.map(|ids| ids.split(",").map(|id| id.to_string()).collect_vec()),
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    codes,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 }

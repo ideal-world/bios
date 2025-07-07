@@ -344,7 +344,7 @@ impl IamCsResApi {
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以用于逐级查询
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
@@ -362,7 +362,7 @@ impl IamCsResApi {
         )
         .await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        TardisResp::ok(IamSetServ::transform_res_tree(result, None, &funs, &ctx.0).await?)
     }
 
     /// Modify Res By Res Id

@@ -2051,6 +2051,7 @@ impl FlowInstServ {
                     next_flow_state_id: model_transition.to_flow_state_id.to_string(),
                     next_flow_state_name: model_transition.to_flow_state_name.to_string(),
                     next_flow_state_color: model_transition.to_flow_state_color.to_string(),
+                    next_flow_state_sys_state: model_transition.to_flow_state_sys_state.clone(),
                     vars_collect: model_transition
                         .vars_collect()
                         .map(|vars| {
@@ -2217,12 +2218,10 @@ impl FlowInstServ {
                 .map(|rel| {
                     if FlowModelServ::get_app_id_by_ctx(ctx).is_some() {
                         rel.rel_own_paths
+                    } else if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
+                        rel.rel_own_paths
                     } else {
-                        if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
-                            rel.rel_own_paths
-                        } else {
-                            format!("{}/{}", rel.rel_own_paths, rel.rel_id)
-                        }
+                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
                     }
                 })
                 .collect_vec();
@@ -2412,66 +2411,83 @@ impl FlowInstServ {
         let state_id_cp = state_id.to_string();
         let ctx_cp = ctx.clone();
         tardis::tokio::spawn(async move {
-            warn!("start notify change status: {:?}", insts);
+            warn!("start notify change insts: {:?}", insts);
             let funs = flow_constants::get_tardis_inst();
-            let mut versions: Vec<FlowModelVersionDetailResp> = vec![];
+            let mut states: Vec<FlowStateDetailResp> = vec![];
             let mut num = 0;
             for inst in insts {
                 num += 1;
                 if num % 2000 == 0 {
                     tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 }
-                let states = if let Some(version) = versions.iter().find(|version| version.id == inst.rel_flow_version_id) {
-                    Some(version.states())
-                } else {
-                    let version = FlowModelVersionServ::get_item(
-                        &inst.rel_flow_version_id,
-                        &FlowModelVersionFilterReq {
-                            basic: RbumBasicFilterReq {
-                                with_sub_own_paths: true,
-                                own_paths: Some("".to_string()),
-                                ..Default::default()
-                            },
+                let original_state = if let Some(original_state) = states.iter().find(|s| s.id == inst.current_state_id) {
+                    Some(original_state.clone())
+                } else if let Ok(state) = FlowStateServ::get_item(
+                    &inst.current_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
                             ..Default::default()
                         },
-                        &funs,
+                        ..Default::default()
+                    },
+                    &funs,
+                    &ctx_cp,
+                )
+                .await {
+                    states.push(state.clone());
+                    Some(state)
+                } else {
+                    None
+                };
+                let new_state = if let Some(new_state) = states.iter().find(|s| s.id == state_id_cp) {
+                    Some(new_state.clone())
+                } else if let Ok(state) = FlowStateServ::get_item(
+                    &inst.current_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    &funs,
+                    &ctx_cp,
+                ).await {
+                    states.push(state.clone());
+                    Some(state)
+                } else {
+                    None
+                };
+                warn!("start notify change status: {:?}", states);
+                if let (Some(original_flow_state), Some(next_flow_state)) = (
+                    original_state,
+                    new_state,
+                ) {
+                    match FlowExternalServ::do_notify_changes(
+                        &inst.tag,
+                        &inst.id,
+                        &inst.rel_business_obj_id,
+                        next_flow_state.name.clone(),
+                        next_flow_state.sys_state.clone(),
+                        original_flow_state.name.clone(),
+                        original_flow_state.sys_state.clone(),
+                        "UPDATE".to_string(),
+                        false,
+                        Some(false),
+                        Some(FlowExternalCallbackOp::Auto),
                         &ctx_cp,
+                        &funs,
                     )
                     .await
-                    .ok();
-                    if let Some(version) = &version {
-                        versions.push(version.clone());
+                    {
+                        Ok(_) => {}
+                        Err(e) => error!("Flow Instance {} modify state error:{:?}", inst.id, e),
                     }
-                    version.map(|v| v.states())
-                };
-                if let Some(states) = states {
-                    if let (Some(original_flow_state), Some(next_flow_state)) = (
-                        states.iter().find(|state| state.id == inst.current_state_id),
-                        states.iter().find(|state| state.id == state_id_cp),
-                    ) {
-                        match FlowExternalServ::do_notify_changes(
-                            &inst.tag,
-                            &inst.id,
-                            &inst.rel_business_obj_id,
-                            next_flow_state.name.clone(),
-                            next_flow_state.sys_state.clone(),
-                            original_flow_state.name.clone(),
-                            original_flow_state.sys_state.clone(),
-                            "UPDATE".to_string(),
-                            false,
-                            Some(false),
-                            Some(FlowExternalCallbackOp::Auto),
-                            &ctx_cp,
-                            &funs,
-                        )
-                        .await
-                        {
-                            Ok(_) => {}
-                            Err(e) => error!("Flow Instance {} modify state error:{:?}", inst.id, e),
-                        }
-                    } else {
-                        error!("Flow Instance {}: flow state not found", inst.id);
-                    }
+                } else {
+                    error!("Flow Instance {}: flow state not found", inst.id);
                 }
                 match FlowCacheServ::del_sync_modify_inst(&inst.own_paths, &inst.tag, &inst.id, &funs).await {
                     Ok(_) => {}

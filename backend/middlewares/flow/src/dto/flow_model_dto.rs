@@ -180,6 +180,8 @@ pub struct FlowModelSummaryResp {
     pub init_state_id: String,
     pub rel_model_id: String,
     pub current_version_id: String,
+    pub main: bool,
+    pub default: bool,
     pub owner: String,
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
@@ -205,6 +207,8 @@ impl From<FlowModelAggResp> for FlowModelSummaryResp {
             init_state_id: value.init_state_id,
             rel_model_id: value.rel_model_id,
             current_version_id: value.current_version_id,
+            main: value.main,
+            default: value.default,
             owner: value.owner,
             own_paths: value.own_paths,
             create_time: value.create_time,
@@ -289,6 +293,7 @@ pub struct FlowModelDetailResp {
     pub template: bool,
     /// 是否主流程
     pub main: bool,
+    pub default: bool,
 
     pub init_state_id: String,
     pub current_version_id: String,
@@ -439,6 +444,7 @@ pub struct FlowModelFilterReq {
     pub template: Option<bool>,
     /// 是否是主流程
     pub main: Option<bool>,
+    pub default: Option<bool>,
     pub own_paths: Option<Vec<String>>,
     pub data_source: Option<String>,
     /// 指定状态ID(用于过滤动作)
@@ -495,6 +501,7 @@ pub struct FlowModelAggResp {
     pub disabled: bool,
     /// 是否作为主流程
     pub main: bool,
+    pub default: bool,
     /// 关联动作
     pub rel_transitions: Option<Vec<FlowModelRelTransitionExt>>,
 }
