@@ -8,10 +8,14 @@ pub struct FlowConfigModifyReq {
 }
 
 // 评审相关配置
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
 pub struct FlowRootConfigResp {
+    pub url: Option<String>,
+    pub icon: String,
+    pub color: String,
     pub code: String,
     pub label: String,
+    pub service: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -20,4 +24,5 @@ pub struct FlowReviewConfigLabelResp {
     pub origin_status: Vec<String>,
     pub pass_status: String,
     pub unpass_status: String,
+    pub origin_status_name: String,
 }

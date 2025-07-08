@@ -49,6 +49,10 @@ pub struct Model {
     ///
     #[index]
     pub main: bool,
+    /// Whether it is a default model / 是否是默认模板
+    ///
+    #[index]
+    pub default: bool,
     /// Whether it is a template / 是否是模板
     ///
     /// Used as a model for the model to be reused in the process

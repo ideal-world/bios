@@ -5,7 +5,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 
-use crate::basic::dto::iam_set_dto::IamSetTreeResp;
+use crate::basic::dto::iam_set_dto::IamResSetTreeResp;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
@@ -25,7 +25,7 @@ impl IamCtResApi {
     /// Find Menu Tree
     /// 查找菜单树
     #[oai(path = "/tree", method = "get")]
-    async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamSetTreeResp> {
+    async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Res, ""), true, &funs, &ctx.0).await?;

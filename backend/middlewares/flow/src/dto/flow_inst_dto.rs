@@ -412,6 +412,11 @@ pub struct FlowInstFindNextTransitionResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub next_flow_state_color: String,
+    /// 修改后状态的系统类型
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 系统类型
+    pub next_flow_state_sys_state: FlowSysStateKind,
     /// 参数列表
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     /// Associated [二次确认](FlowTransitionDoubleCheckInfo)

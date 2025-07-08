@@ -180,6 +180,8 @@ pub struct FlowModelSummaryResp {
     pub init_state_id: String,
     pub rel_model_id: String,
     pub current_version_id: String,
+    pub main: bool,
+    pub default: bool,
     pub owner: String,
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
@@ -205,6 +207,8 @@ impl From<FlowModelAggResp> for FlowModelSummaryResp {
             init_state_id: value.init_state_id,
             rel_model_id: value.rel_model_id,
             current_version_id: value.current_version_id,
+            main: value.main,
+            default: value.default,
             owner: value.owner,
             own_paths: value.own_paths,
             create_time: value.create_time,
@@ -289,6 +293,7 @@ pub struct FlowModelDetailResp {
     pub template: bool,
     /// 是否主流程
     pub main: bool,
+    pub default: bool,
 
     pub init_state_id: String,
     pub current_version_id: String,
@@ -351,10 +356,10 @@ impl FlowModelDetailResp {
             rel_template_ids: Some(self.rel_template_ids.clone()),
             modify_version: Some(FlowModelVersionModifyReq {
                 name: Some(self.name.as_str().into()),
-                bind_states: None,   // todo
-                unbind_states: None, // todo
-                delete_states: None, // todo
-                modify_states: None, // todo
+                bind_states: None,
+                unbind_states: None,
+                delete_states: None,
+                modify_states: None,
                 status: None,
                 init_state_id: Some(self.init_state_id),
                 scope_level: Some(self.scope_level.clone()),
@@ -439,6 +444,7 @@ pub struct FlowModelFilterReq {
     pub template: Option<bool>,
     /// 是否是主流程
     pub main: Option<bool>,
+    pub default: Option<bool>,
     pub own_paths: Option<Vec<String>>,
     pub data_source: Option<String>,
     /// 指定状态ID(用于过滤动作)
@@ -495,6 +501,7 @@ pub struct FlowModelAggResp {
     pub disabled: bool,
     /// 是否作为主流程
     pub main: bool,
+    pub default: bool,
     /// 关联动作
     pub rel_transitions: Option<Vec<FlowModelRelTransitionExt>>,
 }
@@ -529,14 +536,14 @@ pub struct FlowModelBindNewStateReq {
 }
 
 /// 解绑状态
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelUnbindStateReq {
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub state_id: String,
     /// 新的状态ID
-    pub new_state_id: String,
+    pub new_state_id: Option<String>,
 }
 
 /// 状态排序

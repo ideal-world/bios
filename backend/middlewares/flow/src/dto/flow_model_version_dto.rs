@@ -13,7 +13,7 @@ use tardis::{
 };
 
 use super::{
-    flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq},
+    flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelUnbindStateReq},
     flow_state_dto::{FlowStateAggResp, FlowStateModifyReq, FlowStateRelModelModifyReq},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq},
 };
@@ -93,7 +93,7 @@ pub struct FlowModelVersionModifyReq {
     // 修改状态
     pub modify_states: Option<Vec<FlowModelVersionModifyState>>,
     // 解绑状态
-    pub unbind_states: Option<Vec<String>>,
+    pub unbind_states: Option<Vec<FlowModelUnbindStateReq>>,
     // 删除状态
     pub delete_states: Option<Vec<String>>,
     /// 定义每个模块的初始状态
