@@ -25,7 +25,7 @@ use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
-use crate::basic::dto::iam_filer_dto::IamResFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamResFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, InitResItemIds, JsonMenu, MenuItem};
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
@@ -780,20 +780,41 @@ impl IamResServ {
 
     pub async fn get_res_code_with_context(res_codes: Vec<String>, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Vec<IamResSummaryResp>> {
         // 根据上下文角色获取资源
-        let raw_roles = IamAccountServ::find_simple_rel_roles(&ctx.owner, true, Some(true), None, funs, ctx).await?;
+        let raw_roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: false,
+                    rel_ctx_owner: false,
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    optional: false,
+                    tag: Some(IamRelKind::IamAccountRole.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(ctx.owner.clone()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         if raw_roles.is_empty() {
             return Ok(vec![]);
         }
-
-        let mut role_ids = raw_roles.iter().map(|r| r.rel_id.to_string()).collect::<Vec<String>>();
-        let mut extend_roles: Vec<String> = vec![];
-        for role_id in role_ids.clone() {
-            if role_id.contains(':') {
-                let extend_role = role_id.split(':').collect::<Vec<_>>()[0];
-                extend_roles.push(extend_role.to_string());
+        let mut role_ids = vec![];
+        for role in &raw_roles {
+            if role.extend_role_id != "" {
+                role_ids.push(role.extend_role_id.to_string());
             }
+            role_ids.push(role.id.to_string());
         }
-        role_ids.extend(extend_roles);
         let res = Self::find_items(
             &IamResFilterReq {
                 basic: RbumBasicFilterReq {
@@ -805,7 +826,7 @@ impl IamResServ {
                     rel_by_from: true,
                     tag: Some(IamRelKind::IamResRole.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_ids: Some(raw_roles.iter().map(|r| r.rel_id.to_string()).collect()),
+                    rel_item_ids: Some(role_ids),
                     ..Default::default()
                 }),
                 ..Default::default()

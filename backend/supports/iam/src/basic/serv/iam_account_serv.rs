@@ -687,6 +687,31 @@ impl IamAccountServ {
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         for account in accounts.records {
+            let account_roles = IamRoleServ::find_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_ctx_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        optional: false,
+                        tag: Some(IamRelKind::IamAccountRole.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             account_aggs.push(IamAccountSummaryAggResp {
                 id: account.id.clone(),
                 name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
@@ -706,7 +731,7 @@ impl IamAccountServ {
                 temporary: account.temporary,
                 lock_status: account.lock_status,
                 icon: account.icon,
-                roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
+                roles: account_roles.into_iter().filter(|r| r.own_paths == mock_tenant_ctx.own_paths).map(|r| (r.id, r.name)).collect(),
                 certs: IamCertServ::find_certs(
                     &RbumCertFilterReq {
                         basic: RbumBasicFilterReq {
