@@ -1253,7 +1253,7 @@ impl IamCertServ {
                 let proj_app = IamAppServ::find_items(
                     &IamAppFilterReq {
                         basic: RbumBasicFilterReq {
-                            own_paths: Some("".to_string()),
+                            // own_paths: Some("".to_string()),
                             with_sub_own_paths: true,
                             ..Default::default()
                         },
@@ -1267,7 +1267,7 @@ impl IamCertServ {
                 )
                 .await?;
                 for app in proj_app {
-                    if app_ids.contains(&app.id) && !old_app_ids.contains(&app.id) {
+                    if !old_app_ids.contains(&app.id) {
                         old_app_ids.push(app.id.clone());
                         apps.push(IamAccountAppInfoResp {
                             app_id: app.id.clone(),
