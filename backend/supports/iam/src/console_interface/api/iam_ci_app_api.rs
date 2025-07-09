@@ -281,8 +281,8 @@ impl IamCiAppApi {
 
     /// Add App Rel tenant All
     /// 添加应用关联租户
-    #[oai(path = "/:id/tenant/:tenant_id", method = "put")]
-    async fn app_rel_tenant_all(&self, id: Path<String>, tenant_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    #[oai(path = "/:id/tenant/all", method = "put")]
+    async fn app_rel_tenant_all(&self, id: Path<String>, tenant_ids: Query<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
