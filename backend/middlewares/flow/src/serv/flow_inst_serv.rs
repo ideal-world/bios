@@ -2,11 +2,10 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumBasicFilterReq,
-    serv::{
+    dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    },
+    }
 };
 use bios_sdk_invoke::dto::search_item_dto::{
     SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchSortKind, SearchItemSearchSortReq,
@@ -2052,6 +2051,7 @@ impl FlowInstServ {
                     next_flow_state_id: model_transition.to_flow_state_id.to_string(),
                     next_flow_state_name: model_transition.to_flow_state_name.to_string(),
                     next_flow_state_color: model_transition.to_flow_state_color.to_string(),
+                    next_flow_state_sys_state: model_transition.to_flow_state_sys_state.clone(),
                     vars_collect: model_transition
                         .vars_collect()
                         .map(|vars| {
@@ -2218,6 +2218,8 @@ impl FlowInstServ {
                 .map(|rel| {
                     if FlowModelServ::get_app_id_by_ctx(ctx).is_some() {
                         rel.rel_own_paths
+                    } else if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
+                        rel.rel_own_paths
                     } else {
                         format!("{}/{}", rel.rel_own_paths, rel.rel_id)
                     }
@@ -2233,18 +2235,20 @@ impl FlowInstServ {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             if let Some(update_states) = &update_states {
                 for (old_state, new_state) in update_states {
-                    Self::async_unsafe_modify_state(
-                        &FlowInstFilterReq {
-                            main: Some(true),
-                            tags: Some(vec![new_model.tag.clone()]),
-                            current_state_id: Some(old_state.clone()),
-                            ..Default::default()
-                        },
-                        new_state,
-                        funs,
-                        &mock_ctx,
-                    )
-                    .await?;
+                    if old_state != new_state {
+                        Self::async_unsafe_modify_state(
+                            &FlowInstFilterReq {
+                                main: Some(true),
+                                tags: Some(vec![new_model.tag.clone()]),
+                                current_state_id: Some(old_state.clone()),
+                                ..Default::default()
+                            },
+                            new_state,
+                            funs,
+                            &mock_ctx,
+                        )
+                        .await?;
+                    }
                 }
             } else {
                 Self::async_unsafe_modify_state(
@@ -2407,66 +2411,83 @@ impl FlowInstServ {
         let state_id_cp = state_id.to_string();
         let ctx_cp = ctx.clone();
         tardis::tokio::spawn(async move {
-            warn!("start notify change status: {:?}", insts);
+            warn!("start notify change insts: {:?}", insts);
             let funs = flow_constants::get_tardis_inst();
-            let mut versions: Vec<FlowModelVersionDetailResp> = vec![];
+            let mut states: Vec<FlowStateDetailResp> = vec![];
             let mut num = 0;
             for inst in insts {
                 num += 1;
                 if num % 2000 == 0 {
                     tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 }
-                let states = if let Some(version) = versions.iter().find(|version| version.id == inst.rel_flow_version_id) {
-                    Some(version.states())
-                } else {
-                    let version = FlowModelVersionServ::get_item(
-                        &inst.rel_flow_version_id,
-                        &FlowModelVersionFilterReq {
-                            basic: RbumBasicFilterReq {
-                                with_sub_own_paths: true,
-                                own_paths: Some("".to_string()),
-                                ..Default::default()
-                            },
+                let original_state = if let Some(original_state) = states.iter().find(|s| s.id == inst.current_state_id) {
+                    Some(original_state.clone())
+                } else if let Ok(state) = FlowStateServ::get_item(
+                    &inst.current_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
                             ..Default::default()
                         },
-                        &funs,
+                        ..Default::default()
+                    },
+                    &funs,
+                    &ctx_cp,
+                )
+                .await {
+                    states.push(state.clone());
+                    Some(state)
+                } else {
+                    None
+                };
+                let new_state = if let Some(new_state) = states.iter().find(|s| s.id == state_id_cp) {
+                    Some(new_state.clone())
+                } else if let Ok(state) = FlowStateServ::get_item(
+                    &inst.current_state_id,
+                    &FlowStateFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    &funs,
+                    &ctx_cp,
+                ).await {
+                    states.push(state.clone());
+                    Some(state)
+                } else {
+                    None
+                };
+                warn!("start notify change status: {:?}", states);
+                if let (Some(original_flow_state), Some(next_flow_state)) = (
+                    original_state,
+                    new_state,
+                ) {
+                    match FlowExternalServ::do_notify_changes(
+                        &inst.tag,
+                        &inst.id,
+                        &inst.rel_business_obj_id,
+                        next_flow_state.name.clone(),
+                        next_flow_state.sys_state.clone(),
+                        original_flow_state.name.clone(),
+                        original_flow_state.sys_state.clone(),
+                        "UPDATE".to_string(),
+                        false,
+                        Some(false),
+                        Some(FlowExternalCallbackOp::Auto),
                         &ctx_cp,
+                        &funs,
                     )
                     .await
-                    .ok();
-                    if let Some(version) = &version {
-                        versions.push(version.clone());
+                    {
+                        Ok(_) => {}
+                        Err(e) => error!("Flow Instance {} modify state error:{:?}", inst.id, e),
                     }
-                    version.map(|v| v.states())
-                };
-                if let Some(states) = states {
-                    if let (Some(original_flow_state), Some(next_flow_state)) = (
-                        states.iter().find(|state| state.id == inst.current_state_id),
-                        states.iter().find(|state| state.id == state_id_cp),
-                    ) {
-                        match FlowExternalServ::do_notify_changes(
-                            &inst.tag,
-                            &inst.id,
-                            &inst.rel_business_obj_id,
-                            next_flow_state.name.clone(),
-                            next_flow_state.sys_state.clone(),
-                            original_flow_state.name.clone(),
-                            original_flow_state.sys_state.clone(),
-                            "UPDATE".to_string(),
-                            false,
-                            Some(false),
-                            Some(FlowExternalCallbackOp::Auto),
-                            &ctx_cp,
-                            &funs,
-                        )
-                        .await
-                        {
-                            Ok(_) => {}
-                            Err(e) => error!("Flow Instance {} modify state error:{:?}", inst.id, e),
-                        }
-                    } else {
-                        error!("Flow Instance {}: flow state not found", inst.id);
-                    }
+                } else {
+                    error!("Flow Instance {}: flow state not found", inst.id);
                 }
                 match FlowCacheServ::del_sync_modify_inst(&inst.own_paths, &inst.tag, &inst.id, &funs).await {
                     Ok(_) => {}
@@ -3000,17 +3021,19 @@ impl FlowInstServ {
                                             ctx,
                                         )
                                         .await?;
-                                        Self::unsafe_modify_state(
-                                            &FlowInstFilterReq {
-                                                ids: Some(vec![child_main_inst_id.clone()]),
-                                                with_sub: Some(true),
-                                                ..Default::default()
-                                            },
-                                            &conf.pass_status,
-                                            funs,
-                                            ctx,
-                                        )
-                                        .await?;
+                                        if !conf.pass_status.is_empty() {
+                                            Self::unsafe_modify_state(
+                                                &FlowInstFilterReq {
+                                                    ids: Some(vec![child_main_inst_id.clone()]),
+                                                    with_sub: Some(true),
+                                                    ..Default::default()
+                                                },
+                                                &conf.pass_status,
+                                                funs,
+                                                ctx,
+                                            )
+                                            .await?;
+                                        }
                                     } else {
                                         // 更新业务主流程的artifact的状态为审批拒绝
                                         Self::modify_inst_artifacts(
@@ -3023,17 +3046,19 @@ impl FlowInstServ {
                                             ctx,
                                         )
                                         .await?;
-                                        Self::unsafe_modify_state(
-                                            &FlowInstFilterReq {
-                                                ids: Some(vec![child_main_inst_id.clone()]),
-                                                with_sub: Some(true),
-                                                ..Default::default()
-                                            },
-                                            &conf.unpass_status,
-                                            funs,
-                                            ctx,
-                                        )
-                                        .await?;
+                                        if !conf.pass_status.is_empty() {
+                                            Self::unsafe_modify_state(
+                                                &FlowInstFilterReq {
+                                                    ids: Some(vec![child_main_inst_id.clone()]),
+                                                    with_sub: Some(true),
+                                                    ..Default::default()
+                                                },
+                                                &conf.unpass_status,
+                                                funs,
+                                                ctx,
+                                            )
+                                            .await?;
+                                        }
                                     }
                                 }
                             }
@@ -3859,17 +3884,19 @@ impl FlowInstServ {
                                     ctx,
                                 )
                                 .await?;
-                                Self::unsafe_modify_state(
-                                    &FlowInstFilterReq {
-                                        ids: Some(vec![child_main_inst_id.clone()]),
-                                        with_sub: Some(true),
-                                        ..Default::default()
-                                    },
-                                    &conf.unpass_status,
-                                    funs,
-                                    ctx,
-                                )
-                                .await?;
+                                if !conf.unpass_status.is_empty() {
+                                    Self::unsafe_modify_state(
+                                        &FlowInstFilterReq {
+                                            ids: Some(vec![child_main_inst_id.clone()]),
+                                            with_sub: Some(true),
+                                            ..Default::default()
+                                        },
+                                        &conf.unpass_status,
+                                        funs,
+                                        ctx,
+                                    )
+                                    .await?;
+                                }
                             }
                         }
                     }

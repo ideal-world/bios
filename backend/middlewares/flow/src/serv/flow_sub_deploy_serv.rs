@@ -15,7 +15,7 @@ use crate::{
     domain::flow_inst,
     dto::{
         flow_inst_dto::FlowInstFilterReq,
-        flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq},
+        flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelUnbindStateReq},
         flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState},
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelModifyReq},
         flow_sub_deploy_dto::{FlowSubDeployOneExportAggResp, FlowSubDeployOneImportReq, FlowSubDeployTowExportAggResp, FlowSubDeployTowImportReq},
@@ -247,7 +247,10 @@ impl FlowSubDeployServ {
                         &original_model.id,
                         &mut FlowModelModifyReq {
                             modify_version: Some(FlowModelVersionModifyReq {
-                                unbind_states: Some(vec![unbind_state.id.clone()]),
+                                unbind_states: Some(vec![FlowModelUnbindStateReq {
+                                    state_id: unbind_state.id.clone(),
+                                    new_state_id: None,
+                                }]),
                                 ..Default::default()
                             }),
                             ..Default::default()

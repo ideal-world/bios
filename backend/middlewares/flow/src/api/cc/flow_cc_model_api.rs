@@ -11,8 +11,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq,
-    FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -20,6 +19,7 @@ use crate::dto::flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionSo
 use crate::flow_constants;
 use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_model_serv::FlowModelServ;
+use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
 pub struct FlowCcModelApi;
 
@@ -400,6 +400,32 @@ impl FlowCcModelApi {
     async fn find_or_create(&self, req: Json<FlowModelFIndOrCreatReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::find_or_create(&req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get associated model names by template ID, multiple comma separated
+    ///
+    /// 通过模板ID获取关联的模型名，多个逗号隔开
+    #[oai(path = "/find_rel_name_by_template_ids", method = "post")]
+    async fn find_rel_name_by_template_ids(
+        &self,
+        req: Json<FlowModelFindRelNameByTemplateIdsReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, Vec<String>>> {
+        let funs = flow_constants::get_tardis_inst();
+        let mut result = HashMap::new();
+        for rel_template_id in req.0.rel_template_ids {
+            result.insert(
+                rel_template_id.clone(),
+                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0)
+                    .await?
+                    .into_iter()
+                    .map(|rel| rel.rel_name)
+                    .collect_vec(),
+            );
+        }
+
         TardisResp::ok(result)
     }
 }

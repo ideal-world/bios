@@ -16,7 +16,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
 };
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq,
-    FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
+    FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use bios_mw_flow::dto::flow_model_version_dto::{
     FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
@@ -458,7 +458,10 @@ pub async fn test(
             &format!("/cc/model/{}", req_model_template_id.clone()),
             &FlowModelModifyReq {
                 modify_version: Some(FlowModelVersionModifyReq {
-                    unbind_states: Some(vec![finish_state_id.clone()]),
+                    unbind_states: Some(vec![FlowModelUnbindStateReq {
+                        state_id: finish_state_id.clone(),
+                        new_state_id: None,
+                    }]),
                     ..Default::default()
                 }),
                 ..Default::default()
