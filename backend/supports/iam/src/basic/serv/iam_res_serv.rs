@@ -285,27 +285,45 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             }
             for bind_data_guard in bind_data_guards {
                 if let Some(exist_data_guard) = old_data_guards.iter().find(|old| old.code == bind_data_guard.code.clone().unwrap_or_default().to_string()) {
-                    Self::modify_item(&exist_data_guard.id, &mut IamResModifyReq {
-                        name: bind_data_guard.name.clone(),
-                        ..Default::default()
-                    }, funs, ctx).await?;
+                    Self::modify_item(
+                        &exist_data_guard.id,
+                        &mut IamResModifyReq {
+                            name: bind_data_guard.name.clone(),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                 } else if let Some(bind_data_guard_name) = bind_data_guard.name.clone() {
                     let global_ctx = TardisContext {
                         own_paths: "".to_string(),
                         ..ctx.clone()
                     };
                     let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
-                    let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
-                        rel_rbum_set_id: Some(data_guard_set_id.clone()),
-                        ..Default::default()
-                    }, funs, ctx).await?.map(|s| s.id).unwrap_or_default();
-                    let data_guard_id = Self::add_item(&mut IamResAddReq {
-                        code: bind_data_guard.code.clone().unwrap_or_default(),
-                        name: bind_data_guard_name,
-                        kind: IamResKind::DataGuard,
-                        scope_level: Some(res.scope_level.clone()),
-                        ..Default::default()
-                    }, funs, ctx).await?;
+                    let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
+                        &RbumSetCateFilterReq {
+                            rel_rbum_set_id: Some(data_guard_set_id.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?
+                    .map(|s| s.id)
+                    .unwrap_or_default();
+                    let data_guard_id = Self::add_item(
+                        &mut IamResAddReq {
+                            code: bind_data_guard.code.clone().unwrap_or_default(),
+                            name: bind_data_guard_name,
+                            kind: IamResKind::DataGuard,
+                            scope_level: Some(res.scope_level.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                     IamSetServ::add_set_item(
                         &IamSetItemAddReq {
                             set_id: data_guard_set_id,
@@ -651,19 +669,33 @@ impl IamResServ {
                 ..ctx.clone()
             };
             let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
-            let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
-                rel_rbum_set_id: Some(data_guard_set_id.clone()),
-                ..Default::default()
-            }, funs, ctx).await?.map(|s| s.id).unwrap_or_default();
+            let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
+                &RbumSetCateFilterReq {
+                    rel_rbum_set_id: Some(data_guard_set_id.clone()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|s| s.id)
+            .unwrap_or_default();
             for mut bind_data_guard in bind_data_guards.clone() {
                 bind_data_guard.scope_level = add_req.res.scope_level.clone();
-                let _data_guard_id = Self::add_and_bind_data_guard_res(&data_guard_set_id, &data_guard_set_cate_id, &mut bind_data_guard, &res_id, funs,ctx).await?;
+                let _data_guard_id = Self::add_and_bind_data_guard_res(&data_guard_set_id, &data_guard_set_cate_id, &mut bind_data_guard, &res_id, funs, ctx).await?;
             }
         }
         Ok(res_id)
     }
 
-    pub async fn add_and_bind_data_guard_res(set_id: &str, set_cate_id: &str, add_req: &mut IamResAddReq, bind_res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_and_bind_data_guard_res(
+        set_id: &str,
+        set_cate_id: &str,
+        add_req: &mut IamResAddReq,
+        bind_res_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
         let data_guard_id = Self::add_item(add_req, funs, ctx).await?;
         IamSetServ::add_set_item(
             &IamSetItemAddReq {
@@ -752,6 +784,16 @@ impl IamResServ {
         if raw_roles.is_empty() {
             return Ok(vec![]);
         }
+
+        let mut role_ids = raw_roles.iter().map(|r| r.rel_id.to_string()).collect::<Vec<String>>();
+        let mut extend_roles: Vec<String> = vec![];
+        for role_id in role_ids.clone() {
+            if role_id.contains(':') {
+                let extend_role = role_id.split(':').collect::<Vec<_>>()[0];
+                extend_roles.push(extend_role.to_string());
+            }
+        }
+        role_ids.extend(extend_roles);
         let res = Self::find_items(
             &IamResFilterReq {
                 basic: RbumBasicFilterReq {
