@@ -484,14 +484,10 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
 
     if ctx.ak.is_some() {
         //have token,not not have permission
-        Err(TardisError::custom(
-            "403-req-permission-denied",
-            "[Auth] Permission denied",
-            "403-auth-req-permission-denied",
-        ))
+        Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
     } else {
         //not token
-        Err(TardisError::custom("401-auth-req-unauthorized", "[Auth] Permission denied", "401-auth-req-unauthorized"))
+        Err(TardisError::forbidden("[Auth] Permission denied", "401-auth-req-unauthorized"))
     }
 }
 

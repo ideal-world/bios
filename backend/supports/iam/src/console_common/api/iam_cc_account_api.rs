@@ -75,7 +75,8 @@ impl IamCcAccountApi {
             tag: Some(IamRelKind::IamAccountRole.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(role_id),
-            own_paths: Some(ctx.0.clone().own_paths),
+            // todo 开放人员的 own_paths 限制
+            // own_paths: Some(ctx.0.clone().own_paths),
             ..Default::default()
         });
         let rel2 = app_id.0.map(|app_id| RbumItemRelFilterReq {
@@ -83,7 +84,8 @@ impl IamCcAccountApi {
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(app_id),
-            own_paths: Some(ctx.0.clone().own_paths),
+            // todo 开放人员的 own_paths 限制
+            // own_paths: Some(ctx.0.clone().own_paths),
             ..Default::default()
         });
         let result = IamAccountServ::paginate_items(
