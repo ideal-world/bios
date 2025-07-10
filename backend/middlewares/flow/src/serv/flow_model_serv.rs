@@ -1849,8 +1849,8 @@ impl FlowModelServ {
                         }
                     }
                     if let Some(delete_transitions) = &mut modify_state.delete_transitions {
-                        delete_transitions.clear();
                         let delete_transitions_cp = delete_transitions.clone();
+                        delete_transitions.clear();
                         for delete_transition_id in delete_transitions_cp {
                             if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == delete_transition_id.clone()) {
                                 if let Some(trans_id) = child_model_transitions
