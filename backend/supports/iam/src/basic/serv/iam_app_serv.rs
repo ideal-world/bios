@@ -370,7 +370,8 @@ impl IamAppServ {
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(Self::get_id_by_ctx(ctx, funs)?),
-            own_paths: Some(ctx.own_paths.clone()),
+            // todo 开放人员的 own_paths 限制
+            // own_paths: Some(ctx.own_paths.clone()),
             ..Default::default()
         }))
     }
