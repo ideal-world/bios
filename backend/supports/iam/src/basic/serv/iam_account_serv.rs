@@ -608,8 +608,8 @@ impl IamAccountServ {
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
 
-        let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
-        let groups = IamSetServ::find_flat_set_items(&org_set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
+        // let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
+        let groups = IamSetServ::find_flat_set_items(&set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
             name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
