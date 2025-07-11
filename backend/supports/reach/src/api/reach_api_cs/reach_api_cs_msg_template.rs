@@ -53,8 +53,7 @@ impl ReachMessageTemplateCsApi {
             filter.base_filter.with_sub_own_paths = false;
         }
         filter.rel_reach_channel = rel_reach_channel;
-        info!("paginate_msg_template filter: {:?}", filter);
-        let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, None, None, &funs, &ctx).await?;
+        let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, Some(true), None, &funs, &ctx).await?;
         TardisResp::ok(page_resp)
     }
 

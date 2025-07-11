@@ -46,7 +46,7 @@ impl ReachMessageTemplateCtApi {
         if let Some(name) = name.0 {
             filter.base_filter.name = Some(name);
         }
-        let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, None, None, &funs, &ctx).await?;
+        let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, Some(true), None, &funs, &ctx).await?;
         TardisResp::ok(page_resp)
     }
 
