@@ -15,14 +15,11 @@ use tardis::{
 use crate::{
     dto::flow_model_dto::{
         FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelKind,
-    },
-    flow_constants,
-    serv::{
-        clients::search_client::FlowSearchClient,
+    }, flow_constants, helper::task_handler_helper, serv::{
         flow_inst_serv::FlowInstServ,
         flow_model_serv::FlowModelServ,
         flow_rel_serv::{FlowRelKind, FlowRelServ},
-    },
+    }
 };
 
 #[derive(Clone)]
@@ -88,7 +85,7 @@ impl FlowCtModelApi {
             result.insert(rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -155,7 +152,7 @@ impl FlowCtModelApi {
             result.insert(from_model.rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -171,7 +168,7 @@ impl FlowCtModelApi {
             FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }

@@ -4,7 +4,7 @@ use crate::dto::flow_model_dto::{
     FlowModelInitCopyReq, FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq,
 };
 use crate::flow_constants;
-use crate::serv::clients::search_client::FlowSearchClient;
+use crate::helper::task_handler_helper;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -59,7 +59,7 @@ impl FlowCiModelApi {
         .ok_or_else(|| funs.err().internal_error("flow_ci_model_api", "get_detail", "model is not exist", "404-flow-model-not-found"))?
         .id;
         let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -78,7 +78,7 @@ impl FlowCiModelApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -166,7 +166,7 @@ impl FlowCiModelApi {
             let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -187,7 +187,7 @@ impl FlowCiModelApi {
         funs.begin().await?;
         let result = FlowModelServ::copy_models_by_template_id(&from_template_id.0, &to_template_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -204,7 +204,7 @@ impl FlowCiModelApi {
             FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
@@ -283,7 +283,7 @@ impl FlowCiModelApi {
         funs.begin().await?;
         FlowModelServ::sync_modified_field(&modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
@@ -296,7 +296,7 @@ impl FlowCiModelApi {
         funs.begin().await?;
         FlowModelServ::sync_model_template(&funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
@@ -309,7 +309,7 @@ impl FlowCiModelApi {
         funs.begin().await?;
         FlowModelServ::init_copy_model(&req, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }

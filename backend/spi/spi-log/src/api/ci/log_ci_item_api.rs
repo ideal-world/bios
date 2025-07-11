@@ -64,6 +64,16 @@ impl LogCiItemApiV2 {
         TardisResp::ok(id)
     }
 
+    /// Batch Add Item
+    #[oai(path = "/batch/add", method = "post")]
+    async fn batch_add(&self, mut add_req: Json<Vec<LogItemAddV2Req>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        for add_log in add_req.0.iter_mut() {
+            let _ = log_item_serv::addv2(add_log, &funs, &ctx.0).await?;
+        }
+        TardisResp::ok(Void {})
+    }
+
     /// Find Items
     #[oai(path = "/find", method = "put")]
     async fn find(&self, mut find_req: Json<LogItemFindReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<LogItemFindResp>> {

@@ -213,6 +213,13 @@ impl SpiLogClient {
         Ok(())
     }
 
+    pub async fn batch_add(req: Vec<LogItemAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item/batch/add"), &req, headers.clone()).await?;
+        Ok(())
+    }
+
     pub async fn addv2(mut req: LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         req.make_valid();
         #[cfg(feature = "event")]
@@ -225,6 +232,13 @@ impl SpiLogClient {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item"), &req, headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn batch_addv2(req: Vec<LogItemAddV2Req>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item/batch/add"), &req, headers.clone()).await?;
         Ok(())
     }
 

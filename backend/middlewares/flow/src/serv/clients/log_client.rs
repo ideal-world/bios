@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use tardis::web::poem_openapi;
+use tardis::{chrono::Duration, web::poem_openapi};
 
 use bios_sdk_invoke::clients::{
     iam_client::IamClient,
@@ -18,6 +18,9 @@ use tardis::{
 
 use crate::{flow_config::FlowConfig, flow_constants};
 pub struct FlowLogClient;
+
+pub const TASK_LOG_EXT_KEY: &str = "log_add_task";
+pub const TASK_LOGV2_EXT_KEY: &str = "log_addv2_task";
 
 #[derive(Deserialize, Serialize, Default, Debug, Clone, poem_openapi::Object)]
 pub struct LogParamContent {
@@ -122,6 +125,60 @@ impl From<LogParamOp> for String {
 }
 
 impl FlowLogClient {
+    pub async fn batch_add_task(req: LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let task_key = TASK_LOG_EXT_KEY.to_string();
+        let add_log_tasks = if let Some(val) = ctx.ext.read().await.get(&task_key) {
+            let mut original_val = TardisFuns::json.str_to_obj::<Vec<LogItemAddReq>>(val)?;
+            original_val.push(req);
+            original_val
+        } else {
+            vec![req]
+        };
+        let new_val = TardisFuns::json.obj_to_string(&add_log_tasks)?;
+        ctx.remove_ext(&task_key).await?;
+        ctx.add_ext(&task_key, &new_val).await?;
+        Ok(())
+    }
+    
+    pub async fn execute_async_task(task_val: &str, ctx: &TardisContext) -> TardisResult<()> {
+        let funs = flow_constants::get_tardis_inst();
+        let mut add_log_tasks = TardisFuns::json.str_to_obj::<Vec<LogItemAddReq>>(task_val)?;
+        let mut ts = tardis::chrono::Utc::now();
+        for task in add_log_tasks.iter_mut() {
+            ts += Duration::milliseconds(10);
+            task.ts = Some(ts);
+        }
+        SpiLogClient::batch_add(add_log_tasks, &funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn batch_add_v2task(req: LogItemAddV2Req, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let task_key = TASK_LOGV2_EXT_KEY.to_string();
+        let add_log_tasks = if let Some(val) = ctx.ext.read().await.get(&task_key) {
+            let mut original_val = TardisFuns::json.str_to_obj::<Vec<LogItemAddV2Req>>(val)?;
+            original_val.push(req);
+            original_val
+        } else {
+            vec![req]
+        };
+        let new_val = TardisFuns::json.obj_to_string(&add_log_tasks)?;
+        ctx.remove_ext(&task_key).await?;
+        ctx.add_ext(&task_key, &new_val).await?;
+        Ok(())
+    }
+    
+    pub async fn execute_async_v2task(task_val: &str, ctx: &TardisContext) -> TardisResult<()> {
+        let funs = flow_constants::get_tardis_inst();
+        let mut add_log_tasks = TardisFuns::json.str_to_obj::<Vec<LogItemAddV2Req>>(task_val)?;
+            let mut ts = tardis::chrono::Utc::now();
+            for task in add_log_tasks.iter_mut() {
+                ts += Duration::milliseconds(10);
+                task.ts = Some(ts);
+            }
+            SpiLogClient::batch_addv2(add_log_tasks, &funs, ctx).await?;
+        Ok(())
+    }
+
     pub async fn add_ctx_task(
         tag: LogParamTag,
         key: Option<String>,
@@ -148,7 +205,9 @@ impl FlowLogClient {
                             ext,
                             kind,
                             op_kind,
+                            None,
                             rel_key,
+                            false,
                             &funs,
                             &ctx_clone,
                             push_clone, // 使用克隆的 push 变量
@@ -162,7 +221,9 @@ impl FlowLogClient {
                             ext,
                             kind,
                             op_kind,
+                            None,
                             rel_key,
+                            false,
                             &funs,
                             &ctx_clone,
                             push_clone, // 使用克隆的 push 变量
@@ -184,12 +245,18 @@ impl FlowLogClient {
         ext: Option<Value>,
         kind: Option<String>,
         op: Option<String>,
+        ts: Option<DateTime<Utc>>,
         rel_key: Option<String>,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
         _push: bool,
     ) -> TardisResult<()> {
-        let ts = tardis::chrono::Utc::now().to_rfc3339();
+        let ts = if let Some(ts) = ts {
+            ts
+        } else {
+            tardis::chrono::Utc::now()
+        };
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
@@ -197,19 +264,23 @@ impl FlowLogClient {
 
         let req = LogItemAddReq {
             id: None,
-            tag: tag.to_string(),
+            tag,
             content: TardisFuns::json.obj_to_string(&content).expect("content not a valid json value"),
             kind,
             ext,
             key,
             op,
             rel_key,
-            ts: Some(DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            ts: Some(ts),
             owner,
             own_paths,
             data_source: None,
         };
-        SpiLogClient::add(req, funs, ctx).await?;
+        if is_async {
+            Self::batch_add_task(req, funs, ctx).await?;
+        } else {
+            SpiLogClient::add(req, funs, ctx).await?;
+        }
         Ok(())
     }
 
@@ -220,12 +291,18 @@ impl FlowLogClient {
         ext: Option<Value>,
         kind: Option<String>,
         op: Option<String>,
+        ts: Option<DateTime<Utc>>,
         rel_key: Option<String>,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
         push: bool,
     ) -> TardisResult<()> {
-        let ts = tardis::chrono::Utc::now().to_rfc3339();
+        let ts = if let Some(ts) = ts {
+            ts
+        } else {
+            tardis::chrono::Utc::now()
+        };
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
@@ -244,7 +321,7 @@ impl FlowLogClient {
             op,
             rel_key,
             idempotent_id: None,
-            ts: Some(DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            ts: Some(ts),
             owner,
             own_paths,
             msg: None,
@@ -254,7 +331,11 @@ impl FlowLogClient {
             data_source: None,
             ignore_push: None,
         };
-        SpiLogClient::addv2(req, funs, ctx).await?;
+        if is_async {
+            Self::batch_add_v2task(req, funs, ctx).await?;
+        } else {
+            SpiLogClient::addv2(req, funs, ctx).await?;
+        }
         Ok(())
     }
 
@@ -265,6 +346,7 @@ impl FlowLogClient {
     pub fn get_flow_kind_text(tag: &str) -> String {
         let flow_tag_map = HashMap::from([
             ("PRODUCT", "产品"),
+            ("PROJECT_MS", "产品里程碑"),
             ("PROJ", "合同"),
             ("MS", "里程碑"),
             ("ITER", "迭代"),
@@ -284,6 +366,7 @@ impl FlowLogClient {
     pub fn get_junp_kind(tag: &str) -> String {
         let flow_tag_map = HashMap::from([
             ("MS", "idp_feed_ms"),
+            ("PROJECT_MS", "idp_feed_project_ms"),
             ("ITER", "idp_feed_iter"),
             ("REQ", "idp_feed_req"),
             ("TASK", "idp_feed_task"),

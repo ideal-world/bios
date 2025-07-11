@@ -1,6 +1,6 @@
 use crate::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVesionState};
 use crate::flow_constants;
-use crate::serv::clients::search_client::FlowSearchClient;
+use crate::helper::task_handler_helper;
 use crate::serv::flow_model_version_serv::FlowModelVersionServ;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -27,7 +27,7 @@ impl FlowCcModelVersionApi {
         let version_id = FlowModelVersionServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         let result = FlowModelVersionServ::get_item(&version_id, &FlowModelVersionFilterReq::default(), &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -47,7 +47,7 @@ impl FlowCcModelVersionApi {
         funs.begin().await?;
         FlowModelVersionServ::modify_item(&flow_version_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
@@ -59,7 +59,7 @@ impl FlowCcModelVersionApi {
     async fn get(&self, flow_version_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelVersionServ::get_item(&flow_version_id.0, &FlowModelVersionFilterReq::default(), &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -84,7 +84,7 @@ impl FlowCcModelVersionApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -133,7 +133,7 @@ impl FlowCcModelVersionApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -147,7 +147,7 @@ impl FlowCcModelVersionApi {
         funs.begin().await?;
         let result = FlowModelVersionServ::create_editing_version(&flow_version_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

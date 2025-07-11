@@ -14,7 +14,7 @@ use crate::dto::flow_state_dto::{
     FlowStateSummaryResp, FlowSysStateKind,
 };
 use crate::flow_constants;
-use crate::serv::clients::search_client::FlowSearchClient;
+use crate::helper::task_handler_helper;
 use crate::serv::flow_state_serv::FlowStateServ;
 #[derive(Clone)]
 pub struct FlowCcStateApi;
@@ -31,7 +31,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         let result = FlowStateServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -45,7 +45,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         FlowStateServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -69,7 +69,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -138,7 +138,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -154,7 +154,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         FlowStateServ::delete_item(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -182,7 +182,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
     }
@@ -201,7 +201,7 @@ impl FlowCcStateApi {
         funs.begin().await?;
         let result = FlowStateServ::count_group_by_state(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

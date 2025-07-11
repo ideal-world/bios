@@ -40,7 +40,7 @@ use crate::{
             FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq,
         },
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
-        flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
+        flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::{
             FLowStateKindConf, FlowStateCountersignKind, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
             FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind,
@@ -49,7 +49,7 @@ use crate::{
         flow_var_dto::FillType,
     },
     flow_constants,
-    helper::loop_check_helper,
+    helper::{loop_check_helper, task_handler_helper},
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
@@ -2302,7 +2302,7 @@ impl FlowInstServ {
                 .map(|inst| async {
                     let ctx_cp = ctx.clone();
                     let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, &ctx_cp).await;
-                    match FlowSearchClient::execute_async_task(&ctx_cp).await {
+                    match task_handler_helper::execute_async_task(&ctx_cp).await {
                         Ok(_) => {}
                         Err(e) => error!("flow Instance {} add search task error:{:?}", inst.id, e),
                     }
@@ -3490,7 +3490,7 @@ impl FlowInstServ {
                         match result {
                             Ok(_) => {
                                 funs_cp2.commit().await.unwrap_or_default();
-                                FlowSearchClient::execute_async_task(&ctx_cp).await.unwrap_or_default();
+                                task_handler_helper::execute_async_task(&ctx_cp).await.unwrap_or_default();
                                 ctx_cp.execute_task().await.unwrap_or_default();
                             }
                             Err(e) => error!("Flow Instance {} batch_operate error:{:?}", inst.id, e),
