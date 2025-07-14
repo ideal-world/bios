@@ -731,7 +731,7 @@ impl IamAccountServ {
                 temporary: account.temporary,
                 lock_status: account.lock_status,
                 icon: account.icon,
-                roles: account_roles.into_iter().filter(|r| r.own_paths == mock_tenant_ctx.own_paths).map(|r| (r.id, r.name)).collect(),
+                roles: account_roles.into_iter().filter(|r| r.own_paths == ctx.own_paths).map(|r| (r.id, r.name)).collect(),
                 certs: IamCertServ::find_certs(
                     &RbumCertFilterReq {
                         basic: RbumBasicFilterReq {
