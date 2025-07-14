@@ -1094,16 +1094,19 @@ impl IamSetServ {
     // Transform RbumSetTree to IamResSetTreeResp
     pub async fn transform_res_tree(original_tree: RbumSetTreeResp, role_ids: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResSetTreeResp> {
         let res_ids = if let Some(role_ids) = role_ids {
-            let mut res_ids = HashSet::new();
-            let mut global_ctx = ctx.clone();
-            global_ctx.own_paths = "".to_string();
-            // TODO default empty res
-            res_ids.insert("".to_string());
-            for role_id in role_ids {
-                let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
-                res_ids.extend(rel_res_ids.into_iter());
-            }
-            Some(res_ids)
+            let global_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            Some(IamRelServ::find_simple_rels(&RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamResRole.to_string()),
+                to_rbum_item_ids: Some(role_ids.clone()),
+                ..Default::default()
+            }, None, None, false, funs, &global_ctx).await?.into_iter().map(|r| r.rel_id).unique().collect_vec())
         } else {
             None
         };
@@ -1147,9 +1150,18 @@ impl IamSetServ {
                 &global_ctx,
             )
             .await?;
+            let rel_data_guard = IamRelServ::find_rels(&RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamResDataGuard.to_string()),
+                to_rbum_item_ids: Some(res_set_item_ids.clone()),
+                ..Default::default()
+            }, None, None, funs, &global_ctx).await?;
             let mut data_guard_map = HashMap::new();
             for res_set_item_id in res_set_item_ids {
-                let rel_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResDataGuard, &res_set_item_id, None, None, funs, &global_ctx).await?;
+                let rel_ids = rel_data_guard.iter().filter(|r| r.rel.to_rbum_item_id == res_set_item_id).map(|r| r.rel.from_rbum_id.clone()).collect_vec();
                 let data_guard = data_guard_set_items
                     .iter()
                     .filter(|i| rel_ids.contains(&i.rel_rbum_item_id))
