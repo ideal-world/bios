@@ -1869,7 +1869,6 @@ impl FlowModelServ {
                 }
             }
         }
-        warn!("sync_child_model modify_req_clone: {:?}", modify_req_clone);
         let child_model_clone = child_model.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -2103,7 +2102,13 @@ impl FlowModelServ {
             own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
-                .map(|rel| format!("{}/{}", rel.rel_own_paths, rel.rel_id))
+                .map(|rel| 
+                    if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
+                        rel.rel_own_paths
+                    } else {
+                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
+                    }
+                )
                 .collect_vec();
             if own_paths_list.contains(&ctx.own_paths) {
                 own_paths_list = vec![ctx.own_paths.clone()];

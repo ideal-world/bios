@@ -2444,7 +2444,7 @@ impl FlowInstServ {
                 let new_state = if let Some(new_state) = states.iter().find(|s| s.id == state_id_cp) {
                     Some(new_state.clone())
                 } else if let Ok(state) = FlowStateServ::get_item(
-                    &inst.current_state_id,
+                    &state_id_cp,
                     &FlowStateFilterReq {
                         basic: RbumBasicFilterReq {
                             with_sub_own_paths: true,
