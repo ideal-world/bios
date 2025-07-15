@@ -2,10 +2,13 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::{
+    dto::rbum_filer_dto::RbumBasicFilterReq,
+    helper::rbum_scope_helper,
+    rbum_enumeration::RbumScopeLevelKind,
+    serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    }
+    },
 };
 use bios_sdk_invoke::dto::search_item_dto::{
     SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchSortKind, SearchItemSearchSortReq,
@@ -40,7 +43,7 @@ use crate::{
             FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq,
         },
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
-        flow_model_version_dto::{FlowModelVersionDetailResp, FlowModelVersionFilterReq},
+        flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::{
             FLowStateKindConf, FlowStateCountersignKind, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
             FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind,
@@ -49,7 +52,7 @@ use crate::{
         flow_var_dto::FillType,
     },
     flow_constants,
-    helper::loop_check_helper,
+    helper::{loop_check_helper, task_handler_helper},
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
@@ -2302,7 +2305,7 @@ impl FlowInstServ {
                 .map(|inst| async {
                     let ctx_cp = ctx.clone();
                     let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, &ctx_cp).await;
-                    match FlowSearchClient::execute_async_task(&ctx_cp).await {
+                    match task_handler_helper::execute_async_task(&ctx_cp).await {
                         Ok(_) => {}
                         Err(e) => error!("flow Instance {} add search task error:{:?}", inst.id, e),
                     }
@@ -2435,7 +2438,8 @@ impl FlowInstServ {
                     &funs,
                     &ctx_cp,
                 )
-                .await {
+                .await
+                {
                     states.push(state.clone());
                     Some(state)
                 } else {
@@ -2444,7 +2448,7 @@ impl FlowInstServ {
                 let new_state = if let Some(new_state) = states.iter().find(|s| s.id == state_id_cp) {
                     Some(new_state.clone())
                 } else if let Ok(state) = FlowStateServ::get_item(
-                    &inst.current_state_id,
+                    &state_id_cp,
                     &FlowStateFilterReq {
                         basic: RbumBasicFilterReq {
                             with_sub_own_paths: true,
@@ -2455,17 +2459,16 @@ impl FlowInstServ {
                     },
                     &funs,
                     &ctx_cp,
-                ).await {
+                )
+                .await
+                {
                     states.push(state.clone());
                     Some(state)
                 } else {
                     None
                 };
                 warn!("start notify change status: {:?}", states);
-                if let (Some(original_flow_state), Some(next_flow_state)) = (
-                    original_state,
-                    new_state,
-                ) {
+                if let (Some(original_flow_state), Some(next_flow_state)) = (original_state, new_state) {
                     match FlowExternalServ::do_notify_changes(
                         &inst.tag,
                         &inst.id,
@@ -3490,7 +3493,7 @@ impl FlowInstServ {
                         match result {
                             Ok(_) => {
                                 funs_cp2.commit().await.unwrap_or_default();
-                                FlowSearchClient::execute_async_task(&ctx_cp).await.unwrap_or_default();
+                                task_handler_helper::execute_async_task(&ctx_cp).await.unwrap_or_default();
                                 ctx_cp.execute_task().await.unwrap_or_default();
                             }
                             Err(e) => error!("Flow Instance {} batch_operate error:{:?}", inst.id, e),

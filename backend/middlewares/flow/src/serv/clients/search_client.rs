@@ -77,7 +77,7 @@ pub struct FlowSearchClient;
 
 impl FlowSearchClient {
     pub async fn add_search_task(kind: &FlowSearchTaskKind, key: &str, val: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let task_key = format!("{}_{}_{}", flow_constants::DOMAIN_CODE, kind, key);
+        let task_key = format!("search_{}_{}", kind, key);
         let val = match *kind {
             FlowSearchTaskKind::ModifyInstance => val.to_string(),
             FlowSearchTaskKind::AddInstance => val.to_string(),
@@ -104,32 +104,25 @@ impl FlowSearchClient {
         Ok(())
     }
 
-    pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn execute_async_task(key: &str, val: &str, ctx: &TardisContext) -> TardisResult<()> {
         let funs = flow_constants::get_tardis_inst();
-        let ext = ctx.ext.read().await;
-        for (whole_key, val) in ext.iter() {
-            if let Some((prefix, key)) = whole_key.split_once('_') {
-                if prefix == flow_constants::DOMAIN_CODE {
-                    let (kind, id) = key.split_once('_').unwrap_or_default();
-                    match FlowSearchTaskKind::from_str(kind)? {
-                        FlowSearchTaskKind::AddInstance => {
-                            Self::async_add_or_modify_instance_search(id, Box::new(false), &funs, ctx).await?;
-                        }
-                        FlowSearchTaskKind::ModifyInstance => {
-                            Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
-                        }
-                        FlowSearchTaskKind::ModifyModel => {
-                            Self::async_add_or_modify_model_search(id, Box::new(true), &funs, ctx).await?;
-                        }
-                        FlowSearchTaskKind::DeleteModel => {
-                            Self::async_delete_model_search(id, &funs, ctx).await?;
-                        }
-                        FlowSearchTaskKind::ModifyBusinessObj => {
-                            let req = TardisFuns::json.str_to_obj::<ModifyObjSearchExtReq>(val)?;
-                            Self::async_modify_business_obj_search_ext(id, &req, &funs, ctx).await?;
-                        }
-                    }
-                }
+        let (kind, id) = key.split_once('_').unwrap_or_default();
+        match FlowSearchTaskKind::from_str(kind)? {
+            FlowSearchTaskKind::AddInstance => {
+                Self::async_add_or_modify_instance_search(id, Box::new(false), &funs, ctx).await?;
+            }
+            FlowSearchTaskKind::ModifyInstance => {
+                Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
+            }
+            FlowSearchTaskKind::ModifyModel => {
+                Self::async_add_or_modify_model_search(id, Box::new(true), &funs, ctx).await?;
+            }
+            FlowSearchTaskKind::DeleteModel => {
+                Self::async_delete_model_search(id, &funs, ctx).await?;
+            }
+            FlowSearchTaskKind::ModifyBusinessObj => {
+                let req = TardisFuns::json.str_to_obj::<ModifyObjSearchExtReq>(val)?;
+                Self::async_modify_business_obj_search_ext(id, &req, &funs, ctx).await?;
             }
         }
         Ok(())

@@ -192,7 +192,7 @@ pub struct JsonMenu {
     pub items: Option<Vec<MenuItem>>,
     pub children: Option<Vec<JsonMenu>>,
 }
-#[derive(Serialize, Deserialize,Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MenuItem {
     pub code: String,
     pub name: String,
@@ -211,14 +211,12 @@ pub struct IamResAppReq {
 #[derive(Serialize, Deserialize)]
 pub struct InitResItemIds {
     /// key: role code, value: res id list
-    role_res_map: HashMap<String, Vec<String>>
+    role_res_map: HashMap<String, Vec<String>>,
 }
 
 impl InitResItemIds {
     pub fn new() -> Self {
-        Self {
-            role_res_map: HashMap::new(),
-        }
+        Self { role_res_map: HashMap::new() }
     }
 
     pub fn add_role_res(&mut self, role_code: &str, res_id: &str) {

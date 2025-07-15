@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAggAddAndBindReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamResSetTreeResp};
+use crate::basic::dto::iam_set_dto::{IamResSetTreeResp, IamSetCateAddReq, IamSetCateModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -56,18 +56,29 @@ impl IamCsResApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = RbumSetCateServ::find_one_rbum(&RbumSetCateFilterReq {
-            basic: RbumBasicFilterReq {
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
-                ids: Some(vec![add_req.0.set.set_cate_id.clone()]),
+        let set_id = RbumSetCateServ::find_one_rbum(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ids: Some(vec![add_req.0.set.set_cate_id.clone()]),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, &funs, &ctx.0)
+            &funs,
+            &ctx.0,
+        )
         .await?
         .map(|s| s.rel_rbum_set_id)
-        .ok_or_else(|| funs.err().not_found("iam_cs_res_api", "add_and_bind", &format!("not found set by set_cate_id {}", add_req.0.set.set_cate_id.clone()), "404-rbum-set-code-not-exist"))?;
+        .ok_or_else(|| {
+            funs.err().not_found(
+                "iam_cs_res_api",
+                "add_and_bind",
+                &format!("not found set by set_cate_id {}", add_req.0.set.set_cate_id.clone()),
+                "404-rbum-set-code-not-exist",
+            )
+        })?;
         let result = IamResServ::add_res_agg(
             &mut IamResAggAddReq {
                 res: add_req.0.res.clone(),

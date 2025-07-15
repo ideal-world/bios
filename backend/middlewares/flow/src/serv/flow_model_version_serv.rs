@@ -5,6 +5,8 @@ use bios_basic::rbum::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
+    helper::rbum_scope_helper,
+    rbum_enumeration::RbumScopeLevelKind,
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
@@ -24,6 +26,7 @@ use tardis::{
 use crate::{
     domain::flow_model_version,
     dto::{
+        flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelStatus},
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
@@ -37,7 +40,9 @@ use crate::{
 use async_trait::async_trait;
 
 use super::{
+    flow_config_serv::FlowConfigServ,
     flow_inst_serv::FlowInstServ,
+    flow_log_serv::FlowLogServ,
     flow_model_serv::FlowModelServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
     flow_state_serv::FlowStateServ,
@@ -211,7 +216,7 @@ impl
         }
         if let Some(unbind_states) = &modify_req.unbind_states {
             for delete_state in unbind_states {
-                Self::unbind_state(id, &delete_state.state_id, funs, ctx).await?;
+                Self::unbind_state(id, &delete_state.state_id, delete_state.new_state_id.clone(), funs, ctx).await?;
             }
         }
         if let Some(delete_states) = &modify_req.delete_states {
@@ -442,23 +447,93 @@ impl FlowModelVersionServ {
         Ok(())
     }
 
-    pub async fn unbind_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        // Can only be deleted when not in use
-        if FlowInstServ::state_is_used(flow_version_id, state_id, funs, ctx).await? {
-            return Err(funs.err().conflict(
-                &Self::get_obj_name(),
-                "unbind_state",
-                &format!("state {state_id} already used"),
-                "409-flow-state-already-used",
-            ));
+    pub async fn unbind_state(flow_version_id: &str, state_id: &str, new_state_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_model_version = Self::get_item(flow_version_id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
+        let flow_model = FlowModelServ::get_item(&flow_model_version.rel_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        let new_state_id = if let Some(new_state_id) = new_state_id {
+            new_state_id.clone()
+        } else {
+            flow_model.init_state_id.clone()
+        };
+        let mut own_paths_list = vec![];
+        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &flow_model.id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+        {
+            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| {
+                    if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
+                        rel.rel_own_paths
+                    } else {
+                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
+                    }
+                })
+                .collect_vec();
+            if own_paths_list.contains(&ctx.own_paths) {
+                own_paths_list = vec![ctx.own_paths.clone()];
+            }
+        } else {
+            own_paths_list.push(ctx.own_paths.clone());
         }
-        // 获取指向当前节点的动作
-        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
-        FlowTransitionServ::delete_transitions(flow_version_id, &to_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
-        // 获取当前节点指向的动作
-        let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
-        FlowTransitionServ::delete_transitions(flow_version_id, &from_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
-        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
+
+        for own_paths in own_paths_list {
+            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
+            FlowInstServ::async_unsafe_modify_state(
+                &FlowInstFilterReq {
+                    main: Some(true),
+                    tags: Some(vec![flow_model.tag.clone()]),
+                    current_state_id: Some(state_id.to_string()),
+                    ..Default::default()
+                },
+                &new_state_id,
+                funs,
+                &mock_ctx,
+            )
+            .await?;
+        }
+        FlowStateServ::unbind_state(flow_version_id, state_id, funs, ctx).await?;
+
+        let original_state = FlowStateServ::get_item(
+            &state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let target_state = FlowStateServ::get_item(
+            &new_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
+        FlowConfigServ::modify_root_config_by_tag(
+            "review",
+            &flow_model.tag,
+            &original_state.id,
+            &original_state.name,
+            &target_state.id,
+            &target_state.name,
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
     }
 
     pub async fn delete_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -493,7 +568,7 @@ impl FlowModelVersionServ {
         }
 
         FlowTransitionServ::delete_transitions(flow_version_id, &delete_flow_transition_ids, funs, ctx).await?;
-        Self::unbind_state(flow_version_id, state_id, funs, ctx).await?;
+        FlowStateServ::unbind_state(flow_version_id, state_id, funs, ctx).await?;
         FlowStateServ::delete_item(state_id, funs, ctx).await?;
         Ok(())
     }

@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -17,12 +15,10 @@ use crate::dto::flow_inst_dto::{
     FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
 use crate::dto::flow_model_dto::FlowModelDetailResp;
-use crate::dto::flow_state_dto::{FlowStateFilterReq, FlowSysStateKind};
+use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::flow_constants;
-use crate::helper::loop_check_helper;
-use crate::serv::clients::search_client::FlowSearchClient;
+use crate::helper::{loop_check_helper, task_handler_helper};
 use crate::serv::flow_inst_serv::FlowInstServ;
-use crate::serv::flow_state_serv::FlowStateServ;
 #[derive(Clone)]
 pub struct FlowCcInstApi;
 
@@ -38,7 +34,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -52,7 +48,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         let result = FlowInstServ::try_start(&add_req.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -70,7 +66,7 @@ impl FlowCcInstApi {
             result.insert(req.rel_business_obj_id.clone(), inst_id);
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -85,7 +81,7 @@ impl FlowCcInstApi {
         let inst_id = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -101,7 +97,7 @@ impl FlowCcInstApi {
             FlowInstServ::start(add_req, None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -130,11 +126,20 @@ impl FlowCcInstApi {
                 &ctx.0,
             )
             .await?
-            .pop().ok_or_else(|| funs.err().not_found("flow_inst", "abort", &format!("flow inst is not found by {}", flow_inst_detail.rel_business_obj_id), "404-flow-inst-not-found"))?;
+            .pop()
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "flow_inst",
+                    "abort",
+                    &format!("flow inst is not found by {}", flow_inst_detail.rel_business_obj_id),
+                    "404-flow-inst-not-found",
+                )
+            })?;
             if let Some(next_finish_tran) = FlowInstServ::find_next_transitions(&main_inst, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0)
-            .await?
-            .into_iter()
-            .find(|next_tran| next_tran.next_flow_state_sys_state == FlowSysStateKind::Finish) {
+                .await?
+                .into_iter()
+                .find(|next_tran| next_tran.next_flow_state_sys_state == FlowSysStateKind::Finish)
+            {
                 FlowInstServ::transfer(
                     &main_inst,
                     &FlowInstTransferReq {
@@ -154,7 +159,7 @@ impl FlowCcInstApi {
             }
         }
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -166,7 +171,7 @@ impl FlowCcInstApi {
     async fn get(&self, flow_inst_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowInstDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -209,7 +214,7 @@ impl FlowCcInstApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -257,7 +262,7 @@ impl FlowCcInstApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -276,7 +281,7 @@ impl FlowCcInstApi {
         let funs = flow_constants::get_tardis_inst();
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         let result = FlowInstServ::find_next_transitions(&inst, &next_req.0, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -293,7 +298,7 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -325,7 +330,7 @@ impl FlowCcInstApi {
         )
         .await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -366,7 +371,7 @@ impl FlowCcInstApi {
                 .await?,
             );
         }
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -388,7 +393,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -409,7 +414,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -424,7 +429,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -439,7 +444,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         let result = FlowInstServ::add_comment(&inst, &comment_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -451,7 +456,7 @@ impl FlowCcInstApi {
     async fn batch_check_auth(&self, req: Json<FlowInstBatchCheckAuthReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<String>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::batch_check_auth(req.0.flow_inst_ids, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -463,7 +468,7 @@ impl FlowCcInstApi {
     async fn get_rel_model(&self, req: Json<FlowInstFindRelModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Option<FlowModelDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::find_rel_model(req.transition_id.clone(), &req.tag, &req.vars, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

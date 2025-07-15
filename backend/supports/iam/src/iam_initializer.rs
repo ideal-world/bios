@@ -477,7 +477,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
     ];
-    
+
     for role_code in app_roles.iter() {
         let _ = add_role(
             role_code,
@@ -487,7 +487,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             &init_res_item_ids,
             funs,
             &ctx,
-        ).await?;
+        )
+        .await?;
     }
 
     // add custom role
@@ -501,7 +502,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 &init_res_item_ids,
                 funs,
                 &ctx,
-            ).await?;
+            )
+            .await?;
         }
     }
 

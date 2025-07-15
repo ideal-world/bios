@@ -74,6 +74,8 @@ pub struct IamAppAggModifyReq {
 
     pub admin_ids: Option<Vec<String>>,
     pub set_cate_id: Option<String>,
+
+    pub sync_apps_group: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
