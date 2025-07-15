@@ -16,8 +16,8 @@ pub struct IamCpTenantApi;
 /// Passport Console Tenant API
 #[poem_openapi::OpenApi(prefix_path = "/cp/tenant", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpTenantApi {
-    /// Find Tenants
-    /// 查找租户
+    /// Get All Tenants
+    /// 获取所有租户
     #[oai(path = "/all", method = "get")]
     async fn find(&self) -> TardisApiResult<Vec<IamTenantBoneResp>> {
         let funs = iam_constants::get_tardis_inst();

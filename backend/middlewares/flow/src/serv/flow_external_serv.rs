@@ -231,13 +231,9 @@ impl FlowExternalServ {
             sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
         };
-        let original_resp = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?;
-        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> = original_resp
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
+        let original_resp = funs.web_client().post(&external_url, &body, header).await?;
+        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> =
+            original_resp.body.ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"));
         }

@@ -22,8 +22,7 @@ use crate::dto::flow_inst_dto::{
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
-use crate::helper::loop_check_helper;
-use crate::serv::clients::search_client::FlowSearchClient;
+use crate::helper::{loop_check_helper, task_handler_helper};
 use crate::serv::flow_event_serv::FlowEventServ;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_transition_serv::FlowTransitionServ;
@@ -41,7 +40,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -71,7 +70,7 @@ impl FlowCiInstApi {
                 })
                 .collect_vec(),
         );
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -89,7 +88,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -104,7 +103,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -135,7 +134,7 @@ impl FlowCiInstApi {
             &funs,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -178,7 +177,7 @@ impl FlowCiInstApi {
                 .await?,
             );
         }
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -201,7 +200,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -223,7 +222,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -262,7 +261,7 @@ impl FlowCiInstApi {
             funs.commit().await?;
             inst_id
         };
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -277,7 +276,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -297,7 +296,7 @@ impl FlowCiInstApi {
                 result.push(inst_detail);
             }
         }
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -322,7 +321,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -344,7 +343,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::batch_operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
 
         TardisResp::ok(Void {})
@@ -397,7 +396,7 @@ impl FlowCiInstApi {
                         let result = FlowEventServ::do_front_change(&curr_inst, loop_check_helper::InstancesTransition::default(), &inst_ctx, &funs).await;
                         if result.is_ok() {
                             funs.commit().await.unwrap_or_default();
-                            let _ = FlowSearchClient::execute_async_task(&inst_ctx).await;
+                            let _ = task_handler_helper::execute_async_task(&inst_ctx).await;
                             let _ = inst_ctx.execute_task().await;
                         } else {
                             funs.rollback().await.unwrap_or_default();
@@ -452,7 +451,7 @@ impl FlowCiInstApi {
             &ctx.0,
         )
         .await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -466,7 +465,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::stat_inst_count(&req.0.app_ids, &req.0.filter, &funs, &ctx.0).await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -479,7 +478,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let result = FlowInstServ::sync_deleted_instances(&funs, &ctx.0).await?;
         funs.commit().await?;
-        FlowSearchClient::execute_async_task(&ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

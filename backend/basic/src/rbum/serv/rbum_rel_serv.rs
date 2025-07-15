@@ -192,8 +192,14 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
         if let Some(from_rbum_id) = &filter.from_rbum_id {
             query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(from_rbum_id.to_string()));
         }
+        if let Some(from_rbum_ids) = &filter.from_rbum_ids {
+            query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).is_in(from_rbum_ids));
+        }
         if let Some(to_rbum_item_id) = &filter.to_rbum_item_id {
             query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(to_rbum_item_id.to_string()));
+        }
+        if let Some(to_rbum_item_ids) = &filter.to_rbum_item_ids {
+            query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).is_in(to_rbum_item_ids));
         }
         if let Some(from_rbum_scope_levels) = &filter.from_rbum_scope_levels {
             query.and_where(Expr::col((from_rbum_item_table, rbum_item::Column::ScopeLevel)).is_in(from_rbum_scope_levels.clone()));

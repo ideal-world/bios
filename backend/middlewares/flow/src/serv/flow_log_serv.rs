@@ -8,13 +8,10 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{
-    dto::{
-        flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
-        flow_model_dto::{FlowModelDetailResp, FlowModelRelTransitionKind},
-        flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
-    },
-    flow_constants,
+use crate::dto::{
+    flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
+    flow_model_dto::{FlowModelDetailResp, FlowModelRelTransitionKind},
+    flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
 };
 
 use super::{
@@ -32,30 +29,10 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let start_req_cp = start_req.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let create_vars_cp = create_vars.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_start_log(&start_req_cp, &curr_inst_cp, &create_vars_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_start_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+        Self::add_start_log(start_req, flow_inst_detail, create_vars, true, funs, ctx).await
     }
 
     // 添加审批流发起日志
@@ -63,6 +40,7 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -118,7 +96,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Start.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,
@@ -131,30 +111,10 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let start_req_cp = start_req.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let create_vars_cp = create_vars.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_start_dynamic_log(&start_req_cp, &curr_inst_cp, &create_vars_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_start_dynamic_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+        Self::add_start_dynamic_log(start_req, flow_inst_detail, create_vars, true, funs, ctx).await
     }
 
     // 添加审批流发起动态日志
@@ -162,6 +122,7 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -218,7 +179,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Start.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,
@@ -231,30 +194,10 @@ impl FlowLogServ {
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let start_req_cp = start_req.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let create_vars_cp = create_vars.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_start_business_log(&start_req_cp, &curr_inst_cp, &create_vars_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_start_business_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+        Self::add_start_business_log(start_req, flow_inst_detail, create_vars, true, funs, ctx).await
     }
 
     // 添加审批流发起业务日志
@@ -262,6 +205,7 @@ impl FlowLogServ {
         _start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         _create_vars: &HashMap<String, Value>,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -305,7 +249,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Start.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,
@@ -318,30 +264,10 @@ impl FlowLogServ {
         operate_req: &FlowInstOperateReq,
         flow_inst_detail: &FlowInstDetailResp,
         op_kind: LogParamOp,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let operate_req_cp = operate_req.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let op_kind_cp = op_kind.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_operate_log(&operate_req_cp, &curr_inst_cp, op_kind_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_operate_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+        Self::add_operate_log(operate_req, flow_inst_detail, op_kind, true, funs, ctx).await
     }
 
     // 添加审批流操作日志
@@ -349,6 +275,7 @@ impl FlowLogServ {
         operate_req: &FlowInstOperateReq,
         flow_inst_detail: &FlowInstDetailResp,
         op_kind: LogParamOp,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -419,7 +346,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_approval_flow".to_string()),
             Some(op_kind.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,
@@ -432,30 +361,10 @@ impl FlowLogServ {
         operate_req: &FlowInstOperateReq,
         flow_inst_detail: &FlowInstDetailResp,
         op_kind: LogParamOp,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let operate_req_cp = operate_req.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let op_kind_cp = op_kind.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_operate_dynamic_log(&operate_req_cp, &curr_inst_cp, op_kind_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_operate_dynamic_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+        Self::add_operate_dynamic_log(operate_req, flow_inst_detail, op_kind, true, funs, ctx).await
     }
 
     // 添加审批流操作动态日志
@@ -463,6 +372,7 @@ impl FlowLogServ {
         operate_req: &FlowInstOperateReq,
         flow_inst_detail: &FlowInstDetailResp,
         op_kind: LogParamOp,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -543,7 +453,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_approval_flow".to_string()),
             Some(op_kind.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,
@@ -552,30 +464,11 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_finish_log_async_task(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let msg_cp = msg.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_finish_log(&curr_inst_cp, msg_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_finish_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+    pub async fn add_finish_log_async_task(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::add_finish_log(flow_inst_detail, msg, true, funs, ctx).await
     }
 
-    async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_finish_log(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, is_async: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if flow_inst_detail.rel_inst_id.as_ref().is_some_and(|id| !id.is_empty()) {
             return Ok(());
         }
@@ -609,7 +502,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_approval_flow".to_string()),
             Some(LogParamOp::Finish.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,
@@ -618,30 +513,11 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_finish_business_log_async_task(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let msg_cp = msg.clone();
-        let curr_inst_cp = flow_inst_detail.clone();
-        let curr_inst_id = flow_inst_detail.id.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_finish_business_log(&curr_inst_cp, msg_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow Instance {} add_finish_log error:{:?}", curr_inst_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+    pub async fn add_finish_business_log_async_task(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::add_finish_business_log(flow_inst_detail, msg, true, funs, ctx).await
     }
 
-    async fn add_finish_business_log(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_finish_business_log(flow_inst_detail: &FlowInstDetailResp, msg: Option<String>, is_async: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mock_ctx = TardisContext {
             owner: flow_inst_detail.create_ctx.owner.clone(), // 以发起人的身份记录
             ..ctx.clone()
@@ -686,7 +562,9 @@ impl FlowLogServ {
             Some(TardisFuns::json.obj_to_json(&log_ext).expect("ext not a valid json value")),
             Some("dynamic_log_project_manager".to_string()),
             Some(op.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             &mock_ctx,
             false,
@@ -699,36 +577,17 @@ impl FlowLogServ {
         flow_model: &FlowModelDetailResp,
         original_state: &FlowStateDetailResp,
         target_state: &FlowStateDetailResp,
-        _funs: &TardisFunsInst,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ctx_cp = ctx.clone();
-        let flow_model_cp = flow_model.clone();
-        let original_state_cp = original_state.clone();
-        let target_state_cp = target_state.clone();
-        let flow_model_id = flow_model.id.clone();
-        let funs_cp = flow_constants::get_tardis_inst();
-        ctx.add_sync_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tardis::tokio::spawn(async move {
-                    let _ = Self::add_model_delete_state_log(&flow_model_cp, &original_state_cp, &target_state_cp, &funs_cp, &ctx_cp).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Flow model {} add_model_delete_state_log error:{:?}", flow_model_id, e),
-                }
-                tardis::tokio::time::sleep(tardis::tokio::time::Duration::from_millis(1000)).await;
-                Ok(())
-            })
-        }))
-        .await?;
-        Ok(())
+        Self::add_model_delete_state_log(flow_model, original_state, target_state, true, funs, ctx).await
     }
 
     async fn add_model_delete_state_log(
         flow_model: &FlowModelDetailResp,
         original_state: &FlowStateDetailResp,
         target_state: &FlowStateDetailResp,
+        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -750,7 +609,9 @@ impl FlowLogServ {
             None,
             Some("dynamic_log_flow_model".to_string()),
             Some(LogParamOp::Delete.into()),
+            None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            is_async,
             funs,
             ctx,
             false,

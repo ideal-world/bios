@@ -122,9 +122,6 @@ impl From<RbumSetTreeResp> for IamResSetTreeResp {
         } else {
             None
         };
-        Self {
-            main: value.main,
-            ext,
-        }
+        Self { main: value.main, ext }
     }
 }
