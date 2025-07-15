@@ -1753,7 +1753,10 @@ impl FlowModelServ {
             for rel_version_id in rel_version_ids {
                 FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
             }
-            Self::delete_item(&model.id, funs, ctx).await?;
+            Self::modify_model(&model.id, &mut FlowModelModifyReq {
+                disabled: Some(true),
+                ..Default::default()
+            }, funs, ctx).await?;
         }
 
         Ok(models)
