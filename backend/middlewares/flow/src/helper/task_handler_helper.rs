@@ -1,6 +1,9 @@
 use tardis::basic::{dto::TardisContext, result::TardisResult};
 
-use crate::serv::clients::{log_client::{self, TASK_LOGV2_EXT_KEY, TASK_LOG_EXT_KEY}, search_client};
+use crate::serv::clients::{
+    log_client::{self, TASK_LOGV2_EXT_KEY, TASK_LOG_EXT_KEY},
+    search_client,
+};
 
 pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
     for (key, val) in ctx.ext.read().await.iter() {

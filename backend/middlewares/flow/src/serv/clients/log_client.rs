@@ -139,7 +139,7 @@ impl FlowLogClient {
         ctx.add_ext(&task_key, &new_val).await?;
         Ok(())
     }
-    
+
     pub async fn execute_async_task(task_val: &str, ctx: &TardisContext) -> TardisResult<()> {
         let funs = flow_constants::get_tardis_inst();
         let mut add_log_tasks = TardisFuns::json.str_to_obj::<Vec<LogItemAddReq>>(task_val)?;
@@ -166,16 +166,16 @@ impl FlowLogClient {
         ctx.add_ext(&task_key, &new_val).await?;
         Ok(())
     }
-    
+
     pub async fn execute_async_v2task(task_val: &str, ctx: &TardisContext) -> TardisResult<()> {
         let funs = flow_constants::get_tardis_inst();
         let mut add_log_tasks = TardisFuns::json.str_to_obj::<Vec<LogItemAddV2Req>>(task_val)?;
-            let mut ts = tardis::chrono::Utc::now();
-            for task in add_log_tasks.iter_mut() {
-                ts += Duration::milliseconds(10);
-                task.ts = Some(ts);
-            }
-            SpiLogClient::batch_addv2(add_log_tasks, &funs, ctx).await?;
+        let mut ts = tardis::chrono::Utc::now();
+        for task in add_log_tasks.iter_mut() {
+            ts += Duration::milliseconds(10);
+            task.ts = Some(ts);
+        }
+        SpiLogClient::batch_addv2(add_log_tasks, &funs, ctx).await?;
         Ok(())
     }
 
@@ -252,11 +252,7 @@ impl FlowLogClient {
         ctx: &TardisContext,
         _push: bool,
     ) -> TardisResult<()> {
-        let ts = if let Some(ts) = ts {
-            ts
-        } else {
-            tardis::chrono::Utc::now()
-        };
+        let ts = if let Some(ts) = ts { ts } else { tardis::chrono::Utc::now() };
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
@@ -298,11 +294,7 @@ impl FlowLogClient {
         ctx: &TardisContext,
         push: bool,
     ) -> TardisResult<()> {
-        let ts = if let Some(ts) = ts {
-            ts
-        } else {
-            tardis::chrono::Utc::now()
-        };
+        let ts = if let Some(ts) = ts { ts } else { tardis::chrono::Utc::now() };
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };

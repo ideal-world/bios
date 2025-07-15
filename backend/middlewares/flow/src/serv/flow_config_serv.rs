@@ -56,7 +56,16 @@ impl FlowConfigServ {
         TardisFuns::json.json_to_obj::<Vec<FlowRootConfigResp>>(result.value)
     }
 
-    pub async fn modify_root_config_by_tag(root_tag: &str, child_tag: &str, original_state: &str, original_state_name: &str, new_state: &str, new_state_name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_root_config_by_tag(
+        root_tag: &str,
+        child_tag: &str,
+        original_state: &str,
+        original_state_name: &str,
+        new_state: &str,
+        new_state_name: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
         let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
         let key = if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_paths, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
@@ -84,7 +93,7 @@ impl FlowConfigServ {
                 if child_config.unpass_status == *original_state {
                     child_config.unpass_status = new_state.to_string();
                 }
-                let mut new_root_config = root_config.into_iter().filter(|child_config|  child_config.code != *child_tag).collect_vec();
+                let mut new_root_config = root_config.into_iter().filter(|child_config| child_config.code != *child_tag).collect_vec();
                 new_root_config.push(FlowRootConfigResp {
                     url: None,
                     icon: "".to_string(),
@@ -94,7 +103,7 @@ impl FlowConfigServ {
                     service: None,
                 });
                 SpiKvClient::add_or_modify_item(&key, &new_root_config, None, None, None, funs, ctx).await?;
-            }            
+            }
         }
 
         Ok(())

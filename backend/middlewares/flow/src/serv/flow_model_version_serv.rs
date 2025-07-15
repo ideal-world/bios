@@ -4,7 +4,10 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-    }, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation
+    },
+    helper::rbum_scope_helper,
+    rbum_enumeration::RbumScopeLevelKind,
+    serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
 use tardis::{
@@ -23,17 +26,27 @@ use tardis::{
 use crate::{
     domain::flow_model_version,
     dto::{
-        flow_inst_dto::FlowInstFilterReq, flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelStatus}, flow_model_version_dto::{
+        flow_inst_dto::FlowInstFilterReq,
+        flow_model_dto::{FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelFilterReq, FlowModelModifyReq, FlowModelStatus},
+        flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionSummaryResp,
             FlowModelVesionState,
-        }, flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt}, flow_transition_dto::FlowTransitionAddReq
+        },
+        flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateRelModelExt},
+        flow_transition_dto::FlowTransitionAddReq,
     },
     flow_config::FlowBasicInfoManager,
 };
 use async_trait::async_trait;
 
 use super::{
-    flow_config_serv::FlowConfigServ, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
+    flow_config_serv::FlowConfigServ,
+    flow_inst_serv::FlowInstServ,
+    flow_log_serv::FlowLogServ,
+    flow_model_serv::FlowModelServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_state_serv::FlowStateServ,
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowModelVersionServ;
@@ -448,13 +461,13 @@ impl FlowModelVersionServ {
             own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
-                .map(|rel| 
+                .map(|rel| {
                     if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
                         rel.rel_own_paths
                     } else {
                         format!("{}/{}", rel.rel_own_paths, rel.rel_id)
                     }
-                )
+                })
                 .collect_vec();
             if own_paths_list.contains(&ctx.own_paths) {
                 own_paths_list = vec![ctx.own_paths.clone()];
@@ -462,7 +475,7 @@ impl FlowModelVersionServ {
         } else {
             own_paths_list.push(ctx.own_paths.clone());
         }
-        
+
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             FlowInstServ::async_unsafe_modify_state(
@@ -509,7 +522,17 @@ impl FlowModelVersionServ {
         )
         .await?;
         FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
-        FlowConfigServ::modify_root_config_by_tag("review", &flow_model.tag, &original_state.id, &original_state.name,  &target_state.id, &target_state.name, funs, ctx).await?;
+        FlowConfigServ::modify_root_config_by_tag(
+            "review",
+            &flow_model.tag,
+            &original_state.id,
+            &original_state.name,
+            &target_state.id,
+            &target_state.name,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 

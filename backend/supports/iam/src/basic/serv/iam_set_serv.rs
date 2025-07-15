@@ -22,7 +22,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamResSetTreeExtResp, IamResSetTreeResp};
+use crate::basic::dto::iam_set_dto::{IamResSetTreeExtResp, IamResSetTreeResp, IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
@@ -723,7 +723,13 @@ impl IamSetServ {
         let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
-        Self::transform_res_tree(Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?, None, funs, ctx).await
+        Self::transform_res_tree(
+            Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await?,
+            None,
+            funs,
+            ctx,
+        )
+        .await
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
@@ -1098,19 +1104,33 @@ impl IamSetServ {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
-            Some(IamRelServ::find_simple_rels(&RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some(IamRelKind::IamResRole.to_string()),
-                to_rbum_item_ids: Some(role_ids.clone()),
-                ..Default::default()
-            }, None, None, false, funs, &global_ctx).await?.into_iter().map(|r| r.rel_id).unique().collect_vec())
+            Some(
+                IamRelServ::find_simple_rels(
+                    &RbumRelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        tag: Some(IamRelKind::IamResRole.to_string()),
+                        to_rbum_item_ids: Some(role_ids.clone()),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    false,
+                    funs,
+                    &global_ctx,
+                )
+                .await?
+                .into_iter()
+                .map(|r| r.rel_id)
+                .unique()
+                .collect_vec(),
+            )
         } else {
             None
         };
-        
+
         let ext = if let Some(value_ext) = original_tree.ext.clone() {
             Some(IamResSetTreeExtResp {
                 items: value_ext.items,
@@ -1122,10 +1142,7 @@ impl IamSetServ {
         } else {
             None
         };
-        let mut result = IamResSetTreeResp {
-            main: original_tree.main,
-            ext,
-        };
+        let mut result = IamResSetTreeResp { main: original_tree.main, ext };
         if let Some(ext) = &mut result.ext {
             let res_set_item_ids = if let Some(ext) = original_tree.ext {
                 let ext_values = ext.items.values().collect_vec().into_iter().cloned().collect_vec();
@@ -1150,41 +1167,46 @@ impl IamSetServ {
                 &global_ctx,
             )
             .await?;
-            let rel_data_guard = IamRelServ::find_rels(&RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
+            let rel_data_guard = IamRelServ::find_rels(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    tag: Some(IamRelKind::IamResDataGuard.to_string()),
+                    to_rbum_item_ids: Some(res_set_item_ids.clone()),
                     ..Default::default()
                 },
-                tag: Some(IamRelKind::IamResDataGuard.to_string()),
-                to_rbum_item_ids: Some(res_set_item_ids.clone()),
-                ..Default::default()
-            }, None, None, funs, &global_ctx).await?;
+                None,
+                None,
+                funs,
+                &global_ctx,
+            )
+            .await?;
             let mut data_guard_map = HashMap::new();
             for res_set_item_id in res_set_item_ids {
                 let rel_ids = rel_data_guard.iter().filter(|r| r.rel.to_rbum_item_id == res_set_item_id).map(|r| r.rel.from_rbum_id.clone()).collect_vec();
                 let data_guard = data_guard_set_items
                     .iter()
                     .filter(|i| rel_ids.contains(&i.rel_rbum_item_id))
-                    .map(|i| 
-                        RbumSetItemRelInfoResp {
-                            id: i.id.to_string(),
-                            sort: i.sort,
-                            rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
-                            rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
-                            rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
-                            rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
-                            rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
-                            rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
-                            rel_rbum_item_create_time: i.rel_rbum_item_create_time,
-                            rel_rbum_item_update_time: i.rel_rbum_item_update_time,
-                            rel_rbum_item_disabled: i.rel_rbum_item_disabled,
-                            rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
-                            own_paths: i.own_paths.to_string(),
-                            owner: i.owner.to_string(),
-                        }
-                    )
+                    .map(|i| RbumSetItemRelInfoResp {
+                        id: i.id.to_string(),
+                        sort: i.sort,
+                        rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
+                        rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
+                        rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
+                        rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
+                        rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
+                        rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
+                        rel_rbum_item_create_time: i.rel_rbum_item_create_time,
+                        rel_rbum_item_update_time: i.rel_rbum_item_update_time,
+                        rel_rbum_item_disabled: i.rel_rbum_item_disabled,
+                        rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
+                        own_paths: i.own_paths.to_string(),
+                        owner: i.owner.to_string(),
+                    })
                     .collect_vec();
-    
+
                 data_guard_map.insert(res_set_item_id.clone(), data_guard);
             }
             ext.item_data_guards = data_guard_map;

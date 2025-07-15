@@ -5,7 +5,10 @@ use tardis::web::poem_openapi;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumSetItemRelFilterReq};
 
-use crate::{basic::dto::iam_app_dto::IamAppKind, iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind, IamSubDeployHostKind}};
+use crate::{
+    basic::dto::iam_app_dto::IamAppKind,
+    iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind, IamSubDeployHostKind},
+};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]

@@ -34,9 +34,9 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelInitCopyReq, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
-            FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus,
-            FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
+            FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind,
+            FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -59,7 +59,14 @@ use super::{
     clients::{
         log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
-    }, flow_config_serv::FlowConfigServ, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_version_serv::FlowModelVersionServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
+    },
+    flow_config_serv::FlowConfigServ,
+    flow_inst_serv::FlowInstServ,
+    flow_log_serv::FlowLogServ,
+    flow_model_version_serv::FlowModelVersionServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_state_serv::FlowStateServ,
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowModelServ;
@@ -2102,13 +2109,13 @@ impl FlowModelServ {
             own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
-                .map(|rel| 
+                .map(|rel| {
                     if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
                         rel.rel_own_paths
                     } else {
                         format!("{}/{}", rel.rel_own_paths, rel.rel_id)
                     }
-                )
+                })
                 .collect_vec();
             if own_paths_list.contains(&ctx.own_paths) {
                 own_paths_list = vec![ctx.own_paths.clone()];
@@ -2116,7 +2123,7 @@ impl FlowModelServ {
         } else {
             own_paths_list.push(ctx.own_paths.clone());
         }
-        
+
         for own_paths in own_paths_list {
             let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
             FlowInstServ::async_unsafe_modify_state(
@@ -2175,7 +2182,17 @@ impl FlowModelServ {
         )
         .await?;
         FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
-        FlowConfigServ::modify_root_config_by_tag("review", &flow_model.tag, &original_state.id, &original_state.name,  &target_state.id, &target_state.name, funs, ctx).await?;
+        FlowConfigServ::modify_root_config_by_tag(
+            "review",
+            &flow_model.tag,
+            &original_state.id,
+            &original_state.name,
+            &target_state.id,
+            &target_state.name,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 
@@ -2311,14 +2328,8 @@ impl FlowModelServ {
             funs,
             ctx,
         )
-        .await?.ok_or_else(|| {
-            funs.err().not_found(
-                &Self::get_obj_name(),
-                "init_copy_model",
-                "flow model is not found",
-                "404-model-not-found",
-            )
-        })?;
+        .await?
+        .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "init_copy_model", "flow model is not found", "404-model-not-found"))?;
         for rel_template_id in &req.rel_template_ids {
             let new_model = FlowModelServ::copy_or_reference_model(
                 &rel_main_model.id,
@@ -2329,19 +2340,7 @@ impl FlowModelServ {
                 ctx,
             )
             .await?;
-            FlowRelServ::add_simple_rel(
-                &FlowRelKind::FlowModelTemplate,
-                &new_model.id,
-                rel_template_id,
-                None,
-                None,
-                false,
-                true,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
+            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, &new_model.id, rel_template_id, None, None, false, true, None, funs, ctx).await?;
             if req.sync_inst {
                 let mut update_states = HashMap::new();
                 for state in rel_main_model.states() {
@@ -2355,7 +2354,8 @@ impl FlowModelServ {
                 own_paths: own_path.clone(),
                 ..ctx.clone()
             };
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &FlowModelAssociativeOperationKind::Copy, FlowModelKind::AsModel, None, funs, &mock_ctx).await?;
+            let new_model =
+                FlowModelServ::copy_or_reference_model(&rel_main_model.id, &FlowModelAssociativeOperationKind::Copy, FlowModelKind::AsModel, None, funs, &mock_ctx).await?;
             if req.sync_inst {
                 let mut update_states = HashMap::new();
                 for state in rel_main_model.states() {

@@ -2,10 +2,13 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::{
+    dto::rbum_filer_dto::RbumBasicFilterReq,
+    helper::rbum_scope_helper,
+    rbum_enumeration::RbumScopeLevelKind,
+    serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    }
+    },
 };
 use bios_sdk_invoke::dto::search_item_dto::{
     SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchSortKind, SearchItemSearchSortReq,
@@ -2435,7 +2438,8 @@ impl FlowInstServ {
                     &funs,
                     &ctx_cp,
                 )
-                .await {
+                .await
+                {
                     states.push(state.clone());
                     Some(state)
                 } else {
@@ -2455,17 +2459,16 @@ impl FlowInstServ {
                     },
                     &funs,
                     &ctx_cp,
-                ).await {
+                )
+                .await
+                {
                     states.push(state.clone());
                     Some(state)
                 } else {
                     None
                 };
                 warn!("start notify change status: {:?}", states);
-                if let (Some(original_flow_state), Some(next_flow_state)) = (
-                    original_state,
-                    new_state,
-                ) {
+                if let (Some(original_flow_state), Some(next_flow_state)) = (original_state, new_state) {
                     match FlowExternalServ::do_notify_changes(
                         &inst.tag,
                         &inst.id,

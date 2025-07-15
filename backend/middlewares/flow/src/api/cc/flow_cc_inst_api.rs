@@ -126,11 +126,20 @@ impl FlowCcInstApi {
                 &ctx.0,
             )
             .await?
-            .pop().ok_or_else(|| funs.err().not_found("flow_inst", "abort", &format!("flow inst is not found by {}", flow_inst_detail.rel_business_obj_id), "404-flow-inst-not-found"))?;
+            .pop()
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    "flow_inst",
+                    "abort",
+                    &format!("flow inst is not found by {}", flow_inst_detail.rel_business_obj_id),
+                    "404-flow-inst-not-found",
+                )
+            })?;
             if let Some(next_finish_tran) = FlowInstServ::find_next_transitions(&main_inst, &FlowInstFindNextTransitionsReq { vars: None }, &funs, &ctx.0)
-            .await?
-            .into_iter()
-            .find(|next_tran| next_tran.next_flow_state_sys_state == FlowSysStateKind::Finish) {
+                .await?
+                .into_iter()
+                .find(|next_tran| next_tran.next_flow_state_sys_state == FlowSysStateKind::Finish)
+            {
                 FlowInstServ::transfer(
                     &main_inst,
                     &FlowInstTransferReq {
