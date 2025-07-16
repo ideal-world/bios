@@ -35,6 +35,7 @@ impl ReachMessageTemplateCsApi {
         page_size: Query<Option<u32>>,
         name: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
+        is_system: Query<Option<bool>>,
         rel_reach_channel: Query<Option<String>>,
         TardisContextExtractor(ctx): TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<ReachMessageTemplateSummaryResp>> {
@@ -48,9 +49,16 @@ impl ReachMessageTemplateCsApi {
         if let Some(name) = name.0 {
             filter.base_filter.name = Some(name);
         }
-        if let Some(tenant_id) = tenant_id.0 {
-            filter.base_filter.own_paths = Some(tenant_id);
+        if is_system.unwrap_or(false) {
+            filter.base_filter.own_paths = Some("".to_string());
             filter.base_filter.with_sub_own_paths = false;
+            filter.base_filter.ignore_scope = true;
+        } else {
+            if let Some(tenant_id) = tenant_id.0 {
+                filter.base_filter.own_paths = Some(tenant_id);
+                filter.base_filter.with_sub_own_paths = true;
+                filter.base_filter.ignore_scope = true;
+            }
         }
         filter.rel_reach_channel = rel_reach_channel;
         let page_resp = ReachMessageTemplateServ::paginate_rbums(&filter, page_number, page_size, Some(true), None, &funs, &ctx).await?;
