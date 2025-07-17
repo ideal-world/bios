@@ -2423,6 +2423,10 @@ impl FlowInstServ {
                 if num % 2000 == 0 {
                     tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 }
+                let inst_ctx = TardisContext {
+                    own_paths: inst.own_paths.clone(),
+                    ..ctx_cp.clone()
+                };
                 let original_state = if let Some(original_state) = states.iter().find(|s| s.id == inst.current_state_id) {
                     Some(original_state.clone())
                 } else if let Ok(state) = FlowStateServ::get_item(
@@ -2481,7 +2485,7 @@ impl FlowInstServ {
                         false,
                         Some(false),
                         Some(FlowExternalCallbackOp::Auto),
-                        &ctx_cp,
+                        &inst_ctx,
                         &funs,
                     )
                     .await
