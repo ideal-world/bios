@@ -1811,6 +1811,10 @@ impl FlowInstServ {
 
         // notify change state
         if curr_inst.main {
+            let inst_ctx = TardisContext {
+                own_paths: curr_inst.own_paths.clone(),
+                ..ctx.clone()
+            };
             FlowExternalServ::do_notify_changes(
                 &curr_inst.tag,
                 &curr_inst.id,
@@ -1823,7 +1827,7 @@ impl FlowInstServ {
                 next_transition_detail.is_notify,
                 Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
                 Some(callback_kind),
-                ctx,
+                &inst_ctx,
                 funs,
             )
             .await?;
@@ -2368,6 +2372,10 @@ impl FlowInstServ {
                         )
                         .await,
                     ) {
+                        let inst_ctx = TardisContext {
+                            own_paths: inst.own_paths.clone(),
+                            ..ctx.clone()
+                        };
                         FlowExternalServ::do_notify_changes(
                             &inst.tag,
                             &inst.id,
@@ -2380,7 +2388,7 @@ impl FlowInstServ {
                             false,
                             Some(false),
                             Some(FlowExternalCallbackOp::Auto),
-                            ctx,
+                            &inst_ctx,
                             funs,
                         )
                         .await
