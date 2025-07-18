@@ -320,4 +320,12 @@ impl IamCcResApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    #[oai(path = "/refresh", method = "get")]
+    async fn refresh_res_rel(&self, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        let global_ctx = TardisContext::default();
+        IamResServ::refresh_res_cache(&funs, &global_ctx).await?;
+        TardisResp::ok(Void {})
+    }
 }
