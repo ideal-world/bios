@@ -1393,7 +1393,7 @@ impl FlowModelServ {
                     status: Some(FlowModelStatus::Enabled),
                     ..Default::default()
                 },
-                None,
+                Some(true),
                 None,
                 funs,
                 ctx,
@@ -2100,48 +2100,6 @@ impl FlowModelServ {
     }
 
     pub async fn unbind_state(flow_model_id: &str, req: &FlowModelUnbindStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let flow_model = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        let new_state_id = if let Some(new_state_id) = &req.new_state_id {
-            new_state_id.clone()
-        } else {
-            flow_model.init_state_id.clone()
-        };
-        let mut own_paths_list = vec![];
-        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-        {
-            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| {
-                    if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
-                        rel.rel_own_paths
-                    } else {
-                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
-                    }
-                })
-                .collect_vec();
-            if own_paths_list.contains(&ctx.own_paths) {
-                own_paths_list = vec![ctx.own_paths.clone()];
-            }
-        } else {
-            own_paths_list.push(ctx.own_paths.clone());
-        }
-
-        for own_paths in own_paths_list {
-            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            FlowInstServ::async_unsafe_modify_state(
-                &FlowInstFilterReq {
-                    main: Some(true),
-                    tags: Some(vec![flow_model.tag.clone()]),
-                    current_state_id: Some(req.state_id.clone()),
-                    ..Default::default()
-                },
-                &new_state_id,
-                funs,
-                &mock_ctx,
-            )
-            .await?;
-        }
         Self::modify_model(
             flow_model_id,
             &mut FlowModelModifyReq {
@@ -2151,47 +2109,6 @@ impl FlowModelServ {
                 }),
                 ..Default::default()
             },
-            funs,
-            ctx,
-        )
-        .await?;
-
-        let original_state = FlowStateServ::get_item(
-            &req.state_id,
-            &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let target_state = FlowStateServ::get_item(
-            &new_state_id,
-            &FlowStateFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        FlowLogServ::add_model_delete_state_log_async_task(&flow_model, &original_state, &target_state, funs, ctx).await?;
-        FlowConfigServ::modify_root_config_by_tag(
-            "review",
-            &flow_model.tag,
-            &original_state.id,
-            &original_state.name,
-            &target_state.id,
-            &target_state.name,
             funs,
             ctx,
         )
