@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
@@ -7,7 +9,15 @@ use tardis::web::poem_openapi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
-use crate::iam_enumeration::IamResKind;
+use crate::iam_enumeration::{IamRelKind, IamResKind};
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamResAggAddAndBindReq {
+    pub res: IamResAddReq,
+    pub set: IamSetItemAggAddReq,
+    pub bind_res_id: String,
+    pub bind_res_kind: IamRelKind,
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAggAddReq {
@@ -15,8 +25,9 @@ pub struct IamResAggAddReq {
     pub set: IamSetItemAggAddReq,
 }
 
-#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Default, Deserialize, Debug, Clone)]
 pub struct IamResAddReq {
+    pub id: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -41,6 +52,7 @@ pub struct IamResAddReq {
     pub need_login: Option<bool>,
     pub disabled: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
+    pub bind_data_guards: Option<Vec<IamResAddReq>>,
 }
 
 impl IamResAddReq {
@@ -80,6 +92,7 @@ pub struct IamResModifyReq {
     pub double_auth_msg: Option<String>,
     pub need_login: Option<bool>,
     pub bind_api_res: Option<Vec<String>>,
+    pub bind_data_guards: Option<Vec<IamResModifyReq>>,
 }
 
 impl IamResModifyReq {
@@ -132,7 +145,7 @@ impl IamResSummaryResp {
     }
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct IamResDetailResp {
     pub id: String,
     pub code: String,
@@ -179,15 +192,52 @@ pub struct JsonMenu {
     pub items: Option<Vec<MenuItem>>,
     pub children: Option<Vec<JsonMenu>>,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MenuItem {
     pub code: String,
     pub name: String,
     pub kind: String,
+    /// role id bind with res
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role_binds: Option<Vec<String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAppReq {
     pub app_ids: Vec<String>,
     pub res_codes: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InitResItemIds {
+    /// key: role code, value: res id list
+    role_res_map: HashMap<String, Vec<String>>,
+}
+
+impl InitResItemIds {
+    pub fn new() -> Self {
+        Self { role_res_map: HashMap::new() }
+    }
+
+    pub fn add_role_res(&mut self, role_code: &str, res_id: &str) {
+        self.role_res_map.entry(role_code.to_string()).or_insert(Vec::new()).push(res_id.to_string());
+    }
+
+    pub fn add_role_res_list(&mut self, role_code: &str, res_ids: &Vec<String>) {
+        self.role_res_map.entry(role_code.to_string()).or_insert(Vec::new()).extend(res_ids.iter().map(|id| id.to_string()));
+    }
+
+    pub fn get_role_res(&self, role_code: &str) -> Option<&Vec<String>> {
+        self.role_res_map.get(role_code)
+    }
+
+    pub fn get_role_res_or_empty(&self, role_code: &str) -> Vec<String> {
+        self.role_res_map.get(role_code).unwrap_or(&vec![]).to_owned()
+    }
+
+    pub fn extend_role_res(&mut self, other: &InitResItemIds) {
+        for (role_code, res_ids) in other.role_res_map.iter() {
+            self.role_res_map.entry(role_code.to_string()).or_insert(Vec::new()).extend(res_ids.iter().map(|id| id.to_string()));
+        }
+    }
 }

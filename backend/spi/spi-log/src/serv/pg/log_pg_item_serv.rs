@@ -1,5 +1,5 @@
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
     serde_json::Value as JsonValue,
     web::web_resp::TardisPage,
@@ -12,14 +12,15 @@ use crate::dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddRe
 
 use super::log_pg_initializer;
 
-pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
+pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<String> {
     let id = add_req.id.clone().unwrap_or(TardisFuns::field.nanoid());
     let mut params = vec![
         Value::from(id.clone()),
-        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).split(',').map(|s| s.to_string()).collect::<Vec<String>>()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.content.clone()),
+        Value::from(add_req.data_source.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(if let Some(ext) = &add_req.ext {
@@ -32,6 +33,11 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
     if let Some(ts) = add_req.ts {
         params.push(Value::from(ts));
     }
+    if let Some(key) = &add_req.key {
+        if check(&add_req.tag, key, &id, funs, ctx, inst).await? {
+            return Ok(id);
+        }
+    }
 
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
@@ -39,12 +45,12 @@ pub async fn add(add_req: &mut LogItemAddReq, _funs: &TardisFunsInst, ctx: &Tard
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (id, kind, key, op, content, owner, own_paths, ext, rel_key{})
+    (id, kind, key, op, content, data_source, owner, own_paths, ext, rel_key{})
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9{})
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10{})
 	"#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $10" } else { "" },
+            if add_req.ts.is_some() { ", $11" } else { "" },
         ),
         params,
     )
@@ -53,20 +59,44 @@ VALUES
     Ok(id)
 }
 
+async fn check(tag: &str, key: &str, id: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    // 初始化要保存的内容
+    let (conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
+    let count: i64 = conn
+        .query_one(
+            &format!(
+                r#"
+select count(1) as _count from {table_name} where key = $1 and id = $2
+"#
+            ),
+            vec![Value::from(key), Value::from(id)],
+        )
+        .await?
+        .ok_or_else(|| TardisError::not_found("not found", "404-spi-log-not-found"))?
+        .try_get("", "_count")?;
+    Ok(count > 0)
+}
+
 pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<TardisPage<LogItemFindResp>> {
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
 
     if let Some(kinds) = &find_req.kinds {
-        let place_holder = kinds
-            .iter()
-            .map(|kind| {
-                sql_vals.push(Value::from(kind.to_string()));
-                format!("${}", sql_vals.len())
-            })
-            .collect::<Vec<String>>()
-            .join(",");
-        where_fragments.push(format!("kind IN ({place_holder})"));
+        if kinds.len() == 1 {
+            sql_vals.push(Value::from(kinds[0].to_string()));
+            where_fragments.push(format!("${} = ANY(kind)", sql_vals.len()));
+        } else {
+            let place_holder = kinds
+                .iter()
+                .map(|kind| {
+                    sql_vals.push(Value::from(kind.to_string()));
+                    format!("${}", sql_vals.len())
+                })
+                .collect::<Vec<String>>()
+                .join(",");
+            where_fragments.push(format!("kind && ARRAY[{place_holder}]::varchar[]"));
+        }
     }
     if let Some(owners) = &find_req.owners {
         let place_holder = owners
@@ -460,7 +490,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, id, key, op, content, kind, ext, owner, own_paths, rel_key, count(*) OVER() AS total
+                r#"SELECT ts, id, key, op, content, kind, ext, data_source, owner, own_paths, rel_key, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -502,6 +532,7 @@ ORDER BY ts DESC
                 content,
                 rel_key: item.try_get("", "rel_key")?,
                 kind: item.try_get("", "kind")?,
+                data_source: item.try_get("", "data_source")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 msg: String::new(),

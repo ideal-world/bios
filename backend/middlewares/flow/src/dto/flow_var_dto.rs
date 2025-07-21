@@ -28,7 +28,7 @@ pub struct FlowVarInfo {
     pub secret: Option<bool>,
     pub show_by_conds: Option<String>,
     pub data_type: RbumDataTypeKind,
-    pub widget_type: RbumWidgetTypeKind,
+    pub widget_type: FlowidgetTypeKind,
     pub widget_columns: Option<i16>,
     pub default_value: Option<DefaultValue>,
     pub dyn_default_value: Option<Value>,
@@ -99,7 +99,7 @@ impl TryGetable for RbumDataTypeKind {
 }
 
 #[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
-pub enum RbumWidgetTypeKind {
+pub enum FlowidgetTypeKind {
     #[default]
     INPUT,
     INPUTTXT,
@@ -118,15 +118,16 @@ pub enum RbumWidgetTypeKind {
     MULTISELECT,
     LINK,
     CODEEDITOR,
+    DOC,
     CONTAINER, // Display group subtitles, datatype = String, value is empty
     CONTROL,   // Json fields : all parent_attr_name = current attribute, datatype = Json
     GROUP,     // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
 }
 
-impl TryGetable for RbumWidgetTypeKind {
+impl TryGetable for FlowidgetTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
-        RbumWidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+        FlowidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {

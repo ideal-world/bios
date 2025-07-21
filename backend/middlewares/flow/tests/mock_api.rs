@@ -1,6 +1,6 @@
 use bios_mw_flow::dto::flow_external_dto::{
     FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp,
-    FlowExternalQueryFieldResp, FlowExternalReq, RelBusObjResp,
+    FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalUpdateRelationshipResp, RelBusObjResp,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -65,6 +65,9 @@ impl MockApi {
             }
             FlowExternalKind::FetchAuthAccount => {
                 json!(FlowExternalFetchAuthAccountResp { account_ids: vec![] })
+            }
+            FlowExternalKind::UpdateRelationship => {
+                json!(FlowExternalUpdateRelationshipResp {})
             }
         };
         MockResp::ok(result)

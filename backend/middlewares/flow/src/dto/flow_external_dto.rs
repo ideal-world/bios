@@ -100,8 +100,10 @@ pub enum FlowExternalKind {
     QueryField,
     /// 删除业务对象
     DeleteObj,
-    /// 获取关联业务对象
+    /// 获取权限用户
     FetchAuthAccount,
+    /// 更新关联关系
+    UpdateRelationship,
 }
 
 /// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
@@ -173,7 +175,7 @@ pub struct RelBusObjResp {
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalModifyFieldResp {}
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowExternalNotifyChangesResp {}
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
@@ -183,6 +185,9 @@ pub struct FlowExternalQueryFieldResp {
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalDeleteRelObjResp {}
+
+#[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowExternalUpdateRelationshipResp {}
 
 #[derive(Default, Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowExternalFetchAuthAccountResp {

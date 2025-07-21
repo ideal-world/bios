@@ -1,4 +1,5 @@
-use std::{collections::HashMap, str::FromStr};
+use itertools::Itertools;
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 use strum::Display;
 
 use bios_basic::rbum::{
@@ -327,6 +328,30 @@ impl FlowStateDetailResp {
     }
 }
 
+impl From<FlowStateDetailResp> for FlowStateAddReq {
+    fn from(value: FlowStateDetailResp) -> Self {
+        let kind_conf = value.kind_conf();
+        let tags = value.tags.split(',').map(|s| s.to_string()).collect_vec();
+        Self {
+            id: None,
+            id_prefix: None,
+            name: Some(TrimString::from(value.name)),
+            icon: Some(value.icon),
+            color: Some(value.color),
+            sys_state: value.sys_state,
+            info: Some(value.info),
+            state_kind: Some(value.state_kind),
+            kind_conf,
+            template: Some(value.template),
+            main: Some(value.main),
+            rel_state_id: Some(value.rel_state_id),
+            tags: Some(tags),
+            scope_level: Some(value.scope_level),
+            disabled: Some(value.disabled),
+        }
+    }
+}
+
 /// Type of state
 ///
 /// 状态类型
@@ -341,6 +366,16 @@ pub enum FlowSysStateKind {
     Progress,
     #[sea_orm(string_value = "finish")]
     Finish,
+}
+
+impl Display for FlowSysStateKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlowSysStateKind::Start => write!(f, "start"),
+            FlowSysStateKind::Progress => write!(f, "progress"),
+            FlowSysStateKind::Finish => write!(f, "finish"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]

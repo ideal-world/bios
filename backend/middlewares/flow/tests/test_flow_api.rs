@@ -20,6 +20,7 @@ use tardis::web::web_resp::Void;
 use tardis::{tokio, TardisFuns};
 
 mod mock_api;
+mod test_flow_review_scenes_fsm;
 mod test_flow_scenes_fsm;
 
 #[tokio::test]
@@ -44,14 +45,24 @@ async fn test_flow_api() -> TardisResult<()> {
 
     sleep(Duration::from_millis(500)).await;
 
-    let mut search_client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", search_constants::DOMAIN_CODE));
-    let mut flow_client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", flow_constants::DOMAIN_CODE));
-    let mut iam_client = BIOSWebTestClient::new("https://127.0.0.1:8080/iam".to_string());
+    let mut search_client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", search_constants::DOMAIN_CODE));
+    let mut kv_client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", kv_constants::DOMAIN_CODE));
+    let mut flow_client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", flow_constants::DOMAIN_CODE));
+    let mut iam_client = BIOSWebTestClient::new("http://127.0.0.1:8080/iam".to_string());
 
     init_spi_kv().await?;
     init_spi_search().await?;
 
-    test_flow_scenes_fsm::test(&mut flow_client, &mut search_client, &mut iam_client, sysadmin_name, sysadmin_password).await?;
+    // test_flow_scenes_fsm::test(&mut flow_client, &mut search_client, &mut kv_client, &mut iam_client, sysadmin_name.clone(), sysadmin_password.clone()).await?;
+    test_flow_review_scenes_fsm::test(
+        &mut flow_client,
+        &mut search_client,
+        &mut kv_client,
+        &mut iam_client,
+        sysadmin_name.clone(),
+        sysadmin_password.clone(),
+    )
+    .await?;
     truncate_flow_data().await?;
 
     Ok(())
@@ -93,7 +104,7 @@ async fn init_spi_kv() -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", kv_constants::DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", kv_constants::DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 
@@ -133,7 +144,7 @@ async fn init_spi_search() -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", search_constants::DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", search_constants::DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 

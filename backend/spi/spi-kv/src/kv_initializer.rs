@@ -6,7 +6,11 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::kv_ci_item_api, kv_config::KvConfig, kv_constants::DOMAIN_CODE};
+use crate::{
+    api::ci::{kv_ci_item_api, kv_ci_transfer_api},
+    kv_config::KvConfig,
+    kv_constants::DOMAIN_CODE,
+};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     info!("[BIOS.KV] Module initializing");
@@ -28,7 +32,7 @@ async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, kv_ci_item_api::KvCiItemApi)).await;
+    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, kv_ci_item_api::KvCiItemApi, kv_ci_transfer_api::KvTransferApi)).await;
     Ok(())
 }
 

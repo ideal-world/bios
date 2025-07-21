@@ -1,0 +1,52 @@
+[package]
+name = "bios-sub-serv-all"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+
+
+[dependencies]
+serde.workspace = true
+tardis = { workspace = true, features = [
+  "web-server",
+  "conf-remote",
+  "tracing",
+] }
+bios-iam = { version = "0.2.0", path = "../../supports/iam", features = ["spi_search", "spi_kv", "event"] }
+bios-auth = { version = "0.2.0", path = "../../supports/auth", features = ["web-server"] }
+
+bios-spi-cache = { version = "0.2.0", path = "../../spi/spi-cache" }
+bios-spi-graph = { version = "0.2.0", path = "../../spi/spi-graph" }
+bios-spi-kv = { version = "0.2.0", path = "../../spi/spi-kv" }
+bios-spi-log = { version = "0.2.0", path = "../../spi/spi-log" }
+bios-spi-object = { version = "0.2.0", path = "../../spi/spi-object" }
+bios-spi-plugin = { version = "0.2.0", path = "../../spi/spi-plugin" }
+bios-spi-reldb = { version = "0.2.0", path = "../../spi/spi-reldb" }
+# bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search", features = ["default", "with-cn-tokenizer"] }
+bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search", features = ["default"] }
+bios-spi-stats = { version = "0.2.0", path = "../../spi/spi-stats" }
+bios-spi-conf = { version = "0.2.0", path = "../../spi/spi-conf" }
+
+bios-mw-schedule = { version = "0.2.0", path = "../../middlewares/schedule" }
+bios-mw-flow = { version = "0.2.0", path = "../../middlewares/flow" }
+bios-mw-event = { version = "0.2.0", path = "../../middlewares/event" }
+# bios-mw-event-client = { version = "0.2.0", path = "../../middlewares/event-client"}
+# # clients
+# bios-reach = { version = "0.2.0", path = "../../supports/reach" }
+# bios-client-hwsms = { version = "0.2.0", path = "../../../frontend/clients/hwsms", features = [
+#   "reach",
+# ] }
+
+# see [issue](https://github.com/kube-rs/kube/issues/1486)
+json-patch = { version = "=1.2.0" }
+dhat = {version = "0.3.3", optional = true}
+[features]
+default = []
+analysis = ["dep:dhat"]

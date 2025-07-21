@@ -1,4 +1,4 @@
-pub(crate) mod domain;
+pub mod domain;
 pub mod dto;
 pub mod helper;
 pub mod rbum_config;

@@ -30,7 +30,9 @@ use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_rel_serv::IamRelServ;
 use super::iam_res_serv::IamResServ;
 use super::iam_role_serv::IamRoleServ;
-use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
+use super::iam_set_serv::IamSetServ;
+use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountInfoResp};
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
 };
@@ -38,17 +40,19 @@ use crate::basic::dto::iam_cert_dto::{
     IamCertManageAddReq, IamCertManageModifyReq, IamCertModifyVisibilityRequest, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto,
     IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq,
 };
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, IAM_AVATAR, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamResKind, IamSetKind};
 
 lazy_static! {
     static ref SYNC_LOCK: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
@@ -1020,7 +1024,7 @@ impl IamCertServ {
             return Ok(());
         }
         for rel_id in rel_ids {
-            RbumRelServ::delete_rbum(&rel_id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
         }
         Ok(())
     }
@@ -1217,6 +1221,81 @@ impl IamCertServ {
         if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
             return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
+        let mut old_app_ids = account_agg.apps.iter().map(|app| app.app_id.clone()).collect::<Vec<String>>();
+        let mut apps = account_agg.apps;
+        if tenant_id != "" {
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?;
+            let mut app_role_read = HashMap::new();
+            app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            for (app_id, app_name) in app_items {
+                if old_app_ids.contains(&app_id) {
+                    continue;
+                }
+                old_app_ids.push(app_id.clone());
+                apps.push(IamAccountAppInfoResp {
+                    app_id: app_id.clone(),
+                    app_name: app_name.clone(),
+                    app_own_paths: format!("{}/{}", tenant_id, app_id),
+                    app_kind: IamAppKind::Product,
+                    app_icon: "".to_string(),
+                    roles: app_role_read.clone(),
+                    groups: HashMap::new(),
+                });
+            }
+            // todo 拥有全部应用数据权限 则可以查看跨租户的应用，以及当前租户的应用权限 `后续需要优化`
+            if IamResServ::is_res_code_with_context(funs.conf::<IamConfig>().app_res_data_guard_code.clone(), &ctx, funs).await? {
+                let mock_global_ctx = TardisContext {
+                    own_paths: "".to_string(),
+                    ..ctx.clone()
+                };
+                let app_ids = IamTenantServ::find_id_rel_app(tenant_id, None, None, funs, &mock_global_ctx).await?;
+                let proj_app = IamAppServ::find_items(
+                    &IamAppFilterReq {
+                        basic: RbumBasicFilterReq {
+                            // own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        kind: Some(IamAppKind::Project),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for app in proj_app {
+                    if !old_app_ids.contains(&app.id) {
+                        old_app_ids.push(app.id.clone());
+                        apps.push(IamAccountAppInfoResp {
+                            app_id: app.id.clone(),
+                            app_name: app.name.clone(),
+                            app_own_paths: format!("{}/{}", tenant_id, app.id),
+                            app_kind: IamAppKind::Project,
+                            app_icon: app.icon,
+                            roles: app_role_read.clone(),
+                            groups: HashMap::new(),
+                        });
+                    }
+                }
+                for app_id in app_ids {
+                    if !old_app_ids.contains(&app_id) {
+                        old_app_ids.push(app_id.clone());
+                        apps.push(IamAccountAppInfoResp {
+                            app_id: app_id.clone(),
+                            app_name: "".to_string(),
+                            app_own_paths: format!("{}/{}", tenant_id, app_id),
+                            app_kind: IamAppKind::Project,
+                            app_icon: "".to_string(),
+                            roles: app_role_read.clone(),
+                            groups: HashMap::new(),
+                        });
+                    }
+                }
+            }
+        }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),
@@ -1224,7 +1303,7 @@ impl IamCertServ {
             access_token,
             roles: account_agg.roles,
             groups: account_agg.groups,
-            apps: account_agg.apps,
+            apps,
         };
         IamIdentCacheServ::add_contexts(&account_info, tenant_id, funs).await?;
         Ok(account_info)

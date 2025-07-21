@@ -1019,6 +1019,7 @@ pub async fn test_bind_platform_to_tenant_node(
             ext_eq: None,
             ext_like: None,
             to_rbum_item_scope_levels: None,
+            ..Default::default()
         },
         &funs,
         sys_context,

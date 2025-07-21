@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq,
+    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind,
+    FlowModelSyncModifiedFieldReq,
 };
 use crate::flow_constants;
+use crate::helper::task_handler_helper;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use itertools::Itertools;
 use std::iter::Iterator;
-use tardis::basic::dto::TardisContext;
 use tardis::futures::future::join_all;
 use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -60,6 +60,7 @@ impl FlowCiModelApi {
         .ok_or_else(|| funs.err().internal_error("flow_ci_model_api", "get_detail", "model is not exist", "404-flow-model-not-found"))?
         .id;
         let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -78,6 +79,7 @@ impl FlowCiModelApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -125,7 +127,7 @@ impl FlowCiModelApi {
         .await?;
         let mut result = HashMap::new();
         for rel_main_model in rel_main_models {
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
             FlowInstServ::batch_update_when_switch_model(
                 &new_model,
                 new_model.rel_template_ids.first().cloned(),
@@ -162,9 +164,10 @@ impl FlowCiModelApi {
         )
         .await?;
         for rel_non_main_model in rel_non_main_models {
-            let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, &funs, &ctx.0).await?;
+            let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -185,6 +188,7 @@ impl FlowCiModelApi {
         funs.begin().await?;
         let result = FlowModelServ::copy_models_by_template_id(&from_template_id.0, &to_template_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -201,6 +205,7 @@ impl FlowCiModelApi {
             FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
@@ -269,58 +274,6 @@ impl FlowCiModelApi {
         TardisResp::ok(result)
     }
 
-    /// batch add rels with template and app
-    ///
-    /// 批量添加模板和应用的关联关系
-    #[oai(path = "/batch_add_template_app_rels", method = "get")]
-    async fn batch_add_template_app_rels(&self, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        let global_ctx = TardisContext::default();
-        funs.begin().await?;
-        let rels = RbumRelServ::find_rels(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some("FlowModelPath".to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            &funs,
-            &global_ctx,
-        )
-        .await?;
-        for rel in rels {
-            let ctx = TardisContext {
-                own_paths: rel.rel.own_paths,
-                owner: rel.rel.owner,
-                ..Default::default()
-            };
-            let rel_model_id = rel.rel.from_rbum_id;
-            if let Some(template_id) =
-                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_model_id, None, None, &funs, &ctx).await?.pop().map(|rel| rel.rel_id)
-            {
-                FlowRelServ::add_simple_rel(
-                    &FlowRelKind::FlowAppTemplate,
-                    &rel.rel.to_rbum_item_id.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string()).unwrap_or_default(),
-                    &template_id,
-                    None,
-                    None,
-                    true,
-                    true,
-                    None,
-                    &funs,
-                    &ctx,
-                )
-                .await?;
-            }
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void)
-    }
-
     /// Synchronize modified fields
     ///
     /// 同步修改的字段
@@ -331,6 +284,33 @@ impl FlowCiModelApi {
         funs.begin().await?;
         FlowModelServ::sync_modified_field(&modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// 同步模型到search（脚本）
+    #[oai(path = "/sync_model_template", method = "post")]
+    async fn sync_model_template(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::sync_model_template(&funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// 初始化复制模型（脚本）
+    #[oai(path = "/init_copy_model", method = "post")]
+    async fn init_copy_model(&self, req: Json<FlowModelInitCopyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowModelServ::init_copy_model(&req, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }

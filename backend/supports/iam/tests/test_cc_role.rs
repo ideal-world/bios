@@ -39,6 +39,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     info!("【test_cc_role】 : test_single_level : Add Role");
     let role_id1 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role1".to_string())),
             name: TrimString("角色1".to_string()),
             icon: None,
@@ -56,6 +57,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     .await?;
     let _role_id2 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role2".to_string())),
             name: TrimString("角色2".to_string()),
             icon: None,
@@ -159,6 +161,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     // ----------------------- Rel Res -----------------------
     let res_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             name: TrimString("测试资源".to_string()),
             code: TrimString("test_code".to_string()),
             method: Some(TrimString("GET".to_string())),
@@ -175,6 +178,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
             double_auth_msg: None,
             need_login: None,
             bind_api_res: None,
+            bind_data_guards: None,
             ext: None,
         },
         &funs,
@@ -246,6 +250,7 @@ async fn test_multi_level_add<'a>(
 
     let role_sys_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_sys".to_string())),
             name: TrimString("role_sys".to_string()),
             icon: None,
@@ -264,6 +269,7 @@ async fn test_multi_level_add<'a>(
 
     let role_sys_global_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_sys_global".to_string())),
             name: TrimString("role_sys_global".to_string()),
             icon: None,
@@ -282,6 +288,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t1_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_t1".to_string())),
             name: TrimString("role_t1".to_string()),
             icon: None,
@@ -300,6 +307,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_t2".to_string())),
             name: TrimString("role_t2".to_string()),
             icon: None,
@@ -318,6 +326,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_tenant_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_t2_tenant".to_string())),
             name: TrimString("role_t2_tenant".to_string()),
             icon: None,
@@ -336,6 +345,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_a1_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_t2_a1".to_string())),
             name: TrimString("role_t2_a1".to_string()),
             icon: None,
@@ -354,6 +364,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_a2_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role_t2_a2".to_string())),
             name: TrimString("role_t2_a2".to_string()),
             icon: None,

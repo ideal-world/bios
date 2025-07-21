@@ -296,6 +296,8 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             admin_ids: Some(vec![account_id.clone()]),
             set_cate_id: None,
+            kind: None,
+            sync_apps_group: None,
         },
         &funs,
         &tenant_admin_context,
@@ -862,6 +864,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Add res, expected two res records");
     let res_cs_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             code: TrimString("iam/cs-2/**".to_string()),
             name: TrimString("系统控制台".to_string()),
             kind: IamResKind::Api,
@@ -878,6 +881,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             need_login: Some(false),
             double_auth_msg: None,
             bind_api_res: None,
+            bind_data_guards: None,
             ext: None,
         },
         &funs,
@@ -886,6 +890,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     .await?;
     let res_ca_id = IamResServ::add_item(
         &mut IamResAddReq {
+            id: None,
             code: TrimString("iam/ca-2/**".to_string()),
             name: TrimString("应用控制台".to_string()),
             kind: IamResKind::Api,
@@ -901,6 +906,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             double_auth: Some(false),
             need_login: Some(false),
             bind_api_res: None,
+            bind_data_guards: None,
             double_auth_msg: None,
             ext: None,
         },
@@ -935,6 +941,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             double_auth_msg: None,
             need_login: None,
             bind_api_res: None,
+            bind_data_guards: None,
             ext: None,
         },
         &funs,
@@ -963,6 +970,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             double_auth_msg: None,
             need_login: None,
             bind_api_res: None,
+            bind_data_guards: None,
             ext: None,
         },
         &funs,
@@ -995,6 +1003,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Add role rel, expected two role rel records");
     let role_id1 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            id: None,
             code: Some(TrimString("role1".to_string())),
             name: TrimString("角色1".to_string()),
             icon: None,

@@ -33,11 +33,14 @@ use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamRoleKind, IamSetKind};
+use crate::iam_enumeration::{
+    IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind, IamRelKind, IamRoleKind, IamSetKind,
+};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -622,6 +625,16 @@ impl IamTenantServ {
         } else {
             Err(funs.err().not_found("iam_tenant_serv", "get_tenant_agg", "not found cert config", "404-iam-cert-conf-not-exist"))
         }
+    }
+
+    pub async fn find_id_rel_app(
+        tenant_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_to_id_rels(&IamRelKind::IamAppTenant, tenant_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {

@@ -19,11 +19,11 @@ use crate::{
             iam_account_dto::IamAccountDetailAggResp,
             iam_filer_dto::{IamAccountFilterReq, IamTenantFilterReq},
         },
-        serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_tenant_serv::IamTenantServ},
+        serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::IamSetKind,
+    iam_enumeration::{IamRelKind, IamSetKind},
 };
 pub struct IamSearchClient;
 
@@ -66,6 +66,44 @@ impl IamSearchClient {
         .await
     }
 
+    pub async fn sync_add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let account_resp = IamAccountServ::get_account_detail_aggs(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            true,
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        let logout_msg = logout_msg.to_string();
+        ctx.add_sync_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
     pub async fn async_delete_account_search(account_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
@@ -93,6 +131,12 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
+        let global_ctx = TardisContext {
+            own_paths: "".to_owned(),
+            ..ctx.clone()
+        };
+        let sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAccount, account_id, &funs, &global_ctx).await?;
+        let auth_sub_deploy_ids = IamSubDeployServ::find_sub_deploy_id_by_rel_id(&IamRelKind::IamSubDeployAuthAccount, account_id, &funs, &global_ctx).await?;
         let mock_ctx = TardisContext {
             own_paths: "".to_owned(),
             ..ctx.clone()
@@ -162,6 +206,8 @@ impl IamSearchClient {
                     "lock_status": account_resp.lock_status,
                     "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
                     "dept_id": account_resp_dept_id,
+                    "sub_deploy_ids": sub_deploy_ids,
+                    "auth_sub_deploy_ids": auth_sub_deploy_ids,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
@@ -191,6 +237,7 @@ impl IamSearchClient {
                 key: TrimString(key),
                 title: account_resp.name.clone(),
                 content: format!("{},{:?}", account_resp.name, account_certs,),
+                data_source: None,
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
                     Some(account_resp.own_paths.clone())
@@ -205,6 +252,8 @@ impl IamSearchClient {
                     "lock_status": account_resp.lock_status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
+                    "sub_deploy_ids": sub_deploy_ids,
+                    "auth_sub_deploy_ids": auth_sub_deploy_ids,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,

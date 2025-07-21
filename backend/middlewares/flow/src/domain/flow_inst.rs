@@ -15,12 +15,20 @@ pub struct Model {
     pub rel_flow_version_id: String,
 
     /// Instance code / 实例编码
-    #[index(unique)]
+    #[index]
     pub code: Option<String>,
 
     /// Business object Id / 关联的业务对象Id
     #[index]
     pub rel_business_obj_id: String,
+
+    /// Related Transition Id / 关联的动作Id
+    #[index]
+    pub rel_transition_id: Option<String>,
+
+    /// Related Instance Id / 关联的实例Id
+    #[index]
+    pub rel_inst_id: Option<String>,
 
     /// Whether master workflow / 是否主流程
     #[index]
@@ -91,4 +99,7 @@ pub struct Model {
     pub comments: Option<Vec<FlowInstCommentInfo>>,
 
     pub own_paths: String,
+
+    #[index]
+    pub data_source: String,
 }

@@ -22,7 +22,9 @@ use bios_basic::{
 };
 
 use crate::{
-    dto::log_item_dto::{AdvBasicQueryCondInfo, LogConfigReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp},
+    dto::log_item_dto::{
+        AdvBasicQueryCondInfo, LogConfigReq, LogExportDataReq, LogExportDataResp, LogImportDataReq, LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp,
+    },
     log_constants::{CONFIG_TABLE_NAME, LOG_REF_FLAG, TABLE_LOG_FLAG_V2},
 };
 
@@ -46,6 +48,10 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     conn.begin().await?;
     let ref_fields = get_ref_fields_by_table_name(&conn, &get_schema_name_from_ext(&inst.ext).expect("ignore"), &table_name).await?;
     if let Some(key) = add_req.key.as_ref() {
+        // 如果存在上一次记录，则跳过
+        if check(&add_req.tag, key, &id, funs, ctx, inst).await? {
+            return Ok(id);
+        }
         let get_last_record = conn
             .query_one(
                 &format!(
@@ -56,7 +62,6 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
                 vec![Value::from(key.to_string())],
             )
             .await?;
-
         if let Some(last_record) = get_last_record {
             let mut last_content: JsonValue = last_record.try_get("", "content")?;
             let last_ts: DateTime<Utc> = last_record.try_get("", "ts")?;
@@ -111,15 +116,16 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     add_req.content = insert_content;
     let mut params = vec![
         Value::from(id.clone()),
-        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
+        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).split(',').map(|s| s.to_string()).collect::<Vec<String>>()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.tag.clone()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.content.clone()),
+        Value::from(add_req.data_source.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.owner_name.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(add_req.push),
+        Value::from(add_req.push.unwrap_or(false)),
         Value::from(if let Some(ext) = &add_req.ext {
             ext.clone()
         } else {
@@ -134,22 +140,41 @@ pub async fn addv2(add_req: &mut LogItemAddV2Req, funs: &TardisFunsInst, ctx: &T
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-  (idempotent_id, kind, key, tag, op, content, owner, owner_name, own_paths, push, ext, rel_key, msg{})
+  (idempotent_id, kind, key, tag, op, content, data_source, owner, owner_name, own_paths, push, ext, rel_key, msg{})
 VALUES
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13{})
+  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14{})
 "#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $14" } else { "" },
+            if add_req.ts.is_some() { ", $15" } else { "" },
         ),
         params,
     )
     .await?;
     conn.commit().await?;
     //if push is true, then push to EDA
-    if add_req.push {
+    if add_req.push.unwrap_or(false) && !add_req.ignore_push.unwrap_or(false) {
         push_to_eda(add_req, &ref_fields, funs, ctx).await?;
     }
     Ok(id)
+}
+
+async fn check(tag: &str, key: &str, idempotent_id: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    // 初始化要保存的内容
+    let (conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
+    let count: i64 = conn
+        .query_one(
+            &format!(
+                r#"
+select count(1) as _count from {table_name} where key = $1 and idempotent_id = $2
+"#
+            ),
+            vec![Value::from(key), Value::from(idempotent_id)],
+        )
+        .await?
+        .ok_or_else(|| TardisError::not_found("not found", "404-spi-log-not-found"))?
+        .try_get("", "_count")?;
+    Ok(count > 0)
 }
 
 fn get_ref_filed_value(ref_log_record_ts: &DateTime<Utc>, ref_log_record_key: &str) -> String {
@@ -188,15 +213,20 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
     let mut sql_vals: Vec<Value> = vec![];
 
     if let Some(kinds) = &find_req.kinds {
-        let place_holder = kinds
-            .iter()
-            .map(|kind| {
-                sql_vals.push(Value::from(kind.to_string()));
-                format!("${}", sql_vals.len())
-            })
-            .collect::<Vec<String>>()
-            .join(",");
-        where_fragments.push(format!("kind IN ({place_holder})"));
+        if kinds.len() == 1 {
+            sql_vals.push(Value::from(kinds[0].to_string()));
+            where_fragments.push(format!("${} = ANY(kind)", sql_vals.len()));
+        } else {
+            let place_holder = kinds
+                .iter()
+                .map(|kind| {
+                    sql_vals.push(Value::from(kind.to_string()));
+                    format!("${}", sql_vals.len())
+                })
+                .collect::<Vec<String>>()
+                .join(",");
+            where_fragments.push(format!("kind && ARRAY[{place_holder}]::varchar[]"));
+        }
     }
     if let Some(owners) = &find_req.owners {
         let place_holder = owners
@@ -590,7 +620,7 @@ pub async fn findv2(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, owner, owner_name, own_paths, rel_key, msg, count(*) OVER() AS total
+                r#"SELECT ts, idempotent_id, key, op, content, kind, ext, data_source, owner, owner_name, own_paths, rel_key, msg, count(*) OVER() AS total
 FROM {table_name}
 WHERE
   {}
@@ -627,6 +657,7 @@ ORDER BY ts DESC
                 content: item.try_get("", "content")?,
                 rel_key: item.try_get("", "rel_key")?,
                 kind: item.try_get("", "kind")?,
+                data_source: item.try_get("", "data_source")?,
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 msg: item.try_get("", "msg")?,

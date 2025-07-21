@@ -1,10 +1,10 @@
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, fmt::format, vec};
 
 use itertools::Itertools;
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::Utc,
+    chrono::{DateTime, Duration, Utc},
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
@@ -19,8 +19,9 @@ use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper:
 
 use crate::{
     dto::search_item_dto::{
-        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq,
-        SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp,
+        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq,
+        SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
+        SearchItemSearchResp, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp,
     },
     search_config::SearchConfig,
 };
@@ -36,29 +37,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
-
-    let pinyin_vec = to_pinyin_vec(add_req.title.as_str(), Pinyin::plain);
-    let content = add_req.title.as_str().split(' ').last().unwrap_or_default();
-    if add_req.title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
-        params.push(Value::from(format!(
-            "{} {} {} {}",
-            add_req.title.as_str(),
-            pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-            generate_word_combinations_with_symbol(add_req.title.as_str(), vec!["-", "_"]).join(" "),
-            generate_word_combinations(pinyin_vec).join(" ")
-        )));
-    } else {
-        params.push(Value::from(format!(
-            "{} {} {} {} {} {} {}",
-            add_req.title.as_str(),
-            pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-            generate_word_combinations_with_length(content, 1).join(" "),
-            generate_word_combinations_with_length(content, 2).join(" "),
-            generate_word_combinations_with_length(content, 3).join(" "),
-            generate_word_combinations_with_symbol(add_req.title.as_str(), vec!["-", "_"]).join(" "),
-            generate_word_combinations(pinyin_vec).join(" ")
-        )));
-    }
+    params.push(Value::from(title_tsv(add_req.title.as_str(), funs).await?));
 
     params.push(Value::from(add_req.content.as_str()));
     params.push(Value::from(add_req.content.as_str()));
@@ -67,6 +46,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     //     add_req.content.as_str(),
     //     to_pinyin_vec(add_req.content.as_str(), Pinyin::plain).join(",")
     // )));
+    params.push(Value::from(add_req.data_source.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(if let Some(create_time) = add_req.create_time { create_time } else { Utc::now() }));
@@ -91,11 +71,11 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (kind, key, title, title_tsv, content, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
+    (kind, key, title, title_tsv, content, content_tsv, data_source, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('{}', $6), $7, $8, $9, $10, $11, {})"#,
+    ($1, $2, $3, to_tsvector('{word_combinations_way}', $4), $5, to_tsvector('{}', $6), $7, $8, $9, $10, $11, $12, {})"#,
             get_tokenizer(),
-            if add_req.visit_keys.is_some() { "$12" } else { "null" },
+            if add_req.visit_keys.is_some() { "$13" } else { "null" },
         ),
         params,
     )
@@ -126,29 +106,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             "simple".to_string()
         };
         sql_sets.push(format!("title_tsv = to_tsvector('{word_combinations_way}', ${})", params.len() + 1));
-
-        let pinyin_vec = to_pinyin_vec(title, Pinyin::plain);
-        let content = title.split(' ').last().unwrap_or_default();
-        if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
-            params.push(Value::from(format!(
-                "{} {} {} {}",
-                title,
-                pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-                generate_word_combinations_with_symbol(title.as_str(), vec!["-", "_"]).join(" "),
-                generate_word_combinations(pinyin_vec).join(" ")
-            )));
-        } else {
-            params.push(Value::from(format!(
-                "{} {} {} {} {} {} {}",
-                title,
-                pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-                generate_word_combinations_with_length(content, 1).join(" "),
-                generate_word_combinations_with_length(content, 2).join(" "),
-                generate_word_combinations_with_length(content, 3).join(" "),
-                generate_word_combinations_with_symbol(title.as_str(), vec!["-", "_"]).join(" "),
-                generate_word_combinations(pinyin_vec).join(" ")
-            )));
-        }
+        params.push(Value::from(title_tsv(title, funs).await?));
     };
     if let Some(content) = &modify_req.content {
         sql_sets.push(format!("content = ${}", params.len() + 1));
@@ -202,6 +160,32 @@ WHERE key = $1
     .await?;
     conn.commit().await?;
     Ok(())
+}
+
+async fn title_tsv(title: &str, funs: &TardisFunsInst) -> TardisResult<String> {
+    let pinyin_vec = to_pinyin_vec(title, Pinyin::plain);
+    let content = title.split(' ').last().unwrap_or_default();
+    let title_tsv = if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
+        format!(
+            "{} {} {} {}",
+            title,
+            pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
+            generate_word_combinations_with_symbol(title, vec!["-", "_"]).join(" "),
+            generate_word_combinations(pinyin_vec).join(" ")
+        )
+    } else {
+        format!(
+            "{} {} {} {} {} {} {}",
+            title,
+            pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
+            generate_word_combinations_with_length(content, 1).join(" "),
+            generate_word_combinations_with_length(content, 2).join(" "),
+            generate_word_combinations_with_length(content, 3).join(" "),
+            generate_word_combinations_with_symbol(title, vec!["-", "_"]).join(" "),
+            generate_word_combinations(pinyin_vec).join(" ")
+        )
+    };
+    Ok(title_tsv)
 }
 
 fn generate_word_combinations_with_length(original_str: &str, split_len: usize) -> Vec<String> {
@@ -292,7 +276,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let result = conn
         .query_all(
             format!(
-                r#"SELECT kind, key, title, owner, own_paths, create_time, update_time, ext{}{}{}
+                r#"SELECT kind, key, title, data_source, owner, own_paths, create_time, update_time, ext{}{}{}
 FROM {table_name} {table_alias_name}{}
 WHERE 
     {}
@@ -337,6 +321,7 @@ WHERE
                 key: item.try_get("", "key")?,
                 title: item.try_get("", "title")?,
                 content: item.try_get("", "content").unwrap_or_default(),
+                data_source: item.try_get("", "data_source").unwrap_or_default(),
                 owner: item.try_get("", "owner")?,
                 own_paths: item.try_get("", "own_paths")?,
                 create_time: item.try_get("", "create_time")?,
@@ -1429,4 +1414,134 @@ fn get_tokenizer() -> String {
     {
         "simple".to_string()
     }
+}
+
+pub async fn export_data(export_req: &SearchExportDataReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchExportDataResp> {
+    let mut tag_data = HashMap::new();
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    for tag in &export_req.tags {
+        let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+        let mut params = vec![Value::from(format!("{}%", ctx.own_paths.clone()))];
+        let start_time = export_req.start_time.clone().unwrap_or_else(|| Utc::now() - Duration::days(365 * 2));
+        let end_time = export_req.end_time.clone().unwrap_or_else(|| Utc::now());
+        params.push(Value::from(start_time));
+        params.push(Value::from(end_time));
+        let kind_sql = if let Some(tag_kind) = &export_req.tag_kind {
+            if tag_kind.contains_key(tag) && !tag_kind.get(tag).unwrap_or(&vec![]).is_empty() {
+                let kinds = tag_kind.get(tag).unwrap_or(&vec![]).clone();
+                let kind_sql = format!(
+                    "AND kind IN ({})",
+                    (0..kinds.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                );
+                for kind in &kinds {
+                    params.push(Value::from(kind));
+                }
+                kind_sql
+            } else {
+                "".to_string()
+            }
+        } else {
+            "".to_string()
+        };
+        let result = conn
+            .query_all(
+                &format!(
+                    "
+                SELECT key, kind, title, content, data_source, owner, own_paths, create_time, update_time, ext, visit_keys 
+                FROM {table_name} 
+                WHERE 
+                    own_paths like $1
+                    and (
+                        (create_time > $2 and create_time < $3)
+                     or (update_time > $2 and update_time <= $3)
+                    )
+                    {kind_sql}
+                order by create_time desc",
+                ),
+                params,
+            )
+            .await?;
+        let result = result
+            .into_iter()
+            .map(|item| {
+                Ok(SearchExportAggResp {
+                    kind: item.try_get("", "kind")?,
+                    key: item.try_get("", "key")?,
+                    title: item.try_get("", "title")?,
+                    content: item.try_get("", "content")?,
+                    data_source: item.try_get("", "data_source").unwrap_or_default(),
+                    owner: item.try_get("", "owner")?,
+                    own_paths: item.try_get("", "own_paths")?,
+                    create_time: item.try_get("", "create_time")?,
+                    update_time: item.try_get("", "update_time")?,
+                    ext: item.try_get("", "ext")?,
+                    visit_keys: item.try_get("", "visit_keys")?,
+                    tag: tag.to_string(),
+                })
+            })
+            .collect::<TardisResult<Vec<SearchExportAggResp>>>()?;
+        tag_data.insert(tag.to_string(), result);
+    }
+    Ok(SearchExportDataResp { tag_data })
+}
+
+pub async fn import_data(import_req: &SearchImportDataReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<bool> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let mut num = 0;
+    for (tag, tag_data) in &import_req.tag_data {
+        let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+        for data in tag_data {
+            num += 1;
+            if num % 100 == 0 {
+                tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            let key = data.key.clone();
+            let sql = format!("SELECT * FROM {} WHERE key = $1", table_name);
+            let result = conn.query_all(&sql, vec![Value::from(key.clone())]).await?;
+            if result.is_empty() {
+                add(
+                    &mut SearchItemAddReq {
+                        tag: tag.to_string(),
+                        kind: data.kind.clone(),
+                        key: key.into(),
+                        title: data.title.clone(),
+                        content: data.content.clone(),
+                        data_source: Some(import_req.data_source.clone()),
+                        owner: Some(data.owner.clone()),
+                        own_paths: Some(data.own_paths.clone()),
+                        create_time: Some(data.create_time),
+                        update_time: Some(data.update_time),
+                        ext: Some(data.ext.clone()),
+                        visit_keys: data.visit_keys.clone(),
+                    },
+                    funs,
+                    ctx,
+                    inst,
+                )
+                .await?;
+            } else {
+                modify(
+                    tag,
+                    &key,
+                    &mut SearchItemModifyReq {
+                        title: Some(data.title.clone()),
+                        content: Some(data.content.clone()),
+                        owner: Some(data.owner.clone()),
+                        own_paths: Some(data.own_paths.clone()),
+                        create_time: Some(data.create_time),
+                        update_time: Some(data.update_time),
+                        ext: Some(data.ext.clone()),
+                        visit_keys: data.visit_keys.clone(),
+                        kind: Some(data.kind.clone()),
+                        ext_override: Some(true),
+                    },
+                    funs,
+                    ctx,
+                    inst,
+                )
+                .await?;
+            }
+        }
+    }
+    Ok(true)
 }

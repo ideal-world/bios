@@ -39,6 +39,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
+            id: None,
             code: TrimString("test_rbum_set_code".to_string()),
             kind: TrimString("".to_string()),
             name: TrimString(" 测试集合 ".to_string()),

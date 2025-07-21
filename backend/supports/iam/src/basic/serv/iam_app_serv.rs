@@ -20,7 +20,7 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -66,6 +66,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
+            kind: Set(add_req.kind.clone().unwrap_or(IamAppKind::Product)),
             ..Default::default()
         })
     }
@@ -109,7 +110,8 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
     }
     async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
-            IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
+            // IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
+            IamIdentCacheServ::refresh_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
         }
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_app_kv(id, funs, ctx).await?;
@@ -124,8 +126,12 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         query.column((iam_app::Entity, iam_app::Column::Icon));
         query.column((iam_app::Entity, iam_app::Column::Sort));
+        query.column((iam_app::Entity, iam_app::Column::Kind));
         if let Some(contact_phone) = &filter.contact_phone {
             query.and_where(Expr::col(iam_app::Column::ContactPhone).eq(contact_phone.as_str()));
+        }
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::col(iam_app::Column::Kind).eq(kind.to_string()));
         }
         Ok(())
     }
@@ -172,6 +178,8 @@ impl IamAppServ {
                 contact_phone: add_req.app_contact_phone.clone(),
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                kind: add_req.kind.clone(),
+                sync_apps_group: add_req.sync_apps_group,
             },
             funs,
             &app_ctx,
@@ -190,20 +198,22 @@ impl IamAppServ {
         }
         //refresh ctx
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
-        IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
+        let _ = IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
 
-        let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &ctx).await?;
-        IamSetServ::add_set_item(
-            &IamSetItemAddReq {
-                set_id: apps_set_id.clone(),
-                set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-                sort: add_req.app_sort.unwrap_or(0),
-                rel_rbum_item_id: app_id.to_string(),
-            },
-            funs,
-            &ctx,
-        )
-        .await?;
+        if add_req.sync_apps_group.unwrap_or(true) {
+            let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &ctx).await?;
+            IamSetServ::add_set_item(
+                &IamSetItemAddReq {
+                    set_id: apps_set_id.clone(),
+                    set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+                    sort: add_req.app_sort.unwrap_or(0),
+                    rel_rbum_item_id: app_id.to_string(),
+                },
+                funs,
+                &ctx,
+            )
+            .await?;
+        }
         app_ctx.execute_task().await?;
 
         Ok(app_id)
@@ -242,24 +252,26 @@ impl IamAppServ {
                 }
             }
         }
-        if let Some(set_cate_id) = &modify_req.set_cate_id {
-            let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-            let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
-            let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
-            for set_item in set_items {
-                IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
+        if modify_req.sync_apps_group.unwrap_or(true) {
+            if let Some(set_cate_id) = &modify_req.set_cate_id {
+                let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+                let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
+                let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
+                for set_item in set_items {
+                    IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
+                }
+                IamSetServ::add_set_item(
+                    &IamSetItemAddReq {
+                        set_id: apps_set_id.clone(),
+                        set_cate_id: set_cate_id.to_string(),
+                        sort: modify_req.sort.unwrap_or(0),
+                        rel_rbum_item_id: id.to_string(),
+                    },
+                    funs,
+                    &tenant_ctx,
+                )
+                .await?;
             }
-            IamSetServ::add_set_item(
-                &IamSetItemAddReq {
-                    set_id: apps_set_id.clone(),
-                    set_cate_id: set_cate_id.to_string(),
-                    sort: modify_req.sort.unwrap_or(0),
-                    rel_rbum_item_id: id.to_string(),
-                },
-                funs,
-                &tenant_ctx,
-            )
-            .await?;
         }
         if let Some(disabled) = &modify_req.disabled {
             if *disabled {
@@ -310,13 +322,56 @@ impl IamAppServ {
         IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, ctx).await
     }
 
+    pub async fn add_rel_tenant_all(app_id: &str, tenant_ids: Vec<String>, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let original_app_tenant_ids = Self::find_id_rel_tenant(&app_id, None, None, funs, ctx).await?;
+        let original_app_tenant_ids = HashSet::from_iter(original_app_tenant_ids.iter().cloned());
+        for tenant_id in tenant_ids.clone() {
+            if original_app_tenant_ids.contains(&tenant_id) {
+                continue;
+            }
+            Self::add_rel_tenant(app_id, &tenant_id, ignore_exist_error, funs, ctx).await?;
+        }
+        // delete old tenants
+        for tenant_id in original_app_tenant_ids.difference(&tenant_ids.iter().cloned().collect::<HashSet<String>>()) {
+            Self::delete_rel_tenant(&app_id, tenant_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn add_rel_tenant(app_id: &str, tenant_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamAppTenant, app_id, tenant_id, None, None, ignore_exist_error, false, funs, ctx).await
+    }
+
+    pub async fn delete_rel_tenant(app_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAppTenant, app_id, tenant_id, funs, ctx).await
+    }
+
+    pub async fn find_id_rel_tenant(
+        app_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_from_id_rels(&IamRelKind::IamAppTenant, true, app_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    pub async fn count_rel_tenant(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        IamRelServ::count_to_rels(&IamRelKind::IamAppTenant, app_id, funs, &mock_ctx).await
+    }
+
     pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Option<RbumItemRelFilterReq>> {
         Ok(Some(RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(Self::get_id_by_ctx(ctx, funs)?),
-            own_paths: Some(ctx.own_paths.clone()),
+            // todo 开放人员的 own_paths 限制
+            // own_paths: Some(ctx.own_paths.clone()),
             ..Default::default()
         }))
     }

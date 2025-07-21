@@ -60,13 +60,14 @@ impl BasicQueryCondInfo {
                         }
                         BasicQueryOpKind::Gt => {
                             if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) < if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_f64().unwrap_or(0.0)
-                                } else {
-                                    0.0
-                                }
+                                cond.value.as_f64().unwrap_or(0.0)
+                                    < if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_f64().unwrap_or(0.0)
+                                    } else {
+                                        0.0
+                                    }
                             } else if cond.value.is_i64() {
                                 cond.value.as_i64().unwrap_or(0)
                                     < if check_val.is_string() {
@@ -77,13 +78,14 @@ impl BasicQueryCondInfo {
                                         0
                                     }
                             } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) < if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_u64().unwrap_or(0)
-                                } else {
-                                    0
-                                }
+                                cond.value.as_u64().unwrap_or(0)
+                                    < if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_u64().unwrap_or(0)
+                                    } else {
+                                        0
+                                    }
                             } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") < check_val.as_str().unwrap_or("")
                             } else {
@@ -92,29 +94,32 @@ impl BasicQueryCondInfo {
                         }
                         BasicQueryOpKind::Ge => {
                             if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) <= if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_f64().unwrap_or(0.0)
-                                } else {
-                                    0.0
-                                }
+                                cond.value.as_f64().unwrap_or(0.0)
+                                    <= if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_f64().unwrap_or(0.0)
+                                    } else {
+                                        0.0
+                                    }
                             } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) <= if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                } else if check_val.is_i64() {
-                                    check_val.as_i64().unwrap_or(0)
-                                } else {
-                                    0
-                                }
+                                cond.value.as_i64().unwrap_or(0)
+                                    <= if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                                    } else if check_val.is_i64() {
+                                        check_val.as_i64().unwrap_or(0)
+                                    } else {
+                                        0
+                                    }
                             } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) <= if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_u64().unwrap_or(0)
-                                } else {
-                                    0
-                                }
+                                cond.value.as_u64().unwrap_or(0)
+                                    <= if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_u64().unwrap_or(0)
+                                    } else {
+                                        0
+                                    }
                             } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") <= check_val.as_str().unwrap_or("")
                             } else {
@@ -123,29 +128,32 @@ impl BasicQueryCondInfo {
                         }
                         BasicQueryOpKind::Lt => {
                             if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) > if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_f64().unwrap_or(0.0)
-                                } else {
-                                    0.0
-                                }
+                                cond.value.as_f64().unwrap_or(0.0)
+                                    > if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_f64().unwrap_or(0.0)
+                                    } else {
+                                        0.0
+                                    }
                             } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) > if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                } else if check_val.is_i64() {
-                                    check_val.as_i64().unwrap_or(0)
-                                } else {
-                                    0
-                                }
+                                cond.value.as_i64().unwrap_or(0)
+                                    > if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                                    } else if check_val.is_i64() {
+                                        check_val.as_i64().unwrap_or(0)
+                                    } else {
+                                        0
+                                    }
                             } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) > if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_u64().unwrap_or(0)
-                                } else {
-                                    0
-                                }
+                                cond.value.as_u64().unwrap_or(0)
+                                    > if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_u64().unwrap_or(0)
+                                    } else {
+                                        0
+                                    }
                             } else if cond.value.is_string() {
                                 cond.value.as_str().unwrap_or("") > check_val.as_str().unwrap_or("")
                             } else {
@@ -154,21 +162,23 @@ impl BasicQueryCondInfo {
                         }
                         BasicQueryOpKind::Le => {
                             if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0) >= if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                } else if check_val.is_f64() {
-                                    check_val.as_f64().unwrap_or(0.0)
-                                } else {
-                                    0.0
-                                }
+                                cond.value.as_f64().unwrap_or(0.0)
+                                    >= if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
+                                    } else if check_val.is_f64() {
+                                        check_val.as_f64().unwrap_or(0.0)
+                                    } else {
+                                        0.0
+                                    }
                             } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0) >= if check_val.is_string() {
-                                    check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                } else if check_val.is_i64() {
-                                    check_val.as_i64().unwrap_or(0)
-                                } else {
-                                    0
-                                }
+                                cond.value.as_i64().unwrap_or(0)
+                                    >= if check_val.is_string() {
+                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
+                                    } else if check_val.is_i64() {
+                                        check_val.as_i64().unwrap_or(0)
+                                    } else {
+                                        0
+                                    }
                             } else if cond.value.is_u64() {
                                 cond.value.as_u64().unwrap_or(0) >= check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
                             } else if cond.value.is_string() {
@@ -208,7 +218,7 @@ impl BasicQueryCondInfo {
                             } else {
                                 check_val_arr.contains(&cond.value)
                             }
-                        },
+                        }
                         BasicQueryOpKind::NotIn => {
                             let check_val_arr = if check_val.is_array() {
                                 // 数组直接返回
@@ -234,7 +244,7 @@ impl BasicQueryCondInfo {
                             } else {
                                 !check_val_arr.contains(&cond.value)
                             }
-                        },
+                        }
                         BasicQueryOpKind::IsNull => false,
                         BasicQueryOpKind::IsNotNull => true,
                         BasicQueryOpKind::IsNullOrEmpty => false,

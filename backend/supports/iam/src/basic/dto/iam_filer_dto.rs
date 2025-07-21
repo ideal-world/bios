@@ -5,7 +5,10 @@ use tardis::web::poem_openapi;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumSetItemRelFilterReq};
 
-use crate::iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind};
+use crate::{
+    basic::dto::iam_app_dto::IamAppKind,
+    iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind, IamSubDeployHostKind},
+};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
@@ -18,10 +21,50 @@ pub struct IamConfigFilterReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
+pub struct IamSubDeployFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
+    pub province: Option<String>,
+    pub access_url: Option<String>,
+    pub extend_sub_deploy_id: Option<String>,
+}
+
+impl RbumItemFilterFetcher for IamSubDeployFilterReq {
+    fn basic(&self) -> &RbumBasicFilterReq {
+        &self.basic
+    }
+    fn rel(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel
+    }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
+    }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct IamSubDeployHostFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub sub_deploy_id: Option<String>,
+    pub host: Option<String>,
+    pub host_type: Option<IamSubDeployHostKind>,
+}
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct IamSubDeployLicenseFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub sub_deploy_id: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
 pub struct IamAccountFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
+    pub rel3: Option<RbumItemRelFilterReq>,
+    pub rel4: Option<RbumItemRelFilterReq>,
     pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
     pub status: Option<IamAccountStatusKind>,
@@ -47,6 +90,7 @@ pub struct IamAppFilterReq {
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
+    pub kind: Option<IamAppKind>,
     pub contact_phone: Option<String>,
 }
 

@@ -8,7 +8,7 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 use tardis::web::poem_openapi;
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamRoleKind {
     System,
     Tenant,
@@ -103,13 +103,21 @@ pub enum IamRelKind {
     IamResRole,
     IamAccountApp,
     IamResApi,
+    IamResDataGuard,
     IamAccountRel,
     IamCertRel,
     IamOrgRel,
+    IamAppTenant,
 
     IamProductSpec,
     IamCertProduct,
     IamCertSpec,
+
+    IamSubDeployAccount,
+    IamSubDeployAuthAccount,
+    IamSubDeployOrg,
+    IamSubDeployApps,
+    IamSubDeployRel,
 }
 
 #[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
@@ -120,6 +128,7 @@ pub enum IamResKind {
     Ele,
     Product,
     Spec,
+    DataGuard,
 }
 
 impl IamResKind {
@@ -130,6 +139,7 @@ impl IamResKind {
             2 => Ok(IamResKind::Ele),
             3 => Ok(IamResKind::Product),
             4 => Ok(IamResKind::Spec),
+            5 => Ok(IamResKind::DataGuard),
             _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
@@ -141,6 +151,7 @@ impl IamResKind {
             IamResKind::Ele => 2,
             IamResKind::Product => 3,
             IamResKind::Spec => 4,
+            IamResKind::DataGuard => 5,
         }
     }
 }
@@ -161,6 +172,7 @@ pub enum IamSetKind {
     Org,
     Res,
     Apps,
+    DataGuard,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
@@ -401,4 +413,12 @@ impl IamConfigKind {
     pub fn parse(kind: &str) -> TardisResult<IamConfigKind> {
         IamConfigKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not config kind: {kind}"), "404-iam-config-kind-not-exist"))
     }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum IamSubDeployHostKind {
+    /// 二级部署白名单
+    IamSubDeployHostWhite,
+    ///二级部署黑名单
+    IamSubDeployHostBlack,
 }

@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use itertools::Itertools;
-use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -13,13 +11,14 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq,
-    FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq,
+    FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionSortStatesReq};
 use crate::flow_constants;
+use crate::helper::task_handler_helper;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 #[derive(Clone)]
@@ -38,6 +37,7 @@ impl FlowCcModelApi {
         let model_id = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -51,6 +51,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::modify_model(&flow_model_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -62,6 +63,7 @@ impl FlowCcModelApi {
     async fn find_editing_verion(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelVersionDetailResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::find_editing_verion(&flow_model_id.0, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -99,6 +101,7 @@ impl FlowCcModelApi {
         .await?;
         let new_model = FlowModelServ::get_item_detail_aggs(&new_model_id, true, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(new_model)
     }
@@ -110,6 +113,7 @@ impl FlowCcModelApi {
     async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, true, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -181,6 +185,7 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -198,6 +203,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         let result = FlowModelServ::find_rel_model_map(temp_id.0, true, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -215,6 +221,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::delete_item(&flow_model_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -243,6 +250,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -256,6 +264,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::unbind_state(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -298,6 +307,7 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -318,6 +328,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         FlowModelServ::resort_transition(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
@@ -335,6 +346,7 @@ impl FlowCcModelApi {
     ) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -367,60 +379,9 @@ impl FlowCcModelApi {
         )
         .await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
-    }
-
-    /// batch add rels with template and app
-    ///
-    /// 批量添加模板和应用的关联关系
-    #[oai(path = "/batch_add_template_app_rels", method = "get")]
-    async fn batch_add_template_app_rels(&self, _request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        let global_ctx = TardisContext::default();
-        funs.begin().await?;
-        let rels = RbumRelServ::find_rels(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some("FlowModelPath".to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            &funs,
-            &global_ctx,
-        )
-        .await?;
-        for rel in rels {
-            let ctx = TardisContext {
-                own_paths: rel.rel.own_paths,
-                owner: rel.rel.owner,
-                ..Default::default()
-            };
-            let rel_model_id = rel.rel.from_rbum_id;
-            if let Some(template_id) =
-                FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_model_id, None, None, &funs, &ctx).await?.pop().map(|rel| rel.rel_id)
-            {
-                FlowRelServ::add_simple_rel(
-                    &FlowRelKind::FlowAppTemplate,
-                    &rel.rel.to_rbum_item_id.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string()).unwrap_or_default(),
-                    &template_id,
-                    None,
-                    None,
-                    true,
-                    true,
-                    None,
-                    &funs,
-                    &ctx,
-                )
-                .await?;
-            }
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void)
     }
 
     /// Get the operations associated with the model
@@ -430,6 +391,42 @@ impl FlowCcModelApi {
     async fn get_rel_transitions(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<FlowTransitionDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::get_rel_transitions(&flow_model_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get all templates by template id, if the template is not found, then new template according to the default template.
+    ///
+    /// 获取当前模板id下的所有模板，若不存在则按默认模板新建。
+    #[oai(path = "/find_or_create", method = "post")]
+    async fn find_or_create(&self, req: Json<FlowModelFIndOrCreatReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowModelServ::find_or_create(&req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get associated model names by template ID, multiple comma separated
+    ///
+    /// 通过模板ID获取关联的模型名，多个逗号隔开
+    #[oai(path = "/find_rel_name_by_template_ids", method = "post")]
+    async fn find_rel_name_by_template_ids(
+        &self,
+        req: Json<FlowModelFindRelNameByTemplateIdsReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, Vec<String>>> {
+        let funs = flow_constants::get_tardis_inst();
+        let mut result = HashMap::new();
+        for rel_template_id in req.0.rel_template_ids {
+            result.insert(
+                rel_template_id.clone(),
+                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, &funs, &ctx.0)
+                    .await?
+                    .into_iter()
+                    .map(|rel| rel.rel_name)
+                    .collect_vec(),
+            );
+        }
+
         TardisResp::ok(result)
     }
 }

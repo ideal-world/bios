@@ -12,17 +12,24 @@ use bios_basic::rbum::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    db::sea_orm::{
         sea_query::{Cond, Expr, SelectStatement},
         EntityName, Set,
-    }, log::debug, serde_json::json, TardisFuns, TardisFunsInst
+    },
+    futures::future::join_all,
+    serde_json::json,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     domain::flow_state,
-    dto::flow_state_dto::{
-        FlowStateAddReq, FlowStateAggResp, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind,
-        FlowStateModifyReq, FlowStateNameResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
+    dto::{
+        flow_state_dto::{
+            FlowStateAddReq, FlowStateAggResp, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind,
+            FlowStateModifyReq, FlowStateNameResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
+        },
+        flow_transition_dto::FlowTransitionFilterReq,
     },
     flow_config::FlowBasicInfoManager,
 };
@@ -89,24 +96,27 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
     }
 
     async fn after_add_item(id: &str, add_req: &mut FlowStateAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        FlowLogClient::add_ctx_task(
-            LogParamTag::DynamicLog,
-            Some(id.to_string()),
-            LogParamContent {
-                subject: Some("工作流状态".to_string()),
-                name: Some(add_req.name.clone().unwrap_or_default().to_string()),
-                sub_kind: Some("flow_state".to_string()),
-                ..Default::default()
-            },
-            None,
-            Some("dynamic_log_tenant_config".to_string()),
-            Some("新建".to_string()),
-            rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
-            ctx,
-            false,
-        )
-        .await?;
+        if add_req.main.unwrap_or(false) {
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(id.to_string()),
+                LogParamContent {
+                    subject: Some("工作流状态".to_string()),
+                    name: Some(add_req.name.clone().unwrap_or_default().to_string()),
+                    sub_kind: Some("flow_state".to_string()),
+                    ..Default::default()
+                },
+                None,
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("新建".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                false,
+                ctx,
+                false,
+            )
+            .await?;
+        }
+
         Ok(())
     }
 
@@ -125,24 +135,27 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
     }
 
     async fn after_modify_item(id: &str, _: &mut FlowStateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        FlowLogClient::add_ctx_task(
-            LogParamTag::DynamicLog,
-            Some(id.to_string()),
-            LogParamContent {
-                subject: Some("工作流状态".to_string()),
-                name: Some(Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?.name),
-                sub_kind: Some("flow_state".to_string()),
-                ..Default::default()
-            },
-            None,
-            Some("dynamic_log_tenant_config".to_string()),
-            Some("编辑".to_string()),
-            rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-            true,
-            ctx,
-            false,
-        )
-        .await?;
+        let state = Self::get_item(id, &FlowStateFilterReq::default(), funs, ctx).await?;
+        if state.main {
+            FlowLogClient::add_ctx_task(
+                LogParamTag::DynamicLog,
+                Some(id.to_string()),
+                LogParamContent {
+                    subject: Some("工作流状态".to_string()),
+                    name: Some(state.name),
+                    sub_kind: Some("flow_state".to_string()),
+                    ..Default::default()
+                },
+                None,
+                Some("dynamic_log_tenant_config".to_string()),
+                Some("编辑".to_string()),
+                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                false,
+                ctx,
+                false,
+            )
+            .await?;
+        }
         Ok(())
     }
     async fn package_item_modify(_: &str, modify_req: &FlowStateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
@@ -214,24 +227,26 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
 
     async fn after_delete_item(id: &str, detail: &Option<FlowStateDetailResp>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(detail) = detail {
-            FlowLogClient::add_ctx_task(
-                LogParamTag::DynamicLog,
-                Some(id.to_string()),
-                LogParamContent {
-                    subject: Some("工作流状态".to_string()),
-                    name: Some(detail.name.clone()),
-                    sub_kind: Some("flow_state".to_string()),
-                    ..Default::default()
-                },
-                None,
-                Some("dynamic_log_tenant_config".to_string()),
-                Some("删除".to_string()),
-                rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
-                true,
-                ctx,
-                false,
-            )
-            .await?;
+            if detail.main {
+                FlowLogClient::add_ctx_task(
+                    LogParamTag::DynamicLog,
+                    Some(id.to_string()),
+                    LogParamContent {
+                        subject: Some("工作流状态".to_string()),
+                        name: Some(detail.name.clone()),
+                        sub_kind: Some("flow_state".to_string()),
+                        ..Default::default()
+                    },
+                    None,
+                    Some("dynamic_log_tenant_config".to_string()),
+                    Some("删除".to_string()),
+                    rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                    false,
+                    ctx,
+                    false,
+                )
+                .await?;
+            }
         }
         Ok(())
     }
@@ -317,39 +332,52 @@ impl FlowStateServ {
     pub(crate) async fn find_names(
         ids: Option<Vec<String>>,
         tag: Option<String>,
+        main: Option<bool>,
         app_ids: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowStateNameResp>> {
-        let mut flow_version_ids = None;
-        if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
-            if let Some(mut app_ids) = app_ids {
-                if let Some(app_own_paths) = app_ids.pop().map(|app_id| format!("{}/{}", &tenant_own_path, &app_id)) {
-                    let mock_ctx = TardisContext {
-                        own_paths: app_own_paths,
-                        ..ctx.clone()
-                    };
-                    flow_version_ids = Some(
-                        FlowModelServ::find_rel_model_map(None, true, funs, &mock_ctx)
-                            .await?
-                            .into_iter()
-                            .filter(|(current_tag, _model)| tag.is_none() || tag.clone().unwrap_or_default() == *current_tag)
-                            .map(|(_tag, model)| model.current_version_id)
-                            .collect_vec(),
-                    );
-                }
+        let mut flow_version_ids = vec![];
+        if let Some(app_ids) = app_ids {
+            let tag_ref = &tag;
+            let flow_version_id_maps = join_all(
+                app_ids
+                    .iter()
+                    .map(|app_id| async move {
+                        let tag_cp = tag_ref;
+                        if let Some(tenant_own_path) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) {
+                            let mock_ctx = TardisContext {
+                                own_paths: format!("{}/{}", &tenant_own_path, &app_id),
+                                ..ctx.clone()
+                            };
+                            if let Ok(models) = FlowModelServ::find_rel_models(None, true, tag_cp.clone().map(|tag| vec![tag]), funs, &mock_ctx).await {
+                                models.into_iter().map(|model| model.current_version_id).collect_vec()
+                            } else {
+                                vec![]
+                            }
+                        } else {
+                            vec![]
+                        }
+                    })
+                    .collect_vec(),
+            )
+            .await;
+            for app_flow_version_ids in flow_version_id_maps {
+                flow_version_ids.extend(app_flow_version_ids);
             }
         }
-        let names = Self::find_detail_items(
+
+        let mut names = Self::find_id_name_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids,
+                    ids: ids.clone(),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                tag,
-                flow_version_ids,
+                tag: tag.clone(),
+                main: Some(main.unwrap_or(true)),
+                flow_version_ids: if flow_version_ids.is_empty() { None } else { Some(flow_version_ids) },
                 ..Default::default()
             },
             None,
@@ -360,10 +388,14 @@ impl FlowStateServ {
         .await?
         .into_iter()
         .map(|state_detail| FlowStateNameResp {
-            key: state_detail.name.clone(),
-            name: state_detail.name,
+            key: state_detail.1.clone(),
+            name: state_detail.1,
         })
         .collect_vec();
+        names.push(FlowStateNameResp {
+            key: crate::flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(),
+            name: crate::flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(),
+        });
         Ok(names)
     }
 
@@ -449,7 +481,16 @@ impl FlowStateServ {
             ctx,
         )
         .await?;
-        let transitions = FlowTransitionServ::find_transitions(flow_version_id, Some(vec![state.id.clone()]), funs, ctx).await?;
+        let transitions = FlowTransitionServ::find_detail_items(
+            &FlowTransitionFilterReq {
+                flow_version_id: Some(flow_version_id.to_string()),
+                specified_state_ids: Some(vec![state.id.clone()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let kind_conf = state.kind_conf();
         Ok(FlowStateAggResp {
             id: state.id.clone(),
@@ -465,5 +506,24 @@ impl FlowStateServ {
             kind_conf,
             transitions,
         })
+    }
+
+    pub async fn unbind_state(flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // Can only be deleted when not in use
+        if FlowInstServ::state_is_used(flow_version_id, state_id, funs, ctx).await? {
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "unbind_state",
+                &format!("state {state_id} already used"),
+                "409-flow-state-already-used",
+            ));
+        }
+        // 获取指向当前节点的动作
+        let to_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, Some(vec![state_id.to_string()]), None, funs, ctx).await?;
+        FlowTransitionServ::delete_transitions(flow_version_id, &to_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
+        // 获取当前节点指向的动作
+        let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
+        FlowTransitionServ::delete_transitions(flow_version_id, &from_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
+        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
     }
 }

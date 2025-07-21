@@ -54,6 +54,13 @@ impl PluginKindApi {
         TardisResp::ok(result)
     }
 
+    #[oai(path = "/:kind_id/agg", method = "get")]
+    async fn get_agg(&self, kind_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginKindAggResp> {
+        let funs = crate::get_tardis_inst();
+        let result = PluginKindServ::get_kind_agg(&kind_id.0, &rbum_scope_helper::get_max_level_id_by_context(&ctx.0).unwrap_or_default(), &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
     /// find Plugin kind
     #[oai(path = "/", method = "get")]
     async fn find_page(

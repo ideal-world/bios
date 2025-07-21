@@ -8,12 +8,15 @@ use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
+use bios_mw_flow::dto::flow_cond_dto::{BasicQueryCondInfo, BasicQueryOpKind};
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
-use bios_mw_flow::dto::flow_inst_dto::{FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstStartReq};
+use bios_mw_flow::dto::flow_inst_dto::{
+    FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstRelChildObj, FlowInstStartReq,
+};
 use bios_mw_flow::dto::flow_model_dto::{
     FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq,
-    FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
+    FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
 };
 use bios_mw_flow::dto::flow_model_version_dto::{
     FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
@@ -34,12 +37,13 @@ use std::time::Duration;
 use tardis::basic::result::TardisResult;
 use tardis::log::{debug, info};
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
 
 pub async fn test(
     flow_client: &mut TestHttpClient,
     search_client: &mut TestHttpClient,
+    kv_client: &mut TestHttpClient,
     iam_client: &mut BIOSWebTestClient,
     sysadmin_name: String,
     sysadmin_password: String,
@@ -72,7 +76,7 @@ pub async fn test(
     for code in codes {
         modify_configs.push(FlowConfigModifyReq {
             code: code.to_string(),
-            value: "https://127.0.0.1:8080/mock/mock/exchange_data".to_string(),
+            value: "http://127.0.0.1:8080/mock/mock/exchange_data".to_string(),
         });
     }
     let _: Void = flow_client.post("/cs/config", &modify_configs).await;
@@ -98,10 +102,12 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsTemplate,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: None,
                 add_version: Some(FlowModelVersionAddReq {
+                    id: None,
                     name: "测试需求模板1".into(),
                     rel_model_id: None,
                     bind_states: None,
@@ -120,6 +126,8 @@ pub async fn test(
                 icon: None,
                 rel_model_id: None,
                 disabled: None,
+                front_conds: None,
+                data_source: None,
             },
         )
         .await;
@@ -219,6 +227,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 name: "测试需求默认模板1".into(),
                 info: Some("xxx".to_string()),
                 kind: FlowModelKind::AsTemplate,
@@ -233,6 +242,8 @@ pub async fn test(
                 scope_level: Some(RbumScopeLevelKind::Private),
                 icon: None,
                 rel_model_id: None,
+                front_conds: None,
+                data_source: None,
                 disabled: None,
             },
         )
@@ -262,6 +273,7 @@ pub async fn test(
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 name: "测试需求未初始化模板1".into(),
                 info: Some("xxx".to_string()),
                 rel_template_ids: Some(vec![req_template_id1.to_string(), req_template_id2.to_string()]),
@@ -277,6 +289,8 @@ pub async fn test(
                 rel_transition_ids: None,
                 add_version: None,
                 current_version_id: None,
+                front_conds: None,
+                data_source: None,
             },
         )
         .await;
@@ -444,7 +458,10 @@ pub async fn test(
             &format!("/cc/model/{}", req_model_template_id.clone()),
             &FlowModelModifyReq {
                 modify_version: Some(FlowModelVersionModifyReq {
-                    unbind_states: Some(vec![finish_state_id.clone()]),
+                    unbind_states: Some(vec![FlowModelUnbindStateReq {
+                        state_id: finish_state_id.clone(),
+                        new_state_id: None,
+                    }]),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -609,7 +626,12 @@ pub async fn test(
                 rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: None,
                 vars: None,
+                check_vars: None,
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
+                ..Default::default()
             },
         )
         .await;
@@ -653,11 +675,48 @@ pub async fn test(
         .await;
     assert_eq!(state_and_next_transitions.len(), 1);
     assert_eq!(state_and_next_transitions[0].current_flow_state_name, "进行中");
+    // 新建空审批流
+    let req_delete_flow: FlowModelAggResp = flow_client
+        .post(
+            "/cc/model",
+            &FlowModelAddReq {
+                id: None,
+                kind: FlowModelKind::AsModel,
+                status: FlowModelStatus::Enabled,
+                rel_transition_ids: Some(vec!["__DELETE__".to_string()]),
+                add_version: None,
+                current_version_id: None,
+                name: "编辑需求审批流".into(),
+                info: Some("xxx".to_string()),
+                rel_template_ids: None,
+                template: false,
+                main: false,
+                tag: Some("REQ".to_string()),
+                scope_level: None,
+                icon: None,
+                rel_model_id: None,
+                disabled: None,
+                front_conds: None,
+                data_source: None,
+            },
+        )
+        .await;
+    let req_delete_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", req_delete_flow.edit_version_id)).await;
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", req_delete_flow_version.id),
+            &FlowModelVersionModifyReq {
+                status: Some(FlowModelVesionState::Enabled),
+                ..Default::default()
+            },
+        )
+        .await;
     // 新建审批流
     let req_approval_flow: FlowModelAggResp = flow_client
         .post(
             "/cc/model",
             &FlowModelAddReq {
+                id: None,
                 kind: FlowModelKind::AsModel,
                 status: FlowModelStatus::Enabled,
                 rel_transition_ids: Some(vec!["__EDIT__".to_string()]),
@@ -673,6 +732,13 @@ pub async fn test(
                 icon: None,
                 rel_model_id: None,
                 disabled: None,
+                front_conds: Some(vec![vec![BasicQueryCondInfo {
+                    field: "name".to_string(),
+                    op: BasicQueryOpKind::Like,
+                    op_text: None,
+                    value: json!("1111"),
+                }]]),
+                data_source: None,
             },
         )
         .await;
@@ -866,37 +932,169 @@ pub async fn test(
             },
         )
         .await;
-    let _versions: TardisPage<FlowModelVersionDetailResp> = flow_client.get(&format!("/cc/model_version?rel_model_id={}&page_number=1&page_size=100", req_approval_flow.id)).await;
-    let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
-        .put(
-            "/cc/inst/batch/state_transitions",
-            &vec![FlowInstFindStateAndTransitionsReq {
-                flow_inst_id: req_inst_id1.clone(),
-                vars: None,
-            }],
+    let review_approval_flow: FlowModelAggResp = flow_client
+        .post(
+            "/cc/model",
+            &FlowModelAddReq {
+                id: None,
+                kind: FlowModelKind::AsModel,
+                status: FlowModelStatus::Enabled,
+                rel_transition_ids: Some(vec!["__REVIEW__".to_string()]),
+                add_version: None,
+                current_version_id: None,
+                name: "评审审批流".into(),
+                info: Some("xxx".to_string()),
+                rel_template_ids: None,
+                template: false,
+                main: false,
+                tag: Some("REVIEW".to_string()),
+                scope_level: None,
+                icon: None,
+                rel_model_id: None,
+                disabled: None,
+                front_conds: None,
+                data_source: None,
+            },
         )
         .await;
-    info!(
-        "state_and_next_transitions: {:?}",
-        TardisFuns::json.obj_to_json(&state_and_next_transitions).unwrap().to_string()
-    );
-    // 启动审批流实例
-    let req_inst_id2: String = flow_client
-        .post(
+    let review_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", review_approval_flow.edit_version_id)).await;
+    let start_review_state_id = review_approval_flow_version.states()[0].id.clone();
+    let approval_review_state_id = TardisFuns::field.nanoid();
+    let finish_review_state_id = review_approval_flow_version.states()[1].id.clone();
+    let start_review_transition_id = review_approval_flow_version.states()[0].transitions[0].id.clone();
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", review_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                bind_states: Some(vec![FlowModelVersionBindState {
+                    bind_new_state: Some(FlowModelBindNewStateReq {
+                        new_state: FlowStateAddReq {
+                            id: Some(approval_review_state_id.clone().into()),
+                            name: Some("审批节点".into()),
+                            sys_state: FlowSysStateKind::Progress,
+                            state_kind: Some(FlowStateKind::Approval),
+                            tags: Some(vec![review_approval_flow.tag.clone()]),
+                            main: Some(false),
+                            kind_conf: Some(FLowStateKindConf {
+                                form: None,
+                                approval: Some(FlowStateApproval {
+                                    countersign_conf: FlowStateCountersignConf {
+                                        kind: FlowStateCountersignKind::All,
+                                        ..Default::default()
+                                    },
+                                    revoke: true,
+                                    multi_approval_kind: FlowStatusMultiApprovalKind::Orsign,
+                                    pass_btn_name: "通过".to_string(),
+                                    back_btn_name: "退回".to_string(),
+                                    overrule_btn_name: "不通过".to_string(),
+                                    guard_by_creator: true,
+                                    guard_by_his_operators: false,
+                                    guard_by_assigned: true,
+                                    auto_transfer_when_empty_kind: None,
+                                    referral: true,
+                                    ..Default::default()
+                                }),
+                            }),
+                            ..Default::default()
+                        },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                    }),
+                    is_init: false,
+                    add_transitions: Some(vec![FlowTransitionAddReq {
+                        name: Some("提交".into()),
+                        from_flow_state_id: approval_review_state_id.clone(),
+                        to_flow_state_id: finish_review_state_id.clone(),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                }]),
+                modify_states: Some(vec![FlowModelVersionModifyState {
+                    id: Some(start_review_state_id.clone()),
+                    modify_transitions: Some(vec![FlowTransitionModifyReq {
+                        id: start_review_transition_id.clone().into(),
+                        to_flow_state_id: Some(approval_review_state_id.clone()),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+        )
+        .await;
+    let review_approval_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", review_approval_flow.edit_version_id)).await;
+    info!("review_approval_version: {:?}", TardisFuns::json.obj_to_json(&review_approval_version).unwrap().to_string());
+    let _: Void = flow_client
+        .patch(
+            &format!("/cc/model_version/{}", review_approval_flow.edit_version_id),
+            &FlowModelVersionModifyReq {
+                status: Some(FlowModelVesionState::Enabled),
+                ..Default::default()
+            },
+        )
+        .await;
+    // 尝试启动空配置的实例
+    let resp_error: TardisResp<String> = flow_client
+        .post_resp(
             "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: rel_business_obj_id.clone(),
+                transition_id: Some("__DELETE__".to_string()),
+                vars: None,
+                check_vars: None,
+                log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(resp_error.code, *"500-flow-flow_inst-start_secondary_flow");
+    // 尝试启动不符合条件的审批流
+    let empty_inst_id: String = flow_client
+        .post(
+            "/cc/inst/try",
             &FlowInstStartReq {
                 tag: "REQ".to_string(),
                 create_vars: None,
                 rel_business_obj_id: rel_business_obj_id.clone(),
                 transition_id: Some("__EDIT__".to_string()),
                 vars: None,
+                check_vars: Some(HashMap::from([("name".to_string(), json!("xxx111"))])),
                 log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(empty_inst_id, "".to_string());
+    // 尝试启动审批流实例
+    let req_inst_id2: String = flow_client
+        .post(
+            "/cc/inst/try",
+            &FlowInstStartReq {
+                tag: "REQ".to_string(),
+                create_vars: None,
+                rel_business_obj_id: rel_business_obj_id.clone(),
+                transition_id: Some("__EDIT__".to_string()),
+                vars: None,
+                check_vars: Some(HashMap::from([("name".to_string(), json!("xxx1111"))])),
+                log_text: None,
+                rel_transition_id: None,
+                rel_child_objs: None,
+                operator_map: None,
+                ..Default::default()
             },
         )
         .await;
     sleep(Duration::from_millis(5000)).await;
     let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
     assert_eq!(req_inst2.current_state_id, form_state_id);
+    assert_eq!(req_inst2.rel_flow_version_id, req_approval_flow.edit_version_id);
     assert_eq!(req_inst2.current_state_conf.clone().unwrap().operators.len(), 2);
     assert!(req_inst2.current_state_conf.unwrap().operators.contains_key(&FlowStateOperatorKind::Referral));
     // 操作转审
@@ -967,7 +1165,31 @@ pub async fn test(
     let req_inst2: FlowInstDetailResp = flow_client.get(&format!("/cc/inst/{}", req_inst_id2)).await;
     assert_eq!(req_inst2.current_state_id, finish_state_id);
     assert!(req_inst2.current_state_conf.is_none());
-
+    // 创建携带子工作流的实例
+    let review_obj_id = TardisFuns::field.nanoid();
+    let child_obj_id = TardisFuns::field.nanoid();
+    let resp: TardisResp<String> = flow_client
+        .post_resp(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: "REVIEW".to_string(),
+                create_vars: None,
+                rel_business_obj_id: review_obj_id.clone(),
+                transition_id: None,
+                vars: None,
+                check_vars: None,
+                log_text: None,
+                rel_transition_id: Some("__REVIEW__".to_string()),
+                rel_child_objs: Some(vec![FlowInstRelChildObj {
+                    tag: "REQ".to_string(),
+                    obj_id: child_obj_id.clone(),
+                }]),
+                operator_map: Some(HashMap::from([(approval_review_state_id.clone(), vec![t1_data.accounts[0].clone()])])),
+                ..Default::default()
+            },
+        )
+        .await;
+    assert_eq!(resp.code, "200".to_string());
     Ok(())
 }
 
@@ -1148,7 +1370,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
             &json!({
                 "tag":"iam_account",
                 "kind": "iam_account",
-                "key": "u002_2",
+                "key": t2_account_id2,
                 "title": "u002_2",
                 "content": format!("u002_2,{:?}", vec!["user_dp2_2", "devopsxxx22@xx.com"],),
                 "owner":"u002_2",
@@ -1213,6 +1435,8 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 admin_ids: Some(vec![t1_account_id.clone()]),
                 disabled: None,
                 set_cate_id: None,
+                kind: None,
+                sync_apps_group: None,
             },
         )
         .await;
@@ -1228,6 +1452,8 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 admin_ids: Some(vec![t2_account_id1.clone(), t2_account_id2.clone(), t2_account_id3.clone()]),
                 disabled: None,
                 set_cate_id: None,
+                kind: None,
+                sync_apps_group: None,
             },
         )
         .await;

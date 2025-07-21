@@ -8,11 +8,12 @@ use tardis::{
     TardisFuns,
 };
 
-use super::{flow_cond_dto::BasicQueryCondInfo, flow_var_dto::FlowVarInfo};
+use super::{flow_cond_dto::BasicQueryCondInfo, flow_state_dto::FlowSysStateKind, flow_var_dto::FlowVarInfo};
 
 /// 添加动作
 #[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
 pub struct FlowTransitionAddReq {
+    pub id: Option<String>,
     /// 修改前状态
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
@@ -154,6 +155,11 @@ pub struct FlowTransitionDetailResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub to_flow_state_color: String,
+    /// 修改后状态的系统类型
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 系统类型
+    pub to_flow_state_sys_state: FlowSysStateKind,
     /// 为true时，不需要用户干预，在满足条件的前提下自动流转
     pub transfer_by_auto: bool,
     /// 存在值时，到达时间后，在满足条件的前提下自动流转
@@ -245,6 +251,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
         let action_by_front_changes = value.action_by_front_changes();
         let double_check = value.double_check();
         FlowTransitionAddReq {
+            id: None,
             from_flow_state_id: value.from_flow_state_id,
             to_flow_state_id: value.to_flow_state_id,
             name: Some(value.name.into()),
@@ -497,6 +504,7 @@ impl From<TagRelKind> for String {
 
 #[derive(Default)]
 pub struct FlowTransitionInitInfo {
+    pub id: Option<String>,
     pub from_flow_state_id: String,
     pub to_flow_state_id: String,
     pub name: String,
@@ -528,6 +536,7 @@ impl TryFrom<FlowTransitionInitInfo> for FlowTransitionAddReq {
 
     fn try_from(value: FlowTransitionInitInfo) -> Result<Self, Self::Error> {
         Ok(FlowTransitionAddReq {
+            id: value.id,
             from_flow_state_id: value.from_flow_state_id,
             to_flow_state_id: value.to_flow_state_id,
             name: Some(value.name.into()),
@@ -636,7 +645,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             let left_values = TardisFuns::json.str_to_obj::<Vec<Value>>(&left_value).unwrap_or_default();
             if left_values.len() == 1 {
                 left_value = left_values.first().cloned().unwrap_or_default().as_str().unwrap_or("").to_string();
-            } else {
+            } else if left_values.len() > 1 {
                 return false;
             }
         }
@@ -705,4 +714,8 @@ pub struct FlowTransitionFilterReq {
     pub flow_version_id: Option<String>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
+    /// 后置动作为空
+    pub is_empty_post_changes: Option<bool>,
+    /// 前置动作为空
+    pub is_empty_front_changes: Option<bool>,
 }

@@ -13,6 +13,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 /// 资源集分类（节点）添加请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct RbumSetCateAddReq {
+    pub id: Option<TrimString>,
     /// Business code for custom
     ///
     /// 自定义业务编码

@@ -18,6 +18,7 @@ pub struct IamConfig {
     pub rbum: RbumConfig,
     pub in_event: bool,
     pub invoke: InvokeConfig,
+    pub app_res_data_guard_code: String,
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
     pub cache_key_token_info_: String,
@@ -65,6 +66,9 @@ pub struct IamConfig {
     pub sms_pwd_path: String,
     pub third_integration_config_key: String,
     pub third_integration_schedule_code: String,
+
+    /// init custom role list
+    pub init_role_list: Option<Vec<InitRole>>,
     pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
 
@@ -74,6 +78,7 @@ pub struct IamConfig {
     pub crypto_conf: CryptoConf,
 
     pub gateway_openapi_path: String,
+    pub crypto_pri_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -142,6 +147,7 @@ impl Default for IamConfig {
             rbum: Default::default(),
             in_event: false,
             invoke: InvokeConfig::default(),
+            app_res_data_guard_code: "5/*/app*data_guard*all".to_string(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
@@ -164,6 +170,7 @@ impl Default for IamConfig {
             phone_template_cert_login_title: "Your account is trying to login, verification code: {vcode}".to_string(),
             phone_template_cert_login_content: "IAM Service Phone Credentials Activation".to_string(),
             init_menu_json_path: "config/init-menu-default.json".to_string(),
+            init_role_list: None,
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
             cache_key_sync_ldap_status: "iam:cache:sync:ldap:status".to_string(),
@@ -176,6 +183,7 @@ impl Default for IamConfig {
             iam_base_url: "http://127.0.0.1:8080/iam".to_string(),
             spi: Default::default(),
             strict_security_mode: false,
+            crypto_pri_key: "".to_string(),
             crypto_conf: CryptoConf::default(),
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),
@@ -212,11 +220,19 @@ pub struct BasicInfo {
     pub kind_account_id: String,
     pub kind_role_id: String,
     pub kind_res_id: String,
+    pub kind_sub_deploy_id: String,
     pub domain_iam_id: String,
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
     pub role_tenant_audit_id: String,
     pub role_app_admin_id: String,
+    pub role_app_read_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InitRole {
+    pub code: String,
+    pub kind: crate::iam_enumeration::IamRoleKind,
 }
 
 lazy_static! {
@@ -248,11 +264,13 @@ pub trait IamBasicConfigApi {
     fn iam_basic_kind_account_id(&self) -> String;
     fn iam_basic_kind_role_id(&self) -> String;
     fn iam_basic_kind_res_id(&self) -> String;
+    fn iam_basic_kind_sub_deploy_id(&self) -> String;
     fn iam_basic_domain_iam_id(&self) -> String;
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
     fn iam_basic_role_tenant_audit_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
+    fn iam_basic_role_app_read_id(&self) -> String;
 }
 
 impl IamBasicConfigApi for TardisFunsInst {
@@ -276,6 +294,10 @@ impl IamBasicConfigApi for TardisFunsInst {
         IamBasicInfoManager::get_config(|conf| conf.kind_res_id.clone())
     }
 
+    fn iam_basic_kind_sub_deploy_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_sub_deploy_id.clone())
+    }
+
     fn iam_basic_domain_iam_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
@@ -294,5 +316,9 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_app_admin_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_app_admin_id.clone())
+    }
+
+    fn iam_basic_role_app_read_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_app_read_id.clone())
     }
 }

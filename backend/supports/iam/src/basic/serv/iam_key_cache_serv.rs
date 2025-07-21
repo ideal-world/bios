@@ -220,6 +220,88 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn refresh_tokens_and_contexts_by_tenant_or_app(tenant_or_app_id: &str, is_app: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_or_app_id = tenant_or_app_id.to_string();
+        let own_paths = if is_app {
+            IamAppServ::peek_item(
+                &tenant_or_app_id,
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .own_paths
+        } else {
+            tenant_or_app_id.clone()
+        };
+        let ctx_clone = ctx.clone();
+        TaskProcessor::execute_task_with_ctx(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move |_task_id| async move {
+                let funs = iam_constants::get_tardis_inst();
+                let filter = IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(own_paths),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap_or_default() as isize;
+                let mut page_number = 1;
+                while count > 0 {
+                    let mut ids = Vec::new();
+                    if let Ok(page) = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await {
+                        ids = page.records;
+                    }
+                    for id in ids {
+                        let account_context = Self::get_account_context(&id, "", &funs).await;
+                        if let Ok(account_context) = account_context {
+                            if account_context.own_paths == ctx_clone.own_paths {
+                                Self::refresh_account_info_by_account_id(&id, &funs).await?;
+                            }
+                        }
+                    }
+                    page_number += 1;
+                    count -= 100;
+                }
+                if is_app {
+                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
+                    let mut page_number = 1;
+                    while count > 0 {
+                        let mut ids = Vec::new();
+                        if let Ok(page) = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await {
+                            ids = page.records;
+                        }
+                        for id in ids {
+                            let account_context = Self::get_account_context(&id, "", &funs).await;
+                            if let Ok(account_context) = account_context {
+                                if account_context.own_paths == ctx_clone.own_paths {
+                                    Self::refresh_account_info_by_account_id(&id, &funs).await?;
+                                }
+                            }
+                        }
+                        page_number += 1;
+                        count -= 100;
+                    }
+                }
+                Ok(())
+            },
+            &funs.cache(),
+            IAM_AVATAR.to_owned(),
+            Some(vec![format!("account/{}", ctx.owner)]),
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete tokens and contexts: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
@@ -591,6 +673,52 @@ impl IamResCacheServ {
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
+    pub async fn refresh_res_rel(item_code: &str, action: &str, add_or_modify_req: IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        let res_auth = IamCacheResAuth {
+            accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
+            roles: format!("#{}#", add_or_modify_req.roles.join("#")),
+            groups: format!("#{}#", add_or_modify_req.groups.join("#")),
+            apps: format!("#{}#", add_or_modify_req.apps.join("#")),
+            tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            aks: format!("#{}#", add_or_modify_req.aks.join("#")),
+            ..Default::default()
+        };
+        let mut res_dto = IamCacheResRelAddOrModifyDto {
+            auth: None,
+            need_crypto_req: false,
+            need_crypto_resp: false,
+            need_double_auth: false,
+            need_login: false,
+        };
+        if let Some(need_crypto_req) = add_or_modify_req.need_crypto_req {
+            res_dto.need_crypto_req = need_crypto_req
+        }
+        if let Some(need_crypto_resp) = add_or_modify_req.need_crypto_resp {
+            res_dto.need_crypto_resp = need_crypto_resp
+        }
+        if let Some(need_double_auth) = add_or_modify_req.need_double_auth {
+            res_dto.need_double_auth = need_double_auth
+        }
+        if let Some(need_login) = add_or_modify_req.need_login {
+            res_dto.need_login = need_login
+        }
+        if (res_auth.accounts == "#" || res_auth.accounts == "##")
+            && (res_auth.roles == "#" || res_auth.roles == "##")
+            && (res_auth.groups == "#" || res_auth.groups == "##")
+            && (res_auth.apps == "#" || res_auth.apps == "##")
+            && (res_auth.tenants == "#" || res_auth.tenants == "##")
+            && (res_auth.aks == "#" || res_auth.aks == "##")
+        {
+            res_dto.auth = None;
+        } else {
+            res_dto.auth = Some(res_auth);
+        }
+        log::trace!("refresh res rel: uri_mixed={}", uri_mixed);
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
+    }
+
     pub async fn delete_res_rel(item_code: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("delete res rel: uri_mixed={}", uri_mixed);
@@ -643,7 +771,8 @@ impl IamResCacheServ {
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;
         }
-        Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel", "404-iam-cache-res-rel-not-exist"))
+        // Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel", "404-iam-cache-res-rel-not-exist"))
+        Ok(())
     }
 
     async fn add_change_trigger(uri: &str, funs: &TardisFunsInst) -> TardisResult<()> {

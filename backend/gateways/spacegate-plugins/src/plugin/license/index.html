@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证书上传</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        .alert {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+        }
+        .upload-form {
+            text-align: center;
+        }
+        .file-input {
+            display: none;
+        }
+        .upload-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .upload-btn:hover {
+            background-color: #0056b3;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="alert">
+            <strong>提示：</strong> 您尚未上传证书或证书已经失效，请上传有效的授权证书以继续使用系统。
+        </div>
+        <form class="upload-form" id="uploadForm">
+            <input type="file" id="licenseFile" class="file-input" accept=".lic,.cert,.pem">
+            <label for="licenseFile" class="upload-btn">选择证书文件</label>
+            <div id="fileName" class="file-name"></div>
+            <button type="submit" class="upload-btn" style="display: none;">上传证书</button>
+        </form>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('licenseFile');
+        const fileName = document.getElementById('fileName');
+        const submitBtn = document.querySelector('button[type="submit"]');
+        const form = document.getElementById('uploadForm');
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileName.textContent = `已选择: ${e.target.files[0].name}`;
+                submitBtn.style.display = 'inline-block';
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            const fileContent = await file.text();
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: fileContent,
+                    headers: {
+                        "x-bios-upload-license": "",
+                        "Content-Type": "text/plain"
+                    }
+                });
+
+                if (response.ok) {
+                    alert('证书上传成功！');
+                    window.location.reload();
+                } else {
+                    alert('证书上传失败，请重试！');
+                }
+            } catch (error) {
+                alert('上传过程中发生错误，请重试！');
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

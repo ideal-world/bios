@@ -1,17 +1,12 @@
 use bios_basic::rbum::{
     dto::{
         rbum_cert_dto::RbumCertModifyReq,
-        rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelExtFilterReq, RbumRelFilterReq},
+        rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelFilterReq},
         rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq},
         rbum_rel_dto::RbumRelAddReq,
     },
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
-    serv::{
-        rbum_cert_serv::RbumCertServ,
-        rbum_crud_serv::RbumCrudOperation,
-        rbum_item_serv::RbumItemCrudOperation,
-        rbum_rel_serv::{RbumRelEnvServ, RbumRelServ},
-    },
+    serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
 };
 use itertools::Itertools;
 use tardis::{
@@ -171,7 +166,7 @@ impl IamOpenServ {
         )
         .await?;
         for rel in old_product_rels {
-            RbumRelServ::delete_rbum(&rel.id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel.id, funs, ctx).await?;
         }
         let old_spec_rels = RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
@@ -187,21 +182,7 @@ impl IamOpenServ {
         )
         .await?;
         for rel in old_spec_rels {
-            let env_ids = RbumRelEnvServ::find_id_rbums(
-                &RbumRelExtFilterReq {
-                    rel_rbum_rel_id: Some(rel.id.clone()),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for env_id in env_ids {
-                RbumRelEnvServ::delete_rbum(&env_id, funs, ctx).await?;
-            }
-            RbumRelServ::delete_rbum(&rel.id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&rel.id, funs, ctx).await?;
         }
 
         let product_id = IamResServ::find_one_detail_item(

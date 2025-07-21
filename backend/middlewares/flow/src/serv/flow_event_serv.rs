@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use rust_decimal::Decimal;
+use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde_json::{json, Value};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -32,7 +32,7 @@ use crate::{
 
 use super::{
     flow_external_serv::FlowExternalServ, flow_inst_serv::FlowInstServ, flow_model_serv::FlowModelServ, flow_model_version_serv::FlowModelVersionServ,
-    flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ,
+    flow_state_serv::FlowStateServ,
 };
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -304,19 +304,24 @@ impl FlowEventServ {
                                             .to_string();
                                         if let Some(original_value) = original_value {
                                             change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                                            let original_value = if let Some(v) = original_value.as_str() {
+                                                Decimal::from_str(v).unwrap_or_default()
+                                            } else if let Some(v) = original_value.as_i64() {
+                                                Decimal::from_i64(v).unwrap_or_default()
+                                            } else if let Some(v) = original_value.as_f64() {
+                                                Decimal::from_f64(v).unwrap_or_default()
+                                            } else {
+                                                Decimal::new(0, 0)
+                                            };
                                             match changed_op.as_str() {
                                                 "add" => {
                                                     change_info.changed_val = Some(json!(
-                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string())
-                                                            .unwrap_or_default()
-                                                            + Decimal::from_str(&target_value.to_string()).unwrap_or_default())
+                                                        (original_value + Decimal::from_str(&target_value.to_string()).unwrap_or_default())
                                                     ))
                                                 }
                                                 "sub" => {
                                                     change_info.changed_val = Some(json!(
-                                                        (Decimal::from_str(&original_value.as_str().unwrap_or_default().parse::<f64>().unwrap_or_default().to_string())
-                                                            .unwrap_or_default()
-                                                            - Decimal::from_str(&target_value.to_string()).unwrap_or_default())
+                                                        (original_value - Decimal::from_str(&target_value.to_string()).unwrap_or_default())
                                                     ))
                                                 }
                                                 _ => {}
@@ -540,8 +545,7 @@ impl FlowEventServ {
         let insts = FlowInstServ::find_detail(rel_inst_ids, None, None, funs, ctx).await?;
         for rel_inst in insts {
             // find transition
-            let rel_flow_versions = FlowTransitionServ::find_rel_model_map(&rel_inst.tag, funs, ctx).await?;
-            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, None, &None, rel_flow_versions, true, funs, ctx)
+            let transition_resp = FlowInstServ::do_find_next_transitions(&rel_inst, None, &None, true, funs, ctx)
                 .await?
                 .next_flow_transitions
                 .into_iter()

@@ -1,13 +1,12 @@
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use bios_basic::spi_dispatch_service;
-
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
-    SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq,
+    SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 use crate::search_initializer;
 
@@ -33,5 +32,7 @@ spi_dispatch_service! {
         group_search(search_req: &mut GroupSearchItemSearchReq) -> TardisResult<Vec<GroupSearchItemSearchResp>>;
         query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
         refresh_tsv(tag: &str) -> TardisResult<()>;
+        export_data(export_req: &SearchExportDataReq) -> TardisResult<SearchExportDataResp>;
+        import_data(import_req: &SearchImportDataReq) -> TardisResult<bool>;
     }
 }

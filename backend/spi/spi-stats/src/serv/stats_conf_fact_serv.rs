@@ -30,6 +30,14 @@ spi_dispatch_service! {
             desc_by_create: Option<bool>,
             desc_by_update: Option<bool>
         ) -> TardisResult<TardisPage<StatsConfFactInfoResp>>;
+        find(
+            fact_conf_keys: Option<Vec<String>>,
+            show_name: Option<String>,
+            dim_rel_conf_dim_keys: Option<Vec<String>>,
+            is_online: Option<bool>,
+            desc_by_create: Option<bool>,
+            desc_by_update: Option<bool>
+        ) -> TardisResult<Vec<StatsConfFactInfoResp>>;
         create_inst(fact_conf_key: &str) -> TardisResult<()>;
     }
 }

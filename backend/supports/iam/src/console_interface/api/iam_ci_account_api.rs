@@ -11,7 +11,8 @@ use tardis::web::poem_openapi::{param::Path, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 use tardis::TardisFuns;
 
-use crate::basic::dto::iam_account_dto::{IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -157,7 +158,7 @@ impl IamCiAccountApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
-        let result = IamAccountServ::get_account_detail_aggs(
+        let mut result = IamAccountServ::get_account_detail_aggs(
             &id.0,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
@@ -173,6 +174,30 @@ impl IamCiAccountApi {
             &ctx,
         )
         .await?;
+        // 添加项目组下的 `app` 及角色
+        let mut apps = result.apps.clone();
+        if ctx.own_paths != "" {
+            let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &id, &funs, &ctx).await?;
+            let mut app_role_read = HashMap::new();
+            app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            for (app_id, app_name) in app_items {
+                if old_app_ids.contains(&app_id) {
+                    continue;
+                }
+                apps.push(IamAccountAppInfoResp {
+                    app_id: app_id.clone(),
+                    app_name: app_name.clone(),
+                    app_kind: IamAppKind::Project,
+                    app_own_paths: format!("{}/{}", ctx.own_paths, app_id),
+                    app_icon: "".to_string(),
+                    roles: app_role_read.clone(),
+                    groups: HashMap::default(),
+                });
+            }
+        }
+        result.apps = apps;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

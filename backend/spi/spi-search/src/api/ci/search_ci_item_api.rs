@@ -1,4 +1,5 @@
 use tardis::basic::dto::TardisContext;
+use tardis::chrono::{DateTime, Utc};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Query;
 
@@ -10,8 +11,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
-    SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq,
+    SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 use crate::serv::search_item_serv;
 
@@ -98,5 +99,19 @@ impl SearchCiItemApi {
         });
 
         TardisResp::ok(Void {})
+    }
+
+    #[oai(path = "/export", method = "put")]
+    async fn export_data(&self, export_req: Json<SearchExportDataReq>, ctx: TardisContextExtractor) -> TardisApiResult<SearchExportDataResp> {
+        let funs = crate::get_tardis_inst();
+        let result = search_item_serv::export_data(&export_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    #[oai(path = "/import", method = "put")]
+    async fn import_data(&self, import_req: Json<SearchImportDataReq>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+        let funs = crate::get_tardis_inst();
+        let result = search_item_serv::import_data(&import_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
     }
 }

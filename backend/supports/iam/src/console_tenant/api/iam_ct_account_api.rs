@@ -109,6 +109,9 @@ impl IamCtAccountApi {
         role_ids: Query<Option<String>>,
         app_ids: Query<Option<String>>,
         cate_ids: Query<Option<String>>,
+        sys_code_query_depth: Query<Option<i16>>,
+        sub_deploy_ids: Query<Option<String>>,
+        auth_sub_deploy_ids: Query<Option<String>>,
         status: Query<Option<bool>>,
         app_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
@@ -144,6 +147,28 @@ impl IamCtAccountApi {
                 ..Default::default()
             }
         });
+        let rel3 = sub_deploy_ids.0.map(|sub_deploy_ids| {
+            let sub_deploy_ids = sub_deploy_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
+            RbumItemRelFilterReq {
+                rel_by_from: false,
+                tag: Some(IamRelKind::IamSubDeployAccount.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_ids: Some(sub_deploy_ids),
+                own_paths: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            }
+        });
+        let rel4 = auth_sub_deploy_ids.0.map(|sub_deploy_ids| {
+            let sub_deploy_ids = sub_deploy_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
+            RbumItemRelFilterReq {
+                rel_by_from: false,
+                tag: Some(IamRelKind::IamSubDeployAuthAccount.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_ids: Some(sub_deploy_ids),
+                own_paths: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            }
+        });
         let set_rel = if let Some(cate_ids) = cate_ids.0 {
             let cate_ids = cate_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
             let set_cate_vec = IamSetServ::find_set_cate(
@@ -154,6 +179,7 @@ impl IamCtAccountApi {
                         ids: Some(cate_ids),
                         ..Default::default()
                     },
+                    sys_code_query_depth: sys_code_query_depth.0,
                     ..Default::default()
                 },
                 None,
@@ -186,6 +212,8 @@ impl IamCtAccountApi {
                 },
                 rel,
                 rel2,
+                rel3,
+                rel4,
                 set_rel,
                 ..Default::default()
             },
@@ -325,6 +353,8 @@ impl IamCtAccountApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        // todo: 兼容二级服务
+        let account_ctx = IamAccountServ::is_global_account_context(&id, &funs, &ctx.0).await?;
         IamAccountServ::modify_item(
             &id.0,
             &mut IamAccountModifyReq {
@@ -340,12 +370,12 @@ impl IamCtAccountApi {
                 labor_type: None,
             },
             &funs,
-            &ctx.0,
+            &account_ctx,
         )
         .await?;
-        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &ctx.0).await?;
+        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &account_ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        account_ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -356,10 +386,12 @@ impl IamCtAccountApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAccountServ::unlock_account(&id.0, &funs, &ctx.0).await?;
-        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &ctx.0).await?;
+        // todo: 兼容二级服务
+        let account_ctx = IamAccountServ::is_global_account_context(&id, &funs, &ctx.0).await?;
+        IamAccountServ::unlock_account(&id.0, &funs, &account_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(&id.0, Box::new(true), "", &funs, &account_ctx).await?;
         funs.commit().await?;
-        ctx.0.execute_task().await?;
+        account_ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 

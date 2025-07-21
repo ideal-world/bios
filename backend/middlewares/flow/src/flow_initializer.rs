@@ -6,18 +6,9 @@ use bios_basic::rbum::{
 };
 use bios_sdk_invoke::invoke_initializer;
 
-use itertools::Itertools;
-
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::{
-        reldb_client::TardisActiveModel,
-        sea_orm::{
-            self,
-            sea_query::{Expr, Query, Table},
-        },
-    },
-    futures::future::join_all,
+    db::{reldb_client::TardisActiveModel, sea_orm::sea_query::Table},
     log::info,
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -27,7 +18,7 @@ use crate::{
     api::{
         ca::flow_ca_model_api,
         cc::{flow_cc_inst_api, flow_cc_model_api, flow_cc_model_version_api, flow_cc_state_api},
-        ci::{flow_ci_inst_api, flow_ci_model_api, flow_ci_state_api},
+        ci::{flow_ci_inst_api, flow_ci_model_api, flow_ci_state_api, flow_ci_sub_deploy_api},
         cs::flow_cs_config_api,
         ct::flow_ct_model_api,
     },
@@ -35,15 +26,14 @@ use crate::{
     dto::{
         flow_model_dto::FlowModelFilterReq,
         flow_state_dto::FlowSysStateKind,
-        flow_transition_dto::{FlowTransitionDoubleCheckInfo, FlowTransitionInitInfo},
+        flow_transition_dto::{
+            FlowTransitionDoubleCheckInfo, FlowTransitionFrontActionInfo, FlowTransitionFrontActionInfoRelevanceRelation, FlowTransitionFrontActionRightValue,
+            FlowTransitionInitInfo,
+        },
     },
     flow_config::{BasicInfo, FlowBasicInfoManager, FlowConfig},
     flow_constants,
-    serv::{
-        flow_model_serv::FlowModelServ,
-        flow_rel_serv::{FlowRelKind, FlowRelServ},
-        flow_state_serv::FlowStateServ,
-    },
+    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -67,6 +57,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 flow_ci_inst_api::FlowCiInstApi,
                 flow_ci_model_api::FlowCiModelApi,
                 flow_ci_state_api::FlowCiStateApi,
+                flow_ci_sub_deploy_api::FlowCiSubDeployApi,
             ),
         )
         .await;
@@ -87,7 +78,6 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<()> {
     funs.begin().await?;
     if check_initialized(&funs, &ctx).await? {
         init_basic_info(&funs).await?;
-        rebind_model_with_template(&funs, &ctx).await?;
     } else {
         let db_kind = TardisFuns::reldb().backend();
         let compatible_type = TardisFuns::reldb().compatible_type();
@@ -116,52 +106,7 @@ async fn check_initialized(funs: &TardisFunsInst, ctx: &TardisContext) -> Tardis
     .await
 }
 
-async fn rebind_model_with_template(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    #[derive(sea_orm::FromQueryResult)]
-    pub struct FlowModelRelTemolateResult {
-        id: String,
-        rel_template_id: String,
-        own_paths: String,
-    }
-    join_all(
-        funs.db()
-            .find_dtos::<FlowModelRelTemolateResult>(
-                Query::select()
-                    .columns([flow_model::Column::Id, flow_model::Column::RelTemplateId, flow_model::Column::OwnPaths])
-                    .from(flow_model::Entity)
-                    .and_where(Expr::col(flow_model::Column::RelTemplateId).ne("")),
-            )
-            .await?
-            .into_iter()
-            .map(|result| async move {
-                let custom_ctx = TardisContext {
-                    own_paths: result.own_paths,
-                    ..ctx.clone()
-                };
-                FlowRelServ::add_simple_rel(
-                    &FlowRelKind::FlowModelTemplate,
-                    &result.id,
-                    &result.rel_template_id,
-                    None,
-                    None,
-                    true,
-                    true,
-                    None,
-                    funs,
-                    &custom_ctx,
-                )
-                .await
-            })
-            .collect_vec(),
-    )
-    .await
-    .into_iter()
-    .collect::<TardisResult<Vec<()>>>()?;
-
-    Ok(())
-}
-
-async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
+async fn init_basic_info(funs: &TardisFunsInst) -> TardisResult<()> {
     let kind_state_id = RbumKindServ::get_rbum_kind_id_by_code(flow_constants::RBUM_KIND_STATE_CODE, funs)
         .await?
         .ok_or_else(|| funs.err().not_found("flow", "init", "not found state kind", ""))?;
@@ -202,7 +147,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst, ctx: &TardisContext) -> Tardi
     Ok(())
 }
 
-async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+async fn add_kind(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             code: TrimString(scheme.to_string()),
@@ -220,7 +165,7 @@ async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx:
     .await
 }
 
-async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+async fn add_domain(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
             code: TrimString(flow_constants::DOMAIN_CODE.to_string()),
@@ -236,7 +181,7 @@ async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRes
     .await
 }
 
-pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
+pub async fn truncate_data(funs: &TardisFunsInst) -> TardisResult<()> {
     rbum_initializer::truncate_data(funs).await?;
     funs.db().execute(Table::truncate().table(flow_state::Entity)).await?;
     funs.db().execute(Table::truncate().table(flow_model::Entity)).await?;
@@ -917,6 +862,80 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                         is_open: true,
                         content: Some("确认将状态修改成待开始？".to_string()),
                     }),
+                    ..Default::default()
+                },
+            ],
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    let review_init_model = FlowModelServ::paginate_items(
+        &FlowModelFilterReq {
+            basic: RbumBasicFilterReq { ..Default::default() },
+            tags: Some(vec!["REVIEW".to_string()]),
+            ..Default::default()
+        },
+        1,
+        1,
+        None,
+        None,
+        funs,
+        ctx,
+    )
+    .await?
+    .records
+    .pop();
+    if review_init_model.is_none() {
+        let mut bind_states = vec![];
+        bind_states.push(FlowStateServ::init_state("REVIEW", "待开始", FlowSysStateKind::Start, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("REVIEW", "进行中", FlowSysStateKind::Progress, "", funs, ctx).await?);
+        bind_states.push(FlowStateServ::init_state("REVIEW", "已结束", FlowSysStateKind::Finish, "", funs, ctx).await?);
+        FlowModelServ::init_model(
+            "REVIEW",
+            bind_states[0].clone(),
+            bind_states.clone(),
+            "评审通用审批流",
+            vec![
+                FlowTransitionInitInfo {
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[1].clone(),
+                    name: "发起评审".to_string(),
+                    action_by_front_changes: vec![FlowTransitionFrontActionInfo {
+                        relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation::Lt,
+                        relevance_label: "".to_string(),
+                        left_value: "review_start_time".to_string(),
+                        left_label: "".to_string(),
+                        right_value: FlowTransitionFrontActionRightValue::RealTime,
+                        select_field: None,
+                        select_field_label: None,
+                        change_content: None,
+                        change_content_label: None,
+                    }],
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_id: bind_states[0].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
+                    name: "结束评审".to_string(),
+                    ..Default::default()
+                },
+                FlowTransitionInitInfo {
+                    from_flow_state_id: bind_states[1].clone(),
+                    to_flow_state_id: bind_states[2].clone(),
+                    name: "结束评审".to_string(),
+                    double_check: None,
+                    action_by_front_changes: vec![FlowTransitionFrontActionInfo {
+                        relevance_relation: FlowTransitionFrontActionInfoRelevanceRelation::Gt,
+                        relevance_label: "".to_string(),
+                        left_value: "review_end_time".to_string(),
+                        left_label: "".to_string(),
+                        right_value: FlowTransitionFrontActionRightValue::RealTime,
+                        select_field: None,
+                        select_field_label: None,
+                        change_content: None,
+                        change_content_label: None,
+                    }],
                     ..Default::default()
                 },
             ],

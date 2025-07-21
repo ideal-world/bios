@@ -1,20 +1,22 @@
 use std::collections::HashMap;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
+use crate::basic::dto::iam_res_dto::{IamResAggAddAndBindReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
+use crate::basic::dto::iam_set_dto::{IamResSetTreeResp, IamSetCateAddReq, IamSetCateModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
@@ -42,6 +44,52 @@ impl IamCsResApi {
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamResServ::add_res_agg(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Add And Bind Res
+    /// 添加资源
+    #[oai(path = "/add_and_bind", method = "post")]
+    async fn add_and_bind(&self, add_req: Json<IamResAggAddAndBindReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let set_id = RbumSetCateServ::find_one_rbum(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ids: Some(vec![add_req.0.set.set_cate_id.clone()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        .map(|s| s.rel_rbum_set_id)
+        .ok_or_else(|| {
+            funs.err().not_found(
+                "iam_cs_res_api",
+                "add_and_bind",
+                &format!("not found set by set_cate_id {}", add_req.0.set.set_cate_id.clone()),
+                "404-rbum-set-code-not-exist",
+            )
+        })?;
+        let result = IamResServ::add_res_agg(
+            &mut IamResAggAddReq {
+                res: add_req.0.res.clone(),
+                set: add_req.0.set.clone(),
+            },
+            &set_id,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        IamRelServ::add_simple_rel(&add_req.0.bind_res_kind, &result, &add_req.0.bind_res_id, None, None, false, false, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -277,11 +325,23 @@ impl IamCsResApi {
     /// Find Menu Tree
     /// 查找菜单树
     #[oai(path = "/tree/menu", method = "get")]
-    async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_menu_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Data Guard Tree
+    /// 查找数据权限树
+    #[oai(path = "/tree/data_guard", method = "get")]
+    async fn get_data_guard_tree(&self, exts: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_data_guard_tree(&set_id, exts.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
@@ -295,7 +355,7 @@ impl IamCsResApi {
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以用于逐级查询
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamResSetTreeResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
@@ -313,7 +373,7 @@ impl IamCsResApi {
         )
         .await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        TardisResp::ok(IamSetServ::transform_res_tree(result, None, &funs, &ctx.0).await?)
     }
 
     /// Modify Res By Res Id

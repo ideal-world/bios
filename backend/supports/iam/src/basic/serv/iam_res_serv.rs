@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ};
 use itertools::Itertools;
@@ -18,22 +18,22 @@ use tardis::futures_util::future::join_all;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
-use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, JsonMenu, MenuItem};
+use crate::basic::dto::iam_filer_dto::{IamResFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, InitResItemIds, JsonMenu, MenuItem};
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind};
+use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind, IamSetKind};
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::iam_account_serv::IamAccountServ;
@@ -61,6 +61,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
 
     async fn package_item_add(add_req: &IamResAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
+            id: add_req.id.clone(),
             code: Some(add_req.code.clone()),
             name: add_req.name.clone(),
             disabled: add_req.disabled,
@@ -116,6 +117,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             IamResKind::Ele => ("添加目录页面按钮".to_string(), "AddContentPageButton".to_string()),
             IamResKind::Product => ("添加产品".to_string(), "AddProduct".to_string()),
             IamResKind::Spec => ("添加产品规格".to_string(), "AddSpecification".to_string()),
+            IamResKind::DataGuard => ("添加数据权限".to_string(), "AddDaraGuard".to_string()),
         };
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -217,7 +219,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             ctx,
         )
         .await?;
-        if modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() || modify_req.method.is_some() {
+        if res.kind == IamResKind::Api && (modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() || modify_req.method.is_some()) {
             IamResCacheServ::add_or_modify_res_rel(
                 &res.code,
                 &res.method,
@@ -259,12 +261,91 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 }
             }
         }
+        if let Some(bind_data_guards) = &modify_req.bind_data_guards {
+            let old_data_guard_ids =
+                IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResDataGuard, id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec();
+            let old_data_guards = Self::find_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(old_data_guard_ids),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for old_data_guard in &old_data_guards {
+                if bind_data_guards.iter().all(|bind| bind.code.clone().unwrap_or_default().to_string() != old_data_guard.code) {
+                    IamRelServ::delete_simple_rel(&IamRelKind::IamResDataGuard, &old_data_guard.id, id, funs, ctx).await?;
+                }
+            }
+            for bind_data_guard in bind_data_guards {
+                if let Some(exist_data_guard) = old_data_guards.iter().find(|old| old.code == bind_data_guard.code.clone().unwrap_or_default().to_string()) {
+                    Self::modify_item(
+                        &exist_data_guard.id,
+                        &mut IamResModifyReq {
+                            name: bind_data_guard.name.clone(),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                } else if let Some(bind_data_guard_name) = bind_data_guard.name.clone() {
+                    let global_ctx = TardisContext {
+                        own_paths: "".to_string(),
+                        ..ctx.clone()
+                    };
+                    let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
+                    let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
+                        &RbumSetCateFilterReq {
+                            rel_rbum_set_id: Some(data_guard_set_id.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?
+                    .map(|s| s.id)
+                    .unwrap_or_default();
+                    let data_guard_id = Self::add_item(
+                        &mut IamResAddReq {
+                            code: bind_data_guard.code.clone().unwrap_or_default(),
+                            name: bind_data_guard_name,
+                            kind: IamResKind::DataGuard,
+                            scope_level: Some(res.scope_level.clone()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    IamSetServ::add_set_item(
+                        &IamSetItemAddReq {
+                            set_id: data_guard_set_id,
+                            set_cate_id: data_guard_set_cate_id.to_string(),
+                            sort: 0,
+                            rel_rbum_item_id: data_guard_id.to_string(),
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    IamRelServ::add_simple_rel(&IamRelKind::IamResDataGuard, &data_guard_id, id, None, None, false, false, funs, ctx).await?;
+                }
+            }
+        }
         let (op_describe, op_kind) = match res.kind {
             IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
             IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
             IamResKind::Ele => ("编辑操作".to_string(), "ModifyEle".to_string()),
             IamResKind::Product => ("编辑产品".to_string(), "ModifyProduct".to_string()),
             IamResKind::Spec => ("编辑产品规格".to_string(), "ModifySpecification".to_string()),
+            IamResKind::DataGuard => ("编辑数据权限".to_string(), "ModifyDataGuard".to_string()),
         };
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -302,6 +383,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
                 IamResKind::Product => ("移除产品".to_string(), "RemoveProduct".to_string()),
                 IamResKind::Spec => ("移除产品规格".to_string(), "RemoveSpecification".to_string()),
+                IamResKind::DataGuard => ("移除数据权限".to_string(), "RemoveDataGuard".to_string()),
             };
             if !op_describe.is_empty() {
                 let _ = IamLogClient::add_ctx_task(LogParamTag::IamRes, Some(deleted_item.id.to_string()), op_describe, Some(op_kind), ctx).await;
@@ -581,7 +663,53 @@ impl IamResServ {
                 IamRelServ::add_simple_rel(&IamRelKind::IamResApi, api_id, &res_id, None, None, false, false, funs, ctx).await?;
             }
         }
+        if let Some(bind_data_guards) = &add_req.res.bind_data_guards {
+            let global_ctx = TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            };
+            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
+            let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
+                &RbumSetCateFilterReq {
+                    rel_rbum_set_id: Some(data_guard_set_id.clone()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|s| s.id)
+            .unwrap_or_default();
+            for mut bind_data_guard in bind_data_guards.clone() {
+                bind_data_guard.scope_level = add_req.res.scope_level.clone();
+                let _data_guard_id = Self::add_and_bind_data_guard_res(&data_guard_set_id, &data_guard_set_cate_id, &mut bind_data_guard, &res_id, funs, ctx).await?;
+            }
+        }
         Ok(res_id)
+    }
+
+    pub async fn add_and_bind_data_guard_res(
+        set_id: &str,
+        set_cate_id: &str,
+        add_req: &mut IamResAddReq,
+        bind_res_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let data_guard_id = Self::add_item(add_req, funs, ctx).await?;
+        IamSetServ::add_set_item(
+            &IamSetItemAddReq {
+                set_id: set_id.to_string(),
+                set_cate_id: set_cate_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: data_guard_id.to_string(),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        IamRelServ::add_simple_rel(&IamRelKind::IamResDataGuard, &data_guard_id, bind_res_id, None, None, false, false, funs, ctx).await?;
+        Ok(data_guard_id)
     }
 
     pub async fn get_res_by_app_code(
@@ -642,6 +770,76 @@ impl IamResServ {
         Ok(result)
     }
 
+    pub async fn is_res_code_with_context(res_code: String, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<bool> {
+        let res_vec = Self::get_res_code_with_context(vec![res_code], ctx, funs).await?;
+        if res_vec.is_empty() {
+            return Ok(false);
+        }
+        Ok(res_vec.len() == 1)
+    }
+
+    pub async fn get_res_code_with_context(res_codes: Vec<String>, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Vec<IamResSummaryResp>> {
+        // 根据上下文角色获取资源
+        let raw_roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: false,
+                    rel_ctx_owner: false,
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    optional: false,
+                    tag: Some(IamRelKind::IamAccountRole.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(ctx.owner.clone()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if raw_roles.is_empty() {
+            return Ok(vec![]);
+        }
+        let mut role_ids = vec![];
+        for role in &raw_roles {
+            if role.extend_role_id != "" {
+                role_ids.push(role.extend_role_id.to_string());
+            }
+            role_ids.push(role.id.to_string());
+        }
+        let res = Self::find_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    codes: Some(res_codes),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    tag: Some(IamRelKind::IamResRole.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_ids: Some(role_ids),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(res)
+    }
+
     pub async fn delete_res(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let item_detail = Self::get_item(
             id,
@@ -664,32 +862,80 @@ impl IamResServ {
         }
         Self::delete_item_with_all_rels(id, funs, ctx).await
     }
+
+    pub async fn refresh_res_cache(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let res = Self::find_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Api),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for item in res {
+            let mut rel_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
+            let res_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &item.id, None, None, funs, ctx).await?;
+            for res_id in res_ids {
+                let res_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &res_id, None, None, funs, &ctx).await?;
+                rel_role_ids.extend(res_role_ids);
+            }
+            rel_role_ids = rel_role_ids.iter().map(|r| r.to_string()).collect::<Vec<String>>().into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
+            let rel_req = IamCacheResRelAddOrModifyReq {
+                st: None,
+                et: None,
+                accounts: vec![],
+                roles: rel_role_ids,
+                groups: vec![],
+                apps: vec![],
+                tenants: vec![],
+                aks: vec![],
+                need_crypto_req: Some(item.crypto_req),
+                need_crypto_resp: Some(item.crypto_resp),
+                need_double_auth: Some(item.double_auth),
+                need_login: Some(item.need_login),
+            };
+            IamResCacheServ::refresh_res_rel(&item.code, &item.method, rel_req, funs).await?;
+        }
+        Ok(())
+    }
 }
 
 impl IamMenuServ {
-    pub fn parse_menu<'a>(set_id: &'a str, parent_cate_id: &'a str, json_menu: JsonMenu, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
+    pub fn parse_menu<'a>(
+        set_id: &'a str,
+        parent_cate_id: &'a str,
+        json_menu: JsonMenu,
+        funs: &'a TardisFunsInst,
+        ctx: &'a TardisContext,
+    ) -> BoxFuture<'a, TardisResult<InitResItemIds>> {
         async move {
-            let new_cate_id = Self::add_cate_menu(
-                set_id,
-                parent_cate_id,
-                &json_menu.name,
-                &json_menu.bus_code,
-                &IamSetCateKind::parse(&json_menu.ext)?,
-                funs,
-                ctx,
-            )
-            .await?;
+            let mut res_item_ids = InitResItemIds::new();
+            let cate_kind = IamSetCateKind::parse(&json_menu.ext)?;
+            let new_cate_id = Self::add_cate_menu(set_id, parent_cate_id, &json_menu.name, &json_menu.bus_code, &cate_kind, funs, ctx).await?;
             if let Some(items) = json_menu.items {
                 for item in items {
-                    Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+                    let item_id = Self::parse_item(set_id, &new_cate_id, item.clone(), funs, ctx).await?;
+                    if let Some(role_binds) = &item.role_binds {
+                        for role_code in role_binds {
+                            res_item_ids.add_role_res(role_code, &item_id);
+                        }
+                    }
                 }
             };
             if let Some(children_menus) = json_menu.children {
                 for children_menu in children_menus {
-                    Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    let children_res_item_ids = Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                    res_item_ids.extend_role_res(&children_res_item_ids);
                 }
             };
-            Ok(new_cate_id)
+            Ok(res_item_ids)
         }
         .boxed()
     }
@@ -705,6 +951,7 @@ impl IamMenuServ {
     ) -> TardisResult<String> {
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
+                id: None,
                 name: TrimString(name.to_string()),
                 bus_code: TrimString(bus_code.to_string()),
                 icon: None,
@@ -735,6 +982,7 @@ impl IamMenuServ {
         IamResServ::add_res_agg(
             &mut IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString(code.to_string()),
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Menu,
@@ -751,6 +999,7 @@ impl IamMenuServ {
                     double_auth_msg: None,
                     need_login: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -768,6 +1017,7 @@ impl IamMenuServ {
         IamResServ::add_res_agg(
             &mut IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString(code.to_string()),
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Ele,
@@ -784,6 +1034,7 @@ impl IamMenuServ {
                     double_auth_msg: None,
                     need_login: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {

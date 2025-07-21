@@ -1,0 +1,48 @@
+[cs]
+[csm.iam.rbum]
+set_cate_sys_code_node_len = 4
+[csm.auth]
+[csm.spi-cache]
+[csm.spi-kv]
+[csm.spi-log]
+[csm.spi-object]
+[csm.spi-reldb]
+[csm.spi-search]
+[csm.spi-stats]
+[csm.spi-plugin]
+
+[fw]
+[fw.app]
+id = "bios-serv-all"
+name = "BIOS All Services"
+desc = "BIOS All Services"
+version = "0.2.0"
+default_lang = "zh-cn"
+
+[fw.web_server.modules.auth]
+[fw.web_server.modules.spi-cache]
+[fw.web_server.modules.spi-kv]
+[fw.web_server.modules.spi-log]
+[fw.web_server.modules.spi-object]
+[fw.web_server.modules.spi-reldb]
+[fw.web_server.modules.spi-search]
+[fw.web_server.modules.spi-stats]
+[fw.web_server.modules.spi-plugin]
+
+[fw.web_server]
+port = 8080
+[fw.web_server.modules.iam]
+title = "IAM Component"
+doc_urls = [["test env", "http://127.0.0.1:8080/"]]
+
+[fw.db]
+url = "mysql://root:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:3306/test"
+
+[fw.cache]
+url = "redis://:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:6379"
+
+[fw.mq]
+url = "amqp://user:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:5672/%2f"
+
+[fw.adv]
+salt = "qa2df6gr452lfr3e"

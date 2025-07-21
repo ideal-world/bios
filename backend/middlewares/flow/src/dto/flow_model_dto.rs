@@ -10,12 +10,14 @@ use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
     db::sea_orm::{self, prelude::*},
+    serde_json::json,
     serde_json::Value,
     web::poem_openapi,
     TardisFuns,
 };
 
 use super::{
+    flow_cond_dto::BasicQueryCondInfo,
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
     flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
@@ -24,6 +26,7 @@ use super::{
 /// 添加请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowModelAddReq {
+    pub id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -50,8 +53,13 @@ pub struct FlowModelAddReq {
     /// 标签
     pub tag: Option<String>,
 
+    /// 满足条件时，触发该流程
+    pub front_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
+
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+
+    pub data_source: Option<String>,
 }
 
 impl From<FlowModelDetailResp> for FlowModelAddReq {
@@ -75,8 +83,10 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
                 is_init: value.init_state_id == state.id,
             })
             .collect_vec();
-        let rel_transition_ids = value.rel_transition().clone().map(|rel_transition| vec![rel_transition.id]);
+        let rel_transition_ids = value.rel_transitions().clone().map(|rel_transitions| rel_transitions.into_iter().map(|tran| tran.id).collect_vec());
+        let front_conds = value.front_conds();
         Self {
+            id: None,
             name: value.name.as_str().into(),
             icon: Some(value.icon.clone()),
             info: Some(value.info.clone()),
@@ -85,6 +95,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             rel_transition_ids,
             rel_template_ids: Some(value.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
+                id: None,
                 name: value.name.as_str().into(),
                 rel_model_id: None,
                 bind_states: Some(states),
@@ -95,10 +106,12 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             current_version_id: None,
             template: value.template,
             main: value.main,
+            front_conds,
             rel_model_id: None,
             tag: Some(value.tag.clone()),
             scope_level: Some(value.scope_level),
             disabled: Some(value.disabled),
+            data_source: value.data_source,
         }
     }
 }
@@ -150,6 +163,9 @@ pub struct FlowModelModifyReq {
     /// 关联父级工作流模板ID
     pub rel_model_id: Option<String>,
 
+    /// 满足条件时，触发该流程
+    pub front_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
+
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 }
@@ -164,6 +180,8 @@ pub struct FlowModelSummaryResp {
     pub init_state_id: String,
     pub rel_model_id: String,
     pub current_version_id: String,
+    pub main: bool,
+    pub default: bool,
     pub owner: String,
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
@@ -176,7 +194,32 @@ pub struct FlowModelSummaryResp {
 
     pub states: Value,
     /// 关联动作
-    pub rel_transition: Option<Value>,
+    pub rel_transitions: Option<Value>,
+}
+
+impl From<FlowModelAggResp> for FlowModelSummaryResp {
+    fn from(value: FlowModelAggResp) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            icon: value.icon,
+            info: value.info,
+            init_state_id: value.init_state_id,
+            rel_model_id: value.rel_model_id,
+            current_version_id: value.current_version_id,
+            main: value.main,
+            default: value.default,
+            owner: value.owner,
+            own_paths: value.own_paths,
+            create_time: value.create_time,
+            update_time: value.update_time,
+            tag: value.tag,
+            disabled: value.disabled,
+            status: value.status,
+            states: json!(value.states),
+            rel_transitions: value.rel_transitions.map(|rel_transitions| json!(rel_transitions)),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Default, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
@@ -187,12 +230,52 @@ pub struct FlowModelRelTransitionExt {
     pub to_flow_state_name: Option<String>,
 }
 
-impl fmt::Display for FlowModelRelTransitionExt {
+/// 关联动作类型
+#[derive(PartialEq, Default, Debug, Clone)]
+pub enum FlowModelRelTransitionKind {
+    #[default]
+    Edit,
+    Delete,
+    Related,
+    Review,
+    Transfer(FlowModelRelTransitionExt),
+}
+
+impl fmt::Display for FlowModelRelTransitionKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.id.as_str() {
-            "__EDIT__" => write!(f, "编辑"),
-            "__DELETE__" => write!(f, "删除"),
-            _ => write!(f, "{}({})", self.name, self.from_flow_state_name),
+        match self {
+            Self::Edit => write!(f, "编辑"),
+            Self::Delete => write!(f, "删除"),
+            Self::Related => write!(f, "关联"),
+            Self::Review => write!(f, "评审"),
+            Self::Transfer(tran) => {
+                write!(f, "{}({})", tran.name, tran.from_flow_state_name)
+            }
+        }
+    }
+}
+
+impl From<FlowModelRelTransitionExt> for FlowModelRelTransitionKind {
+    fn from(value: FlowModelRelTransitionExt) -> Self {
+        match value.id.as_str() {
+            "__EDIT__" => Self::Edit,
+            "__DELETE__" => Self::Delete,
+            "__REQRELATED__" => Self::Related,
+            "__TASKRELATED__" => Self::Related,
+            "__REVIEW__" => Self::Review,
+            _ => Self::Transfer(value),
+        }
+    }
+}
+
+impl FlowModelRelTransitionKind {
+    pub fn log_text(&self) -> String {
+        match self {
+            Self::Edit => "编辑审批".to_string(),
+            Self::Delete => "删除审批".to_string(),
+            Self::Related => "关联审批".to_string(),
+            Self::Review => "评审审批".to_string(),
+            Self::Transfer(tran) => format!("{}({})", tran.name, tran.from_flow_state_name).to_string(),
         }
     }
 }
@@ -210,6 +293,7 @@ pub struct FlowModelDetailResp {
     pub template: bool,
     /// 是否主流程
     pub main: bool,
+    pub default: bool,
 
     pub init_state_id: String,
     pub current_version_id: String,
@@ -221,18 +305,21 @@ pub struct FlowModelDetailResp {
     pub transitions: Option<Value>,
     // 状态信息
     pub states: Option<Value>,
+    /// 标签
+    pub tag: String,
+
+    /// 关联动作
+    pub rel_transitions: Option<Value>,
+    /// 满足条件时，触发该流程
+    pub front_conds: Option<Value>,
 
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    /// 标签
-    pub tag: String,
-
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
-    /// 关联动作
-    pub rel_transition: Option<Value>,
+    pub data_source: Option<String>,
 }
 
 impl FlowModelDetailResp {
@@ -250,8 +337,95 @@ impl FlowModelDetailResp {
         }
     }
 
-    pub fn rel_transition(&self) -> Option<FlowModelRelTransitionExt> {
-        self.rel_transition.clone().map(|rel_transition| TardisFuns::json.json_to_obj(rel_transition).unwrap_or_default())
+    pub fn rel_transitions(&self) -> Option<Vec<FlowModelRelTransitionExt>> {
+        self.rel_transitions.clone().map(|rel_transitions| TardisFuns::json.json_to_obj(rel_transitions).unwrap_or_default())
+    }
+
+    pub fn front_conds(&self) -> Option<Vec<Vec<BasicQueryCondInfo>>> {
+        self.front_conds.clone().map(|front_conds| TardisFuns::json.json_to_obj(front_conds).unwrap_or_default())
+    }
+
+    pub fn create_modify_req(self) -> FlowModelModifyReq {
+        let front_conds = self.front_conds();
+        FlowModelModifyReq {
+            name: Some(self.name.as_str().into()),
+            icon: Some(self.icon.clone()),
+            info: Some(self.info.clone()),
+            status: Some(self.status),
+            template: Some(self.template),
+            rel_template_ids: Some(self.rel_template_ids.clone()),
+            modify_version: Some(FlowModelVersionModifyReq {
+                name: Some(self.name.as_str().into()),
+                bind_states: None,
+                unbind_states: None,
+                delete_states: None,
+                modify_states: None,
+                status: None,
+                init_state_id: Some(self.init_state_id),
+                scope_level: Some(self.scope_level.clone()),
+                disabled: Some(self.disabled),
+            }),
+            current_version_id: Some(self.current_version_id.clone()),
+            front_conds,
+            rel_model_id: Some(self.rel_model_id.clone()),
+            tag: Some(self.tag.clone()),
+            scope_level: Some(self.scope_level),
+            disabled: Some(self.disabled),
+        }
+    }
+
+    pub fn create_add_req(self) -> FlowModelAddReq {
+        let mut add_transitions = vec![];
+        for transition in self.transitions() {
+            let mut add_transitions_req = FlowTransitionAddReq::from(transition.clone());
+            add_transitions_req.id = Some(transition.id.clone());
+            add_transitions.push(add_transitions_req);
+        }
+        let states = self
+            .states()
+            .into_iter()
+            .map(|state| FlowModelVersionBindState {
+                exist_state: Some(FlowModelBindStateReq {
+                    state_id: state.id.clone(),
+                    ext: state.ext,
+                }),
+                bind_new_state: None,
+                add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state.id).collect_vec()),
+                modify_transitions: None,
+                delete_transitions: None,
+                is_init: self.init_state_id == state.id,
+            })
+            .collect_vec();
+        let rel_transition_ids = self.rel_transitions().clone().map(|rel_transitions| rel_transitions.into_iter().map(|tran| tran.id).collect_vec());
+        let front_conds = self.front_conds();
+        FlowModelAddReq {
+            id: Some(self.id.clone()),
+            name: self.name.as_str().into(),
+            icon: Some(self.icon.clone()),
+            info: Some(self.info.clone()),
+            kind: self.kind,
+            status: self.status,
+            rel_transition_ids,
+            rel_template_ids: Some(self.rel_template_ids.clone()),
+            add_version: Some(FlowModelVersionAddReq {
+                id: Some(self.current_version_id.clone()),
+                name: self.name.as_str().into(),
+                rel_model_id: Some(self.id.clone()),
+                bind_states: Some(states),
+                status: FlowModelVesionState::Enabled,
+                scope_level: Some(self.scope_level.clone()),
+                disabled: Some(self.disabled),
+            }),
+            current_version_id: Some(self.current_version_id.clone()),
+            template: self.template,
+            main: self.main,
+            front_conds,
+            rel_model_id: Some(self.rel_model_id.clone()),
+            tag: Some(self.tag.clone()),
+            scope_level: Some(self.scope_level),
+            disabled: Some(self.disabled),
+            data_source: self.data_source,
+        }
     }
 }
 
@@ -270,7 +444,9 @@ pub struct FlowModelFilterReq {
     pub template: Option<bool>,
     /// 是否是主流程
     pub main: Option<bool>,
+    pub default: Option<bool>,
     pub own_paths: Option<Vec<String>>,
+    pub data_source: Option<String>,
     /// 指定状态ID(用于过滤动作)
     pub specified_state_ids: Option<Vec<String>>,
     /// 关联模型ID
@@ -301,6 +477,7 @@ pub struct FlowModelAggResp {
     pub name: String,
     pub icon: String,
     pub info: String,
+    pub status: FlowModelStatus,
     /// 是否作为模板使用
     pub template: bool,
     /// 关联父级模型ID
@@ -324,6 +501,9 @@ pub struct FlowModelAggResp {
     pub disabled: bool,
     /// 是否作为主流程
     pub main: bool,
+    pub default: bool,
+    /// 关联动作
+    pub rel_transitions: Option<Vec<FlowModelRelTransitionExt>>,
 }
 
 /// 绑定状态
@@ -356,14 +536,14 @@ pub struct FlowModelBindNewStateReq {
 }
 
 /// 解绑状态
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, Clone)]
 pub struct FlowModelUnbindStateReq {
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) id
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) id
     pub state_id: String,
     /// 新的状态ID
-    pub new_state_id: String,
+    pub new_state_id: Option<String>,
 }
 
 /// 状态排序
@@ -428,7 +608,7 @@ pub struct FlowModelFindRelStateResp {
 }
 
 /// 工作流关联操作类型
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, poem_openapi::Enum)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, poem_openapi::Enum)]
 pub enum FlowModelAssociativeOperationKind {
     #[default]
     Reference,
@@ -493,4 +673,22 @@ pub struct FlowModelSyncModifiedFieldReq {
     /// 参数列表
     pub add_fields: Option<Vec<String>>,
     pub delete_fields: Option<Vec<String>>,
+}
+
+/// 状态排序
+#[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelFIndOrCreatReq {
+    pub rel_template_id: String,
+    pub tags: Vec<String>,
+    pub op: FlowModelAssociativeOperationKind,
+    pub data_source: Option<String>,
+}
+
+/// 初始化复制模型
+#[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelInitCopyReq {
+    pub rel_template_ids: Vec<String>,
+    pub own_path: Vec<String>,
+    pub rel_model_id: String,
+    pub sync_inst: bool,
 }

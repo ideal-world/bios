@@ -390,6 +390,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
             "/cs/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("audit_admin".to_string())),
                     name: TrimString("审计管理员".to_string()),
                     // 必须设置成全局作用域（1）
@@ -482,7 +483,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert_eq!(account.exts.len(), 1);
     assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "".to_string());
     assert_eq!(account.certs.len(), 2);
-    assert!(account.certs.contains_key(&("UserPwd".to_string())));
+    assert!(account.certs.contains_key("UserPwd"));
 
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/cs/cert?account_id={}", account_id)).await;
@@ -572,6 +573,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("work_spaces".to_string()),
                     name: TrimString("工作台页面".to_string()),
                     kind: IamResKind::Menu,
@@ -588,6 +590,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -603,6 +606,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("work_spaces#btn1".to_string()),
                     name: TrimString("xx按钮".to_string()),
                     kind: IamResKind::Ele,
@@ -619,6 +623,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -632,6 +637,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("work_spaces#btn2".to_string()),
                     name: TrimString("yy按钮".to_string()),
                     kind: IamResKind::Ele,
@@ -648,6 +654,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -666,6 +673,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
             "/cs/res",
             &IamResAggAddReq {
                 res: IamResAddReq {
+                    id: None,
                     code: TrimString("cs-test/**".to_string()),
                     name: TrimString("系统控制台功能".to_string()),
                     kind: IamResKind::Api,
@@ -682,6 +690,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     need_login: Some(false),
                     double_auth_msg: None,
                     bind_api_res: None,
+                    bind_data_guards: None,
                     ext: None,
                 },
                 set: IamSetItemAggAddReq {
@@ -711,6 +720,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 double_auth_msg: None,
                 need_login: None,
                 bind_api_res: None,
+                bind_data_guards: None,
                 ext: None,
             },
         )
@@ -750,6 +760,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
             "/cs/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("test_role".to_string())),
                     name: TrimString("测试角色".to_string()),
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),

@@ -246,6 +246,10 @@ pub struct RbumRelFilterReq {
     ///
     /// ``from`` 方的对象id
     pub from_rbum_id: Option<String>,
+    /// ``from`` party object id
+    ///
+    /// ``from`` 方的对象id
+    pub from_rbum_ids: Option<Vec<String>>,
     /// ``from`` party scope levels
     ///
     /// ``from`` 方的作用域集合
@@ -254,6 +258,10 @@ pub struct RbumRelFilterReq {
     ///
     /// ``to`` 方的对象id
     pub to_rbum_item_id: Option<String>,
+    /// ``to`` party object id
+    ///
+    /// ``to`` 方的对象id
+    pub to_rbum_item_ids: Option<Vec<String>>,
     /// ``to`` party scope levels
     ///
     /// ``to`` 方的作用域集合

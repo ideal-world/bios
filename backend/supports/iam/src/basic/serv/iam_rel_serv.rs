@@ -1,6 +1,3 @@
-use std::fmt::format;
-
-use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{Duration, Utc};
@@ -135,6 +132,12 @@ impl IamRelServ {
         }
         if rel_kind == &IamRelKind::IamAccountApp {
             IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
+        }
+        if rel_kind == &IamRelKind::IamSubDeployAccount {
+            IamSearchClient::sync_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
+        }
+        if rel_kind == &IamRelKind::IamSubDeployAuthAccount {
+            IamSearchClient::sync_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
         }
 
         if rel_kind == &IamRelKind::IamResRole {
@@ -568,11 +571,19 @@ impl IamRelServ {
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
             }
             IamRelKind::IamAccountApp => {
-                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await?;
+                // TODO reset account cache
+                // IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await?;
+                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             IamRelKind::IamAccountRel => {
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
+            }
+            IamRelKind::IamSubDeployAccount => {
+                IamSearchClient::sync_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
+            }
+            IamRelKind::IamSubDeployAuthAccount => {
+                IamSearchClient::sync_add_or_modify_account_search(to_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             _ => {}
         }
@@ -781,6 +792,34 @@ impl IamRelServ {
                 from_rbum_id: Some(from_iam_item_id.to_string()),
                 to_rbum_item_id: Some(to_iam_item_id.to_string()),
                 from_own_paths: Some(ctx.own_paths.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    pub async fn exist_from_rels(rel_kind: &IamRelKind, from_iam_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        RbumRelServ::check_simple_rel(
+            &RbumRelSimpleFindReq {
+                tag: Some(rel_kind.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(from_iam_item_id.to_string()),
+                from_own_paths: Some(ctx.own_paths.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    pub async fn exist_to_rel(rel_kind: &IamRelKind, to_iam_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        RbumRelServ::check_simple_rel(
+            &RbumRelSimpleFindReq {
+                tag: Some(rel_kind.to_string()),
+                to_rbum_item_id: Some(to_iam_item_id.to_string()),
                 ..Default::default()
             },
             funs,

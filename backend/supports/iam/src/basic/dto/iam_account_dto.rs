@@ -6,6 +6,7 @@ use tardis::chrono::{self, DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
 use crate::basic::serv::iam_cert_ldap_serv::ldap::LdapSearchResp;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountLogoutTypeKind, IamAccountStatusKind};
@@ -195,7 +196,7 @@ pub struct IamAccountSummaryAggResp {
     pub orgs: Vec<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountDetailAggResp {
     pub id: String,
     pub name: String,
@@ -227,7 +228,7 @@ pub struct IamAccountDetailAggResp {
     pub apps: Vec<IamAccountAppInfoResp>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountAttrResp {
     pub name: String,
     pub label: String,
@@ -252,10 +253,12 @@ pub struct IamAccountInfoWithUserPwdAkResp {
     pub status: String,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,
+    pub app_kind: IamAppKind,
+    pub app_own_paths: String,
     pub app_icon: String,
     pub roles: HashMap<String, String>,
     pub groups: HashMap<String, String>,
@@ -329,4 +332,26 @@ pub struct AccountTenantInfo {
     pub orgs: Vec<String>,
     pub groups: HashMap<String, String>,
     pub apps: Vec<IamAccountAppInfoResp>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountLogoutEvent {
+    pub id: String,
+}
+
+#[cfg(feature = "event")]
+pub mod event {
+    use bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject};
+    use tardis::chrono::{Duration, Utc};
+
+    impl EventAttribute for super::IamAccountLogoutEvent {
+        const SUBJECT: Subject = Subject::const_new("iam/account/logout");
+        fn durable_config() -> Option<MessageDurableConfig> {
+            Some(MessageDurableConfig {
+                // 两个月后过期
+                expire: Utc::now() + Duration::days(60),
+                max_receiver: Some(1),
+            })
+        }
+    }
 }

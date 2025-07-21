@@ -20,5 +20,6 @@ pub mod iam_rel_serv;
 pub mod iam_res_serv;
 pub mod iam_role_serv;
 pub mod iam_set_serv;
+pub mod iam_sub_deploy_serv;
 pub mod iam_tenant_serv;
 pub mod oauth2_spi;

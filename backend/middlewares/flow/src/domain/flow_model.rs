@@ -49,6 +49,10 @@ pub struct Model {
     ///
     #[index]
     pub main: bool,
+    /// Whether it is a default model / 是否是默认模板
+    ///
+    #[index]
+    pub default: bool,
     /// Whether it is a template / 是否是模板
     ///
     /// Used as a model for the model to be reused in the process
@@ -118,6 +122,18 @@ pub struct Model {
     /// ```
     // pub exchange_data_url: String,
 
+    /// Transfer condition: the condition that the current flow instance satisfies
+    /// 流转条件：当前工作流实例满足的条件
+    ///
+    /// This conditional format is json wrapped in two layers of arrays:
+    /// [ -- The outer layer is an OR relationship
+    ///   [{},{}] -- The inner layer is an AND relationship
+    /// ]
+    pub front_conds: Option<Json>,
+
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
+
+    #[index]
+    pub data_source: String,
 }

@@ -2,6 +2,10 @@ use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+
+#[cfg(feature = "event")]
+use bios_sdk_invoke::clients::event_client::{mq_error, EventAttributeExt, SPI_RPC_TOPIC};
+
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
@@ -26,7 +30,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
     AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp,
-    IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
+    IamAccountDetailResp, IamAccountLogoutEvent, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
@@ -164,7 +168,18 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await?;
         }
+        // add event
+        #[cfg(feature = "event")]
+        if funs.conf::<IamConfig>().in_event {
+            if let Some(event_node) = bios_sdk_invoke::clients::event_client::mq_client_node_opt() {
+                if modify_req.status == Some(IamAccountStatusKind::Logout) {
+                    event_node.send_event(SPI_RPC_TOPIC, IamAccountLogoutEvent { id: id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
+                    // warn!("send event message: logout accout,id: {:?}", id);
+                }
+            }
+        }
 
+        // log
         let mut tasks = vec![];
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             tasks.push(("注销账号".to_string(), "Logout".to_string()));
@@ -235,6 +250,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::LaborType));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
+        }
+        if let Some(rbum_item_rel_filter_req) = &filter.rel3 {
+            Self::package_rel(query, Alias::new("rbum_rel3"), rbum_item_rel_filter_req);
+        }
+        if let Some(rbum_item_rel_filter_req) = &filter.rel4 {
+            Self::package_rel(query, Alias::new("rbum_rel4"), rbum_item_rel_filter_req);
         }
         if let Some(set_rel) = &filter.set_rel {
             Self::package_set_rel(query, Alias::new("rbum_set_rel"), set_rel);
@@ -469,7 +490,13 @@ impl IamAccountServ {
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?), true, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(
+                &IamSetServ::get_default_code(&IamSetKind::Org, &IamTenantServ::get_id_by_ctx(ctx, funs)?),
+                true,
+                funs,
+                &mock_tenant_ctx,
+            )
+            .await?
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         let roles = if skip_filter_role {
@@ -522,7 +549,7 @@ impl IamAccountServ {
                 ctx,
             )
             .await?
-        }; 
+        };
 
         let enabled_apps = IamAppServ::find_items(
             &IamAppFilterReq {
@@ -558,16 +585,37 @@ impl IamAccountServ {
             apps.push(IamAccountAppInfoResp {
                 app_id: app.id,
                 app_name: app.name,
+                app_kind: app.kind,
+                app_own_paths: app.own_paths.clone(),
                 app_icon: app.icon,
                 roles: roles.iter().filter(|r| r.own_paths == app.own_paths).map(|r| (r.id.to_string(), r.name.to_string())).collect(),
                 groups: HashMap::default(),
             });
         }
+        // if ctx.own_paths != "" {
+        //     let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
+        //     let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &mock_tenant_ctx).await?;
+        //     let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &account_id, &funs, &mock_tenant_ctx).await?;
+        //     let mut app_role_read = HashMap::new();
+        //     app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+        //     for (app_id, app_name) in app_items {
+        //         if old_app_ids.contains(&app_id) {
+        //             continue;
+        //         }
+        //         apps.push(IamAccountAppInfoResp {
+        //             app_id: app_id.clone(),
+        //             app_name: app_name.clone(),
+        //             app_icon: "".to_string(),
+        //             roles: app_role_read.clone(),
+        //             groups: HashMap::default(),
+        //         });
+        //     }
+        // }
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
 
-        let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
-        let groups = IamSetServ::find_flat_set_items(&org_set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
+        // let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
+        let groups = IamSetServ::find_flat_set_items(&set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
             name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
@@ -645,6 +693,31 @@ impl IamAccountServ {
             // IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         for account in accounts.records {
+            let account_roles = IamRoleServ::find_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_ctx_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        optional: false,
+                        tag: Some(IamRelKind::IamAccountRole.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             account_aggs.push(IamAccountSummaryAggResp {
                 id: account.id.clone(),
                 name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
@@ -664,7 +737,7 @@ impl IamAccountServ {
                 temporary: account.temporary,
                 lock_status: account.lock_status,
                 icon: account.icon,
-                roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
+                roles: account_roles.into_iter().filter(|r| r.own_paths == ctx.own_paths).map(|r| (r.id, r.name)).collect(),
                 certs: IamCertServ::find_certs(
                     &RbumCertFilterReq {
                         basic: RbumBasicFilterReq {

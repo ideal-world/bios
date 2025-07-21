@@ -55,8 +55,7 @@ pub struct LogItemFindReq {
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct LogItemFindResp {
-    #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Value,
     pub kind: String,
     pub ext: Value,
     pub owner: String,
@@ -86,6 +85,7 @@ pub struct LogItemAddReq {
     pub rel_key: Option<String>,
     pub id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
+    pub data_source: Option<String>,
     pub owner: Option<String>,
     pub own_paths: Option<String>,
 }
@@ -101,11 +101,13 @@ pub struct LogItemAddV2Req {
     pub rel_key: Option<String>,
     pub idempotent_id: Option<String>,
     pub ts: Option<DateTime<Utc>>,
+    pub data_source: Option<String>,
     pub owner: Option<String>,
     pub owner_name: Option<String>,
     pub own_paths: Option<String>,
     pub disable: Option<bool>,
-    pub push: bool,
+    pub push: Option<bool>,
+    pub ignore_push: Option<bool>,
     pub msg: Option<String>,
 }
 
@@ -159,6 +161,7 @@ impl SpiLogClient {
             rel_key,
             id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            data_source: None,
             owner: Some(ctx.owner.clone()),
             own_paths: Some(ctx.own_paths.clone()),
         };
@@ -189,11 +192,13 @@ impl SpiLogClient {
             rel_key,
             idempotent_id: None,
             ts: ts.map(|ts| DateTime::parse_from_rfc3339(&ts).unwrap_or_default().with_timezone(&Utc)),
+            data_source: None,
             owner: Some(ctx.owner.clone()),
             own_paths: Some(ctx.own_paths.clone()),
             msg: None,
             owner_name,
-            push: false,
+            push: Some(false),
+            ignore_push: None,
             disable: None,
         };
         Self::addv2(req, funs, ctx).await?;
@@ -205,6 +210,13 @@ impl SpiLogClient {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &req, headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn batch_add(req: Vec<LogItemAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item/batch/add"), &req, headers.clone()).await?;
         Ok(())
     }
 
@@ -220,6 +232,13 @@ impl SpiLogClient {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item"), &req, headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn batch_addv2(req: Vec<LogItemAddV2Req>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item/batch/add"), &req, headers.clone()).await?;
         Ok(())
     }
 

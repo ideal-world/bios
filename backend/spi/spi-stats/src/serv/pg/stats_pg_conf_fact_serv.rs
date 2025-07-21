@@ -95,6 +95,9 @@ pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModify
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
+    let Some(fact_conf) = get(fact_conf_key, &conn, ctx).await? else {
+        return Err(funs.err().not_found("starsys_stats_conf_fact", "find", "fact conf not found", "404-fact-conf-not-found"));
+    };
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(fact_conf_key.to_string())];
     // todo cancel online check
@@ -163,8 +166,8 @@ WHERE key = $1
     ScheduleClient::add_or_modify_sync_task(
         AddOrModifySyncTaskReq {
             code: format!("{}_{}", SYNC_FACT_TASK_CODE, fact_conf_key),
-            enable: modify_req.is_sync.unwrap_or_default(),
-            cron: modify_req.sync_cron.clone().unwrap_or("".to_string()),
+            enable: fact_conf.is_sync.unwrap_or_default(),
+            cron: modify_req.sync_cron.clone().unwrap_or(fact_conf.sync_cron.clone().unwrap_or("".to_string())),
             callback_url: format!("{}/ci/fact/{}/sync", funs.conf::<StatsConfig>().base_url, fact_conf_key),
             callback_method: "PUT".to_string(),
             callback_body: None,
@@ -345,6 +348,121 @@ LIMIT $1 OFFSET $2
         total_size: total_size as u64,
         records: final_result,
     })
+}
+
+pub(crate) async fn find(
+    fact_conf_keys: Option<Vec<String>>,
+    show_name: Option<String>,
+    dim_rel_conf_dim_keys: Option<Vec<String>>,
+    is_online: Option<bool>,
+    desc_by_create: Option<bool>,
+    desc_by_update: Option<bool>,
+    _funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<Vec<StatsConfFactInfoResp>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
+
+    do_find(fact_conf_keys, show_name, dim_rel_conf_dim_keys, is_online, desc_by_create, desc_by_update, &conn, ctx).await
+}
+
+async fn do_find(
+    fact_conf_keys: Option<Vec<String>>,
+    show_name: Option<String>,
+    dim_rel_conf_dim_keys: Option<Vec<String>>,
+    is_online: Option<bool>,
+    desc_by_create: Option<bool>,
+    desc_by_update: Option<bool>,
+    conn: &TardisRelDBlConnection,
+    ctx: &TardisContext,
+) -> TardisResult<Vec<StatsConfFactInfoResp>> {
+    let table_name = package_table_name("stats_conf_fact", ctx);
+    let table_col_name = package_table_name("stats_conf_fact_col", ctx);
+    let mut sql_where = vec!["1 = 1".to_string()];
+    let mut sql_order = vec![];
+    let mut sql_left = "".to_string();
+    let mut params: Vec<Value> = vec![];
+    if let Some(fact_conf_keys) = &fact_conf_keys {
+        sql_where.push(format!(
+            "fact.key IN ({})",
+            (0..fact_conf_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+        ));
+        for fact_conf_key in fact_conf_keys {
+            params.push(Value::from(fact_conf_key.to_string()));
+        }
+    }
+    if let Some(show_name) = &show_name {
+        sql_where.push(format!("fact.show_name LIKE ${}", params.len() + 1));
+        params.push(Value::from(format!("%{show_name}%")));
+    }
+    if let Some(is_online) = &is_online {
+        sql_where.push(format!("fact.is_online = ${}", params.len() + 1));
+        params.push(Value::from(*is_online));
+    }
+    if let Some(dim_rel_conf_dim_keys) = &dim_rel_conf_dim_keys {
+        if !dim_rel_conf_dim_keys.is_empty() {
+            sql_left = format!(
+                r#" LEFT JOIN (SELECT rel_conf_fact_key,COUNT(rel_conf_fact_key) FROM {table_col_name}  WHERE dim_rel_conf_dim_key IN ({}) GROUP BY rel_conf_fact_key HAVING COUNT(rel_conf_fact_key) = {}) AS fact_col ON fact.key = fact_col.rel_conf_fact_key"#,
+                (0..dim_rel_conf_dim_keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(","),
+                dim_rel_conf_dim_keys.len()
+            );
+            for dim_rel_conf_dim_key in dim_rel_conf_dim_keys {
+                params.push(Value::from(dim_rel_conf_dim_key.to_string()));
+            }
+            sql_where.push("fact_col.rel_conf_fact_key IS NOT NULL".to_string());
+        }
+    }
+    if let Some(desc_by_create) = desc_by_create {
+        sql_order.push(format!("fact.create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
+    }
+    if let Some(desc_by_update) = desc_by_update {
+        sql_order.push(format!("fact.update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
+    }
+
+    let result = conn
+        .query_all(
+            &format!(
+                r#"SELECT t.* FROM (
+SELECT distinct fact.key as key, fact.show_name as show_name, fact.query_limit as query_limit, fact.remark as remark, fact.redirect_path as redirect_path, fact.is_online as is_online, fact.rel_cert_id as rel_cert_id, fact.sync_sql as sync_sql, fact.sync_cron as sync_cron, fact.is_sync as is_sync, fact.create_time as create_time, fact.update_time as update_time
+FROM {table_name} as fact
+{}
+WHERE 
+    {}
+    {}
+    ) as t
+"#,
+                sql_left,
+                sql_where.join(" AND "),
+                if sql_order.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("ORDER BY {}", sql_order.join(","))
+                }
+            ),
+            params,
+        )
+        .await?;
+
+    let mut final_result = vec![];
+    for item in result {
+        final_result.push(StatsConfFactInfoResp {
+            key: item.try_get("", "key")?,
+            show_name: item.try_get("", "show_name")?,
+            query_limit: item.try_get("", "query_limit")?,
+            remark: item.try_get("", "remark")?,
+            create_time: item.try_get("", "create_time")?,
+            update_time: item.try_get("", "update_time")?,
+            online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
+            is_online: item.try_get("", "is_online")?,
+            redirect_path: item.try_get("", "redirect_path")?,
+            rel_cert_id: item.try_get("", "rel_cert_id")?,
+            sync_sql: item.try_get("", "sync_sql")?,
+            sync_cron: item.try_get("", "sync_cron")?,
+            is_sync: item.try_get("", "is_sync")?,
+        });
+    }
+    Ok(final_result)
 }
 
 /// Create fact instance table.

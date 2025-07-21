@@ -77,7 +77,7 @@ impl FlowTransitionServ {
         let flow_transitions = add_req
             .iter()
             .map(|req| flow_transition::ActiveModel {
-                id: Set(TardisFuns::field.nanoid()),
+                id: Set(if let Some(id) = &req.id { id.clone() } else { TardisFuns::field.nanoid() }),
                 name: Set(req.name.as_ref().map(|name| name.to_string()).unwrap_or("".to_string())),
 
                 from_flow_state_id: Set(from_flow_state_id.to_string()),
@@ -162,7 +162,15 @@ impl FlowTransitionServ {
                 "404-flow-transition-rel-model-not-legal",
             ));
         }
-        let model_transitions = Self::find_transitions(flow_version_id, None, funs, ctx).await?;
+        let model_transitions = Self::find_detail_items(
+            &FlowTransitionFilterReq {
+                flow_version_id: Some(flow_version_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         for req in modify_req {
             if let Some(transiton) = model_transitions.iter().find(|trans| trans.id == req.id.to_string()) {
                 let mut flow_transition = flow_transition::ActiveModel {
@@ -343,6 +351,10 @@ impl FlowTransitionServ {
             .expr_as(Expr::col((from_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("from_flow_state_color"))
             .expr_as(Expr::col((to_state_rbum_table.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("to_flow_state_name"))
             .expr_as(Expr::col((to_state_table.clone(), Alias::new("color"))).if_null(""), Alias::new("to_flow_state_color"))
+            .expr_as(
+                Expr::col((to_state_table.clone(), Alias::new("sys_state"))).if_null(""),
+                Alias::new("to_flow_state_sys_state"),
+            )
             .from(flow_transition::Entity)
             .join_as(
                 JoinType::LeftJoin,
@@ -383,55 +395,26 @@ impl FlowTransitionServ {
         if let Some(specified_state_ids) = &filter.specified_state_ids {
             query.and_where(Expr::col((flow_transition::Entity, flow_transition::Column::FromFlowStateId)).is_in(specified_state_ids));
         }
+        if let Some(is_empty_front_changes) = filter.is_empty_front_changes {
+            if is_empty_front_changes {
+                query.and_where(Expr::cust("action_by_front_changes::text == '[]' or action_by_front_changes is null"));
+            } else {
+                query.and_where(Expr::cust("action_by_front_changes::text != '[]' and action_by_front_changes is not null"));
+            }
+        }
+        if let Some(is_empty_post_changes) = filter.is_empty_post_changes {
+            if is_empty_post_changes {
+                query.and_where(Expr::cust("action_by_post_callback::text == '[]' or action_by_post_callback is null"));
+            } else {
+                query.and_where(Expr::cust("action_by_post_callback::text != '[]' and action_by_post_callback is not null"));
+            }
+        }
         Ok(())
     }
 
-    pub async fn find_detail_items(
-        ids: Vec<String>,
-        desc_sort_by_create: Option<bool>,
-        desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
+    pub async fn find_detail_items(filter: &FlowTransitionFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowTransitionDetailResp>> {
         let mut query = Query::select();
-        Self::package_ext_query(
-            &mut query,
-            &FlowTransitionFilterReq {
-                ids: Some(ids),
-                specified_state_ids: None,
-                flow_version_id: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        if let Some(sort) = desc_sort_by_create {
-            query.order_by((flow_transition::Entity, flow_transition::Column::CreateTime), if sort { Order::Desc } else { Order::Asc });
-        }
-        if let Some(sort) = desc_sort_by_update {
-            query.order_by((flow_transition::Entity, flow_transition::Column::UpdateTime), if sort { Order::Desc } else { Order::Asc });
-        }
-        funs.db().find_dtos(&query).await
-    }
-
-    pub async fn find_transitions(
-        flow_version_id: &str,
-        specified_state_ids: Option<Vec<String>>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
-        let mut query = Query::select();
-        Self::package_ext_query(
-            &mut query,
-            &FlowTransitionFilterReq {
-                ids: None,
-                specified_state_ids,
-                flow_version_id: Some(flow_version_id.to_string()),
-            },
-            funs,
-            ctx,
-        )
-        .await?;
+        Self::package_ext_query(&mut query, filter, funs, ctx).await?;
 
         query
             .order_by((flow_transition::Entity, flow_transition::Column::Sort), Order::Asc)
@@ -447,29 +430,36 @@ impl FlowTransitionServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<FlowTransitionDetailResp>> {
-        Ok(Self::find_transitions(flow_version_id, None, funs, ctx)
-            .await?
-            .into_iter()
-            .filter(|tran_detail| {
-                if let Some(target_state_id) = target_state_id.as_ref() {
-                    target_state_id.contains(&tran_detail.to_flow_state_id)
-                } else {
-                    true
-                }
-            })
-            .filter(|tran_detail| {
-                if let Some(current_state_id) = current_state_id.as_ref() {
-                    current_state_id.contains(&tran_detail.from_flow_state_id)
-                } else {
-                    true
-                }
-            })
-            .collect_vec())
+        Ok(Self::find_detail_items(
+            &FlowTransitionFilterReq {
+                flow_version_id: Some(flow_version_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .filter(|tran_detail| {
+            if let Some(target_state_id) = target_state_id.as_ref() {
+                target_state_id.contains(&tran_detail.to_flow_state_id)
+            } else {
+                true
+            }
+        })
+        .filter(|tran_detail| {
+            if let Some(current_state_id) = current_state_id.as_ref() {
+                current_state_id.contains(&tran_detail.from_flow_state_id)
+            } else {
+                true
+            }
+        })
+        .collect_vec())
     }
 
     // 获取动作关联模型
     pub async fn find_rel_model_map(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let mut rel_transitons = HashMap::new();
+        let mut rel_transitions = HashMap::new();
         let rel_template_id = if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(ctx) {
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
         } else {
@@ -499,10 +489,10 @@ impl FlowTransitionServ {
         for rel_model_id in rel_model_ids {
             let transition_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
             if let Some(transition_id) = transition_id {
-                rel_transitons.insert(transition_id, rel_model_id.clone());
+                rel_transitions.insert(transition_id, rel_model_id.clone());
             }
         }
 
-        Ok(rel_transitons)
+        Ok(rel_transitions)
     }
 }

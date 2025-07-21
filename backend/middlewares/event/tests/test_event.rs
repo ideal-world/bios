@@ -71,6 +71,7 @@ pub async fn test_event_topic_api() -> Result<(), Box<dyn std::error::Error>> {
             overflow_size: 500,
             check_auth: true,
             blocking: false,
+            max_payload_size: 500,
         },
         ctx,
         &funs,

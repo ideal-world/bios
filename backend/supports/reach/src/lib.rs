@@ -18,3 +18,7 @@ pub mod reach_initializer {
     pub use crate::reach_init::reach_init_trigger_scene;
 }
 mod serv;
+
+// fix instrument tracing error
+use tardis::tracing::*;
+extern crate self as tracing;

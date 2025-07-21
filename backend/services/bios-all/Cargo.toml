@@ -43,5 +43,9 @@ bios-client-hwsms = { version = "0.2.0", path = "../../../frontend/clients/hwsms
   "reach",
 ] }
 
+bios-client-custom-sms = { version = "0.2.0", path = "../../../frontend/clients/custom-sms", features = [
+  "reach",
+] }
+
 # see [issue](https://github.com/kube-rs/kube/issues/1486)
 json-patch = { version = "=1.2.0" }

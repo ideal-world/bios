@@ -58,6 +58,9 @@ impl TaskProcessor {
             // u32::MAX * u32::MAX + u32::MAX - 1
             cache_client.setbit(&format!("{cache_key}:2"), (u64::MAX - task_id) as usize, status).await?;
         } else {
+            // todo : use lua script
+            // cache_client.setbit(&format!("{cache_key}:3"), (task_id / u32::MAX as u64) as usize, status).await?;
+            // cache_client.setbit(&format!("{cache_key}:4"), (task_id % u32::MAX as u64) as usize, status).await?;
             let _: String = cache_client
                 .script(
                     r#"
@@ -84,6 +87,7 @@ impl TaskProcessor {
             // u32::MAX * u32::MAX + u32::MAX - 1
             Ok(cache_client.getbit(&format!("{cache_key}:2"), (u64::MAX - task_id) as usize).await?)
         } else {
+            // todo : use lua script
             let (r1, r2): (bool, bool) = cache_client
                 .script(r#"return {redis.call('GETBIT', KEYS[1]..':3', ARGV[1]),redis.call('GETBIT', KEYS[1]..':4', ARGV[2])}"#)
                 .key(cache_key)
@@ -91,6 +95,9 @@ impl TaskProcessor {
                 .invoke()
                 .await?;
             Ok(r1 && r2)
+            // let result1 = cache_client.getbit(&format!("{cache_key}:3"), (task_id / u32::MAX as u64) as usize).await?;
+            // let result2 = cache_client.getbit(&format!("{cache_key}:4"), (task_id % u32::MAX as u64) as usize).await?;
+            // Ok(result1 && result2)
         }
     }
 

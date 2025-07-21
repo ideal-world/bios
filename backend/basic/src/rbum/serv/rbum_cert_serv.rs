@@ -435,7 +435,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             }
             // Fill Time
             if add_req.end_time.is_none() {
-                add_req.end_time = Some(add_req.start_time.expect("ignore") + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value()));
+                add_req.end_time = Some(add_req.start_time.expect("ignore") + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::MAX));
             }
             // Dynamic Sk do not require an expiration time
             if rbum_cert_conf.sk_dynamic {
@@ -1266,7 +1266,7 @@ impl RbumCertServ {
                     "400-rbum-cert-ak-duplicate",
                 ));
             }
-            let end_time = Utc::now() + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::max_value());
+            let end_time = Utc::now() + Duration::try_seconds(rbum_cert_conf.expire_sec).unwrap_or(TimeDelta::MAX);
             (new_sk, end_time)
         } else {
             if original_sk != stored_sk {

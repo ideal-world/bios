@@ -21,7 +21,8 @@ ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
 ldap_client = ["ldap3"]
 spi_kv = []
 spi_search = ["event"]
-event = ["bios-sdk-invoke/event", "bios-basic/with-mq"]
+# event = ["bios-sdk-invoke/event", "bios-basic/with-mq"]
+event = ["bios-sdk-invoke/event"]
 
 [dependencies]
 serde.workspace = true
@@ -35,6 +36,7 @@ tardis = { workspace = true, features = [
     "web-server",
     "web-client",
     "mail",
+    "crypto-with-sm"
 ] }
 bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [

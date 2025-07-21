@@ -27,6 +27,8 @@ use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::tokio::time::sleep;
 use tardis::{TardisFuns, TardisFunsInst};
 
+use super::rbum_crud_serv::ID_FIELD;
+
 pub struct RbumSetServ;
 
 pub struct RbumSetCateServ;
@@ -40,8 +42,9 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
     }
 
     async fn package_add(add_req: &RbumSetAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
+        let id = if let Some(id) = &add_req.id { id.to_string() } else { TardisFuns::field.nanoid() };
         Ok(rbum_set::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
+            id: Set(id),
             code: Set(add_req.code.to_string()),
             kind: Set(add_req.kind.to_string()),
             name: Set(add_req.name.to_string()),
@@ -476,9 +479,10 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
     }
 
     async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
+        let id = if let Some(id) = &add_req.id { id.to_string() } else { TardisFuns::field.nanoid() };
         let sys_code = Self::package_sys_code(&add_req.rel_rbum_set_id, add_req.rbum_parent_cate_id.as_deref(), funs, ctx).await?;
         Ok(rbum_set_cate::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
+            id: Set(id),
             sys_code: Set(sys_code),
             bus_code: Set(add_req.bus_code.to_string()),
             name: Set(add_req.name.to_string()),
@@ -728,7 +732,7 @@ impl RbumSetCateServ {
     /// Fetch the sys_code of the parent node
     ///
     /// 获取父级节点的sys_code集合
-    fn get_parent_sys_codes(sys_code: &str, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
+    pub fn get_parent_sys_codes(sys_code: &str, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let mut level = sys_code.len() / set_cate_sys_code_node_len - 1;
         if level == 0 {
@@ -914,6 +918,67 @@ impl RbumSetCateServ {
         }
 
         result
+    }
+
+    #[async_recursion]
+    pub async fn delete_with_all_rels(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let set_cate = Self::get_rbum(
+            set_cate_id,
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let child_set_cates_items = RbumSetItemServ::find_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_set_cate_sys_codes: Some(vec![set_cate.sys_code.clone()]),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                rel_rbum_set_id: Some(set_cate.rel_rbum_set_id.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for child_set_cate_item in child_set_cates_items {
+            RbumSetItemServ::delete_rbum(&child_set_cate_item.id, funs, ctx).await?;
+        }
+        let child_set_cates = Self::find_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                sys_codes: Some(vec![set_cate.sys_code.clone()]),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+                rel_rbum_set_id: Some(set_cate.rel_rbum_set_id.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for child_set_cate in child_set_cates {
+            let res_select_req = <<rbum_set_cate::ActiveModel as tardis::db::sea_orm::ActiveModelTrait>::Entity as EntityTrait>::find()
+                .filter(Expr::col(ID_FIELD.clone()).eq(child_set_cate.id.clone()));
+            let _ = funs.db().soft_delete(res_select_req, &ctx.owner).await?;
+        }
+        Self::delete_rbum(set_cate_id, funs, ctx).await?;
+        Ok(())
     }
 }
 

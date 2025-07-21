@@ -6,11 +6,13 @@
     {
       "code": "first_menu",
       "name": "menu",
+      "role_bind": ["sys_admin"],
       "kind": "Menu"
     },
     {
       "code": "default_button",
       "name": "button",
+      "role_bind": ["sys_admin"],
       "kind": "Ele"
     }
   ],

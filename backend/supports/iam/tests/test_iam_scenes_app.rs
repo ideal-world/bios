@@ -115,6 +115,8 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 admin_ids: Some(vec![app_account_id.clone()]),
                 disabled: None,
                 set_cate_id: None,
+                kind: None,
+                sync_apps_group: None,
             },
         )
         .await;
@@ -177,6 +179,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
             "/ca/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
+                    id: None,
                     code: Some(TrimString("role_xxx".to_string())),
                     name: TrimString("自定义角色1".to_string()),
                     scope_level: Some(RBUM_SCOPE_LEVEL_APP),

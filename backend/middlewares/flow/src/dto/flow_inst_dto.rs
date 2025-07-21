@@ -10,25 +10,44 @@ use tardis::{
 };
 
 use super::{
-    flow_model_dto::FlowModelRelTransitionExt,
+    flow_model_dto::{FlowModelRelTransitionExt, FlowModelRelTransitionKind},
     flow_state_dto::{FlowGuardConf, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind},
     flow_transition_dto::FlowTransitionDoubleCheckInfo,
     flow_var_dto::FlowVarInfo,
 };
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Default, Clone)]
 pub struct FlowInstStartReq {
     /// 关联业务ID
     pub rel_business_obj_id: String,
     pub tag: String,
     /// 创建时的参数列表
     pub create_vars: Option<HashMap<String, Value>>,
+    /// 创建时的参数列表
+    pub check_vars: Option<HashMap<String, Value>>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
     /// 创建时修改的参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 关联的子业务对象触发的动作ID
+    pub rel_transition_id: Option<String>,
+    /// 关联的子业务对象
+    pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,
+    /// 操作人权限
+    pub operator_map: Option<HashMap<String, Vec<String>>>,
     /// 日志文本
     pub log_text: Option<String>,
+    /// 关联的工作流id
+    pub rel_inst_id: Option<String>,
+
+    pub data_source: Option<String>,
+}
+
+// 实例关联的子业务对象
+#[derive(Serialize, Deserialize, PartialEq, Debug, poem_openapi::Object, Clone)]
+pub struct FlowInstRelChildObj {
+    pub tag: String,
+    pub obj_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -48,6 +67,7 @@ pub struct FlowInstBatchBindReq {
     pub rel_business_objs: Vec<FlowInstBindRelObjReq>,
     /// 触发的动作ID
     pub transition_id: Option<String>,
+    pub data_source: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -141,6 +161,11 @@ pub struct FlowInstDetailResp {
     pub rel_flow_model_name: String,
     /// 关联业务ID
     pub rel_business_obj_id: String,
+    /// 关联动作ID
+    pub rel_transition_id: Option<String>,
+
+    /// 关联的实例ID
+    pub rel_inst_id: Option<String>,
 
     pub tag: String,
 
@@ -209,6 +234,8 @@ pub struct FlowInstDetailResp {
     pub rel_transition: Option<FlowModelRelTransitionExt>,
 
     pub own_paths: String,
+
+    pub data_source: String,
 }
 
 // 状态配置
@@ -237,24 +264,26 @@ pub struct FLowInstStateApprovalConf {
 // 流程实例中对应的数据存储
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifacts {
-    pub his_operators: Option<Vec<String>>,                             // 历史操作人
-    pub curr_operators: Option<Vec<String>>,                            // 当前操作人
-    pub prohibit_guard_by_spec_account_ids: Option<Vec<String>>,        // 禁止操作的指定用户ID
-    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>, // 当前审批结果
-    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>,    // 当前转审映射 key: 代操作用户, value: 主操作用户
-    pub approval_total: Option<HashMap<String, usize>>,                 // 审批总数
-    pub form_state_map: HashMap<String, HashMap<String, Value>>,        // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
-    pub curr_vars: Option<HashMap<String, Value>>,                      // 当前参数列表
-    pub prev_non_auto_state_id: Option<Vec<String>>,                    // 上一个非自动节点ID列表
-    pub prev_non_auto_account_id: Option<String>,                       // 上一个节点操作人ID
-    pub state: Option<FlowInstStateKind>,                               // 状态
+    pub his_operators: Option<Vec<String>>,                                  // 历史操作人
+    pub curr_operators: Option<Vec<String>>,                                 // 当前操作人
+    pub approval_result: HashMap<String, HashMap<String, Vec<String>>>,      // 当前审批结果
+    pub referral_map: Option<HashMap<String, HashMap<String, Vec<String>>>>, // 当前转审映射 key: 代操作用户, value: 主操作用户
+    pub approval_total: Option<HashMap<String, usize>>,                      // 审批总数
+    pub form_state_map: HashMap<String, HashMap<String, Value>>,             // 录入节点映射 key为节点ID,对应的value为节点中的录入的参数
+    pub curr_vars: Option<HashMap<String, Value>>,                           // 当前参数列表
+    pub prev_non_auto_state_id: Option<Vec<String>>,                         // 上一个非自动节点ID列表
+    pub prev_non_auto_account_id: Option<String>,                            // 上一个节点操作人ID
+    pub state: Option<FlowInstStateKind>,                                    // 状态
+    pub operator_map: Option<HashMap<String, Vec<String>>>,                  // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
+    pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,                    // 关联的子业务对象
+    pub rel_transition_id: Option<String>,                                   // 关联的子业务对象触发的动作ID
+    pub rel_model_version_id: Option<String>,                                // 关联的子业务对象所使用的模型版本
 }
 
 // 流程实例中数据存储更新
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, sea_orm::FromJsonQueryResult)]
 pub struct FlowInstArtifactsModifyReq {
     pub state: Option<FlowInstStateKind>,
-    pub prohibit_guard_conf_account_ids: Option<Vec<String>>,          // 禁止操作人ID列表
     pub add_his_operator: Option<String>,                              // 添加历史操作人
     pub curr_operators: Option<Vec<String>>,                           // 更新操作人列表
     pub add_approval_result: Option<(String, FlowApprovalResultKind)>, // 增加审批结果
@@ -268,6 +297,10 @@ pub struct FlowInstArtifactsModifyReq {
     pub add_referral_map: Option<(String, Vec<String>)>,               // 修改转审映射
     pub remove_referral_map: Option<String>,                           // 删除转审映射
     pub clear_referral_map: Option<String>,                            // 清除转审映射信息
+    pub operator_map: Option<HashMap<String, Vec<String>>>,            // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
+    pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,              // 关联的子业务对象
+    pub rel_transition_id: Option<String>,                             // 关联的子业务对象触发的动作ID
+    pub rel_model_version_id: Option<String>,                          // 关联的子业务对象所使用的模型版本
 }
 
 /// 审批结果类型
@@ -278,6 +311,10 @@ pub enum FlowApprovalResultKind {
     Pass,
     /// 拒绝
     Overrule,
+    /// 录入
+    Form,
+    /// 评审
+    Review,
 }
 
 impl Display for FlowApprovalResultKind {
@@ -285,6 +322,8 @@ impl Display for FlowApprovalResultKind {
         match self {
             FlowApprovalResultKind::Pass => write!(f, "PASS"),
             FlowApprovalResultKind::Overrule => write!(f, "OVERRULE"),
+            FlowApprovalResultKind::Form => write!(f, "FORM"),
+            FlowApprovalResultKind::Review => write!(f, "REVIEW"),
         }
     }
 }
@@ -296,6 +335,8 @@ impl FromStr for FlowApprovalResultKind {
         match s.to_uppercase().as_str() {
             "PASS" => Ok(Self::Pass),
             "OVERRULE" => Ok(Self::Overrule),
+            "FORM" => Ok(Self::Form),
+            "REVIEW" => Ok(Self::Review),
             _ => Err(TardisError::bad_request(&format!("invalid FlowApprovalResultKind: {}", s), "400-operator-invalid-param")),
         }
     }
@@ -371,6 +412,11 @@ pub struct FlowInstFindNextTransitionResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub next_flow_state_color: String,
+    /// 修改后状态的系统类型
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 系统类型
+    pub next_flow_state_sys_state: FlowSysStateKind,
     /// 参数列表
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     /// Associated [二次确认](FlowTransitionDoubleCheckInfo)
@@ -393,6 +439,8 @@ pub struct FlowInstFindStateAndTransitionsReq {
 pub struct FlowInstFindStateAndTransitionsResp {
     /// 实例ID
     pub flow_inst_id: String,
+    /// 业务ID
+    pub rel_business_obj_id: String,
     /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
@@ -415,6 +463,33 @@ pub struct FlowInstFindStateAndTransitionsResp {
     pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
     /// 绑定其他工作流的动作
     pub rel_flow_versions: HashMap<String, String>,
+}
+
+/// 实例流转信息
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowInstFindTransitionsResp {
+    /// 实例ID
+    pub flow_inst_id: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) name
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) name
+    pub current_flow_state_name: String,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) sys_state
+    pub current_flow_state_sys_kind: FlowSysStateKind,
+    /// Associated [flow_state](super::flow_state_dto::FlowStateDetailResp) color
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
+    pub current_flow_state_color: String,
+    /// Associated [flow_state_ext](FlowStateRelModelExt)
+    ///
+    /// 关联的[工作流状态扩展](FlowStateRelModelExt)
+    pub current_flow_state_ext: FlowStateRelModelExt,
+    /// 结束时间
+    pub finish_time: Option<DateTime<Utc>>,
+    /// 流转信息
+    pub next_flow_transitions: Vec<FlowInstFindNextTransitionResp>,
 }
 
 /// 流转请求
@@ -479,7 +554,7 @@ pub struct FlowInstModifyCurrentVarsReq {
 }
 
 /// 操作实例请求
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
 pub struct FlowInstOperateReq {
     pub operate: FlowStateOperatorKind,
     /// 修改参数列表
@@ -505,20 +580,34 @@ pub struct FlowInstFilterReq {
     pub flow_version_id: Option<String>,
     /// 业务ID
     pub rel_business_obj_ids: Option<Vec<String>>,
+    /// 关联的实例ID
+    pub rel_inst_ids: Option<Vec<String>>,
     /// 标签
-    pub tag: Option<String>,
+    pub tags: Option<Vec<String>>,
+
+    pub data_source: Option<String>,
 
     /// 是否主流程
     pub main: Option<bool>,
 
     /// 是否结束
     pub finish: Option<bool>,
+    /// 是否强制结束
+    pub finish_abort: Option<bool>,
     /// 当前状态ID
     pub current_state_id: Option<String>,
+    pub current_state_sys_kind: Option<FlowSysStateKind>,
+
     pub with_sub: Option<bool>,
+
+    pub create_time_start: Option<DateTime<Utc>>,
+    pub create_time_end: Option<DateTime<Utc>>,
+
+    pub update_time_start: Option<DateTime<Utc>>,
+    pub update_time_end: Option<DateTime<Utc>>,
 }
 
-#[derive(sea_orm::FromQueryResult)]
+#[derive(sea_orm::FromQueryResult, Debug, Clone)]
 pub struct FlowInstSummaryResult {
     pub id: String,
     pub code: String,
@@ -576,7 +665,15 @@ pub struct FlowInstBatchCheckAuthReq {
     pub flow_inst_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
+/// 获取实例所适配的模板
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstFindRelModelReq {
+    pub transition_id: Option<String>,
+    pub tag: String,
+    pub vars: HashMap<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Copy, Clone)]
 pub enum FlowInstStateKind {
     /// 录入中
     #[default]
@@ -591,4 +688,61 @@ pub enum FlowInstStateKind {
     Pass,
     /// 审批拒绝
     Overrule,
+}
+
+impl Display for FlowInstStateKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlowInstStateKind::Form => write!(f, "FORM"),
+            FlowInstStateKind::Approval => write!(f, "Approval"),
+            FlowInstStateKind::Back => write!(f, "Back"),
+            FlowInstStateKind::Revoke => write!(f, "Revoke"),
+            FlowInstStateKind::Pass => write!(f, "Pass"),
+            FlowInstStateKind::Overrule => write!(f, "Overrule"),
+        }
+    }
+}
+
+/// 在search中使用的实例详情
+#[derive(Debug)]
+pub struct FlowInstDetailInSearch {
+    pub id: String,
+    pub code: String,
+    pub title: Option<String>,
+    pub name: Option<String>,
+    pub content: Option<String>,
+    pub owner: String,
+    pub own_paths: String,
+    pub tag: Option<String>,
+    pub current_state_id: Option<String>,
+    pub rel_business_obj_name: Option<String>,
+    pub current_state_name: Option<String>,
+    pub current_state_kind: Option<FlowStateKind>,
+    pub rel_business_obj_id: Option<String>,
+    pub finish_time: Option<DateTime<Utc>>,
+    pub op_time: Option<DateTime<Utc>>,
+    pub state: Option<FlowInstStateKind>,
+    pub rel_transition: Option<FlowModelRelTransitionKind>,
+    pub his_operators: Option<Vec<String>>,
+    pub curr_operators: Option<Vec<String>>,
+    pub curr_referral: Option<Vec<String>>,
+    pub create_time: Option<DateTime<Utc>>,
+    pub update_time: Option<DateTime<Utc>>,
+    pub rel_inst_id: Option<String>,
+}
+
+/// 修改业务search的ext
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct ModifyObjSearchExtReq {
+    pub tag: String,
+    pub status: Option<String>,                    // 当前状态
+    pub rel_state: Option<String>,                 // 审批状态
+    pub rel_transition_state_name: Option<String>, // 审批节点名
+}
+
+/// 实例统计数量请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, Clone)]
+pub struct FlowInstStatcountReq {
+    pub app_ids: Vec<String>,
+    pub filter: FlowInstFilterReq,
 }
