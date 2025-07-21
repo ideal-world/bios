@@ -5,8 +5,6 @@ use bios_basic::rbum::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
-    helper::rbum_scope_helper,
-    rbum_enumeration::RbumScopeLevelKind,
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
@@ -455,46 +453,26 @@ impl FlowModelVersionServ {
         } else {
             flow_model.init_state_id.clone()
         };
-        let mut own_paths_list = vec![];
-        if let Some(rel_template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &flow_model.id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-        {
-            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| {
-                    if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
-                        rel.rel_own_paths
-                    } else {
-                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
-                    }
-                })
-                .collect_vec();
-            if own_paths_list.contains(&ctx.own_paths) {
-                own_paths_list = vec![ctx.own_paths.clone()];
-            }
-        } else {
-            own_paths_list.push(ctx.own_paths.clone());
-        }
-
-        for own_paths in own_paths_list {
-            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            FlowInstServ::async_unsafe_modify_state(
-                &FlowInstFilterReq {
-                    main: Some(true),
-                    tags: Some(vec![flow_model.tag.clone()]),
-                    current_state_id: Some(state_id.to_string()),
-                    ..Default::default()
-                },
-                &new_state_id,
-                funs,
-                &mock_ctx,
-            )
-            .await?;
-        }
+        
+        let global_ctx = TardisContext { own_paths: "".to_string(), ..ctx.clone() };
+        FlowInstServ::async_unsafe_modify_state(
+            &FlowInstFilterReq {
+                main: Some(true),
+                tags: Some(vec![flow_model.tag.clone()]),
+                current_state_id: Some(state_id.to_string()),
+                flow_version_id: Some(flow_version_id.to_string()),
+                with_sub: Some(true),
+                ..Default::default()
+            },
+            &new_state_id,
+            funs,
+            &global_ctx,
+        )
+        .await?;
         FlowStateServ::unbind_state(flow_version_id, state_id, funs, ctx).await?;
 
         let original_state = FlowStateServ::get_item(
-            &state_id,
+            state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),

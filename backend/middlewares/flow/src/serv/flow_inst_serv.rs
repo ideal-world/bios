@@ -1131,8 +1131,9 @@ impl FlowInstServ {
                     .add(Expr::col((rel_model_table.clone(), Alias::new("to_rbum_item_id"))).equals((flow_inst::Entity, flow_inst::Column::RelTransitionId)))
                     .add(Expr::col((rel_model_table.clone(), Alias::new("tag"))).eq("FlowModelTransition".to_string())),
             )
-            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(flow_inst_ids))
-            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(flow_inst_ids));
+            // TODO 因突发线上问题暂时放开权限判断，后续版本会重新打开
+            // .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
         if let Some(sort) = desc_sort_by_create {
             query.order_by((flow_inst::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -1810,6 +1811,10 @@ impl FlowInstServ {
 
         // notify change state
         if curr_inst.main {
+            let inst_ctx = TardisContext {
+                own_paths: curr_inst.own_paths.clone(),
+                ..ctx.clone()
+            };
             FlowExternalServ::do_notify_changes(
                 &curr_inst.tag,
                 &curr_inst.id,
@@ -1822,7 +1827,7 @@ impl FlowInstServ {
                 next_transition_detail.is_notify,
                 Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
                 Some(callback_kind),
-                ctx,
+                &inst_ctx,
                 funs,
             )
             .await?;
@@ -2367,6 +2372,10 @@ impl FlowInstServ {
                         )
                         .await,
                     ) {
+                        let inst_ctx = TardisContext {
+                            own_paths: inst.own_paths.clone(),
+                            ..ctx.clone()
+                        };
                         FlowExternalServ::do_notify_changes(
                             &inst.tag,
                             &inst.id,
@@ -2379,7 +2388,7 @@ impl FlowInstServ {
                             false,
                             Some(false),
                             Some(FlowExternalCallbackOp::Auto),
-                            ctx,
+                            &inst_ctx,
                             funs,
                         )
                         .await
@@ -2423,6 +2432,10 @@ impl FlowInstServ {
                 if num % 2000 == 0 {
                     tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 }
+                let inst_ctx = TardisContext {
+                    own_paths: inst.own_paths.clone(),
+                    ..ctx_cp.clone()
+                };
                 let original_state = if let Some(original_state) = states.iter().find(|s| s.id == inst.current_state_id) {
                     Some(original_state.clone())
                 } else if let Ok(state) = FlowStateServ::get_item(
@@ -2481,7 +2494,7 @@ impl FlowInstServ {
                         false,
                         Some(false),
                         Some(FlowExternalCallbackOp::Auto),
-                        &ctx_cp,
+                        &inst_ctx,
                         &funs,
                     )
                     .await
