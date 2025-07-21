@@ -21,7 +21,7 @@ use tardis::{
         EntityName, Set,
     },
     futures::future::join_all,
-    log::{error, warn},
+    log::error,
     serde_json::json,
     tokio,
     web::web_resp::TardisPage,
@@ -32,7 +32,6 @@ use crate::{
     domain::{flow_model, flow_transition},
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
-        flow_inst_dto::FlowInstFilterReq,
         flow_model_dto::{
             FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
             FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind,
@@ -43,7 +42,7 @@ use crate::{
             FlowModelVesionState,
         },
         flow_state_dto::{
-            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateFilterReq, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
+            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
         },
         flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo,
@@ -60,9 +59,7 @@ use super::{
         log_client::{FlowLogClient, LogParamContent, LogParamTag},
         search_client::FlowSearchClient,
     },
-    flow_config_serv::FlowConfigServ,
     flow_inst_serv::FlowInstServ,
-    flow_log_serv::FlowLogServ,
     flow_model_version_serv::FlowModelVersionServ,
     flow_rel_serv::{FlowRelKind, FlowRelServ},
     flow_state_serv::FlowStateServ,
@@ -1455,6 +1452,26 @@ impl FlowModelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Option<FlowModelDetailResp>> {
+        // 非项目层的用例使用特殊规则
+        if tag == "TC" && Self::get_app_id_by_ctx(ctx).is_none() {
+            return Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    template: Some(false),
+                    main: Some(true),
+                    kinds: Some(vec![FlowModelKind::AsModel]),
+                    tags: Some(vec![tag.to_string()]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await;
+        }
         let mut result = if let Some(rel_template_id) = rel_template_id {
             // 规则1
             FlowModelServ::find_detail_items(
