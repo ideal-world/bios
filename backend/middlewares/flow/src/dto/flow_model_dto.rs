@@ -19,7 +19,7 @@ use tardis::{
 use super::{
     flow_cond_dto::BasicQueryCondInfo,
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
-    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt},
+    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt, FlowSysStateKind},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 
@@ -605,6 +605,10 @@ pub struct FlowModelFindRelStateResp {
     ///
     /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) color
     pub color: String,
+    /// Associated [flow state](super::flow_state_dto::FlowStateDetailResp) sys_state
+    ///
+    /// 关联的[工作流状态](super::flow_state_dto::FlowStateDetailResp) 系统类型
+    pub sys_state: FlowSysStateKind,
 }
 
 /// 工作流关联操作类型

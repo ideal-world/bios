@@ -11,8 +11,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq,
-    FlowModelFindRelStateResp, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -150,6 +149,7 @@ impl FlowCcModelApi {
         tag: Query<Option<String>>,
         enabled: Query<Option<bool>>,
         status: Query<Option<FlowModelStatus>>,
+        kind: Query<Option<FlowModelKind>>,
         rel_template_id: Query<Option<String>>,
         main: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
@@ -175,6 +175,7 @@ impl FlowCcModelApi {
                 rel_template_id: rel_template_id.0,
                 tags: tag.0.map(|tag| vec![tag]),
                 status: status.0,
+                kinds: kind.0.map(|s| vec![s]),
                 ..Default::default()
             },
             page_number.0,
@@ -198,10 +199,10 @@ impl FlowCcModelApi {
     /// - `temp_id` - associated template_id
     /// - `is_shared` - whether the associated template is shared
     #[oai(path = "/find_rel_models", method = "put")]
-    async fn find_rel_models(&self, temp_id: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+    async fn find_rel_models(&self, temp_id: Query<Option<String>>, tag_ids: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = FlowModelServ::find_rel_model_map(temp_id.0, true, &funs, &ctx.0).await?;
+        let result = FlowModelServ::find_rel_model_map(temp_id.0, tag_ids.0.map(|s| s.split(",").map(|tag| tag.to_string()).collect_vec()), true, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

@@ -436,15 +436,27 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::paginate(
-            flow_model_id.0,
-            tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec()),
-            finish.0,
-            finish_abort.0,
-            main.0,
-            current_state_id.0,
-            current_state_sys_kind.0,
-            rel_business_obj_id.0,
-            with_sub.0,
+            &FlowInstFilterReq {
+                flow_model_id: flow_model_id.0,
+                tags: tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec()),
+                finish: finish.0,
+                finish_abort: finish_abort.0,
+                main: main.0,
+                current_state_id: current_state_id.0,
+                current_state_sys_kind: current_state_sys_kind.0,
+                rel_business_obj_ids: rel_business_obj_id.0.map(|id| vec![id]),
+                with_sub: with_sub.0,
+                ..Default::default()
+            },
+            // flow_model_id.0,
+            // tags.0.map(|v| v.split(',').map(|s| s.to_string()).collect_vec()),
+            // finish.0,
+            // finish_abort.0,
+            // main.0,
+            // current_state_id.0,
+            // current_state_sys_kind.0,
+            // rel_business_obj_id.0,
+            // with_sub.0,
             page_number.0,
             page_size.0,
             &funs,
@@ -481,5 +493,16 @@ impl FlowCiInstApi {
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// 同步已删除的实例（脚本）
+    #[oai(path = "/sync_state_color", method = "post")]
+    async fn sync_state_color(&self, req: Json<FlowInstFilterReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        FlowInstServ::sync_state_color(&req.0, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
     }
 }
