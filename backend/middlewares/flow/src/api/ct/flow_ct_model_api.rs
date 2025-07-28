@@ -55,13 +55,13 @@ impl FlowCtModelApi {
         )
         .await?;
         let mut result = HashMap::new();
-        for (tag, rel_model_id) in req.0.rel_model_ids {
-            let orginal_model_id = orginal_models.get(&tag).map(|orginal_model| orginal_model.id.clone());
-            if orginal_model_id.clone().unwrap_or_default() == rel_model_id {
+        for (tag, rel_model_id) in &req.0.rel_model_ids {
+            let orginal_model_id = orginal_models.get(tag).map(|orginal_model| orginal_model.id.clone());
+            if orginal_model_id.clone().unwrap_or_default() == rel_model_id.clone() {
                 continue;
             }
             let new_model = FlowModelServ::copy_or_reference_model(
-                &rel_model_id,
+                rel_model_id,
                 &FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 FlowModelKind::AsTemplateAndAsModel,
                 None,
@@ -84,7 +84,7 @@ impl FlowCtModelApi {
                 )
                 .await?;
             }
-            FlowInstServ::batch_update_when_switch_model(&new_model, req.0.rel_template_id.clone(), None, &funs, &ctx.0).await?;
+            FlowInstServ::batch_update_when_switch_model(&new_model, req.0.rel_template_id.clone(), req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()), &funs, &ctx.0).await?;
             result.insert(rel_model_id.clone(), new_model);
         }
         funs.commit().await?;
