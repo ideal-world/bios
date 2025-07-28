@@ -629,6 +629,8 @@ pub struct FlowModelCopyOrReferenceReq {
     pub rel_template_id: Option<String>,
     /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
+    /// 切换模板时，状态更新映射
+    pub update_states: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 /// 创建或引用模型请求
