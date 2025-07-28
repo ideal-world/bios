@@ -495,7 +495,7 @@ impl FlowCiInstApi {
         TardisResp::ok(result)
     }
 
-    /// 同步已删除的实例（脚本）
+    /// 同步实例的颜色标识到search服务
     #[oai(path = "/sync_state_color", method = "post")]
     async fn sync_state_color(&self, req: Json<FlowInstFilterReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
