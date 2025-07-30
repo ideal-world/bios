@@ -61,7 +61,7 @@ impl FlowCaModelApi {
         funs.begin().await?;
         let _orginal_models = FlowModelServ::clean_rel_models(None, None, Some(vec![req.0.tag.clone()]), &funs, &ctx.0).await?;
         let new_model = FlowModelServ::copy_or_reference_model(&req.0.rel_model_id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
-        FlowInstServ::batch_update_when_switch_model(&new_model, None, None, &funs, &ctx.0).await?;
+        FlowInstServ::batch_update_when_switch_model(&new_model, None, req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()), &funs, &ctx.0).await?;
 
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
