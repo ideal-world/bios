@@ -96,6 +96,9 @@ impl FlowSearchClient {
                 if modify_req.rel_transition_state_name.is_some() {
                     req.rel_transition_state_name = modify_req.rel_transition_state_name;
                 }
+                if modify_req.current_state_color.is_some() {
+                    req.current_state_color = modify_req.current_state_color;
+                }
                 TardisFuns::json.obj_to_string(&req)?
             }
         };
@@ -194,7 +197,7 @@ impl FlowSearchClient {
                 let rel_business_obj_id_cp2 = rel_business_obj_id_cp.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
-                    let _ = Self::modify_business_obj_search_ext(&rel_business_obj_id_cp, &req_cp, &funs, &ctx_clone).await;
+                    Self::modify_business_obj_search_ext(&rel_business_obj_id_cp, &req_cp, &funs, &ctx_clone).await
                 });
                 match task_handle.await {
                     Ok(_) => {}
@@ -225,7 +228,12 @@ impl FlowSearchClient {
                     ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap_or_default());
                 }
             }
-            SpiSearchClient::modify_item_and_name(
+            if let Some(current_state_color) = &req.current_state_color {
+                if let Some(ext_mut) = ext.as_object_mut() {
+                    ext_mut.insert("current_state_color".to_string(), current_state_color.to_json().unwrap_or_default());
+                }
+            }
+            return SpiSearchClient::modify_item_and_name(
                 table,
                 rel_business_obj_id,
                 &SearchItemModifyReq {
@@ -245,8 +253,7 @@ impl FlowSearchClient {
                 funs,
                 ctx,
             )
-            .await
-            .unwrap_or_default();
+            .await;
         }
 
         Ok(())
@@ -595,13 +602,15 @@ impl FlowSearchClient {
             ("ITER".to_string(), ("idp_product".to_string(), "idp_feed_iter".to_string())),
             ("MS".to_string(), ("idp_product".to_string(), "idp_feed_ms".to_string())),
             ("PRODUCT".to_string(), ("idp_product".to_string(), "idp_product".to_string())),
-            ("PROJ".to_string(), ("idp_project".to_string(), "idp_project".to_string())),
+            ("PROJECT_MS".to_string(), ("idp_product".to_string(), "idp_feed_project_ms".to_string())),
+            ("PROJ".to_string(), ("idp_product".to_string(), "idp_project".to_string())),
             ("REQ".to_string(), ("idp_product".to_string(), "idp_feed_req".to_string())),
             ("TASK".to_string(), ("idp_product".to_string(), "idp_feed_task".to_string())),
             ("TICKET".to_string(), ("ticket".to_string(), "ticket_inst".to_string())),
             ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
             ("TS".to_string(), ("idp_test".to_string(), "idp_test_stage".to_string())),
             ("TC".to_string(), ("idp_test".to_string(), "idp_test_case".to_string())),
+            ("REVIEW".to_string(), ("idp_product".to_string(), "idp_feed_review".to_string())),
         ])
     }
 }

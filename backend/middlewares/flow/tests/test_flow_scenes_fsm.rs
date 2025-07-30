@@ -431,6 +431,7 @@ pub async fn test(
                 rel_model_ids,
                 rel_template_id: Some(project_template_id1.to_string()),
                 op: FlowModelAssociativeOperationKind::ReferenceOrCopy,
+                update_states: None,
             },
         )
         .await;

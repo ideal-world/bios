@@ -108,17 +108,19 @@ pub struct FlowInstSummaryResp {
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
-    pub rel_flow_model_id: String,
+    pub rel_flow_model_id: Option<String>,
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) name
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
-    pub rel_flow_model_name: String,
+    pub rel_flow_model_name: Option<String>,
     /// 关联业务ID
     pub rel_business_obj_id: String,
     /// 当前状态ID
     pub current_state_id: String,
     /// 当前状态名
     pub current_state_name: String,
+    /// 当前状态颜色标识
+    pub current_state_color: Option<String>,
     /// 创建上下文信息
     pub create_ctx: FlowOperationContext,
     /// 创建时间
@@ -154,11 +156,11 @@ pub struct FlowInstDetailResp {
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) id
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) ID
-    pub rel_flow_model_id: String,
+    pub rel_flow_model_id: Option<String>,
     /// Associated [flow_model](super::flow_model_dto::FlowModelDetailResp) name
     ///
     /// 关联的[工作流模板](super::flow_model_dto::FlowModelDetailResp) 名称
-    pub rel_flow_model_name: String,
+    pub rel_flow_model_name: Option<String>,
     /// 关联业务ID
     pub rel_business_obj_id: String,
     /// 关联动作ID
@@ -612,12 +614,13 @@ pub struct FlowInstSummaryResult {
     pub id: String,
     pub code: String,
     pub rel_flow_version_id: String,
-    pub rel_flow_model_id: String,
-    pub rel_flow_model_name: String,
+    pub rel_flow_model_id: Option<String>,
+    pub rel_flow_model_name: Option<String>,
 
     pub current_vars: Option<Value>,
     pub current_state_id: String,
     pub current_state_name: String,
+    pub current_state_color: Option<String>,
     pub rel_business_obj_id: String,
 
     pub create_ctx: Value,
@@ -738,6 +741,7 @@ pub struct ModifyObjSearchExtReq {
     pub status: Option<String>,                    // 当前状态
     pub rel_state: Option<String>,                 // 审批状态
     pub rel_transition_state_name: Option<String>, // 审批节点名
+    pub current_state_color: Option<String>,        // 当前状态颜色信息
 }
 
 /// 实例统计数量请求

@@ -24,7 +24,7 @@ use tardis::{
         JoinType, Order, Set,
     },
     futures_util::future::join_all,
-    log::{error, warn},
+    log::{debug, error},
     serde_json::Value,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
@@ -74,6 +74,7 @@ use super::{
 pub struct FlowInstServ;
 
 impl FlowInstServ {
+    // 尝试创建工作流实例，成功后返回实例ID,若找不到匹配的工作流模型则直接返回空
     pub async fn try_start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut create_vars = if start_req.transition_id.is_some() {
             Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.clone(), funs, ctx).await?
@@ -102,6 +103,12 @@ impl FlowInstServ {
                     )
                     .await?;
                     let main_inst = Self::get(&inst_id, funs, ctx).await?;
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: main_inst.tag.clone(),
+                        current_state_color: main_inst.current_state_color.clone(),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                     // 存入rel_state，用来标记关联的业务项被选中
                     for rel_child_obj in start_req.rel_child_objs.clone().unwrap_or_default() {
                         let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
@@ -109,6 +116,7 @@ impl FlowInstServ {
                             status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
                             rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                             rel_transition_state_name: Some("".to_string()),
+                            ..Default::default()
                         })?;
                         FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
                         // 更新业务主流程的artifact的状态为审批中
@@ -147,6 +155,7 @@ impl FlowInstServ {
                     status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
                     rel_state: inst.artifacts.unwrap_or_default().state.map(|s| s.to_string()),
                     rel_transition_state_name: Some(inst.current_state_name.unwrap_or_default()),
+                    ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 Ok(inst_id)
@@ -156,77 +165,10 @@ impl FlowInstServ {
         }
     }
     pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let mut create_vars = if start_req.transition_id.is_some() {
-            Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.clone(), funs, ctx).await?
+        let inst_id = Self::try_start(start_req, current_state_name, funs, ctx).await?;
+        if inst_id.is_empty() {
+            Err(funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))
         } else {
-            start_req.create_vars.clone().unwrap_or_default()
-        };
-        if let Some(check_vars) = &start_req.check_vars {
-            create_vars.extend(check_vars.clone());
-            create_vars.insert("changes".to_string(), json!(check_vars.keys().collect_vec()));
-        }
-        let rel_model = Self::find_rel_model(start_req.transition_id.clone(), &start_req.tag, &create_vars, funs, ctx)
-            .await?
-            .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))?;
-        if start_req.transition_id.is_none() {
-            let inst_id = Self::start_main_flow(start_req, &rel_model, current_state_name, funs, ctx).await?;
-            if start_req.rel_child_objs.is_some() {
-                let rel_child_model = Self::find_rel_model(start_req.rel_transition_id.clone(), &start_req.tag, &create_vars, funs, ctx)
-                    .await?
-                    .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "approve model not found", "404-flow-model-not-found"))?;
-                Self::modify_inst_artifacts(
-                    &inst_id,
-                    &FlowInstArtifactsModifyReq {
-                        rel_child_objs: start_req.rel_child_objs.clone(),
-                        operator_map: start_req.operator_map.clone(),
-                        rel_transition_id: start_req.rel_transition_id.clone(),
-                        rel_model_version_id: Some(rel_child_model.current_version_id.clone()),
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?;
-                let main_inst = Self::get(&inst_id, funs, ctx).await?;
-                // 存入rel_state，用来标记关联的业务项被选中
-                for rel_child_obj in start_req.rel_child_objs.clone().unwrap_or_default() {
-                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                        tag: rel_child_obj.tag.clone(),
-                        status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
-                        rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
-                        rel_transition_state_name: Some("".to_string()),
-                    })?;
-                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
-                    // 更新业务主流程的artifact的状态为审批中
-                    if let Some(main_child_inst_id) = Self::find_ids(
-                        &FlowInstFilterReq {
-                            rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
-                            main: Some(true),
-                            ..Default::default()
-                        },
-                        funs,
-                        ctx,
-                    )
-                    .await?
-                    .pop()
-                    {
-                        Self::modify_inst_artifacts(
-                            &main_child_inst_id,
-                            &FlowInstArtifactsModifyReq {
-                                state: Some(FlowInstStateKind::Approval),
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                    }
-                }
-            }
-            Ok(inst_id)
-        } else {
-            let inst_id = Self::start_secondary_flow(start_req, false, &rel_model, None, funs, ctx).await?;
-            FlowSearchClient::add_or_modify_instance_search(&inst_id, Box::new(false), funs, ctx).await?;
             Ok(inst_id)
         }
     }
@@ -235,7 +177,7 @@ impl FlowInstServ {
     async fn start_child_flow(root_inst_id: &str, rel_child_objs: &[FlowInstRelChildObj], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let root_inst = Self::get(root_inst_id, funs, ctx).await?;
         let rel_child_model = FlowModelServ::get_item(
-            &root_inst.rel_flow_model_id.clone(),
+            &root_inst.rel_flow_model_id.clone().unwrap_or_default(),
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
@@ -644,6 +586,7 @@ impl FlowInstServ {
                 Alias::new("rel_flow_model_id"),
             )
             .expr_as(Expr::col((flow_state_item.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
+            .expr_as(Expr::col((flow_state::Entity, Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
             .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
             .expr_as(Expr::col((rel_model_table.clone(), Alias::new("ext"))).if_null(""), Alias::new("rel_transition"))
             .from(flow_inst::Entity)
@@ -890,6 +833,7 @@ impl FlowInstServ {
                     status: main_inst.current_state_name.clone(),
                     rel_state: Some("".to_string()),
                     rel_transition_state_name: Some("".to_string()),
+                    ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
             }
@@ -1159,8 +1103,8 @@ impl FlowInstServ {
                     id: inst.id,
                     code: inst.code,
                     rel_flow_version_id: inst.rel_flow_version_id,
-                    rel_flow_model_id: inst.rel_flow_model_id,
-                    rel_flow_model_name: inst.rel_flow_model_name,
+                    rel_flow_model_id: Some(inst.rel_flow_model_id),
+                    rel_flow_model_name: Some(inst.rel_flow_model_name),
                     rel_transition_id: inst.rel_transition_id,
                     rel_inst_id: inst.rel_inst_id,
                     tag: inst.tag,
@@ -1224,15 +1168,7 @@ impl FlowInstServ {
 
     #[allow(clippy::too_many_arguments)]
     pub async fn paginate(
-        flow_version_id: Option<String>,
-        tags: Option<Vec<String>>,
-        finish: Option<bool>,
-        finish_abort: Option<bool>,
-        main: Option<bool>,
-        current_state_id: Option<String>,
-        current_state_sys_kind: Option<FlowSysStateKind>,
-        rel_business_obj_id: Option<String>,
-        with_sub: Option<bool>,
+        filter: &FlowInstFilterReq,
         page_number: u32,
         page_size: u32,
         funs: &TardisFunsInst,
@@ -1241,18 +1177,7 @@ impl FlowInstServ {
         let mut query = Query::select();
         Self::package_ext_query(
             &mut query,
-            &FlowInstFilterReq {
-                flow_version_id,
-                tags,
-                finish,
-                finish_abort,
-                main,
-                current_state_id,
-                current_state_sys_kind,
-                rel_business_obj_ids: rel_business_obj_id.map(|id| vec![id]),
-                with_sub,
-                ..Default::default()
-            },
+            filter,
             funs,
             ctx,
         )
@@ -1280,6 +1205,7 @@ impl FlowInstServ {
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
                     current_state_name: inst.current_state_name,
+                    current_state_color: inst.current_state_color,
                     rel_business_obj_id: inst.rel_business_obj_id,
                     rel_transition: inst.rel_transition.map(|ext| TardisFuns::json.str_to_obj::<FlowModelRelTransitionExt>(&ext).unwrap_or_default()),
                     tag: inst.tag,
@@ -1566,6 +1492,7 @@ impl FlowInstServ {
                                     status: Some(main_inst.current_state_name.clone()),
                                     rel_state: Some("".to_string()),
                                     rel_transition_state_name: Some("".to_string()),
+                                    ..Default::default()
                                 })?;
                                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
                             }
@@ -1653,6 +1580,7 @@ impl FlowInstServ {
                 status: current_state_name,
                 rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
                 rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
+                ..Default::default()
             })?;
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
         }
@@ -1815,6 +1743,12 @@ impl FlowInstServ {
                 own_paths: curr_inst.own_paths.clone(),
                 ..ctx.clone()
             };
+            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                tag: curr_inst.tag.clone(),
+                current_state_color: Some(next_flow_state.color.clone()),
+                ..Default::default()
+            })?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &curr_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
             FlowExternalServ::do_notify_changes(
                 &curr_inst.tag,
                 &curr_inst.id,
@@ -2376,6 +2310,12 @@ impl FlowInstServ {
                             own_paths: inst.own_paths.clone(),
                             ..ctx.clone()
                         };
+                        let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                            tag: inst.tag.clone(),
+                            current_state_color: Some(next_flow_state.color.clone()),
+                            ..Default::default()
+                        })?;
+                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                         FlowExternalServ::do_notify_changes(
                             &inst.tag,
                             &inst.id,
@@ -2423,7 +2363,7 @@ impl FlowInstServ {
         let state_id_cp = state_id.to_string();
         let ctx_cp = ctx.clone();
         tardis::tokio::spawn(async move {
-            warn!("start notify change insts: {:?}", insts);
+            debug!("start notify change insts: {:?}", insts);
             let funs = flow_constants::get_tardis_inst();
             let mut states: Vec<FlowStateDetailResp> = vec![];
             let mut num = 0;
@@ -2480,8 +2420,19 @@ impl FlowInstServ {
                 } else {
                     None
                 };
-                warn!("start notify change status: {:?}", states);
+                debug!("start notify change status: {:?}", states);
                 if let (Some(original_flow_state), Some(next_flow_state)) = (original_state, new_state) {
+                    match FlowSearchClient::modify_business_obj_search_ext(&inst.rel_business_obj_id, &ModifyObjSearchExtReq {
+                        tag: inst.tag.clone(),
+                        current_state_color: Some(next_flow_state.color.clone()),
+                        ..Default::default()
+                    }, &funs, &inst_ctx).await
+                    {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Flow Instance {}: failed to modify business obj search ext: {:?}", inst.id, e);
+                        }
+                    };
                     match FlowExternalServ::do_notify_changes(
                         &inst.tag,
                         &inst.id,
@@ -2894,6 +2845,7 @@ impl FlowInstServ {
                     } else {
                         child_inst.current_state_name
                     },
+                    ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
             }
@@ -2940,6 +2892,7 @@ impl FlowInstServ {
                 status: main_inst.current_state_name.clone(),
                 rel_state: Some("".to_string()),
                 rel_transition_state_name: Some("".to_string()),
+                ..Default::default()
             })?;
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
         }
@@ -3100,6 +3053,7 @@ impl FlowInstServ {
                                 status: current_state_name,
                                 rel_state: None,
                                 rel_transition_state_name: Some("".to_string()),
+                                ..Default::default()
                             };
                             let modify_serach_ext = TardisFuns::json.obj_to_string(&modify_ext_req)?;
                             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
@@ -4465,5 +4419,38 @@ impl FlowInstServ {
         }
 
         Ok(result)
+    }
+
+    pub async fn sync_state_color(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut page = 1;
+        let page_size = 500;
+        loop {
+            let insts = Self::paginate(filter, page, page_size, funs, ctx).await?.records;
+            if insts.is_empty() {
+                break;
+            }
+            page += 1;
+            join_all(
+                insts
+                    .iter()
+                    .map(|flow_inst| async {
+                        match FlowSearchClient::modify_business_obj_search_ext(&flow_inst.rel_business_obj_id, &ModifyObjSearchExtReq {
+                            tag: flow_inst.tag.clone(),
+                            current_state_color: flow_inst.current_state_color.clone(),
+                            ..Default::default()
+                        }, funs, ctx).await
+                        {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("Flow Instance {}: failed to modify business obj search ext: {:?}", flow_inst.id, e);
+                            }
+                        };
+                    })
+                    .collect_vec(),
+            )
+            .await;
+        }
+        
+        Ok(())
     }
 }
