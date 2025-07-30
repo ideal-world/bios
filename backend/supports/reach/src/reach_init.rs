@@ -43,6 +43,7 @@ pub async fn db_init() -> TardisResult<()> {
                     module: None,
                     ext_table_name: Some(RBUM_EXT_TABLE_REACH_MESSAGE.to_owned()),
                     scope_level: Some(RbumScopeLevelKind::Root),
+                    parent_id: None,
                 },
                 &funs,
                 &ctx,

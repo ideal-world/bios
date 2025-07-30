@@ -78,6 +78,7 @@ impl PluginKindApi {
                     ..Default::default()
                 },
                 module: Some(KIND_MODULE_CODE.to_string()),
+                ..Default::default()
             },
             page_number.0,
             page_size.0,

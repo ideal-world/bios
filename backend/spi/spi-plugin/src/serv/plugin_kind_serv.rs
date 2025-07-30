@@ -102,6 +102,7 @@ impl PluginKindServ {
                     ..Default::default()
                 },
                 module: Some(KIND_MODULE_CODE.to_string()),
+                ..Default::default()
             },
             None,
             None,
@@ -126,6 +127,7 @@ impl PluginKindServ {
                     ..Default::default()
                 },
                 module: Some(KIND_MODULE_CODE.to_string()),
+                ..Default::default()
             },
             funs,
             ctx,

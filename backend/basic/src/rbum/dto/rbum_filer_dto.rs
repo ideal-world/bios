@@ -182,6 +182,8 @@ pub struct RbumKindFilterReq {
     ///
     /// 模块
     pub module: Option<String>,
+    /// parent kind id
+    pub parent_id: Option<String>,
 }
 
 /// Resource kind attribute filter

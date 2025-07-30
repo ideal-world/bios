@@ -158,6 +158,7 @@ async fn add_kind(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx: &Ta
             module: None,
             ext_table_name: Some(ext_table.to_string().to_lowercase()),
             scope_level: Some(RbumScopeLevelKind::Root),
+            parent_id: None,
         },
         funs,
         ctx,

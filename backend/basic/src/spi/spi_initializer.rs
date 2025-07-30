@@ -77,6 +77,7 @@ pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) 
                 module: None,
                 ext_table_name: Some("spi_bs".to_lowercase()),
                 scope_level: Some(RbumScopeLevelKind::Root),
+                parent_id: None,
             },
             funs,
             ctx,

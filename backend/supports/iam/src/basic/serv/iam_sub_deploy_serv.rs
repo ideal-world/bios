@@ -1096,7 +1096,7 @@ impl IamSubDeployServ {
                     }
                 }
                 for cate in delete_old_res_set_cate {
-                    RbumSetCateServ::delete_with_all_rels(&cate.id, funs, &global_ctx).await?;
+                    let _ = RbumSetCateServ::delete_with_all_rels(&cate.id, funs, &global_ctx).await?;
                 }
             }
             if let Some(res_items) = res_items {
@@ -1128,7 +1128,7 @@ impl IamSubDeployServ {
                         None
                     };
                     if old_res_item_ids.contains(&res_item.id.clone()) {
-                        IamResServ::modify_item(
+                        let _ = IamResServ::modify_item(
                             &res_item.id.clone(),
                             &mut IamResModifyReq {
                                 name: Some(TrimString(res_item.name)),
@@ -1157,7 +1157,7 @@ impl IamSubDeployServ {
                         if let Some(res_set_item) = res_set_item.clone() {
                             if res_set_item.contains_key(&res_item.id.clone()) && !res_set_item[&res_item.id].is_empty() {
                                 let set_cate_id = res_set_item[&res_item.id][0].clone();
-                                IamResServ::add_res_agg(
+                                let _ = IamResServ::add_res_agg(
                                     &mut IamResAggAddReq {
                                         res: IamResAddReq {
                                             id: Some(TrimString(res_item.id.clone())),
@@ -1208,14 +1208,14 @@ impl IamSubDeployServ {
                                 .await?
                                     > 0
                                 {
-                                    IamRelServ::add_simple_rel(&IamRelKind::IamResRole, &res_item.id, &role_id, None, None, true, false, funs, &global_ctx).await?;
+                                    let _ = IamRelServ::add_simple_rel(&IamRelKind::IamResRole, &res_item.id, &role_id, None, None, true, false, funs, &global_ctx).await?;
                                 }
                             }
                         }
                     }
                 }
                 for delete_res_id in delete_old_res_ids {
-                    IamResServ::delete_item_with_all_rels(&delete_res_id, funs, &global_ctx).await?;
+                    let _ = IamResServ::delete_item_with_all_rels(&delete_res_id, funs, &global_ctx).await?;
                 }
             }
         }

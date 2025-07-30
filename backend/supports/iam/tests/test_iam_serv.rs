@@ -32,6 +32,7 @@ mod test_key_cache;
 async fn test_iam_serv() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
 
+    let _x = init_test_container::init(None).await?;
     let _y = test_basic::init().await?;
 
     let funs = iam_constants::get_tardis_inst();

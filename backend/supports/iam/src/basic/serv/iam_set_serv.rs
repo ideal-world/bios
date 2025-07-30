@@ -646,28 +646,6 @@ impl IamSetServ {
         if rbum_set_cate_code.is_empty() {
             return Ok(vec![]);
         }
-        // 获取 sys_cate_code 当前层级及下级的 set_cate
-        let rbum_set_cates = RbumSetCateServ::find_rbums(
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                rel_rbum_set_id: Some(set_id.to_string()),
-                sys_codes: Some(rbum_set_cate_code.clone()),
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        if rbum_set_cates.is_empty() {
-            return Ok(vec![]);
-        }
-        // 获取 set_cate 下面的应用
         let apps = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
@@ -678,7 +656,8 @@ impl IamSetServ {
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.to_string()),
                 rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_app_id()]),
-                rel_rbum_set_cate_ids: Some(rbum_set_cates.iter().map(|r| r.id.clone()).collect()),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                rel_rbum_set_cate_sys_codes: Some(rbum_set_cate_code),
                 ..Default::default()
             },
             Some(true),
