@@ -145,9 +145,10 @@ impl PluginCiBsApi {
         TardisResp::ok(result)
     }
 
+    // todo api modify
     /// Get Plugin Service Rel App/Tenant
     #[oai(path = "/rel/up/:kind_code", method = "get")]
-    async fn get_bs_by_rel_up(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsCertInfoResp> {
+    async fn get_bs_by_kind_code(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsCertInfoResp> {
         let funs = crate::get_tardis_inst();
         let result = PluginBsServ::get_bs_by_kind_code(&kind_code.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)

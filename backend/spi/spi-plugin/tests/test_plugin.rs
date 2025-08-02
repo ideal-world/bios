@@ -24,10 +24,9 @@ use bios_spi_plugin::plugin_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
-use tardis::{testcontainers, tokio, TardisFuns};
+use tardis::{tokio, TardisFuns};
 mod test_plugin_exec;
 
 #[tokio::test]
@@ -284,7 +283,7 @@ async fn init_data() -> TardisResult<()> {
             &format!("/ci/manage/bs/rel",),
             &PluginBsAddReq {
                 attrs: Some(attrs),
-                id: None,
+                rel_id: None,
                 bs_id: bs_id.clone(),
                 app_tenant_id: "app001".to_string(),
                 name: "test-rel".to_string(),

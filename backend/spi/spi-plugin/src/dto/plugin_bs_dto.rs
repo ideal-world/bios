@@ -5,7 +5,7 @@ use tardis::web::poem_openapi;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct PluginBsAddReq {
-    pub id: Option<String>,
+    pub rel_id: Option<String>,
     pub bs_id: String,
     pub app_tenant_id: String,
     pub name: String,

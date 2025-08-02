@@ -51,8 +51,8 @@ impl PluginBsServ {
             ));
         }
         let bs = SpiBsServ::peek_item(&add_req.bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
-        let rel_id = if let Some(id) = add_req.clone().id {
-            let id_clone = id.clone();
+        let rel_id = if let Some(rel_id) = add_req.clone().rel_id {
+            let rel_id_clone = rel_id.clone();
             ctx.add_async_task(Box::new(|| {
                 Box::pin(async move {
                     let task_handle = tokio::spawn(async move {
@@ -65,7 +65,7 @@ impl PluginBsServ {
                             },
                             None,
                             Some("dynamic_log_plugin_manage".to_string()),
-                            Some(id_clone.clone()),
+                            Some(rel_id_clone.clone()),
                             Some("编辑".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -79,9 +79,9 @@ impl PluginBsServ {
                 })
             }))
             .await?;
-            let rel_agg = Self::get_bs_rel_agg(&id, funs, ctx).await?;
+            let rel_agg = Self::get_bs_rel_agg(&rel_id, funs, ctx).await?;
             RbumRelServ::modify_rbum(
-                &id,
+                &rel_id,
                 &mut RbumRelModifyReq {
                     tag: None,
                     note: Some(add_req.name.clone()),
@@ -112,7 +112,7 @@ impl PluginBsServ {
                     .await?;
                 }
             }
-            id
+            rel_id
         } else {
             let rel_id = SpiBsServ::add_rel_agg(
                 bs.id.as_str(),
