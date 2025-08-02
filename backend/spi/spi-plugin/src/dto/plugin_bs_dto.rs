@@ -5,6 +5,10 @@ use tardis::web::poem_openapi;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct PluginBsAddReq {
+    pub id: Option<String>,
+    pub bs_id: String,
+    pub app_tenant_id: String,
+    pub name: String,
     pub attrs: Option<Vec<RbumRelAttrAggAddReq>>,
 }
 
@@ -16,6 +20,8 @@ pub struct PluginBsInfoResp {
     pub kind_id: String,
     pub kind_code: String,
     pub kind_name: String,
+    pub kind_parent_id: Option<String>,
+    pub kind_parent_name: Option<String>,
     pub rel: Option<RbumRelAggResp>,
 }
 

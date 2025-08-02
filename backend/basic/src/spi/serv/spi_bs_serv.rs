@@ -245,57 +245,72 @@ impl SpiBsServ {
         })
     }
 
-    pub async fn add_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::add_rel_agg(bs_id, app_tenant_id, None, None, funs, ctx).await
+    pub async fn add_rel(bs_id: &str, app_tenant_id: &str, is_inner: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        Self::add_rel_agg(bs_id, app_tenant_id, is_inner, None, None, None, funs, ctx).await
     }
 
     pub async fn add_rel_agg(
         bs_id: &str,
         app_tenant_id: &str,
+        is_inner: bool,
+        note: Option<String>,
         attrs: Option<Vec<RbumRelAttrAggAddReq>>,
         envs: Option<Vec<RbumRelEnvAggAddReq>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<()> {
-        if !RbumRelServ::check_simple_rel(
-            &RbumRelSimpleFindReq {
-                tag: Some(SPI_IDENT_REL_TAG.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(bs_id.to_string()),
-                to_rbum_item_id: Some(app_tenant_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        {
-            let attrs = attrs.unwrap_or_default();
-            let envs = envs.unwrap_or_default();
-            RbumRelServ::add_rel(
-                &mut RbumRelAggAddReq {
-                    rel: RbumRelAddReq {
-                        tag: SPI_IDENT_REL_TAG.to_string(),
-                        note: None,
-                        from_rbum_kind: RbumRelFromKind::Item,
-                        from_rbum_id: bs_id.to_string(),
-                        to_rbum_item_id: app_tenant_id.to_string(),
-                        to_own_paths: ctx.own_paths.to_string(),
-                        to_is_outside: true,
-                        ext: None,
-                    },
-                    attrs,
-                    envs,
+    ) -> TardisResult<String> {
+        if is_inner {
+            if RbumRelServ::check_simple_rel(
+                &RbumRelSimpleFindReq {
+                    tag: Some(SPI_IDENT_REL_TAG.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    from_rbum_id: Some(bs_id.to_string()),
+                    to_rbum_item_id: Some(app_tenant_id.to_string()),
+                    ..Default::default()
                 },
                 funs,
                 ctx,
             )
-            .await?;
+            .await?
+            {
+                return Err(funs.err().conflict(
+                    &Self::get_obj_name(),
+                    "add_rel_agg",
+                    "The binding relationship between the backend service and the application/tenant already exists",
+                    "409-spi-bs-rel-exist",
+                ));
+            }
         }
+        let attrs = attrs.unwrap_or_default();
+        let envs = envs.unwrap_or_default();
+        let rel_id = RbumRelServ::add_rel(
+            &mut RbumRelAggAddReq {
+                rel: RbumRelAddReq {
+                    tag: SPI_IDENT_REL_TAG.to_string(),
+                    note: note,
+                    from_rbum_kind: RbumRelFromKind::Item,
+                    from_rbum_id: bs_id.to_string(),
+                    to_rbum_item_id: app_tenant_id.to_string(),
+                    to_own_paths: ctx.own_paths.to_string(),
+                    to_is_outside: true,
+                    ext: None,
+                },
+                attrs,
+                envs,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(rel_id)
+    }
+
+    pub async fn delete_rel(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
         Ok(())
     }
 
-    pub async fn delete_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ids = RbumRelServ::find_id_rbums(
             &RbumRelFilterReq {
                 tag: Some(SPI_IDENT_REL_TAG.to_string()),
@@ -311,7 +326,7 @@ impl SpiBsServ {
         )
         .await?;
         for id in ids {
-            RbumRelServ::delete_rel_with_ext(&id, funs, ctx).await?;
+            Self::delete_rel(&id, funs, ctx).await?;
         }
         Ok(())
     }

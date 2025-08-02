@@ -1,10 +1,15 @@
 use std::env;
 use std::time::Duration;
 
+use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
+use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
+use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAttrAggAddReq;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_initializer;
@@ -12,13 +17,16 @@ use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_plugin::dto::plugin_api_dto::PluginApiAddOrModifyReq;
 use bios_spi_plugin::dto::plugin_bs_dto::PluginBsAddReq;
+use bios_spi_plugin::dto::plugin_kind_dto::PluginKindAddAggReq;
 use bios_spi_plugin::plugin_constants::DOMAIN_CODE;
 use bios_spi_plugin::plugin_enumeration::PluginApiMethodKind;
 use bios_spi_plugin::plugin_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::tokio::time::sleep;
+use tardis::web::web_resp::Void;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod test_plugin_exec;
 
@@ -52,6 +60,35 @@ async fn init_data() -> TardisResult<()> {
         owner: "".to_string(),
         ..Default::default()
     };
+    let app_kind_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("iam-app".to_string()),
+            name: TrimString("iam-app".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            module: None,
+            ext_table_name: Some("iam_app".to_lowercase()),
+            scope_level: Some(RbumScopeLevelKind::Root),
+            parent_id: None,
+        },
+        &funs,
+        &ctx,
+    )
+    .await?;
+    let iam_domain_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("iam".to_string()),
+            name: TrimString("iam".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: Some(RbumScopeLevelKind::Root),
+        },
+        &funs,
+        &ctx,
+    )
+    .await?;
     spi_initializer::add_kind("gitlib", &funs, &ctx).await?;
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code("gitlib", &funs).await?.unwrap();
     let kind_attr_1 = RbumKindAttrServ::add_rbum(
@@ -159,7 +196,21 @@ async fn init_data() -> TardisResult<()> {
         &ctx,
     )
     .await?;
-    let base_url = format!("https://127.0.0.1:8080/{}", DOMAIN_CODE);
+    let _ = RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            id: Some("app001".into()),
+            code: Some("app001".into()),
+            name: "app001".into(),
+            rel_rbum_kind_id: app_kind_id,
+            rel_rbum_domain_id: iam_domain_id,
+            scope_level: Some(RbumScopeLevelKind::Root),
+            disabled: None,
+        },
+        &funs,
+        &ctx,
+    )
+    .await?;
+    let base_url = format!("http://127.0.0.1:8080/{}", DOMAIN_CODE);
     let mut client = TestHttpClient::new(base_url.clone());
 
     client.set_auth(&ctx)?;
@@ -208,7 +259,7 @@ async fn init_data() -> TardisResult<()> {
             &PluginApiAddOrModifyReq {
                 code: TrimString("test-api".to_string()),
                 name: TrimString("test-api".to_string()),
-                kind_id: TrimString(kind_id),
+                kind_id: TrimString(kind_id.clone()),
                 callback: "".to_string(),
                 content_type: "".to_string(),
                 timeout: 0,
@@ -228,8 +279,31 @@ async fn init_data() -> TardisResult<()> {
         owner: "app001".to_string(),
         ..Default::default()
     })?;
-    let _: String = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &PluginBsAddReq { attrs: Some(attrs) }).await;
+    let rel_id: String = client
+        .put(
+            &format!("/ci/manage/bs/rel",),
+            &PluginBsAddReq {
+                attrs: Some(attrs),
+                id: None,
+                bs_id: bs_id.clone(),
+                app_tenant_id: "app001".to_string(),
+                name: "test-rel".to_string(),
+            },
+        )
+        .await;
+    let _: Void = client
+        .put(
+            &format!("/ci/kind/agg",),
+            &PluginKindAddAggReq {
+                attrs: None,
+                bs_id,
+                app_tenant_id: "app001".to_string(),
+                kind_id: kind_id.clone(),
+                rel_id: Some(rel_id),
+                bs_rel: None,
+            },
+        )
+        .await;
     test_plugin_exec::test(&mut client).await?;
-
     Ok(())
 }

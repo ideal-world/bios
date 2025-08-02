@@ -32,33 +32,21 @@ impl PluginKindServ {
         if bs.kind_id != add_req.kind_id {
             return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
         }
-        if let Some(bs_rel) = add_req.bs_rel.clone() {
-            PluginBsServ::add_or_modify_plugin_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, &mut bs_rel.clone(), funs, ctx).await?;
-        }
-        let bs_rel = PluginBsServ::get_bs_rel_agg(&add_req.bs_id, &add_req.app_tenant_id, funs, ctx).await?;
-        // if RbumRelServ::count_rbums(
-        //     &RbumRelFilterReq {
-        //         basic: RbumBasicFilterReq {
-        //             with_sub_own_paths: true,
-        //             ..Default::default()
-        //         },
-        //         tag: Some(PluginAppBindRelKind::PluginAppBindKind.to_string()),
-        //         from_rbum_kind: Some(RbumRelFromKind::Item),
-        //         from_rbum_id: Some(bing_item_id.clone()),
-        //         ext_eq: Some(add_req.kind_id.clone()),
-        //         ..Default::default()
-        //     },
-        //     funs,
-        //     ctx,
-        // )
-        // .await?
-        //     == 0
-        // {
+        let rel_id = if let Some(bs_rel) = add_req.bs_rel.clone() {
+            let rel_id = PluginBsServ::add_or_modify_plugin_rel_agg(&mut bs_rel.clone(), funs, ctx).await?;
+            rel_id
+        } else {
+            if let Some(rel_id) = &add_req.rel_id {
+                rel_id.clone()
+            } else {
+                return Err(funs.err().conflict("plugin_kind", "add_rel", "rel_id is required", ""));
+            }
+        };
         Self::delete_kind_agg_rel(&add_req.kind_id, funs, ctx).await?;
         PluginRelServ::add_simple_rel(
             &PluginAppBindRelKind::PluginAppBindKind,
             &bing_item_id,
-            &bs_rel.rel.id,
+            &rel_id,
             None,
             Some(add_req.kind_id.clone()),
             false,
@@ -68,7 +56,6 @@ impl PluginKindServ {
             ctx,
         )
         .await?;
-        // }
         Ok(())
     }
 
@@ -92,7 +79,13 @@ impl PluginKindServ {
         Ok(())
     }
 
-    pub async fn find_kind_agg(kind_codes: Option<Vec<String>>, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<PluginKindAggResp>> {
+    pub async fn find_kind_agg(
+        parent_id: Option<String>,
+        kind_codes: Option<Vec<String>>,
+        app_tenant_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<PluginKindAggResp>> {
         let kinds = RbumKindServ::find_detail_rbums(
             &RbumKindFilterReq {
                 basic: RbumBasicFilterReq {
@@ -102,7 +95,7 @@ impl PluginKindServ {
                     ..Default::default()
                 },
                 module: Some(KIND_MODULE_CODE.to_string()),
-                ..Default::default()
+                parent_id: parent_id,
             },
             None,
             None,
@@ -112,7 +105,10 @@ impl PluginKindServ {
         .await?;
         let mut kind_aggs = Vec::new();
         for kind in kinds {
-            kind_aggs.push(Self::get_kind_agg(&kind.id, app_tenant_id, funs, ctx).await?);
+            let kind_agg = Self::get_kind_agg(&kind.id, app_tenant_id, funs, ctx).await?;
+            if kind_agg.rel_bs.is_some() || kind_agg.rel_bind.is_some() {
+                kind_aggs.push(kind_agg);
+            }
         }
         Ok(kind_aggs)
     }
@@ -149,7 +145,7 @@ impl PluginKindServ {
         {
             match PluginRelServ::get_rel(&rel_bind.rel.to_rbum_item_id, funs, ctx).await {
                 Ok(rel) => {
-                    let mut rel_bs = PluginBsServ::get_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await?;
+                    let mut rel_bs = PluginBsServ::get_bs(&rel.id, funs, ctx).await?;
                     if let Some(mut rel) = rel_bs.rel.clone() {
                         let mut new_attrs = rel_bind.attrs.clone();
                         rel.attrs.iter().for_each(|r| {

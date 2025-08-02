@@ -145,7 +145,7 @@ impl SpiCiBsApi {
     async fn add_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
-        SpiBsServ::add_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        SpiBsServ::add_rel(&id.0, &app_tenant_id.0, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -161,7 +161,7 @@ impl SpiCiBsApi {
     async fn delete_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
-        SpiBsServ::delete_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        SpiBsServ::delete_rel_agg(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

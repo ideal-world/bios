@@ -110,37 +110,38 @@ impl PluginCiBsApi {
     }
 
     /// Add Plugin Service Rel App/Tenant
-    #[oai(path = "/:id/rel/:app_tenant_id", method = "put")]
-    async fn add_plugin_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, mut add_req: Json<PluginBsAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    #[oai(path = "/rel", method = "put")]
+    async fn add_plugin_rel_agg(&self, mut add_req: Json<PluginBsAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        let result = PluginBsServ::add_or_modify_plugin_rel_agg(&id.0, &app_tenant_id.0, &mut add_req.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::add_or_modify_plugin_rel_agg(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
     /// Get Plugin Service Rel App/Tenant Support empty
-    #[oai(path = "/:id/rel/:app_tenant_id/empty", method = "get")]
-    async fn get_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
+    #[oai(path = "/rel/:rel_id/empty", method = "get")]
+    async fn get_empty_bs_rel_agg(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::get_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::get_bs(&rel_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
-    /// Exist Plugin Service Rel App/Tenant Support empty
-    #[oai(path = "/:id/rel/exist/:app_tenant_id/empty", method = "get")]
-    async fn exist_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
-        let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::exist_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
-        TardisResp::ok(result)
-    }
+    // todo remove
+    // /// Exist Plugin Service Rel App/Tenant Support empty
+    // #[oai(path = "/:id/rel/exist/:app_tenant_id/empty", method = "get")]
+    // async fn exist_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+    //     let funs = crate::get_tardis_inst();
+    //     let result = PluginBsServ::exist_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+    //     TardisResp::ok(result)
+    // }
 
     /// Get Plugin Service Rel App/Tenant
-    #[oai(path = "/:id/rel/:app_tenant_id", method = "get")]
-    async fn get_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
+    #[oai(path = "/rel/:rel_id", method = "get")]
+    async fn get_bs_rel_agg(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::get_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::get_bs(&rel_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -148,7 +149,7 @@ impl PluginCiBsApi {
     #[oai(path = "/rel/up/:kind_code", method = "get")]
     async fn get_bs_by_rel_up(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsCertInfoResp> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::get_bs_by_rel_up(&kind_code.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::get_bs_by_kind_code(&kind_code.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -169,11 +170,11 @@ impl PluginCiBsApi {
     }
 
     /// Delete Plugin Service Rel App/Tenant
-    #[oai(path = "/:id/rel/:app_tenant_id", method = "delete")]
-    async fn delete_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/rel/:id", method = "delete")]
+    async fn delete_rel(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        PluginBsServ::delete_plugin_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        PluginBsServ::delete_plugin_rel(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
