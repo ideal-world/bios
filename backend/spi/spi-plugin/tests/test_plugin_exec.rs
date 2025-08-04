@@ -4,6 +4,7 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_plugin::dto::plugin_exec_dto::{PluginExecReq, PluginExecResp};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::serde_json::json;
 use tardis::TardisFuns;
 
@@ -31,6 +32,6 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
-    println!("resp: {},{}", resp.code, resp.body.unwrap());
+    info!("resp: {},{}", resp.code, resp.body.unwrap());
     Ok(())
 }

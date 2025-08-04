@@ -24,6 +24,7 @@ use bios_spi_plugin::plugin_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
 use tardis::{tokio, TardisFuns};
@@ -282,8 +283,20 @@ async fn init_data() -> TardisResult<()> {
         .put(
             &format!("/ci/manage/bs/rel",),
             &PluginBsAddReq {
-                attrs: Some(attrs),
+                attrs: Some(attrs.clone()),
                 rel_id: None,
+                bs_id: bs_id.clone(),
+                app_tenant_id: "app001".to_string(),
+                name: "test-rel".to_string(),
+            },
+        )
+        .await;
+    let _: String = client
+        .put(
+            &format!("/ci/manage/bs/rel",),
+            &PluginBsAddReq {
+                attrs: Some(attrs),
+                rel_id: Some(rel_id.clone()),
                 bs_id: bs_id.clone(),
                 app_tenant_id: "app001".to_string(),
                 name: "test-rel".to_string(),

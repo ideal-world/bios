@@ -157,9 +157,9 @@ impl PluginBsServ {
         Ok(rel_id)
     }
 
-    pub async fn delete_plugin_rel(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_plugin_rel(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        let rel_agg = Self::get_bs_rel_agg(id, funs, ctx).await?;
+        let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
         if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
             return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "401-spi-plugin-bind-exist"));
         }
@@ -172,7 +172,7 @@ impl PluginBsServ {
             },
             None,
             Some("dynamic_log_plugin_manage".to_string()),
-            Some(id.to_string()),
+            Some(rel_id.to_string()),
             Some("删除".to_string()),
             None,
             Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -180,7 +180,7 @@ impl PluginBsServ {
             &ctx_clone,
         )
         .await;
-        SpiBsServ::delete_rel(id, funs, ctx).await?;
+        SpiBsServ::delete_rel(rel_id, funs, ctx).await?;
         Ok(())
     }
 
