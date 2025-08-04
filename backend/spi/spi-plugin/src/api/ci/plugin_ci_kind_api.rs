@@ -47,10 +47,17 @@ impl PluginKindApi {
 
     /// find Plugin kind agg
     #[oai(path = "/agg", method = "get")]
-    async fn find_agg(&self, kind_codes: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<PluginKindAggResp>> {
+    async fn find_agg(&self, parent_id: Query<Option<String>>, kind_codes: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<PluginKindAggResp>> {
         let funs = crate::get_tardis_inst();
         let kind_codes: Option<Vec<String>> = kind_codes.0.map(|kind_codes| kind_codes.split(',').map(|kind_code| kind_code.to_string()).collect());
-        let result = PluginKindServ::find_kind_agg(kind_codes, &rbum_scope_helper::get_max_level_id_by_context(&ctx.0).unwrap_or_default(), &funs, &ctx.0).await?;
+        let result = PluginKindServ::find_kind_agg(
+            parent_id.0,
+            kind_codes,
+            &rbum_scope_helper::get_max_level_id_by_context(&ctx.0).unwrap_or_default(),
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 
@@ -66,6 +73,7 @@ impl PluginKindApi {
     async fn find_page(
         &self,
         code: Query<Option<String>>,
+        parent_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
@@ -78,6 +86,8 @@ impl PluginKindApi {
                     ..Default::default()
                 },
                 module: Some(KIND_MODULE_CODE.to_string()),
+                parent_id: parent_id.0,
+                ..Default::default()
             },
             page_number.0,
             page_size.0,

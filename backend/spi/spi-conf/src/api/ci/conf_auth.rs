@@ -119,7 +119,7 @@ impl ConfCiAuthApi {
             }
         };
         let app_tenant_id = req.app_tenant_id.as_deref().unwrap_or(ctx.owner.as_str());
-        SpiBsServ::add_rel(&bs_id, app_tenant_id, &funs, &ctx).await?;
+        SpiBsServ::add_rel(&bs_id, app_tenant_id, true, &funs, &ctx).await?;
         ctx.owner = app_tenant_id.to_string();
         let resp = register(req.register_request, &funs, &ctx).await?;
         if let Some((_, app)) = ctx.own_paths.split_once('/') {

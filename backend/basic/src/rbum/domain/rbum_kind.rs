@@ -64,6 +64,12 @@ pub struct Model {
     /// 每个资源类型可以指定一个扩展表用于存储自定义数据。
     pub ext_table_name: String,
 
+    /// Parent kind id
+    ///
+    /// 资源类型父id
+    #[index]
+    pub parent_id: String,
+
     pub scope_level: i16,
 
     #[index]

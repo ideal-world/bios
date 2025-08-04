@@ -1,9 +1,10 @@
 use bios_basic::{
     rbum::{
         dto::{
-            rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
+            rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumKindFilterReq, RbumRelFilterReq},
             rbum_rel_agg_dto::RbumRelAggResp,
             rbum_rel_attr_dto::RbumRelAttrAddReq,
+            rbum_rel_dto::RbumRelModifyReq,
         },
         helper::rbum_scope_helper,
         rbum_enumeration::RbumRelFromKind,
@@ -17,7 +18,7 @@ use bios_basic::{
     spi::{
         dto::spi_bs_dto::SpiBsFilterReq,
         serv::spi_bs_serv::SpiBsServ,
-        spi_constants::{self, SPI_IDENT_REL_TAG},
+        spi_constants::{self},
     },
 };
 use bios_sdk_invoke::clients::spi_log_client::{LogDynamicContentReq, SpiLogClient};
@@ -39,19 +40,19 @@ use super::plugin_rel_serv::PluginRelServ;
 pub struct PluginBsServ;
 
 impl PluginBsServ {
-    pub async fn add_or_modify_plugin_rel_agg(bs_id: &str, app_tenant_id: &str, add_req: &mut PluginBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_or_modify_plugin_rel_agg(add_req: &mut PluginBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let ctx_clone = ctx.clone();
-        let bs_id_clone = bs_id.to_string();
-        if !ctx.own_paths.contains(app_tenant_id) {
+        if !ctx.own_paths.contains(&add_req.app_tenant_id) {
             return Err(funs.err().unauthorized(
                 "spi_bs",
                 "add_or_modify_plugin_rel_agg",
-                &format!("plugin binding rel unauthorized {}.{} by {}", bs_id, app_tenant_id, ctx.own_paths),
+                &format!("plugin binding rel unauthorized {}.{} by {}", add_req.bs_id, add_req.app_tenant_id, ctx.own_paths),
                 "401-plugin-ownership-illegal",
             ));
         }
-        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
-        if Self::exist_bs(bs_id, app_tenant_id, funs, ctx).await? {
+        let bs = SpiBsServ::peek_item(&add_req.bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let rel_id = if let Some(rel_id) = add_req.clone().rel_id {
+            let rel_id_clone = rel_id.clone();
             ctx.add_async_task(Box::new(|| {
                 Box::pin(async move {
                     let task_handle = tokio::spawn(async move {
@@ -64,7 +65,7 @@ impl PluginBsServ {
                             },
                             None,
                             Some("dynamic_log_plugin_manage".to_string()),
-                            Some(bs_id_clone),
+                            Some(rel_id_clone.clone()),
                             Some("编辑".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -78,13 +79,24 @@ impl PluginBsServ {
                 })
             }))
             .await?;
-            let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+            let rel_agg = Self::get_bs_rel_agg(&rel_id, funs, ctx).await?;
+            RbumRelServ::modify_rbum(
+                &rel_id,
+                &mut RbumRelModifyReq {
+                    tag: None,
+                    note: Some(add_req.name.clone()),
+                    ext: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             for attrs in rel_agg.attrs {
                 RbumRelAttrServ::delete_rbum(&attrs.id, funs, ctx).await?;
             }
-            if let Some(attrs) = add_req.attrs.clone() {
+            if let Some(attrs) = &add_req.attrs {
                 // TODO check attrs
-                for attr in &attrs {
+                for attr in attrs {
                     RbumRelAttrServ::add_rbum(
                         &mut RbumRelAttrAddReq {
                             is_from: attr.is_from,
@@ -100,7 +112,20 @@ impl PluginBsServ {
                     .await?;
                 }
             }
+            rel_id
         } else {
+            let rel_id = SpiBsServ::add_rel_agg(
+                bs.id.as_str(),
+                &add_req.clone().app_tenant_id,
+                false,
+                Some(add_req.name.clone()),
+                add_req.clone().attrs,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            let rel_id_clone = rel_id.clone();
             ctx.add_async_task(Box::new(|| {
                 Box::pin(async move {
                     let task_handle = tokio::spawn(async move {
@@ -113,7 +138,7 @@ impl PluginBsServ {
                             },
                             None,
                             Some("dynamic_log_plugin_manage".to_string()),
-                            Some(bs_id_clone),
+                            Some(rel_id_clone),
                             Some("新增".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -127,19 +152,18 @@ impl PluginBsServ {
                 })
             }))
             .await?;
-
-            SpiBsServ::add_rel_agg(bs.id.as_str(), app_tenant_id, add_req.attrs.clone(), None, funs, ctx).await?;
-        }
-        Ok(bs.id)
+            rel_id
+        };
+        Ok(rel_id)
     }
 
-    pub async fn delete_plugin_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_plugin_rel(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+        let rel_agg = Self::get_bs_rel_agg(id, funs, ctx).await?;
         if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
             return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "401-spi-plugin-bind-exist"));
         }
-        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         let _ = SpiLogClient::add_dynamic_log(
             &LogDynamicContentReq {
                 details: None,
@@ -148,7 +172,7 @@ impl PluginBsServ {
             },
             None,
             Some("dynamic_log_plugin_manage".to_string()),
-            Some(bs_id.to_string()),
+            Some(id.to_string()),
             Some("删除".to_string()),
             None,
             Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -156,19 +180,33 @@ impl PluginBsServ {
             &ctx_clone,
         )
         .await;
-        SpiBsServ::delete_rel(bs_id, app_tenant_id, funs, ctx).await?;
+        SpiBsServ::delete_rel(id, funs, ctx).await?;
         Ok(())
     }
 
+    pub async fn find_sub_bind_ids_bak(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
+        let app_ids = PluginRelServ::find_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, None, true, None, None, funs, ctx)
+            .await?
+            .into_iter()
+            .map(|resp| resp.rel_id)
+            .collect::<Vec<String>>();
+        Ok(app_ids)
+    }
+
+    // todo remove
     pub async fn find_sub_bind_ids(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
-        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
-        Ok(
-            PluginRelServ::find_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, None, true, None, None, funs, ctx)
+        let rel_aggs = Self::find_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+        let mut rel_ids = vec![];
+        for rel_agg in rel_aggs {
+            let app_ids = PluginRelServ::find_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, None, true, None, None, funs, ctx)
                 .await?
                 .into_iter()
                 .map(|resp| resp.rel_id)
-                .collect(),
-        )
+                .collect::<Vec<String>>();
+            rel_ids.extend(app_ids);
+        }
+        Ok(rel_ids)
     }
 
     pub async fn paginate_bs_rel_agg(
@@ -194,12 +232,28 @@ impl PluginBsServ {
         let mut bs_records = vec![];
         for rel_agg in rel_agg.records {
             let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+            let kind = RbumKindServ::get_rbum(
+                &bs.kind_id,
+                &RbumKindFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             bs_records.push(PluginBsInfoResp {
                 id: bs.id,
                 name: bs.name,
                 kind_id: bs.kind_id,
                 kind_code: bs.kind_code,
                 kind_name: bs.kind_name,
+                kind_parent_id: Some(kind.parent_id.clone()),
+                kind_parent_name: kind.parent_name.clone(),
                 rel: Some(rel_agg),
             });
         }
@@ -211,38 +265,53 @@ impl PluginBsServ {
         })
     }
 
-    pub async fn exist_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        if SpiBsServ::count_items(
+    // todo
+    // pub async fn exist_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    //     if SpiBsServ::count_items(
+    //         &SpiBsFilterReq {
+    //             basic: RbumBasicFilterReq {
+    //                 ids: Some(vec![bs_id.to_string()]),
+    //                 ..Default::default()
+    //             },
+    //             rel: Some(RbumItemRelFilterReq {
+    //                 rel_by_from: true,
+    //                 tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
+    //                 from_rbum_kind: Some(RbumRelFromKind::Item),
+    //                 rel_item_id: Some(app_tenant_id.to_owned()),
+    //                 ..Default::default()
+    //             }),
+    //             ..Default::default()
+    //         },
+    //         funs,
+    //         ctx,
+    //     )
+    //     .await?
+    //         > 0
+    //     {
+    //         return Ok(true);
+    //     }
+    //     Ok(false)
+    // }
+
+    pub async fn get_bs(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
+        let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
+        let bs = SpiBsServ::peek_item(
+            &rel_agg.rel.from_rbum_id,
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(vec![bs_id.to_string()]),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
-                rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: true,
-                    tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(app_tenant_id.to_owned()),
-                    ..Default::default()
-                }),
                 ..Default::default()
             },
             funs,
             ctx,
         )
-        .await?
-            > 0
-        {
-            return Ok(true);
-        }
-        Ok(false)
-    }
-
-    pub async fn get_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
-        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
-        let bs = SpiBsServ::peek_item(
-            bs_id,
-            &SpiBsFilterReq {
+        .await?;
+        let kind = RbumKindServ::get_rbum(
+            &bs.kind_id,
+            &RbumKindFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     own_paths: Some("".to_string()),
@@ -260,13 +329,15 @@ impl PluginBsServ {
             kind_id: bs.kind_id,
             kind_code: bs.kind_code,
             kind_name: bs.kind_name,
+            kind_parent_id: Some(kind.parent_id.clone()),
+            kind_parent_name: kind.parent_name.clone(),
             rel: Some(rel_agg),
         })
     }
 
-    pub async fn get_cert_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
-        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
-        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+    pub async fn get_cert_bs(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
+        let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
+        let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         Ok(PluginBsCertInfoResp {
             id: bs.id,
             name: bs.name,
@@ -279,45 +350,7 @@ impl PluginBsServ {
         })
     }
 
-    pub async fn get_bs_by_rel(kind_code: Option<String>, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
-        let bs = SpiBsServ::find_one_item(
-            &SpiBsFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    enabled: Some(true),
-                    ..Default::default()
-                },
-                rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: true,
-                    tag: Some(SPI_IDENT_REL_TAG.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(app_tenant_id.to_string()),
-                    ..Default::default()
-                }),
-                kind_code,
-                domain_code: Some(funs.module_code().to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .ok_or_else(|| funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel", "not found backend service", "404-spi-bs-not-exist"))?;
-        let rel_agg = Self::get_bs_rel_agg(bs.id.as_str(), app_tenant_id, funs, ctx).await?;
-        Ok(PluginBsCertInfoResp {
-            id: bs.id,
-            name: bs.name,
-            conn_uri: bs.conn_uri,
-            ak: bs.ak,
-            sk: bs.sk,
-            ext: bs.ext,
-            private: bs.private,
-            rel: Some(rel_agg),
-        })
-    }
-
-    pub async fn get_bs_by_rel_up(kind_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
+    pub async fn get_bs_by_kind_code(kind_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(kind_code, funs).await?;
         if let Some(kind_id) = kind_id {
             if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
@@ -335,26 +368,16 @@ impl PluginBsServ {
             .first()
             {
                 let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
-                return Self::get_cert_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await;
+                return Self::get_cert_bs(&rel.id, funs, ctx).await;
             } else {
-                let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
-                for own_path in own_paths {
-                    let resp = Self::get_bs_by_rel(Some(kind_code.to_string()), own_path.as_str(), funs, ctx).await;
-                    info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
-                    if resp.is_ok() {
-                        match resp {
-                            Ok(bs) => return Ok(bs),
-                            Err(_) => return Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist")),
-                        }
-                    }
-                }
+                return Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"));
             }
         }
         Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"))
     }
 
-    pub async fn get_bs_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
-        let mut rel_agg = RbumRelServ::find_rels(
+    pub async fn find_bs_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
+        let rel_agg = RbumRelServ::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
@@ -365,6 +388,28 @@ impl PluginBsServ {
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(bs_id.to_owned()),
                 to_rbum_item_id: Some(app_tenant_id.to_owned()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(rel_agg)
+    }
+
+    pub async fn get_bs_rel_agg(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
+        let mut rel_agg = RbumRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ids: Some(vec![id.to_string()]),
+                    ..Default::default()
+                },
+                tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
                 ..Default::default()
             },
             None,
