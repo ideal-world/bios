@@ -544,6 +544,7 @@ async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx:
             module: None,
             ext_table_name: Some(ext_table.to_string().to_lowercase()),
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+            parent_id: None,
         },
         funs,
         ctx,

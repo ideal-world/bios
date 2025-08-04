@@ -20,6 +20,7 @@ use crate::rbum::dto::rbum_filer_dto::RbumKindFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
+use crate::rbum::serv::rbum_crud_serv::ID_FIELD;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, R_URL_PART_CODE};
 use crate::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelAttrServ;
@@ -60,6 +61,7 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
             sort: Set(add_req.sort.unwrap_or(0)),
             ext_table_name: Set(add_req.ext_table_name.as_ref().unwrap_or(&"".to_string()).to_string()),
             scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
+            parent_id: Set(add_req.parent_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
     }
@@ -90,6 +92,9 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
         if let Some(scope_level) = &modify_req.scope_level {
             rbum_kind.scope_level = Set(scope_level.to_int());
         }
+        if let Some(parent_id) = &modify_req.parent_id {
+            rbum_kind.parent_id = Set(parent_id.to_string());
+        }
         Ok(rbum_kind)
     }
 
@@ -97,6 +102,15 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumKindAttrServ::get_table_name(), rbum_kind_attr::Column::RelRbumKindId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumItemServ::get_table_name(), rbum_item::Column::RelRbumKindId.as_str(), funs).await?;
+        // Check if there are sub kinds
+        if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::ParentId).eq(id.to_string()))).await? > 0 {
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "delete",
+                "this kind has sub kinds, please delete them first",
+                "409-rbum-kind-delete-conflict",
+            ));
+        }
         Ok(None)
     }
 
@@ -111,12 +125,25 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
             (rbum_kind::Entity, rbum_kind::Column::Icon),
             (rbum_kind::Entity, rbum_kind::Column::Sort),
             (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
+            (rbum_kind::Entity, rbum_kind::Column::ParentId),
             (rbum_kind::Entity, rbum_kind::Column::OwnPaths),
             (rbum_kind::Entity, rbum_kind::Column::Owner),
             (rbum_kind::Entity, rbum_kind::Column::CreateTime),
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
             (rbum_kind::Entity, rbum_kind::Column::ScopeLevel),
         ]);
+        if is_detail {
+            let parent_kind = Alias::new("parent_kind");
+            query.expr_as(Expr::col((parent_kind.clone(), Alias::new("name"))), Alias::new("parent_name")).join_as(
+                JoinType::LeftJoin,
+                rbum_kind::Entity,
+                parent_kind.clone(),
+                Expr::col((parent_kind.clone(), ID_FIELD.clone())).equals((rbum_kind::Entity, rbum_kind::Column::ParentId)),
+            );
+        }
+        if let Some(parent_id) = &filter.parent_id {
+            query.and_where(Expr::col(rbum_kind::Column::ParentId).eq(parent_id.to_string()));
+        }
         if let Some(module) = &filter.module {
             query.and_where(Expr::col((rbum_kind::Entity, rbum_kind::Column::Module)).eq(module.to_string()));
         }

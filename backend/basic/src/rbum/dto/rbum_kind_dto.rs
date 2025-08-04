@@ -63,6 +63,11 @@ pub struct RbumKindAddReq {
     /// 每个资源类型可以指定一个扩展表用于存储自定义数据。
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
+    /// Parent kind id
+    /// 
+    /// 资源类型父id
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub parent_id: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
 }
@@ -109,6 +114,11 @@ pub struct RbumKindModifyReq {
     /// 每个资源类型可以指定一个扩展表用于存储自定义数据。
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
+    /// Parent kind id
+    /// 
+    /// 资源类型父id
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub parent_id: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
 }
@@ -146,6 +156,10 @@ pub struct RbumKindSummaryResp {
     ///
     /// 扩展表名
     pub ext_table_name: String,
+    /// Parent kind id
+    /// 
+    /// 资源类型父id
+    pub parent_id: String,
 
     pub own_paths: String,
     pub owner: String,
@@ -192,6 +206,12 @@ pub struct RbumKindDetailResp {
     ///
     /// 扩展表名
     pub ext_table_name: String,
+    /// Parent kind id
+    /// 
+    /// 资源类型父id
+    pub parent_id: String,
+
+    pub parent_name: Option<String>,
 
     pub own_paths: String,
     pub owner: String,

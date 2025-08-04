@@ -9,6 +9,7 @@ pub struct PluginKindAddAggReq {
     pub kind_id: String,
     pub app_tenant_id: String,
     pub bs_id: String,
+    pub rel_id: Option<String>,
     pub bs_rel: Option<PluginBsAddReq>,
     pub attrs: Option<Vec<RbumRelAttrAggAddReq>>,
 }

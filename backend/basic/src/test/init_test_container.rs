@@ -14,7 +14,7 @@ use testcontainers_modules::redis::Redis;
 pub struct LifeHold {
     pub reldb: ContainerAsync<Postgres>,
     pub redis: ContainerAsync<Redis>,
-    // pub rabbit: ContainerAsync<RabbitMq>,
+    pub rabbit: ContainerAsync<RabbitMq>,
 }
 
 pub async fn postgres_custom(init_script_path: Option<&str>) -> TardisResult<ContainerAsync<Postgres>> {
@@ -46,15 +46,15 @@ pub async fn init(sql_init_path: Option<String>) -> TardisResult<LifeHold> {
     env::set_var("TARDIS_FW.CACHE.URL", url);
 
     // TODO remove
-    // let rabbit_container = TardisTestContainer::rabbit_custom().await?;
-    // let port = rabbit_container.get_host_port_ipv4(5672).await?;
-    // let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");
-    // env::set_var("TARDIS_FW.MQ.URL", url);
+    let rabbit_container = TardisTestContainer::rabbit_custom().await?;
+    let port = rabbit_container.get_host_port_ipv4(5672).await?;
+    let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");
+    env::set_var("TARDIS_FW.MQ.URL", url);
 
     TardisFuns::init(Some("tests/config")).await?;
     Ok(LifeHold {
         reldb: reldb_container,
         redis: redis_container,
-        // rabbit: rabbit_container,
+        rabbit: rabbit_container,
     })
 }

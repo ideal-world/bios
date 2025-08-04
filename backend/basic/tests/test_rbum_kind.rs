@@ -58,6 +58,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext_table_name: Some("reldb_mgr".to_string()),
             scope_level: Some(RbumScopeLevelKind::L2),
+            parent_id: None
         },
         &funs,
         context,
@@ -74,6 +75,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext_table_name: Some("reldb_mgr".to_string()),
             scope_level: Some(RbumScopeLevelKind::L2),
+            parent_id: None
         },
         &funs,
         context,
@@ -90,6 +92,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext_table_name: Some("reldb_mgr".to_string()),
             scope_level: Some(RbumScopeLevelKind::L2),
+            parent_id: None
         },
         &funs,
         context,
@@ -106,6 +109,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext_table_name: Some("reldb_mgr".to_string()),
             scope_level: Some(RbumScopeLevelKind::L2),
+            parent_id: None,
         },
         &funs,
         context,
@@ -129,6 +133,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext_table_name: None,
             scope_level: None,
+            parent_id: None,
         },
         &funs,
         context,
@@ -181,6 +186,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext_table_name: None,
             scope_level: Some(RbumScopeLevelKind::L2),
+            parent_id: None,
         },
         &funs,
         context,

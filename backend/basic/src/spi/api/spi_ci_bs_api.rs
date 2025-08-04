@@ -90,6 +90,8 @@ impl SpiCiBsApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        kind_id: Query<Option<String>>,
+        kind_code: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -105,6 +107,8 @@ impl SpiCiBsApi {
                     name: name.0,
                     ..Default::default()
                 },
+                kind_id: kind_id.0,
+                kind_code: kind_code.0,
                 domain_code: Some(funs.module_code().to_string()),
                 ..Default::default()
             },
@@ -145,7 +149,7 @@ impl SpiCiBsApi {
     async fn add_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
-        SpiBsServ::add_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        SpiBsServ::add_rel(&id.0, &app_tenant_id.0, true, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -161,7 +165,7 @@ impl SpiCiBsApi {
     async fn delete_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
-        SpiBsServ::delete_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        SpiBsServ::delete_rel_agg(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

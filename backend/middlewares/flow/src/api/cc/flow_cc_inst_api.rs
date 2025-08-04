@@ -199,15 +199,18 @@ impl FlowCcInstApi {
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowInstServ::paginate(
-            flow_model_id.0,
-            tag.0.map(|tag| vec![tag]),
-            finish.0,
-            finish_abort.0,
-            main.0,
-            current_state_id.0,
-            current_state_sys_kind.0,
-            rel_business_obj_id.0,
-            with_sub.0,
+            &FlowInstFilterReq {
+                flow_model_id: flow_model_id.0,
+                tags: tag.0.map(|t| vec![t]),
+                finish: finish.0,
+                finish_abort: finish_abort.0,
+                main: main.0,
+                current_state_id: current_state_id.0,
+                current_state_sys_kind: current_state_sys_kind.0,
+                rel_business_obj_ids: rel_business_obj_id.0.map(|id| vec![id]),
+                with_sub: with_sub.0,
+                ..Default::default()
+            },
             page_number.0,
             page_size.0,
             &funs,

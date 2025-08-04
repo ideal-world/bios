@@ -1085,8 +1085,8 @@ impl FlowModelServ {
     }
 
     // Find the rel models.
-    pub async fn find_rel_model_map(template_id: Option<String>, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
-        let models = Self::find_rel_models(template_id, main, None, funs, ctx).await?;
+    pub async fn find_rel_model_map(template_id: Option<String>, tags: Option<Vec<String>>, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, FlowModelSummaryResp>> {
+        let models = Self::find_rel_models(template_id, main, tags, funs, ctx).await?;
 
         let mut result: HashMap<String, FlowModelSummaryResp> = HashMap::new();
         // First iterate over the models
@@ -1345,6 +1345,7 @@ impl FlowModelServ {
                     id: state_detail.id.clone(),
                     name: state_detail.name.clone(),
                     color: state_detail.color.clone(),
+                    sys_state: state_detail.sys_state.clone(),
                 })
                 .collect_vec();
             result.append(&mut states);
@@ -1662,7 +1663,7 @@ impl FlowModelServ {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let models = Self::find_rel_model_map(rel_template_id.clone(), true, funs, ctx).await?;
+        let models = Self::find_rel_model_map(rel_template_id.clone(), spec_tags.clone(), true, funs, ctx).await?;
         let mut non_main_models = vec![];
         if let Some(rel_template_id) = rel_template_id.clone() {
             let rel_model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, &global_ctx)
@@ -1733,12 +1734,7 @@ impl FlowModelServ {
             )
             .await?
         }
-        for (tag, model) in models.iter() {
-            if let Some(spec_tags) = spec_tags.clone() {
-                if !spec_tags.contains(tag) {
-                    continue;
-                }
-            }
+        for (_, model) in models.iter() {
             if let Some(orginal_model_ids) = orginal_model_ids.clone() {
                 if orginal_model_ids.contains(&model.id) {
                     continue;
