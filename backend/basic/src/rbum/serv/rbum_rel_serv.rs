@@ -799,7 +799,11 @@ impl RbumRelServ {
                 rel,
                 attrs: RbumRelAttrServ::find_rbums(
                     &RbumRelExtFilterReq {
-                        basic: filter.basic.clone(),
+                        basic: RbumBasicFilterReq {
+                            own_paths: filter.basic.own_paths.clone(),
+                            with_sub_own_paths: filter.basic.with_sub_own_paths.clone(),
+                            ..Default::default()
+                        },
                         rel_rbum_rel_id: Some(rbum_rel_id.clone()),
                     },
                     None,
@@ -810,7 +814,11 @@ impl RbumRelServ {
                 .await?,
                 envs: RbumRelEnvServ::find_rbums(
                     &RbumRelExtFilterReq {
-                        basic: filter.basic.clone(),
+                        basic: RbumBasicFilterReq {
+                            own_paths: filter.basic.own_paths.clone(),
+                            with_sub_own_paths: filter.basic.with_sub_own_paths.clone(),
+                            ..Default::default()
+                        },
                         rel_rbum_rel_id: Some(rbum_rel_id.clone()),
                     },
                     None,
