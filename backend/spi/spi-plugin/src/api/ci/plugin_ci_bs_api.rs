@@ -158,6 +158,7 @@ impl PluginCiBsApi {
     #[oai(path = "/rel", method = "get")]
     async fn paginate_bs_rel_agg(
         &self,
+        kind_id: Query<Option<String>>,
         app_tenant_id: Query<String>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -166,7 +167,7 @@ impl PluginCiBsApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<PluginBsInfoResp>> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::paginate_bs_rel_agg(&app_tenant_id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::paginate_bs_rel_agg(kind_id.0, &app_tenant_id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

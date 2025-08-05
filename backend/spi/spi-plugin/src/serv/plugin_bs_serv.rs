@@ -210,6 +210,7 @@ impl PluginBsServ {
     }
 
     pub async fn paginate_bs_rel_agg(
+        kind_id: Option<String>,
         app_tenant_id: &str,
         page_number: u32,
         page_size: u32,
@@ -233,6 +234,11 @@ impl PluginBsServ {
         let mut bs_records = vec![];
         for rel_agg in rel_agg.records {
             let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+            if let Some(kind_id) = kind_id.clone() {
+                if bs.kind_id != kind_id {
+                    continue;
+                }
+            }
             let kind = RbumKindServ::get_rbum(
                 &bs.kind_id,
                 &RbumKindFilterReq {
