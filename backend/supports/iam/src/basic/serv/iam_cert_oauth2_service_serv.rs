@@ -122,7 +122,7 @@ impl IamCertOAuth2ServiceServ {
     }
 
     /// 列出OAuth2服务证书配置
-    pub async fn list_cert_confs(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamCertConfOAuth2ServiceResp>> {
+    pub async fn find_cert_confs(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamCertConfOAuth2ServiceResp>> {
         let cert_confs = RbumCertConfServ::find_rbums(
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq::default(),

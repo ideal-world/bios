@@ -276,7 +276,7 @@ impl IamCsCertConfigOAuth2ServiceApi {
     async fn list_oauth2_service_certs(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamCertConfOAuth2ServiceResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let resp = IamCertOAuth2ServiceServ::list_cert_confs(&funs, &ctx.0).await?;
+        let resp = IamCertOAuth2ServiceServ::find_cert_confs(&funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
     }
