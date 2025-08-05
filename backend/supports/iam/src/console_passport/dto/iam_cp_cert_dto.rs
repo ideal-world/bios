@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
 
+use crate::iam_enumeration::{OAuth2ResponseType, Oauth2GrantType};
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpUserPwdLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -114,4 +116,34 @@ pub struct IamCpUserPwdBindReq {
     pub ak: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
+}
+
+// OAuth2 Service DTOs for Console Passport
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpOAuth2ServiceAuthorizeReq {
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub client_id: TrimString,
+    pub state: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub scope: TrimString,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub redirect_uri: TrimString,
+    #[oai(default)]
+    pub response_type: OAuth2ResponseType,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpOAuth2ServiceTokenReq {
+    pub grant_type: Oauth2GrantType,
+    pub code: Option<String>,
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_uri: Option<String>,
+    pub refresh_token: Option<String>,
+    pub scope: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpOAuth2ServiceAuthorizeResp {
+    pub redirect_url: String,
 }
