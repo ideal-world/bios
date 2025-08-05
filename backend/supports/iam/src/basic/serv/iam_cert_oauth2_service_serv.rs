@@ -16,7 +16,7 @@ use tardis::{
 use crate::{
     basic::{
         dto::{
-            iam_cert_conf_dto::{IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceResp},
+            iam_cert_conf_dto::{IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceExt, IamCertConfOAuth2ServiceResp},
             iam_cert_dto::{IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2TokenResp},
         },
         serv::iam_key_cache_serv::IamIdentCacheServ,
@@ -52,18 +52,24 @@ pub struct IamOAuth2RefreshTokenInfo {
 
 impl IamCertOAuth2ServiceServ {
     pub async fn add_cert_conf(add_req: &IamCertConfOAuth2ServiceAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let client_id = TardisFuns::crypto.key.generate_ak()?;
+        let client_secret = TardisFuns::crypto.key.generate_sk(&client_id)?;
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                id: Some(add_req.client_id.to_string()),
                 kind: TrimString(IamCertExtKind::OAuth2Service.to_string()),
-                supplier: None,
+                supplier: Some(TrimString(client_id.clone())),
                 name: add_req.name.clone(),
                 note: None,
                 ak_note: None,
                 ak_rule: None,
                 sk_note: None,
                 sk_rule: None,
-                ext: Some(TardisFuns::json.obj_to_string(&add_req)?),
+                ext: Some(TardisFuns::json.obj_to_string(&IamCertConfOAuth2ServiceExt {
+                    client_id,
+                    client_secret,
+                    redirect_uri: add_req.redirect_uri.to_string(),
+                    scope: vec![],
+                })?),
                 sk_need: Some(false),
                 sk_dynamic: Some(false),
                 sk_encrypted: Some(false),
@@ -78,38 +84,7 @@ impl IamCertOAuth2ServiceServ {
                 conn_uri: Some(add_req.redirect_uri.to_string()),
                 status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
-                rel_rbum_item_id: None,
-            },
-            funs,
-            ctx,
-        )
-        .await
-    }
-
-    /// 修改OAuth2服务证书配置
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfOAuth2ServiceAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        RbumCertConfServ::modify_rbum(
-            id,
-            &mut RbumCertConfModifyReq {
-                name: Some(modify_req.name.clone()),
-                note: None,
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                ext: Some(TardisFuns::json.obj_to_string(&modify_req)?),
-                sk_need: None,
-                sk_encrypted: None,
-                repeatable: None,
-                is_basic: None,
-                rest_by_kinds: None,
-                expire_sec: Some(modify_req.access_token_expire_sec.unwrap_or(60 * 60 * 24 * 7)),
-                sk_lock_cycle_sec: None,
-                sk_lock_err_times: None,
-                sk_lock_duration_sec: None,
-                coexist_num: None,
-                conn_uri: Some(modify_req.redirect_uri.to_string()),
-                status: None,
+                rel_rbum_item_id: add_req.rel_rbum_item_id.clone(),
             },
             funs,
             ctx,
@@ -134,14 +109,15 @@ impl IamCertOAuth2ServiceServ {
         )
         .await?;
 
-        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceAddOrModifyReq>(&cert_conf.ext)?;
+        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&cert_conf.ext)?;
 
         Ok(IamCertConfOAuth2ServiceResp {
             id: cert_conf.id,
             name: cert_conf.name,
-            client_id: id.to_string(),
+            client_id: ext.client_id,
+            client_secret: ext.client_secret,
             access_token_expire_sec: cert_conf.expire_sec,
-            redirect_uri: ext.redirect_uri.to_string(),
+            redirect_uri: ext.redirect_uri,
         })
     }
 
@@ -165,11 +141,12 @@ impl IamCertOAuth2ServiceServ {
 
         let mut result = Vec::new();
         for cert_conf in cert_confs {
-            let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceAddOrModifyReq>(&cert_conf.ext)?;
+            let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&cert_conf.ext)?;
             result.push(IamCertConfOAuth2ServiceResp {
                 id: cert_conf.id.clone(),
                 name: cert_conf.name,
-                client_id: cert_conf.id,
+                client_id: ext.client_id,
+                client_secret: ext.client_secret,
                 access_token_expire_sec: cert_conf.expire_sec,
                 redirect_uri: ext.redirect_uri.to_string(),
             });
@@ -214,10 +191,10 @@ impl IamCertOAuth2ServiceServ {
         .await
         .map_err(|_| funs.err().unauthorized("oauth2", "generate_code", &format!("client not found: {}", add_req.client_id), "401-oauth2-invalid-client"))?;
 
-        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceAddOrModifyReq>(&conf.ext)?;
+        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
 
         // 3. 验证重定向URI
-        if add_req.redirect_uri != ext.redirect_uri {
+        if add_req.redirect_uri.to_string() != ext.redirect_uri {
             return Err(funs.err().bad_request("oauth2", "generate_code", "invalid_redirect_uri", "400-oauth2-invalid-redirect-uri"));
         }
 
@@ -269,7 +246,7 @@ impl IamCertOAuth2ServiceServ {
         .await
         .map_err(|_| funs.err().unauthorized("oauth2", "verify_code", "invalid_client", "401-oauth2-invalid-client"))?;
 
-        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceAddOrModifyReq>(&conf.ext)?;
+        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
 
         // 验证客户端密钥
         if req.client_secret != ext.client_secret {
@@ -314,19 +291,10 @@ impl IamCertOAuth2ServiceServ {
         let refresh_token = TardisFuns::crypto.key.generate_token()?;
 
         let iam_config = funs.conf::<IamConfig>();
-        let access_token_expire_sec = ext.access_token_expire_sec.unwrap_or(iam_config.oauth2_access_token_default_expire_sec as i64) as u32;
+        let access_token_expire_sec = conf.expire_sec;
 
         // 7. 存储访问令牌（复用现有的令牌缓存系统）
-        IamIdentCacheServ::add_token(
-            &access_token,
-            &IamCertTokenKind::TokenOauth2,
-            &code_info.ctx.owner,
-            None,
-            access_token_expire_sec as i64,
-            1,
-            funs,
-        )
-        .await?;
+        IamIdentCacheServ::add_token(&access_token, &IamCertTokenKind::TokenOauth2, &code_info.ctx.owner, None, access_token_expire_sec, 1, funs).await?;
 
         // 8. 存储刷新令牌
         let refresh_token_info = IamOAuth2RefreshTokenInfo {

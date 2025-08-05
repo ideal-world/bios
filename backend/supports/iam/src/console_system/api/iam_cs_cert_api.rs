@@ -257,26 +257,7 @@ impl IamCsCertConfigOAuth2ServiceApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
-    }
-
-    /// Modify OAuth2 Service Cert Conf
-    /// 修改OAuth2服务证书配置
-    #[oai(path = "/:id", method = "put")]
-    async fn modify_oauth2_service_cert(
-        &self,
-        id: Path<String>,
-        modify_req: Json<IamCertConfOAuth2ServiceAddOrModifyReq>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamCertOAuth2ServiceServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
+    }      
 
     /// Get OAuth2 Service Cert Conf
     /// 获取OAuth2服务证书配置

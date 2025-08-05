@@ -3,10 +3,17 @@ use std::{collections::HashMap, vec};
 use itertools::Itertools;
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult}, chrono::{Duration, Utc}, db::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    chrono::{Duration, Utc},
+    db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
-    }, futures::future::join_all, regex::Regex, serde_json::{self, json, Map}, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
+    },
+    futures::future::join_all,
+    regex::Regex,
+    serde_json::{self, json, Map},
+    web::web_resp::TardisPage,
+    TardisFuns, TardisFunsInst,
 };
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -215,30 +222,22 @@ fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<Strin
 
 fn generate_word_combinations_with_digit(chars: &str) -> Vec<String> {
     if let Ok(re) = Regex::new(r"(\d+)") {
-        re.find_iter(chars).map( |m| m.as_str().to_string()).collect_vec()
+        re.find_iter(chars).map(|m| m.as_str().to_string()).collect_vec()
     } else {
         vec![]
     }
 }
 
-
 fn generate_word_combinations(chars: &str, way: SearchWordCombinationsRuleWay) -> Vec<String> {
     match way {
         // 按数字分词
-        SearchWordCombinationsRuleWay::Number => {
-            generate_word_combinations_with_digit(chars)
-        },
+        SearchWordCombinationsRuleWay::Number => generate_word_combinations_with_digit(chars),
         // 指定长度分词
-        SearchWordCombinationsRuleWay::SpecLength(len) => {
-            generate_word_combinations_with_length(chars, len)
-        },
+        SearchWordCombinationsRuleWay::SpecLength(len) => generate_word_combinations_with_length(chars, len),
         // 指定分隔符分词
-        SearchWordCombinationsRuleWay::SpecSymbols(allowed_symbols) => {
-            generate_word_combinations_with_symbol(chars, allowed_symbols)
-        },
+        SearchWordCombinationsRuleWay::SpecSymbols(allowed_symbols) => generate_word_combinations_with_symbol(chars, allowed_symbols),
     }
 }
-
 
 pub async fn delete(tag: &str, key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
