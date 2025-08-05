@@ -17,6 +17,7 @@ use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     db::sea_orm::{
+        self,
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, Set,
     },
@@ -29,13 +30,11 @@ use tardis::{
 };
 
 use crate::{
-    domain::{flow_model, flow_transition},
+    domain::{flow_inst, flow_model, flow_model_version, flow_transition},
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
-            FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind,
-            FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
+            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -2296,6 +2295,90 @@ impl FlowModelServ {
                 }
                 FlowInstServ::batch_update_when_switch_model(&new_model, None, Some(update_states), funs, &mock_ctx).await?;
             }
+        }
+        Ok(())
+    }
+
+    pub async fn merge_data(req: &FlowModelMergeDataReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // 1、内网状态合并
+        for (original_state, target_state) in &req.state_map {
+            // 1-1、模板版本状态调整
+            funs.db().update_many(Query::update()
+            .table(flow_model_version::Entity)
+            .values(vec![
+              (flow_model_version::Column::InitStateId, target_state.into()),
+            ])
+            .and_where(Expr::col(flow_model_version::Column::InitStateId).eq(original_state.clone()))).await?;
+            // 1-2、动作状态调整
+            funs.db().update_many(Query::update()
+            .table(flow_transition::Entity)
+            .values(vec![
+              (flow_transition::Column::FromFlowStateId, target_state.into()),
+            ])
+            .and_where(Expr::col(flow_transition::Column::FromFlowStateId).eq(original_state.clone()))).await?;
+            funs.db().update_many(Query::update()
+                .table(flow_transition::Entity)
+                .values(vec![
+                (flow_transition::Column::ToFlowStateId, target_state.into()),
+                ])
+                .and_where(Expr::col(flow_transition::Column::ToFlowStateId).eq(original_state.clone()))).await?;
+            funs.db()
+                .execute_one(
+                    "UPDATE flow_transition SET action_by_post_changes = (replace(action_by_post_changes::text, '\"$1\"', '\"$2\"'))::json WHERE action_by_post_changes::text like '%$1%';",
+                    vec![
+                        sea_orm::Value::from(original_state.clone()),
+                        sea_orm::Value::from(target_state.clone()),
+                    ]
+                ).await?;
+            // 1-3、实例状态调整
+            funs.db().update_many(Query::update()
+                .table(flow_inst::Entity)
+                .values(vec![
+                (flow_inst::Column::CurrentStateId, target_state.into()),
+                ])
+                .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(original_state.clone()))).await?;
+            // 1-4、模型关联状态调整
+            funs.db()
+                .execute_one(
+                    "UPDATE rbum_rel SET to_rbum_item_id = $1 WHERE kind = 'FlowModelState' AND to_rbum_item_id = $2;",
+                    vec![
+                        sea_orm::Value::from(target_state.clone()),
+                        sea_orm::Value::from(original_state.clone()),
+                    ]
+                ).await?;
+        }
+        // 2、模型合并
+        for (original_model_id, target_model_id) in &req.model_map {
+            let original_model = Self::get_item(original_model_id, &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?;
+            let target_model = Self::get_item(target_model_id, &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            }, funs, ctx).await?;
+            // 2-1、关联模型调整
+            funs.db().update_many(Query::update()
+                .table(flow_model::Entity)
+                .values(vec![
+                (flow_model::Column::RelModelId, target_model_id.into()),
+                ])
+                .and_where(Expr::col(flow_model::Column::RelModelId).eq(target_model_id.clone()))).await?;
+            // 2-2、关联实例调整
+            funs.db().update_many(Query::update()
+                .table(flow_inst::Entity)
+                .values(vec![
+                (flow_inst::Column::RelFlowVersionId, target_model.current_version_id.into()),
+                ])
+                .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(original_model.current_version_id.clone()))).await?;
+            // 2-3、删除废弃模型
+            Self::delete_item(original_model_id, funs, ctx).await?;
         }
         Ok(())
     }
