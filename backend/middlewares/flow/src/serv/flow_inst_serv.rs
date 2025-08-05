@@ -88,6 +88,13 @@ impl FlowInstServ {
         if let Some(rel_model) = Self::find_rel_model(start_req.transition_id.clone(), &start_req.tag, &create_vars, funs, ctx).await? {
             if start_req.transition_id.is_none() {
                 let inst_id = Self::start_main_flow(start_req, &rel_model, current_state_name, funs, ctx).await?;
+                let main_inst = Self::get(&inst_id, funs, ctx).await?;
+                let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                    tag: main_inst.tag.clone(),
+                    current_state_color: main_inst.current_state_color.clone(),
+                    ..Default::default()
+                })?;
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 if start_req.rel_child_objs.is_some() {
                     Self::modify_inst_artifacts(
                         &inst_id,
@@ -102,13 +109,6 @@ impl FlowInstServ {
                         ctx,
                     )
                     .await?;
-                    let main_inst = Self::get(&inst_id, funs, ctx).await?;
-                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                        tag: main_inst.tag.clone(),
-                        current_state_color: main_inst.current_state_color.clone(),
-                        ..Default::default()
-                    })?;
-                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                     // 存入rel_state，用来标记关联的业务项被选中
                     for rel_child_obj in start_req.rel_child_objs.clone().unwrap_or_default() {
                         let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
@@ -1075,9 +1075,8 @@ impl FlowInstServ {
                     .add(Expr::col((rel_model_table.clone(), Alias::new("to_rbum_item_id"))).equals((flow_inst::Entity, flow_inst::Column::RelTransitionId)))
                     .add(Expr::col((rel_model_table.clone(), Alias::new("tag"))).eq("FlowModelTransition".to_string())),
             )
-            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(flow_inst_ids));
-            // TODO 因突发线上问题暂时放开权限判断，后续版本会重新打开
-            // .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(flow_inst_ids))
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
         if let Some(sort) = desc_sort_by_create {
             query.order_by((flow_inst::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }

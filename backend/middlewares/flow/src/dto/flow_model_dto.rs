@@ -642,6 +642,8 @@ pub struct FlowModelSingleCopyOrReferenceReq {
     pub rel_model_id: String,
     /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
+    /// 切换模板时，状态更新映射
+    pub update_states: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 /// 创建或引用模型请求
@@ -697,4 +699,11 @@ pub struct FlowModelInitCopyReq {
     pub own_path: Vec<String>,
     pub rel_model_id: String,
     pub sync_inst: bool,
+}
+
+/// 合并数据
+#[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelMergeDataReq {
+    pub state_map: HashMap<String, String>,
+    pub model_map: HashMap<String, String>,
 }

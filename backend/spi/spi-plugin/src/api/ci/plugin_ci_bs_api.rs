@@ -171,11 +171,11 @@ impl PluginCiBsApi {
     }
 
     /// Delete Plugin Service Rel App/Tenant
-    #[oai(path = "/rel/:id", method = "delete")]
-    async fn delete_rel(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/rel/:rel_id", method = "delete")]
+    async fn delete_rel(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        PluginBsServ::delete_plugin_rel(&id.0, &funs, &ctx.0).await?;
+        PluginBsServ::delete_plugin_rel(&rel_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
