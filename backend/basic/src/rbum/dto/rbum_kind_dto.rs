@@ -64,7 +64,7 @@ pub struct RbumKindAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
     /// Parent kind id
-    /// 
+    ///
     /// 资源类型父id
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub parent_id: Option<String>,
@@ -115,7 +115,7 @@ pub struct RbumKindModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
     /// Parent kind id
-    /// 
+    ///
     /// 资源类型父id
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub parent_id: Option<String>,
@@ -157,7 +157,7 @@ pub struct RbumKindSummaryResp {
     /// 扩展表名
     pub ext_table_name: String,
     /// Parent kind id
-    /// 
+    ///
     /// 资源类型父id
     pub parent_id: String,
 
@@ -207,7 +207,7 @@ pub struct RbumKindDetailResp {
     /// 扩展表名
     pub ext_table_name: String,
     /// Parent kind id
-    /// 
+    ///
     /// 资源类型父id
     pub parent_id: String,
 

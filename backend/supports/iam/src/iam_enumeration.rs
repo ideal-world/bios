@@ -191,15 +191,28 @@ impl IamSetCateKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum Oauth2GrantType {
+    #[strum(serialize = "authorization_code")]
     AuthorizationCode,
+    #[strum(serialize = "password")]
     Password,
+    #[strum(serialize = "client_credentials")]
     ClientCredentials,
+    #[strum(serialize = "refresh_token")]
+    RefreshToken,
 }
 
 impl Oauth2GrantType {
     pub fn parse(kind: &str) -> TardisResult<Oauth2GrantType> {
         Oauth2GrantType::from_str(kind).map_err(|_| TardisError::format_error(&format!("not supports OAuth2 kind: {kind}"), "404-iam-cert-oauth-kind-not-exist"))
     }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum Oauth2TokenType {
+    #[strum(serialize = "Bearer")]
+    Bearer,
+    #[strum(serialize = "Mac")]
+    Mac,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
@@ -421,4 +434,12 @@ pub enum IamSubDeployHostKind {
     IamSubDeployHostWhite,
     ///二级部署黑名单
     IamSubDeployHostBlack,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]
+pub enum OAuth2ResponseType {
+    /// Authorization code response type
+    #[default]
+    #[strum(serialize = "code")]
+    Code,
 }

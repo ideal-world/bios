@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
+use crate::iam_enumeration::{IamCertExtKind, OAuth2ResponseType, Oauth2GrantType, Oauth2TokenType, WayToAdd, WayToDelete};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
@@ -265,7 +265,7 @@ pub struct IamCertAkSkResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamOauth2AkSkResp {
     pub access_token: String,
-    pub token_type: String,
+    pub token_type: Oauth2TokenType,
     pub expires_in: String,
     pub refresh_token: String,
     pub scope: String,
@@ -290,12 +290,41 @@ pub struct IamCertOAuth2ServiceCodeAddReq {
     pub scope: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub redirect_uri: TrimString,
+    #[oai(default)]
+    pub response_type: OAuth2ResponseType,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertOAuth2ServiceCodeVerifyReq {
+    pub grant_type: Oauth2GrantType,
     pub code: String,
     pub client_id: String,
     pub client_secret: String,
     pub redirect_uri: Option<String>,
+}
+
+// 新增：刷新令牌请求
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertOAuth2ServiceRefreshTokenReq {
+    pub grant_type: Oauth2GrantType,
+    pub refresh_token: String,
+    pub client_id: String,
+    pub client_secret: Option<String>,
+    pub scope: Option<String>,
+}
+
+// 改进令牌响应
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2TokenResp {
+    pub access_token: String,
+    pub token_type: Oauth2TokenType,
+    pub expires_in: i64,
+    pub refresh_token: Option<String>,
+    pub scope: Option<String>,
+}
+
+// OAuth2 授权响应
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2AuthorizeResp {
+    pub redirect_url: String,
 }

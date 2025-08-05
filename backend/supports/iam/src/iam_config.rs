@@ -79,6 +79,13 @@ pub struct IamConfig {
 
     pub gateway_openapi_path: String,
     pub crypto_pri_key: String,
+
+    // OAuth2 相关配置
+    pub oauth2_auth_code_expire_sec: u32,
+    pub oauth2_access_token_default_expire_sec: u32,
+    pub oauth2_refresh_token_expire_sec: u32,
+    pub oauth2_require_pkce: bool,
+    pub oauth2_allow_implicit_flow: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -188,6 +195,13 @@ impl Default for IamConfig {
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),
             vcode_cd_in_sec: crate::iam_constants::DEFAULT_V_CODE_CD_IN_SEC,
+
+            // OAuth2 默认配置
+            oauth2_auth_code_expire_sec: 600,                      // 10分钟
+            oauth2_access_token_default_expire_sec: 7 * 24 * 3600, // 7天
+            oauth2_refresh_token_expire_sec: 30 * 24 * 3600,       // 30天
+            oauth2_require_pkce: false,
+            oauth2_allow_implicit_flow: false,
         }
     }
 }
