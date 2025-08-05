@@ -1,6 +1,6 @@
 use bios_basic::rbum::{
     dto::{
-        rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq},
+        rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq, RbumCertConfSummaryResp},
         rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq},
     },
     rbum_enumeration::RbumCertConfStatusKind,
@@ -160,6 +160,39 @@ impl IamCertOAuth2ServiceServ {
         RbumCertConfServ::delete_rbum(id, funs, ctx).await
     }
 
+    async fn get_cert_conf_by_client_id(client_id: &str, funs: &TardisFunsInst) -> TardisResult<RbumCertConfSummaryResp> {
+        let global_ctx = TardisContext::default();
+
+        let mut conf = RbumCertConfServ::find_rbums(
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(TrimString(IamCertExtKind::OAuth2Service.to_string())),
+                supplier: Some(client_id.to_string()),
+                status: Some(RbumCertConfStatusKind::Enabled),
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
+                rel_rbum_item_id: None,
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?;
+
+        if conf.is_empty() {
+            return Err(funs.err().unauthorized("oauth2", "generate_code", &format!("client not found: {}", client_id), "401-oauth2-invalid-client"));
+        } else if conf.len() > 1 {
+            return Err(funs.err().bad_request("oauth2", "generate_code", "multiple_clients_found", "400-oauth2-multiple-clients-found"));
+        }
+
+        Ok(conf.remove(0))
+    }
+
     /// 改进的生成授权码方法 - 使用配置中的有效期
     pub async fn generate_code(add_req: &IamCertOAuth2ServiceCodeAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // 1. 验证响应类型 - 目前只支持code模式
@@ -170,26 +203,7 @@ impl IamCertOAuth2ServiceServ {
         let code = TardisFuns::field.nanoid();
 
         // 2. 获取客户端配置
-        let conf = RbumCertConfServ::get_rbum(
-            &add_req.client_id,
-            &RbumCertConfFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                kind: Some(TrimString(IamCertExtKind::OAuth2Service.to_string())),
-                supplier: None,
-                status: Some(RbumCertConfStatusKind::Enabled),
-                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
-                rel_rbum_item_id: None,
-            },
-            funs,
-            ctx,
-        )
-        .await
-        .map_err(|_| funs.err().unauthorized("oauth2", "generate_code", &format!("client not found: {}", add_req.client_id), "401-oauth2-invalid-client"))?;
+        let conf = Self::get_cert_conf_by_client_id(&add_req.client_id, funs).await?;
 
         let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
 
@@ -223,28 +237,9 @@ impl IamCertOAuth2ServiceServ {
         if req.grant_type != Oauth2GrantType::AuthorizationCode {
             return Err(funs.err().bad_request("oauth2", "verify_code", "unsupported_grant_type", "400-oauth2-unsupported-grant-type"));
         }
-        let global_ctx = TardisContext::default();
 
         // 2. 获取客户端配置并验证client_secret
-        let conf = RbumCertConfServ::get_rbum(
-            &req.client_id,
-            &RbumCertConfFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                kind: Some(TrimString(IamCertExtKind::OAuth2Service.to_string())),
-                supplier: None,
-                status: Some(RbumCertConfStatusKind::Enabled),
-                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
-                rel_rbum_item_id: None,
-            },
-            funs,
-            &global_ctx,
-        )
-        .await
-        .map_err(|_| funs.err().unauthorized("oauth2", "verify_code", "invalid_client", "401-oauth2-invalid-client"))?;
+        let conf = Self::get_cert_conf_by_client_id(&req.client_id, funs).await?;
 
         let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
 

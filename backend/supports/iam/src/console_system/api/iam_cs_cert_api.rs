@@ -257,7 +257,7 @@ impl IamCsCertConfigOAuth2ServiceApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
-    }      
+    }
 
     /// Get OAuth2 Service Cert Conf
     /// 获取OAuth2服务证书配置
