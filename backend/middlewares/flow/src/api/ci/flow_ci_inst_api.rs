@@ -301,6 +301,28 @@ impl FlowCiInstApi {
         TardisResp::ok(result)
     }
 
+    /// Find Instances
+    ///
+    /// 获取实例列表
+    #[oai(path = "/details", method = "post")]
+    async fn find_detail_items(
+        &self,
+        req: Json<FlowInstFilterReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<Vec<FlowInstDetailResp>> {
+        let funs = flow_constants::get_tardis_inst();
+        let result = FlowInstServ::find_detail_items(
+            &req.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// sync instance status to search
     ///
     /// 同步状态信息
@@ -495,7 +517,7 @@ impl FlowCiInstApi {
         TardisResp::ok(result)
     }
 
-    /// 同步实例的颜色标识到search服务
+    /// 同步已删除的实例（脚本）
     #[oai(path = "/sync_state_color", method = "post")]
     async fn sync_state_color(&self, req: Json<FlowInstFilterReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();

@@ -19,7 +19,7 @@ use crate::rbum::dto::rbum_filer_dto::{
     RbumSetItemFilterReq, RbumSetItemRelFilterReq,
 };
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
-use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp};
+use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp, RbumItemTransferOwnershipReq};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelSimpleFindReq};
 use crate::rbum::helper::rbum_event_helper;
@@ -606,6 +606,51 @@ where
         }
 
         Self::delete_item(id, funs, ctx).await
+    }
+
+    // ----------------------------- Transfer Ownership -------------------------------
+
+    /// Transfer ownership of the resource item
+    ///
+    /// 转移资源项的所有权
+    ///
+    /// Only the current owner can transfer ownership.
+    /// The new owner will have full control over the resource item.
+    ///
+    /// 只有当前所有者才能转移所有权。
+    /// 新所有者将对资源项拥有完全控制权。
+    async fn transfer_item_ownership(id: &str, transfer_req: &RbumItemTransferOwnershipReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumItemServ::check_ownership(id, funs, ctx).await?;
+        
+        let current_item = RbumItemServ::peek_rbum(
+            id,
+            &RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        ).await?;
+        
+        if current_item.owner != ctx.owner {
+            return Err(funs.err().bad_request(
+                &Self::get_obj_name(),
+                "transfer_ownership",
+                "only the owner can transfer ownership",
+                "403-rbum-*-ownership-transfer-forbidden",
+            ));
+        }
+
+        let mut rbum_update_statement = Query::update();
+        rbum_update_statement
+            .table(rbum_item::Entity)
+            .value(rbum_item::Column::Owner, Value::from(transfer_req.new_owner.to_string()))
+            .value(rbum_item::Column::OwnPaths, Value::from(transfer_req.new_own_paths.to_string()))
+            .and_where(Expr::col(rbum_item::Column::Id).eq(id));
+        
+        funs.db().execute(&rbum_update_statement).await?;
+
+        Ok(())
     }
 
     // ----------------------------- Query -------------------------------

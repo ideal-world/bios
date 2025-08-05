@@ -1,18 +1,12 @@
-use std::{collections::HashMap, fmt::format, vec};
+use std::{collections::HashMap, vec};
 
 use itertools::Itertools;
 use pinyin::{to_pinyin_vec, Pinyin};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    chrono::{DateTime, Duration, Utc},
-    db::{
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult}, chrono::{Duration, Utc}, db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
-    },
-    futures::future::join_all,
-    serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    }, futures::future::join_all, regex::Regex, serde_json::{self, json, Map}, web::web_resp::TardisPage, TardisFuns, TardisFunsInst
 };
 
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
@@ -21,7 +15,7 @@ use crate::{
     dto::search_item_dto::{
         AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq,
         SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
-        SearchItemSearchResp, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp,
+        SearchItemSearchResp, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchWordCombinationsRuleWay,
     },
     search_config::SearchConfig,
 };
@@ -167,22 +161,24 @@ async fn title_tsv(title: &str, funs: &TardisFunsInst) -> TardisResult<String> {
     let content = title.split(' ').last().unwrap_or_default();
     let title_tsv = if title.chars().count() > funs.conf::<SearchConfig>().split_strategy_rule_config.specify_word_length.unwrap_or(30) {
         format!(
-            "{} {} {} {}",
+            "{} {} {} {} {}",
             title,
             pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-            generate_word_combinations_with_symbol(title, vec!["-", "_"]).join(" "),
-            generate_word_combinations(pinyin_vec).join(" ")
+            generate_word_combinations(title, SearchWordCombinationsRuleWay::Number).join(" "),
+            generate_word_combinations(title, SearchWordCombinationsRuleWay::SpecSymbols(vec!["-".to_string(), "_".to_string()])).join(" "),
+            generate_word_combinations(&pinyin_vec.join(" "), SearchWordCombinationsRuleWay::SpecSymbols(vec![" ".to_string()])).join(" "),
         )
     } else {
         format!(
-            "{} {} {} {} {} {} {}",
+            "{} {} {} {} {} {} {} {}",
             title,
             pinyin_vec.clone().into_iter().map(|pinyin| pinyin.chars().next().unwrap_or_default()).join(""),
-            generate_word_combinations_with_length(content, 1).join(" "),
-            generate_word_combinations_with_length(content, 2).join(" "),
-            generate_word_combinations_with_length(content, 3).join(" "),
-            generate_word_combinations_with_symbol(title, vec!["-", "_"]).join(" "),
-            generate_word_combinations(pinyin_vec).join(" ")
+            generate_word_combinations(title, SearchWordCombinationsRuleWay::Number).join(" "),
+            generate_word_combinations(content, SearchWordCombinationsRuleWay::SpecLength(1)).join(" "),
+            generate_word_combinations(content, SearchWordCombinationsRuleWay::SpecLength(2)).join(" "),
+            generate_word_combinations(content, SearchWordCombinationsRuleWay::SpecLength(3)).join(" "),
+            generate_word_combinations(title, SearchWordCombinationsRuleWay::SpecSymbols(vec!["-".to_string(), "_".to_string()])).join(" "),
+            generate_word_combinations(&pinyin_vec.join(" "), SearchWordCombinationsRuleWay::SpecSymbols(vec![" ".to_string()])).join(" "),
         )
     };
     Ok(title_tsv)
@@ -200,16 +196,16 @@ fn generate_word_combinations_with_length(original_str: &str, split_len: usize) 
     combinations
 }
 
-fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<&str>) -> Vec<String> {
+fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<String>) -> Vec<String> {
     let mut combinations = Vec::new();
     for symbol in symbols {
-        let splited_words = original_str.split(symbol).collect_vec();
+        let splited_words = original_str.split(&symbol).collect_vec();
         if splited_words.len() == 1 {
             continue;
         }
         for i in 0..splited_words.len() {
             for j in i..splited_words.len() {
-                let word = splited_words[i..=j].join(symbol);
+                let word = splited_words[i..=j].join(&symbol);
                 combinations.push(word);
             }
         }
@@ -217,16 +213,32 @@ fn generate_word_combinations_with_symbol(original_str: &str, symbols: Vec<&str>
     combinations.into_iter().map(|word| word.to_string()).collect_vec()
 }
 
-fn generate_word_combinations(chars: Vec<&str>) -> Vec<String> {
-    let mut combinations = Vec::new();
-    for i in 0..chars.len() {
-        for j in i..chars.len() {
-            let word = chars[i..=j].join("");
-            combinations.push(word);
-        }
+fn generate_word_combinations_with_digit(chars: &str) -> Vec<String> {
+    if let Ok(re) = Regex::new(r"(\d+)") {
+        re.find_iter(chars).map( |m| m.as_str().to_string()).collect_vec()
+    } else {
+        vec![]
     }
-    combinations
 }
+
+
+fn generate_word_combinations(chars: &str, way: SearchWordCombinationsRuleWay) -> Vec<String> {
+    match way {
+        // 按数字分词
+        SearchWordCombinationsRuleWay::Number => {
+            generate_word_combinations_with_digit(chars)
+        },
+        // 指定长度分词
+        SearchWordCombinationsRuleWay::SpecLength(len) => {
+            generate_word_combinations_with_length(chars, len)
+        },
+        // 指定分隔符分词
+        SearchWordCombinationsRuleWay::SpecSymbols(allowed_symbols) => {
+            generate_word_combinations_with_symbol(chars, allowed_symbols)
+        },
+    }
+}
+
 
 pub async fn delete(tag: &str, key: &str, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
@@ -640,7 +652,7 @@ fn package_ext(
     if let Some(ext) = &ext {
         for ext_item in ext {
             let value = db_helper::json_to_sea_orm_value(&ext_item.value, &ext_item.op);
-            let Some(mut value) = value else { return err_not_found(&ext_item.clone().into()) };
+            let Some(mut value) = value else { return err_not_found(&ext_item.clone()) };
             if !INNER_FIELD.contains(&ext_item.field.clone().as_str()) {
                 if ext_item.op == BasicQueryOpKind::In {
                     if value.len() == 1 {
@@ -692,7 +704,7 @@ fn package_ext(
                     };
                 } else {
                     if value.len() > 1 {
-                        return err_not_found(&ext_item.clone().into());
+                        return err_not_found(&ext_item.clone());
                     }
                     let Some(value) = value.pop() else {
                         return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
@@ -840,7 +852,7 @@ fn package_ext(
                 ));
             } else {
                 if value.len() > 1 {
-                    return err_not_found(&ext_item.clone().into());
+                    return err_not_found(&ext_item.clone());
                 }
                 let Some(value) = value.pop() else {
                     return Err(funs.err().bad_request("item", "search", "Request item using 'IN' operator show have a value", "400-spi-item-op-in-without-value"));
@@ -1416,14 +1428,14 @@ fn get_tokenizer() -> String {
     }
 }
 
-pub async fn export_data(export_req: &SearchExportDataReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchExportDataResp> {
+pub async fn export_data(export_req: &SearchExportDataReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchExportDataResp> {
     let mut tag_data = HashMap::new();
     let bs_inst = inst.inst::<TardisRelDBClient>();
     for tag in &export_req.tags {
         let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
         let mut params = vec![Value::from(format!("{}%", ctx.own_paths.clone()))];
-        let start_time = export_req.start_time.clone().unwrap_or_else(|| Utc::now() - Duration::days(365 * 2));
-        let end_time = export_req.end_time.clone().unwrap_or_else(|| Utc::now());
+        let start_time = export_req.start_time.unwrap_or_else(|| Utc::now() - Duration::days(365 * 2));
+        let end_time = export_req.end_time.unwrap_or_else(Utc::now);
         params.push(Value::from(start_time));
         params.push(Value::from(end_time));
         let kind_sql = if let Some(tag_kind) = &export_req.tag_kind {

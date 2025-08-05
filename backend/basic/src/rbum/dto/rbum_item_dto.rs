@@ -170,6 +170,23 @@ pub struct RbumItemSummaryResp {
     pub disabled: bool,
 }
 
+/// Transfer ownership request for resource item
+///
+/// 资源项转移所有权请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct RbumItemTransferOwnershipReq {
+    /// Target owner
+    ///
+    /// 目标所有者
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub new_owner: TrimString,
+    /// Target owner path
+    ///
+    /// 目标所有者路径
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub new_own_paths: TrimString,
+}
+
 /// Resource item detail information
 ///
 /// 资源项详细信息
