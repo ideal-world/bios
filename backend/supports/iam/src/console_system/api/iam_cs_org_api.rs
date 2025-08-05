@@ -63,7 +63,7 @@ impl IamCsOrgApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
-    
+
     /// Add Org Cate
     /// 添加组织分类
     #[oai(path = "/cate", method = "post")]

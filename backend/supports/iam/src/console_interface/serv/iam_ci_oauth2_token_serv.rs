@@ -1,7 +1,7 @@
 use crate::basic::dto::iam_cert_dto::IamOauth2AkSkResp;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
-use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind, Oauth2GrantType};
+use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind, Oauth2GrantType, Oauth2TokenType};
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -32,6 +32,7 @@ impl IamCiOauth2AkSkServ {
             Oauth2GrantType::AuthorizationCode => {}
             Oauth2GrantType::Password => {}
             Oauth2GrantType::ClientCredentials => {}
+            Oauth2GrantType::RefreshToken => {}
         }
 
         let access_token = TardisFuns::crypto.key.generate_token()?;
@@ -40,7 +41,7 @@ impl IamCiOauth2AkSkServ {
         IamIdentCacheServ::add_token(&access_token.clone(), &IamCertTokenKind::TokenOauth2, &rel_iam_item_id, None, expire_sec, 1, &funs).await?;
         Ok(IamOauth2AkSkResp {
             access_token,
-            token_type: "Bearer".to_string(),
+            token_type: Oauth2TokenType::Bearer,
             expires_in: expire_sec.to_string(),
             refresh_token,
             scope: "".to_string(),

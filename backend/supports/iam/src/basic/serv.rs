@@ -7,6 +7,7 @@ pub mod iam_cert_aksk_serv;
 pub mod iam_cert_ldap_serv;
 pub mod iam_cert_mail_vcode_serv;
 pub mod iam_cert_oauth2_serv;
+pub mod iam_cert_oauth2_service_serv;
 pub mod iam_cert_phone_vcode_serv;
 pub mod iam_cert_serv;
 pub mod iam_cert_token_serv;

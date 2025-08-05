@@ -621,7 +621,7 @@ where
     /// 新所有者将对资源项拥有完全控制权。
     async fn transfer_item_ownership(id: &str, transfer_req: &RbumItemTransferOwnershipReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
-        
+
         let current_item = RbumItemServ::peek_rbum(
             id,
             &RbumBasicFilterReq {
@@ -630,8 +630,9 @@ where
             },
             funs,
             ctx,
-        ).await?;
-        
+        )
+        .await?;
+
         if current_item.owner != ctx.owner {
             return Err(funs.err().bad_request(
                 &Self::get_obj_name(),
@@ -647,7 +648,7 @@ where
             .value(rbum_item::Column::Owner, Value::from(transfer_req.new_owner.to_string()))
             .value(rbum_item::Column::OwnPaths, Value::from(transfer_req.new_own_paths.to_string()))
             .and_where(Expr::col(rbum_item::Column::Id).eq(id));
-        
+
         funs.db().execute(&rbum_update_statement).await?;
 
         Ok(())

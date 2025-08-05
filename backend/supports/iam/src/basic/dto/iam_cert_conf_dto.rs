@@ -92,6 +92,43 @@ pub struct IamCertConfOAuth2AddOrModifyReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertConfOAuth2ServiceAddOrModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
+    /// The expiration time of the access_token
+    /// Default is 7 days
+    pub access_token_expire_sec: Option<i64>,
+    /// This is the callback address for the third-party access
+    /// 第三方接入的回调地址
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub redirect_uri: TrimString,
+    pub rel_rbum_item_id: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertConfOAuth2ServiceResp {
+    pub id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: String,
+    pub client_id: String,
+    pub client_secret: String,
+    /// The expiration time of the access_token
+    pub access_token_expire_sec: i64,
+    /// This is the callback address for the third-party access
+    /// 第三方接入的回调地址
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub redirect_uri: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertConfOAuth2ServiceExt {
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_uri: String,
+    pub scope: Vec<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfOAuth2Resp {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak: String,
