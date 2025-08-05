@@ -650,6 +650,7 @@ impl RbumRelServ {
         to_rbum_item_id: &str,
         page_number: u32,
         page_size: u32,
+        own_paths: Option<String>,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -658,7 +659,7 @@ impl RbumRelServ {
         Self::paginate_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(ctx.own_paths.to_string()),
+                    own_paths: Some(own_paths.unwrap_or(ctx.own_paths.to_string())),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()

@@ -1060,7 +1060,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.first().unwrap().envs.first().unwrap().value2, end_time);
 
     info!("【test_rbum_rel_use】 : Test Find To Rels : RbumRelServ::find_to_rels");
-    let rbums = RbumRelServ::paginate_to_rels("bind", item_account_a1_id.as_str(), 1, 10, None, None, &funs, context).await?;
+    let rbums = RbumRelServ::paginate_to_rels("bind", item_account_a1_id.as_str(), 1, 10, None, None, None, &funs, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);

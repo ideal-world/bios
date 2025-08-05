@@ -223,6 +223,7 @@ impl PluginBsServ {
             app_tenant_id,
             page_number,
             page_size,
+            Some("".to_string()),
             desc_by_create,
             desc_by_update,
             funs,
