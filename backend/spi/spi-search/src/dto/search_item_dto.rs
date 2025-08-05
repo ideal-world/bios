@@ -583,3 +583,11 @@ pub struct SearchImportAggReq {
     pub ext: Value,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
+
+// 分词规则类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SearchWordCombinationsRuleWay {
+    Number,
+    SpecLength(usize),
+    SpecSymbols(Vec<String>),
+}
