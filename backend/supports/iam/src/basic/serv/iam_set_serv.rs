@@ -38,6 +38,10 @@ use super::iam_sub_deploy_serv::IamSubDeployServ;
 
 const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
 
+pub const MENU_ROOT_SET_BUS_CODE: &str = "__menus__";
+pub const API_ROOT_SET_BUS_CODE: &str = "__apis__";
+pub const DATA_GUARD_ROOT_SET_BUS_CODE: &str = "__data_guards__";
+
 pub struct IamSetServ;
 
 impl IamSetServ {
@@ -65,7 +69,7 @@ impl IamSetServ {
                 let cate_menu_id = RbumSetCateServ::add_rbum(
                     &mut RbumSetCateAddReq {
                         name: TrimString("Menus".to_string()),
-                        bus_code: TrimString("__menus__".to_string()),
+                        bus_code: TrimString(MENU_ROOT_SET_BUS_CODE.to_string()),
                         icon: None,
                         sort: None,
                         ext: Some(IamSetCateKind::Root.to_string()),
@@ -81,7 +85,23 @@ impl IamSetServ {
                 let cate_api_id = RbumSetCateServ::add_rbum(
                     &mut RbumSetCateAddReq {
                         name: TrimString("Apis".to_string()),
-                        bus_code: TrimString("__apis__".to_string()),
+                        bus_code: TrimString(API_ROOT_SET_BUS_CODE.to_string()),
+                        icon: None,
+                        sort: None,
+                        ext: None,
+                        rbum_parent_cate_id: None,
+                        rel_rbum_set_id: set_id.clone(),
+                        scope_level: Some(scope_level.clone()),
+                        id: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                let _ = RbumSetCateServ::add_rbum(
+                    &mut RbumSetCateAddReq {
+                        name: TrimString("DataGuards".to_string()),
+                        bus_code: TrimString(DATA_GUARD_ROOT_SET_BUS_CODE.to_string()),
                         icon: None,
                         sort: None,
                         ext: None,
@@ -95,25 +115,6 @@ impl IamSetServ {
                 )
                 .await?;
                 Some((cate_menu_id, cate_api_id))
-            }
-            IamSetKind::DataGuard => {
-                let _ = RbumSetCateServ::add_rbum(
-                    &mut RbumSetCateAddReq {
-                        name: TrimString("DataGuards".to_string()),
-                        bus_code: TrimString("__data_guards__".to_string()),
-                        icon: None,
-                        sort: None,
-                        ext: None,
-                        rbum_parent_cate_id: None,
-                        rel_rbum_set_id: set_id.clone(),
-                        scope_level: Some(scope_level.clone()),
-                        id: None,
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?;
-                None
             }
             _ => None,
         };
@@ -712,9 +713,17 @@ impl IamSetServ {
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
-        let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        if let Some(api_sys_code) = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?) {
-            Self::get_tree_with_sys_codes(set_id, Some(vec![api_sys_code]), None, funs, ctx).await
+        if let Some(api_set_cate) = RbumSetCateServ::find_one_rbum(
+            &RbumSetCateFilterReq {
+                rel_rbum_set_id: Some(set_id.to_string()),
+                bus_codes: Some(vec![API_ROOT_SET_BUS_CODE.to_string()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await? {
+            Self::get_tree_with_sys_codes(set_id, Some(vec![api_set_cate.sys_code]), None, funs, ctx).await
         } else {
             Self::get_tree_with_sys_codes(set_id, None, None, funs, ctx).await
         }
@@ -722,9 +731,21 @@ impl IamSetServ {
 
     pub async fn get_data_guard_tree(set_id: &str, exts: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
-        let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
-        Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await
+        if let Some(data_guard_set_cate) = RbumSetCateServ::find_one_rbum(
+            &RbumSetCateFilterReq {
+                rel_rbum_set_id: Some(set_id.to_string()),
+                bus_codes: Some(vec![DATA_GUARD_ROOT_SET_BUS_CODE.to_string()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await? {
+            Self::get_tree_with_sys_codes(set_id, Some(vec![data_guard_set_cate.sys_code]), cate_exts, funs, ctx).await
+        } else {
+            Self::get_tree_with_sys_codes(set_id, None, None, funs, ctx).await
+        }
+        
     }
 
     pub async fn get_cate_id_with_sys_code(set_id: &str, filter_sys_code: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
@@ -1133,11 +1154,24 @@ impl IamSetServ {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
-            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
+            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, funs, &global_ctx).await?;
+            let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
+                &RbumSetCateFilterReq {
+                    bus_codes: Some(vec![DATA_GUARD_ROOT_SET_BUS_CODE.to_string()]),
+                    rel_rbum_set_id: Some(data_guard_set_id.clone()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|s| s.id)
+            .unwrap_or_default();
             let data_guard_set_items = RbumSetItemServ::find_detail_rbums(
                 &RbumSetItemFilterReq {
+                    rel_rbum_set_cate_ids: Some(vec![data_guard_set_cate_id]),
                     rel_rbum_item_ids: res_ids.map(|res_ids| res_ids.into_iter().collect()),
-                    rel_rbum_set_id: Some(data_guard_set_id.to_string()),
+                    rel_rbum_set_id: Some(data_guard_set_id.clone()),
                     ..Default::default()
                 },
                 None,

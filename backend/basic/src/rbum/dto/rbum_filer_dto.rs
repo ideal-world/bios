@@ -183,7 +183,7 @@ pub struct RbumKindFilterReq {
     /// 模块
     pub module: Option<String>,
     /// parent kind id
-    ///
+    /// 
     /// 父类型id
     pub parent_id: Option<String>,
 }
@@ -340,6 +340,10 @@ pub struct RbumSetCateFilterReq {
     ///
     /// 资源分类（节点）sys_code 列表
     pub sys_codes: Option<Vec<String>>,
+    /// Resource category (node) business code for custom
+    ///
+    /// 自定义业务编码 列表
+    pub bus_codes: Option<Vec<String>>,
     /// Resource set category(node) query kind
     ///
     /// 资源集分类（节点）的查询类型

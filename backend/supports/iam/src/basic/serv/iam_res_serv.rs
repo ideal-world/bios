@@ -40,6 +40,7 @@ use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_key_cache_serv::IamCacheResRelAddOrModifyReq;
 use super::iam_role_serv::IamRoleServ;
+use super::iam_set_serv::DATA_GUARD_ROOT_SET_BUS_CODE;
 
 pub struct IamResServ;
 
@@ -300,9 +301,10 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                         own_paths: "".to_string(),
                         ..ctx.clone()
                     };
-                    let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
+                    let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, funs, &global_ctx).await?;
                     let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
                         &RbumSetCateFilterReq {
+                            bus_codes: Some(vec![DATA_GUARD_ROOT_SET_BUS_CODE.to_string()]),
                             rel_rbum_set_id: Some(data_guard_set_id.clone()),
                             ..Default::default()
                         },
@@ -668,9 +670,10 @@ impl IamResServ {
                 own_paths: "".to_string(),
                 ..ctx.clone()
             };
-            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::DataGuard, funs, &global_ctx).await?;
+            let data_guard_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, funs, &global_ctx).await?;
             let data_guard_set_cate_id = RbumSetCateServ::find_one_rbum(
                 &RbumSetCateFilterReq {
+                    bus_codes: Some(vec![DATA_GUARD_ROOT_SET_BUS_CODE.to_string()]),
                     rel_rbum_set_id: Some(data_guard_set_id.clone()),
                     ..Default::default()
                 },
