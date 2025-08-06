@@ -64,6 +64,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         Ok(iam_app::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+            description: Set(add_req.description.clone()),
             sort: Set(add_req.sort.unwrap_or(0)),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
             kind: Set(add_req.kind.clone().unwrap_or(IamAppKind::Product)),
@@ -100,6 +101,9 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         if let Some(contact_phone) = &modify_req.contact_phone {
             iam_app.contact_phone = Set(contact_phone.to_string());
         }
+        if let Some(description) = &modify_req.description {
+            iam_app.description = Set(Some(description.to_string()));
+        }
         Ok(Some(iam_app))
     }
 
@@ -125,6 +129,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         query.column((iam_app::Entity, iam_app::Column::Icon));
+        query.column((iam_app::Entity, iam_app::Column::Description));
         query.column((iam_app::Entity, iam_app::Column::Sort));
         query.column((iam_app::Entity, iam_app::Column::Kind));
         if let Some(contact_phone) = &filter.contact_phone {
@@ -173,6 +178,7 @@ impl IamAppServ {
             &mut IamAppAddReq {
                 id: Some(TrimString(app_id.clone())),
                 name: add_req.app_name.clone(),
+                description: add_req.app_description.clone(),
                 icon: add_req.app_icon.clone(),
                 sort: add_req.app_sort,
                 contact_phone: add_req.app_contact_phone.clone(),
@@ -227,6 +233,7 @@ impl IamAppServ {
             id,
             &mut IamAppModifyReq {
                 name: modify_req.name.clone(),
+                description: modify_req.description.clone(),
                 scope_level: modify_req.scope_level.clone(),
                 disabled: modify_req.disabled,
                 icon: modify_req.icon.clone(),

@@ -12,6 +12,8 @@ pub struct IamAppAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub app_name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub app_description: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub app_icon: Option<String>,
     pub app_sort: Option<i64>,
 
@@ -34,6 +36,8 @@ pub struct IamAppAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
 
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub description: Option<String>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
@@ -63,6 +67,9 @@ pub struct IamAppAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
 
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub description: Option<String>,
+
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
@@ -82,6 +89,9 @@ pub struct IamAppAggModifyReq {
 pub struct IamAppModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
+
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub description: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -117,7 +127,7 @@ pub struct IamAppSummaryResp {
 pub struct IamAppDetailResp {
     pub id: String,
     pub name: String,
-
+    pub description: Option<String>,
     pub own_paths: String,
     pub owner: String,
     pub owner_name: Option<String>,

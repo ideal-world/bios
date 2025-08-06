@@ -8,6 +8,7 @@ use crate::basic::dto::iam_app_dto::IamAppKind;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    pub description: Option<String>,
     pub icon: String,
     pub sort: i64,
     // 联系号码
