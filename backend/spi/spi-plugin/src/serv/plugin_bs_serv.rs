@@ -272,33 +272,32 @@ impl PluginBsServ {
         })
     }
 
-    // todo
-    // pub async fn exist_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-    //     if SpiBsServ::count_items(
-    //         &SpiBsFilterReq {
-    //             basic: RbumBasicFilterReq {
-    //                 ids: Some(vec![bs_id.to_string()]),
-    //                 ..Default::default()
-    //             },
-    //             rel: Some(RbumItemRelFilterReq {
-    //                 rel_by_from: true,
-    //                 tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
-    //                 from_rbum_kind: Some(RbumRelFromKind::Item),
-    //                 rel_item_id: Some(app_tenant_id.to_owned()),
-    //                 ..Default::default()
-    //             }),
-    //             ..Default::default()
-    //         },
-    //         funs,
-    //         ctx,
-    //     )
-    //     .await?
-    //         > 0
-    //     {
-    //         return Ok(true);
-    //     }
-    //     Ok(false)
-    // }
+    pub async fn exist_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        if SpiBsServ::count_items(
+            &SpiBsFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![bs_id.to_string()]),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(app_tenant_id.to_owned()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+            > 0
+        {
+            return Ok(true);
+        }
+        Ok(false)
+    }
 
     pub async fn get_bs(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
         let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;

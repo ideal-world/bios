@@ -32,7 +32,13 @@ impl PluginKindServ {
         if bs.kind_id != add_req.kind_id {
             return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
         }
+        if Self::exist_kind_rel(&add_req.kind_id, funs, ctx).await? {
+            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin kind rel already exists", ""));
+        }
         let rel_id = if let Some(bs_rel) = add_req.bs_rel.clone() {
+            if bs_rel.rel_id.is_none() && PluginBsServ::exist_bs(&bs_rel.bs_id, &bs_rel.app_tenant_id, funs, ctx).await? {
+                return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs rel already exists", ""));
+            }
             let rel_id = PluginBsServ::add_or_modify_plugin_rel_agg(&mut bs_rel.clone(), funs, ctx).await?;
             rel_id
         } else {
