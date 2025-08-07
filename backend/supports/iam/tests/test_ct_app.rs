@@ -19,6 +19,7 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
         &IamAppAggAddReq {
             app_name: TrimString("测试应用1".to_string()),
             app_icon: None,
+            app_description: None,
             app_sort: None,
             app_contact_phone: None,
             disabled: None,
@@ -36,6 +37,7 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
         &IamAppAggAddReq {
             app_name: TrimString("测试应用2".to_string()),
             app_icon: None,
+            app_description: None,
             app_sort: None,
             app_contact_phone: None,
             disabled: None,
@@ -55,6 +57,7 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
         &mut IamAppModifyReq {
             name: Some(TrimString("测试应用3".to_string())),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
             disabled: None,
@@ -71,6 +74,7 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
         &mut IamAppModifyReq {
             name: Some(TrimString("测试应用".to_string())),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
             disabled: None,

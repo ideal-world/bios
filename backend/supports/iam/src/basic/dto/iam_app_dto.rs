@@ -143,3 +143,19 @@ pub struct IamAppDetailResp {
 
     pub kind: IamAppKind,
 }
+
+/// Transfer ownership request for app
+///
+/// 应用转移所有权请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct IamAppTransferOwnershipReq {
+    /// Target owner
+    ///
+    /// 目标所有者
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub new_owner: TrimString,
+    /// Whether to retain administrators
+    ///
+    /// 是否保留管理员
+    pub retain_admin: Option<bool>,
+}

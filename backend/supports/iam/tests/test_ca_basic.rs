@@ -147,6 +147,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
         &mut IamAppAggAddReq {
             app_name: TrimString("测试应用1".to_string()),
             app_icon: None,
+            app_description: None,
             app_sort: None,
             app_contact_phone: None,
             disabled: None,
@@ -164,6 +165,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
         &IamAppAggAddReq {
             app_name: TrimString("测试应用2".to_string()),
             app_icon: None,
+            app_description: None,
             app_sort: None,
             app_contact_phone: None,
             disabled: None,
