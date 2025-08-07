@@ -12,7 +12,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -186,4 +186,17 @@ impl IamCtAppApi {
         TardisResp::ok(result)
     }
 
+    /// Transfer App Set Item Ownership
+    /// 转移应用集合项所有权
+    #[oai(path = "/:id/transfer", method = "post")]
+    async fn transfer_app_set_item(&self, id: Path<String>, transfer_req: Json<IamAppTransferOwnershipReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::use_app_ctx(ctx.0, id.0.as_str())?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAppServ::transfer_app_ownership(&id.0, &transfer_req.0, &funs, &ctx).await?;
+        funs.commit().await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
 }
