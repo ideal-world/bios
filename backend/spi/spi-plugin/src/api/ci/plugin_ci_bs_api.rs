@@ -128,15 +128,6 @@ impl PluginCiBsApi {
         TardisResp::ok(result)
     }
 
-    // todo remove
-    // /// Exist Plugin Service Rel App/Tenant Support empty
-    // #[oai(path = "/:id/rel/exist/:app_tenant_id/empty", method = "get")]
-    // async fn exist_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
-    //     let funs = crate::get_tardis_inst();
-    //     let result = PluginBsServ::exist_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
-    //     TardisResp::ok(result)
-    // }
-
     /// Get Plugin Service Rel App/Tenant
     #[oai(path = "/rel/:rel_id", method = "get")]
     async fn get_bs_rel_agg(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {

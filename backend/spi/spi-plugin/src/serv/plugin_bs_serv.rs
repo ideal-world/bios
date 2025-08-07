@@ -161,7 +161,7 @@ impl PluginBsServ {
         let ctx_clone = ctx.clone();
         let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
         if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
-            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "401-spi-plugin-bind-exist"));
+            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "409-spi-plugin-bind-exist"));
         }
         let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         let _ = SpiLogClient::add_dynamic_log(
