@@ -1430,6 +1430,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
             "/ct/app",
             &IamAppAggAddReq {
                 app_name: "app01".into(),
+                app_description: None,
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,
@@ -1447,6 +1448,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
             "/ct/app",
             &IamAppAggAddReq {
                 app_name: "app02".into(),
+                app_description: None,
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,

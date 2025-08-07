@@ -702,6 +702,7 @@ impl IamSubDeployServ {
                         &app.id,
                         &mut IamAppModifyReq {
                             name: Some(TrimString::from(app.name.clone())),
+                            description: app.description.clone(),
                             scope_level: Some(app.scope_level.clone()),
                             disabled: Some(app.disabled.clone()),
                             icon: Some(app.icon.clone()),
@@ -717,6 +718,7 @@ impl IamSubDeployServ {
                         &mut IamAppAddReq {
                             id: Some(TrimString::from(app.id.clone())),
                             name: TrimString::from(app.name),
+                            description: app.description,
                             scope_level: Some(app.scope_level),
                             disabled: Some(app.disabled),
                             icon: Some(app.icon),

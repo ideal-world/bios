@@ -19,6 +19,7 @@ pub async fn test(context1: &TardisContext, _context2: &TardisContext) -> Tardis
         &mut IamAppAggModifyReq {
             name: Some(TrimString("测试应用".to_string())),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
             disabled: None,
@@ -38,6 +39,7 @@ pub async fn test(context1: &TardisContext, _context2: &TardisContext) -> Tardis
         &mut IamAppAggModifyReq {
             name: Some(TrimString("测试应用".to_string())),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
             disabled: None,
@@ -57,6 +59,7 @@ pub async fn test(context1: &TardisContext, _context2: &TardisContext) -> Tardis
         &mut IamAppAggModifyReq {
             name: Some(TrimString("测试应用".to_string())),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
             disabled: None,
