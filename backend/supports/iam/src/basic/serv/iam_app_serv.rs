@@ -14,14 +14,14 @@ use tardis::futures_util::future::join_all;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetItemFilterReq};
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemTransferOwnershipReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp};
-use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq};
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -31,7 +31,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::{IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamRoleKind, IamSetKind};
 
 use super::clients::iam_kv_client::IamKvClient;
 pub struct IamAppServ;
@@ -404,6 +404,32 @@ impl IamAppServ {
         )
         .await?;
         IamKvClient::add_or_modify_key_name(&funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), app_id, &app.name, None, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn transfer_app_ownership(app_id: &str, transfer_req: &IamAppTransferOwnershipReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let current_owner = &ctx.owner;
+        let new_owner = &transfer_req.new_owner;
+        
+        // Transfer the app item ownership first
+        Self::transfer_item_ownership(app_id, &RbumItemTransferOwnershipReq { new_owner: transfer_req.new_owner.clone(), new_own_paths: None }, funs, ctx).await?;
+
+        // Create app context for operations within the app scope
+        let new_app_ctx = TardisContext {
+            owner: new_owner.to_string(),
+            ..ctx.clone()
+        };
+
+        //给新的owner添加app管理员角色
+        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &new_app_ctx).await?;
+        IamRoleServ::add_rel_account(&app_admin_role_id, new_owner, None, funs, &new_app_ctx).await?;
+
+        // If the administrator is not retained, delete the administrator role of the old owner
+        if !transfer_req.retain_admin.unwrap_or(true) {
+            let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
+            IamRoleServ::delete_rel_account(&app_admin_role_id, current_owner, None, funs, ctx).await?;
+        }
+        
         Ok(())
     }
 }

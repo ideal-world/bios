@@ -110,6 +110,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
             &IamAppAggAddReq {
                 app_name: TrimString("devops project".to_string()),
                 app_icon: None,
+                app_description: None,
                 app_sort: None,
                 app_contact_phone: None,
                 admin_ids: Some(vec![app_account_id.clone()]),
@@ -133,6 +134,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
             &IamAppModifyReq {
                 name: Some(TrimString("DevOps项目".to_string())),
                 icon: None,
+                description: None,
                 sort: None,
                 contact_phone: None,
                 disabled: None,
