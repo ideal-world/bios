@@ -57,10 +57,6 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
             // 比如租户对应的账户可以关联到应用，账户属于租户但scope=1，所以可以被应用使用。
             Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
         }
-
-        if add_req.to_rbum_item_id.trim().is_empty() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty", "400-rbum-rel-not-empty-item"));
-        }
         // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances.
         //
         // 当存在多个数据库实例时，可能无法获取to_rbum_item_id的数据。
