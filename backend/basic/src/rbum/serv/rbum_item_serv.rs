@@ -646,8 +646,10 @@ where
         rbum_update_statement
             .table(rbum_item::Entity)
             .value(rbum_item::Column::Owner, Value::from(transfer_req.new_owner.to_string()))
-            .value(rbum_item::Column::OwnPaths, Value::from(transfer_req.new_own_paths.to_string()))
             .and_where(Expr::col(rbum_item::Column::Id).eq(id));
+        if let Some(new_own_paths) = &transfer_req.new_own_paths {
+            rbum_update_statement.value(rbum_item::Column::OwnPaths, Value::from(new_own_paths.to_string()));
+        }
 
         funs.db().execute(&rbum_update_statement).await?;
 

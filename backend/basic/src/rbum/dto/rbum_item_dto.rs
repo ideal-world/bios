@@ -180,11 +180,11 @@ pub struct RbumItemTransferOwnershipReq {
     /// 目标所有者
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub new_owner: TrimString,
-    /// Target owner path
+    /// Target owner path,if none,the owner path will not be changed
     ///
-    /// 目标所有者路径
+    /// 目标所有者路径,如果为空，则所有者路径不会被改变
     #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub new_own_paths: TrimString,
+    pub new_own_paths: Option<TrimString>,
 }
 
 /// Resource item detail information
