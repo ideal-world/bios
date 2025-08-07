@@ -610,7 +610,7 @@ where
 
     // ----------------------------- Transfer Ownership -------------------------------
 
-    /// Transfer ownership of the resource item
+    /// Transfer ownership of the resource item only
     ///
     /// 转移资源项的所有权
     ///
