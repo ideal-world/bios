@@ -30,14 +30,14 @@ impl PluginKindServ {
         let bing_item_id = rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_default();
         let bs = SpiBsServ::peek_item(&add_req.bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         if bs.kind_id != add_req.kind_id {
-            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", ""));
+            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", "409-spi-plugin-kind-mismatch"));
         }
         if Self::exist_kind_rel(&add_req.kind_id, funs, ctx).await? {
-            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin kind rel already exists", ""));
+            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin kind rel already exists", "409-spi-plugin-kind-already-exists"));
         }
         let rel_id = if let Some(bs_rel) = add_req.bs_rel.clone() {
             if bs_rel.rel_id.is_none() && PluginBsServ::exist_bs(&bs_rel.bs_id, &bs_rel.app_tenant_id, funs, ctx).await? {
-                return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs rel already exists", ""));
+                return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs rel already exists", "409-spi-plugin-bs-already-exists"));
             }
             let rel_id = PluginBsServ::add_or_modify_plugin_rel_agg(&mut bs_rel.clone(), funs, ctx).await?;
             rel_id
@@ -45,7 +45,7 @@ impl PluginKindServ {
             if let Some(rel_id) = &add_req.rel_id {
                 rel_id.clone()
             } else {
-                return Err(funs.err().conflict("plugin_kind", "add_rel", "rel_id is required", ""));
+                return Err(funs.err().conflict("plugin_kind", "add_rel", "rel_id is required", "409-spi-plugin-required"));
             }
         };
         Self::delete_kind_agg_rel(&add_req.kind_id, funs, ctx).await?;
