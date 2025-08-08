@@ -313,7 +313,6 @@ impl IamAppServ {
 
     pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await?;
-        // TODO delete app rel account and role
         let rel_account_roles =
             RbumRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole.to_string(), &RbumRelFromKind::Item, true, account_id, None, None, funs, ctx).await?;
         if rel_account_roles.is_empty() {
@@ -408,6 +407,9 @@ impl IamAppServ {
     }
 
     pub async fn transfer_app_ownership(app_id: &str, transfer_req: &IamAppTransferOwnershipReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+      if transfer_req.retain_in_app.unwrap_or(true)==false &&transfer_req.retain_admin.unwrap_or(true)!=false{
+          return Err(funs.err().conflict(&Self::get_obj_name(), "transfer_app_ownership", "retain_in_app is false, but retain_admin is true", "409-iam-app-retain-in-app-is-false-but-retain-admin-is-true"));
+      }
         let current_owner = &ctx.owner;
         let new_owner = &transfer_req.new_owner;
         
@@ -420,14 +422,34 @@ impl IamAppServ {
             ..ctx.clone()
         };
 
+        // 如果目标所有者不保留其他角色，那么先删除目标所有者的其他的app角色
+        if !transfer_req.new_owner_retain_other_roles.unwrap_or(true) {
+            let rel_account_roles =
+                RbumRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole.to_string(), &RbumRelFromKind::Item, true, new_owner, None, None, funs, &new_app_ctx).await?;
+            for rel in rel_account_roles {
+                IamRoleServ::delete_rel_account(&rel.rel_id, new_owner, Some(RBUM_SCOPE_LEVEL_APP), funs, &new_app_ctx).await?;
+            }
+        }
+
         //给新的owner添加app管理员角色
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &new_app_ctx).await?;
         IamRoleServ::add_rel_account(&app_admin_role_id, new_owner, None, funs, &new_app_ctx).await?;
 
+        
         // If the administrator is not retained, delete the administrator role of the old owner
         if !transfer_req.retain_admin.unwrap_or(true) {
             let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
             IamRoleServ::delete_rel_account(&app_admin_role_id, current_owner, None, funs, ctx).await?;
+        }
+
+        // 检查新的owner是否在app中,如果不在就添加
+        if !IamRelServ::exist_rels(&IamRelKind::IamAccountApp, new_owner, app_id, funs, &new_app_ctx).await? {
+            Self::add_rel_account(app_id, new_owner, true, funs, &new_app_ctx).await?;
+        }
+
+        // 如果不要求留在app中,那么删除关联关系
+        if !transfer_req.retain_in_app.unwrap_or(true) {
+            Self::delete_rel_account(app_id, current_owner, funs, &ctx).await?;
         }
         
         Ok(())
