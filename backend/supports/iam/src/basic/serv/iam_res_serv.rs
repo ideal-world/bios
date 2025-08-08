@@ -282,6 +282,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             for old_data_guard in &old_data_guards {
                 if bind_data_guards.iter().all(|bind| bind.code.clone().unwrap_or_default().to_string() != old_data_guard.code) {
                     IamRelServ::delete_simple_rel(&IamRelKind::IamResDataGuard, &old_data_guard.id, id, funs, ctx).await?;
+                    Self::delete_res(&old_data_guard.id, funs, ctx).await?;
                 }
             }
             for bind_data_guard in bind_data_guards {

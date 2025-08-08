@@ -308,10 +308,11 @@ impl FlowCiInstApi {
     async fn find_detail_items(
         &self,
         req: Json<FlowInstFilterReq>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Vec<FlowInstDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::find_detail_items(
             &req.0,
             &funs,
