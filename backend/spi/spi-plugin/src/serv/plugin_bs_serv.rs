@@ -4,7 +4,7 @@ use bios_basic::{
             rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumKindFilterReq, RbumRelFilterReq},
             rbum_rel_agg_dto::RbumRelAggResp,
             rbum_rel_attr_dto::RbumRelAttrAddReq,
-            rbum_rel_dto::RbumRelModifyReq,
+            rbum_rel_dto::{RbumRelDetailResp, RbumRelModifyReq},
         },
         helper::rbum_scope_helper,
         rbum_enumeration::RbumRelFromKind,
@@ -161,7 +161,7 @@ impl PluginBsServ {
         let ctx_clone = ctx.clone();
         let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
         if PluginRelServ::exist_to_simple_rels(&PluginAppBindRelKind::PluginAppBindKind, &rel_agg.rel.id, funs, ctx).await? {
-            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "401-spi-plugin-bind-exist"));
+            return Err(funs.err().unauthorized("spi_bs", "delete_plugin_rel", "The pluging exists bound", "409-spi-plugin-bind-exist"));
         }
         let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         let _ = SpiLogClient::add_dynamic_log(
@@ -304,6 +304,7 @@ impl PluginBsServ {
         }
         Ok(false)
     }
+    
 
     pub async fn get_bs(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
         let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
@@ -388,6 +389,30 @@ impl PluginBsServ {
         Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"))
     }
 
+    pub async fn find_bs_rel_id(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let rel_agg = RbumRelServ::find_id_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(bs_id.to_owned()),
+                to_rbum_item_id: Some(app_tenant_id.to_owned()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(rel_agg)
+    }
+
+
     pub async fn find_bs_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
         let rel_agg = RbumRelServ::find_rels(
             &RbumRelFilterReq {
@@ -411,13 +436,13 @@ impl PluginBsServ {
         Ok(rel_agg)
     }
 
-    pub async fn get_bs_rel_agg(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
+    pub async fn get_bs_rel_agg(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
         let mut rel_agg = RbumRelServ::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
-                    ids: Some(vec![id.to_string()]),
+                    ids: Some(vec![rel_id.to_string()]),
                     ..Default::default()
                 },
                 tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),

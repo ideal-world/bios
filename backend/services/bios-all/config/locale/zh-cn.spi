@@ -35,7 +35,6 @@
 409-spi-conf-conflict-username	用户名冲突
 409-spi-plugin-kind-mismatch	插件类型不匹配
 409-spi-plugin-bind-exist	该插件已被绑定
-409-spi-plugin-bs-already-exists	插件服务已配置
 409-spi-plugin-kind-already-exists	插件类型已配置
 409-spi-plugin-required	缺少必要参数
 409-spi-plugin-kind-mismatch	插件类型不匹配
