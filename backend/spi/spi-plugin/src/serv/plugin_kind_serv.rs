@@ -35,9 +35,9 @@ impl PluginKindServ {
         if Self::exist_kind_rel(&add_req.kind_id, funs, ctx).await? {
             return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin kind rel already exists", "409-spi-plugin-kind-already-exists"));
         }
-        let rel_id = if let Some(bs_rel) = add_req.bs_rel.clone() {
-            if bs_rel.rel_id.is_none() && PluginBsServ::exist_bs(&bs_rel.bs_id, &bs_rel.app_tenant_id, funs, ctx).await? {
-                return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs rel already exists", "409-spi-plugin-bs-already-exists"));
+        let rel_id = if let Some(mut bs_rel) = add_req.bs_rel.clone() {
+            if bs_rel.rel_id.is_none() {
+                bs_rel.rel_id = PluginBsServ::find_bs_rel_id(&bs_rel.bs_id, &bs_rel.app_tenant_id, funs, ctx).await?.first().cloned();
             }
             let rel_id = PluginBsServ::add_or_modify_plugin_rel_agg(&mut bs_rel.clone(), funs, ctx).await?;
             rel_id
