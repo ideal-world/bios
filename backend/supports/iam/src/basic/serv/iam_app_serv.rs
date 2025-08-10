@@ -20,7 +20,9 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq};
+use crate::basic::dto::iam_app_dto::{
+    IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq,
+};
 use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -407,14 +409,28 @@ impl IamAppServ {
     }
 
     pub async fn transfer_app_ownership(app_id: &str, transfer_req: &IamAppTransferOwnershipReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-      if transfer_req.retain_in_app.unwrap_or(true)==false &&transfer_req.retain_admin.unwrap_or(true)!=false{
-          return Err(funs.err().conflict(&Self::get_obj_name(), "transfer_app_ownership", "retain_in_app is false, but retain_admin is true", "409-iam-app-retain-in-app-is-false-but-retain-admin-is-true"));
-      }
+        if transfer_req.retain_in_app.unwrap_or(true) == false && transfer_req.retain_admin.unwrap_or(true) != false {
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "transfer_app_ownership",
+                "retain_in_app is false, but retain_admin is true",
+                "409-iam-app-retain-in-app-is-false-but-retain-admin-is-true",
+            ));
+        }
         let current_owner = &ctx.owner;
         let new_owner = &transfer_req.new_owner;
-        
+
         // Transfer the app item ownership first
-        Self::transfer_item_ownership(app_id, &RbumItemTransferOwnershipReq { new_owner: transfer_req.new_owner.clone(), new_own_paths: None }, funs, ctx).await?;
+        Self::transfer_item_ownership(
+            app_id,
+            &RbumItemTransferOwnershipReq {
+                new_owner: transfer_req.new_owner.clone(),
+                new_own_paths: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
 
         // Create app context for operations within the app scope
         let new_app_ctx = TardisContext {
@@ -424,8 +440,17 @@ impl IamAppServ {
 
         // 如果目标所有者不保留其他角色，那么先删除目标所有者的其他的app角色
         if !transfer_req.new_owner_retain_other_roles.unwrap_or(true) {
-            let rel_account_roles =
-                RbumRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole.to_string(), &RbumRelFromKind::Item, true, new_owner, None, None, funs, &new_app_ctx).await?;
+            let rel_account_roles = RbumRelServ::find_from_simple_rels(
+                &IamRelKind::IamAccountRole.to_string(),
+                &RbumRelFromKind::Item,
+                true,
+                new_owner,
+                None,
+                None,
+                funs,
+                &new_app_ctx,
+            )
+            .await?;
             for rel in rel_account_roles {
                 IamRoleServ::delete_rel_account(&rel.rel_id, new_owner, Some(RBUM_SCOPE_LEVEL_APP), funs, &new_app_ctx).await?;
             }
@@ -435,7 +460,6 @@ impl IamAppServ {
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &new_app_ctx).await?;
         IamRoleServ::add_rel_account(&app_admin_role_id, new_owner, None, funs, &new_app_ctx).await?;
 
-        
         // If the administrator is not retained, delete the administrator role of the old owner
         if !transfer_req.retain_admin.unwrap_or(true) {
             let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
@@ -450,8 +474,18 @@ impl IamAppServ {
         // 如果不要求留在app中,那么删除关联关系
         if !transfer_req.retain_in_app.unwrap_or(true) {
             Self::delete_rel_account(app_id, current_owner, funs, &ctx).await?;
+            // 从Apps Set集合中删除原所有者对app的访问权限
+            let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+            let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(apps_set_id), None, Some(app_id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
+            for set_item in set_items {
+                // 只删除当前用户相关的set item，通过检查rel_rbum_item_id是否匹配app_id
+                if set_item.rel_rbum_item_id == app_id {
+                    IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
+                }
+            }
         }
-        
+
         Ok(())
     }
 }
