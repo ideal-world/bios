@@ -11,15 +11,17 @@ use super::SimpleInvokeClient;
 pub struct IamClient<'a> {
     pub funs: &'a TardisFunsInst,
     pub ctx: &'a TardisContext,
+    pub bios_ctx: Option<TardisContext>,
     pub account: &'a str,
     pub base_url: &'a str,
 }
 
 impl<'a> IamClient<'a> {
-    pub fn new(account: &'a str, funs: &'a TardisFunsInst, ctx: &'a TardisContext, url: &'a str) -> Self {
+    pub fn new(account: &'a str, funs: &'a TardisFunsInst, ctx: &'a TardisContext, bios_ctx: Option<TardisContext>, url: &'a str) -> Self {
         Self {
             funs,
             ctx,
+            bios_ctx,
             account,
             base_url: url,
         }
@@ -29,6 +31,10 @@ impl<'a> SimpleInvokeClient for IamClient<'a> {
     const DOMAIN_CODE: &'static str = "iam";
     fn get_ctx(&self) -> &'a TardisContext {
         self.ctx
+    }
+
+    fn get_bios_ctx(&self) -> &Option<TardisContext> {
+        &self.bios_ctx
     }
 
     fn get_base_url(&self) -> &str {

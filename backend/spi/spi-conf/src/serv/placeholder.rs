@@ -100,7 +100,7 @@ async fn render_content(
 
 async fn get_cert_kvmap(codes: HashSet<&str>, config: &ConfConfig, funs: &tardis::TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
     let url = config.iam_client.base_url.as_str();
-    let client = IamClient::new("", funs, ctx, url);
+    let client = IamClient::new("", funs, ctx,None, url);
     let codes = codes.into_iter().map(|s| s.to_string()).collect::<HashSet<String>>();
     let req = IamCertDecodeRequest { codes };
     let response = client.batch_decode_cert(&req).await?;

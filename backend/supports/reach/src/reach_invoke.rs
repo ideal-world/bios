@@ -20,6 +20,10 @@ impl SimpleInvokeClient for Client<'_> {
         self.ctx
     }
 
+    fn get_bios_ctx(&self) -> &Option<TardisContext> {
+        &None
+    }
+
     fn get_base_url(&self) -> &str {
         self.base_url
     }

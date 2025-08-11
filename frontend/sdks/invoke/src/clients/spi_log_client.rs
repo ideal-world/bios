@@ -181,7 +181,7 @@ impl SpiLogClient {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let cfg = funs.conf::<InvokeConfig>();
-        let owner_name = IamClient::new("", funs, ctx, cfg.module_urls.get("iam").expect("missing iam base url")).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
+        let owner_name = IamClient::new("", funs, ctx,None, cfg.module_urls.get("iam").expect("missing iam base url")).get_account(&ctx.owner, &ctx.own_paths).await?.owner_name;
         let req = LogItemAddV2Req {
             tag: DYNAMIC_LOG.to_string(),
             content: TardisFuns::json.obj_to_json(content)?,
