@@ -154,8 +154,16 @@ pub struct IamAppTransferOwnershipReq {
     /// 目标所有者
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub new_owner: TrimString,
+    /// Whether to retain other roles
+    ///
+    /// 目标所有者是否保留其他角色
+    pub new_owner_retain_other_roles: Option<bool>,
     /// Whether to retain administrators
     ///
-    /// 是否保留管理员
+    /// 当前所有者是否保留管理员
     pub retain_admin: Option<bool>,
+    /// Whether to retain in app
+    ///
+    /// 当前所有者是否保留在app中,为false的时候，要求retain_admin为false  
+    pub retain_in_app: Option<bool>,
 }

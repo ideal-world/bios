@@ -139,6 +139,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
             &IamAppAggAddReq {
                 app_name: TrimString("devops project".to_string()),
                 app_icon: None,
+                app_description: None,
                 app_sort: None,
                 app_contact_phone: None,
                 admin_ids: Some(vec![account_id.clone()]),

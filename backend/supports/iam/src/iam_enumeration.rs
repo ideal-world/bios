@@ -191,12 +191,16 @@ impl IamSetCateKind {
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum Oauth2GrantType {
     #[strum(serialize = "authorization_code")]
+    #[oai(rename = "authorization_code")]
     AuthorizationCode,
     #[strum(serialize = "password")]
+    #[oai(rename = "password")]
     Password,
     #[strum(serialize = "client_credentials")]
+    #[oai(rename = "client_credentials")]
     ClientCredentials,
     #[strum(serialize = "refresh_token")]
+    #[oai(rename = "refresh_token")]
     RefreshToken,
 }
 
@@ -440,5 +444,6 @@ pub enum OAuth2ResponseType {
     /// Authorization code response type
     #[default]
     #[strum(serialize = "code")]
+    #[oai(rename = "code")]
     Code,
 }

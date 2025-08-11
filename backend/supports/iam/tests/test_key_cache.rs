@@ -291,6 +291,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &IamAppAggAddReq {
             app_name: TrimString("缓存测试应用".to_string()),
             app_icon: None,
+            app_description: None,
             app_sort: None,
             app_contact_phone: None,
             disabled: None,
@@ -635,6 +636,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             scope_level: None,
             disabled: Some(true),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: None,
         },
@@ -710,6 +712,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             scope_level: None,
             disabled: Some(false),
             icon: None,
+            description: None,
             sort: None,
             contact_phone: None,
         },
