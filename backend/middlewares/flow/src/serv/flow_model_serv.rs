@@ -1663,7 +1663,6 @@ impl FlowModelServ {
             ..ctx.clone()
         };
         let models = Self::find_rel_model_map(rel_template_id.clone(), spec_tags.clone(), true, funs, ctx).await?;
-        let mut non_main_models = vec![];
         if let Some(rel_template_id) = rel_template_id.clone() {
             let rel_model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id, None, None, funs, &global_ctx)
                 .await?
@@ -1717,7 +1716,7 @@ impl FlowModelServ {
                 )
                 .await?;
             }
-            non_main_models = Self::find_items(
+            let non_main_models = Self::find_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         enabled: Some(true),
@@ -1731,7 +1730,34 @@ impl FlowModelServ {
                 funs,
                 ctx,
             )
-            .await?
+            .await?;
+            // clean non-main flow model
+            for model in non_main_models {
+                if let Some(spec_tags) = spec_tags.clone() {
+                    if !spec_tags.contains(&model.tag) {
+                        continue;
+                    }
+                }
+                // abort instances with current ctx
+                let rel_version_ids = FlowModelVersionServ::find_id_items(
+                    &FlowModelVersionFilterReq {
+                        rel_model_ids: Some(vec![model.id.clone()]),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for rel_version_id in rel_version_ids {
+                    FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
+                }
+                Self::modify_model(&model.id, &mut FlowModelModifyReq {
+                    disabled: Some(true),
+                    ..Default::default()
+                }, funs, ctx).await?;
+            }
         }
         for (_, model) in models.iter() {
             if let Some(orginal_model_ids) = orginal_model_ids.clone() {
@@ -1742,33 +1768,6 @@ impl FlowModelServ {
             if ctx.own_paths == model.own_paths {
                 Self::delete_item(&model.id, funs, ctx).await?;
             }
-        }
-        // clean non-main flow model
-        for model in non_main_models {
-            if let Some(spec_tags) = spec_tags.clone() {
-                if !spec_tags.contains(&model.tag) {
-                    continue;
-                }
-            }
-            // abort instances with current ctx
-            let rel_version_ids = FlowModelVersionServ::find_id_items(
-                &FlowModelVersionFilterReq {
-                    rel_model_ids: Some(vec![model.id.clone()]),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for rel_version_id in rel_version_ids {
-                FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
-            }
-            Self::modify_model(&model.id, &mut FlowModelModifyReq {
-                disabled: Some(true),
-                ..Default::default()
-            }, funs, ctx).await?;
         }
 
         Ok(models)

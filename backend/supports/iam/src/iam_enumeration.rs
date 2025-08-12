@@ -172,7 +172,6 @@ pub enum IamSetKind {
     Org,
     Res,
     Apps,
-    DataGuard,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]

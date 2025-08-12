@@ -45,6 +45,22 @@ impl FlowCiInstApi {
         TardisResp::ok(result)
     }
 
+    /// Start Instance(Return Instance)
+    ///
+    /// 启动实例(返回实例)
+    #[oai(path = "/start_and_get", method = "post")]
+    async fn start_and_get(&self, add_req: Json<FlowInstStartReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<FlowInstDetailResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        let inst_id = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
+        let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Get Instance By Instance Id
     ///
     /// 获取实例信息
@@ -308,10 +324,11 @@ impl FlowCiInstApi {
     async fn find_detail_items(
         &self,
         req: Json<FlowInstFilterReq>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
     ) -> TardisApiResult<Vec<FlowInstDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let result = FlowInstServ::find_detail_items(
             &req.0,
             &funs,
