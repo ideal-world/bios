@@ -11,7 +11,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::invoke_constants::TARDIS_CONTEXT;
+use crate::invoke_constants::{BIOS_CTX, TARDIS_CONTEXT};
 
 #[cfg(feature = "spi_base")]
 pub mod base_spi_client;
@@ -193,8 +193,8 @@ macro_rules! tardis_api {
                 }
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
-            let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().get::<TardisResp<$Resp>>(&url, vec![header]).await?;
+            let headers = self.get_tardis_context_header()?;
+            let resp = self.get_funs().web_client().get::<TardisResp<$Resp>>(&url, headers).await?;
             Self::extract_response(resp)
         }
     };
@@ -217,8 +217,8 @@ macro_rules! tardis_api {
                 }
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
-            let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().post::<$Body, TardisResp<$Resp>>(&url, body, vec![header]).await?;
+            let headers = self.get_tardis_context_header()?;
+            let resp = self.get_funs().web_client().post::<$Body, TardisResp<$Resp>>(&url, body, headers).await?;
             Self::extract_response(resp)
         }
     };
@@ -241,8 +241,8 @@ macro_rules! tardis_api {
                 }
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
-            let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().put::<$Body, TardisResp<$Resp>>(&url, body, vec![header]).await?;
+            let headers = self.get_tardis_context_header()?;
+            let resp = self.get_funs().web_client().put::<$Body, TardisResp<$Resp>>(&url, body, headers).await?;
             Self::extract_response(resp)
         }
     };
@@ -265,8 +265,8 @@ macro_rules! tardis_api {
                 }
             )*
             let url = self.get_url(&[$($path,)*], query.as_ref());
-            let header = self.get_tardis_context_header()?;
-            let resp = self.get_funs().web_client().delete::<TardisResp<$Resp>>(&url, vec![header]).await?;
+            let headers = self.get_tardis_context_header()?;
+            let resp = self.get_funs().web_client().delete::<TardisResp<$Resp>>(&url, headers).await?;
             Self::extract_response(resp)
         }
     };
@@ -302,15 +302,21 @@ impl QueryBuilder {
 pub trait SimpleInvokeClient {
     const DOMAIN_CODE: &'static str;
     fn get_ctx(&self) -> &TardisContext;
+    fn get_bios_ctx(&self) -> &Option<TardisContext>;
     fn get_funs(&self) -> &TardisFunsInst;
     fn get_base_url(&self) -> &str;
 
     /*
      * default implements
      */
-    fn get_tardis_context_header(&self) -> TardisResult<(String, String)> {
+    fn get_tardis_context_header(&self) -> TardisResult<Vec<(String, String)>> {
         let ctx = self.get_ctx();
-        Ok((TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)))
+        let bios_ctx = self.get_bios_ctx();
+        if let Some(bios_ctx) = bios_ctx {
+            Ok(vec![(BIOS_CTX.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&bios_ctx)?)), (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)),])
+        } else {
+            Ok(vec![(TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)),])
+        }
     }
     fn get_url(&self, path: &[&str], query: &str) -> String {
         format!(

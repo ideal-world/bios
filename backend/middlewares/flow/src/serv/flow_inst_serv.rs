@@ -1527,6 +1527,12 @@ impl FlowInstServ {
                     Ok(_) => {}
                     Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
                 }
+                match task_handler_helper::execute_async_task(&ctx_cp).await {
+                    Ok(_) => {
+                        ctx_cp.execute_task().await.unwrap_or_default();
+                    }
+                    Err(e) => error!("Flow Instance {} transfer execute_async_task error:{:?}", flow_inst_cp.id, e),
+                }
             });
         }
 
@@ -2102,6 +2108,12 @@ impl FlowInstServ {
                     Err(e) => error!("Flow Instance {} do_front_change error:{:?}", curr_inst.id, e),
                 }
                 funs.commit().await.unwrap_or_default();
+                match task_handler_helper::execute_async_task(&ctx_cp).await {
+                    Ok(_) => {
+                        ctx_cp.execute_task().await.unwrap_or_default();
+                    }
+                    Err(e) => error!("Flow Instance {} modify_current_vars execute_async_task error:{:?}", curr_inst.id, e),
+                }
             });
         }
 

@@ -645,6 +645,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
             "/ct/app",
             &IamAppAggAddReq {
                 app_name: TrimString("app1".to_string()),
+                app_description: Some("app1 description".to_string()),
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,
@@ -661,6 +662,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
             "/ct/app",
             &IamAppAggAddReq {
                 app_name: TrimString("app2".to_string()),
+                app_description: Some("app2 description".to_string()),
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,

@@ -1,5 +1,6 @@
 pub const LOG_PREFIX_NAME: &str = "[Invoke SDK]";
 pub const TARDIS_CONTEXT: &str = "Tardis-Context";
+pub const BIOS_CTX: &str = "Bios-Ctx";
 pub const INVOKE_DB_CODE: &str = "_SDK_";
 pub const PLUGIN_OWN_PATHS: &str = "_PLUGIN_OWN_PATHS_";
 pub const DYNAMIC_LOG: &str = "dynamic_log";

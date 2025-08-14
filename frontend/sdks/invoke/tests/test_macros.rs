@@ -22,6 +22,9 @@ impl SimpleInvokeClient for Client {
     fn get_base_url(&self) -> &str {
         unimplemented!()
     }
+    fn get_bios_ctx(&self) -> &Option<TardisContext> {
+        &None
+    }
 
     fn get_funs(&self) -> &tardis::TardisFunsInst {
         todo!()
