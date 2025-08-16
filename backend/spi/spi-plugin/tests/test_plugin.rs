@@ -16,7 +16,7 @@ use bios_basic::spi::spi_initializer;
 use bios_basic::test::init_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_plugin::dto::plugin_api_dto::PluginApiAddOrModifyReq;
-use bios_spi_plugin::dto::plugin_bs_dto::PluginBsAddReq;
+use bios_spi_plugin::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsInfoResp};
 use bios_spi_plugin::dto::plugin_kind_dto::PluginKindAddAggReq;
 use bios_spi_plugin::plugin_constants::DOMAIN_CODE;
 use bios_spi_plugin::plugin_enumeration::PluginApiMethodKind;
@@ -24,9 +24,8 @@ use bios_spi_plugin::plugin_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::Void;
+use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{tokio, TardisFuns};
 mod test_plugin_exec;
 
@@ -210,7 +209,7 @@ async fn init_data() -> TardisResult<()> {
         &ctx,
     )
     .await?;
-    let base_url = format!("http://127.0.0.1:8080/{}", DOMAIN_CODE);
+    let base_url = format!("https://127.0.0.1:8080/{}", DOMAIN_CODE);
     let mut client = TestHttpClient::new(base_url.clone());
 
     client.set_auth(&ctx)?;
@@ -316,6 +315,7 @@ async fn init_data() -> TardisResult<()> {
             },
         )
         .await;
+    let _: TardisPage<PluginBsInfoResp> = client.get(&format!("/ci/manage/bs/rel?app_tenant_id=app001&page_number=1&page_size=10",)).await;
     test_plugin_exec::test(&mut client).await?;
     Ok(())
 }

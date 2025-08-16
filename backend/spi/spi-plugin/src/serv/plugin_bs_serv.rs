@@ -220,12 +220,20 @@ impl PluginBsServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<PluginBsInfoResp>> {
-        let rel_agg = RbumRelServ::paginate_to_rels(
-            spi_constants::SPI_IDENT_REL_TAG,
-            app_tenant_id,
+        let rel_agg = RbumRelServ::paginate_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_owned()),
+                from_rbum_id: bs_id,
+                to_rbum_item_id: Some(app_tenant_id.to_string()),
+                ..Default::default()
+            },
             page_number,
             page_size,
-            Some("".to_string()),
             desc_by_create,
             desc_by_update,
             funs,
@@ -234,11 +242,6 @@ impl PluginBsServ {
         .await?;
         let mut bs_records = vec![];
         for rel_agg in rel_agg.records {
-            if let Some(bs_id) = bs_id.clone() {
-                if bs_id != rel_agg.rel.from_rbum_id {
-                    continue;
-                }
-            }
             let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
             if let Some(kind_id) = kind_id.clone() {
                 if bs.kind_id != kind_id {
@@ -304,7 +307,6 @@ impl PluginBsServ {
         }
         Ok(false)
     }
-    
 
     pub async fn get_bs(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
         let rel_agg = Self::get_bs_rel_agg(rel_id, funs, ctx).await?;
@@ -383,6 +385,19 @@ impl PluginBsServ {
                 let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
                 return Self::get_cert_bs(&rel.id, funs, ctx).await;
             } else {
+                let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
+                for own_path in own_paths {
+                    let resp = Self::paginate_bs_rel_agg(Some(kind_code.to_string()), None, own_path.as_str(), 1, 999, None, None, funs, ctx).await?;
+                    info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.records.len());
+                    if resp.records.len() > 0 {
+                        match resp.records.iter().filter(|r| r.rel.is_some()).collect::<Vec<&PluginBsInfoResp>>().first() {
+                            Some(bs_rel_agg) => {
+                                return Self::get_cert_bs(&bs_rel_agg.rel.clone().unwrap().rel.id, funs, ctx).await;
+                            }
+                            None => return Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist")),
+                        }
+                    }
+                }
                 return Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"));
             }
         }
@@ -411,7 +426,6 @@ impl PluginBsServ {
         .await?;
         Ok(rel_agg)
     }
-
 
     pub async fn find_bs_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
         let rel_agg = RbumRelServ::find_rels(
