@@ -96,13 +96,16 @@ impl FlowInstServ {
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 if start_req.rel_child_objs.is_some() {
+                    let rel_child_model = Self::find_rel_model(start_req.rel_transition_id.clone(), &start_req.tag, &create_vars, funs, ctx)
+                        .await?
+                        .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "approve model not found", "404-flow-model-not-found"))?;
                     Self::modify_inst_artifacts(
                         &inst_id,
                         &FlowInstArtifactsModifyReq {
                             rel_child_objs: start_req.rel_child_objs.clone(),
                             operator_map: start_req.operator_map.clone(),
                             rel_transition_id: start_req.rel_transition_id.clone(),
-                            rel_model_version_id: Some(rel_model.current_version_id.clone()),
+                            rel_model_version_id: Some(rel_child_model.current_version_id.clone()),
                             ..Default::default()
                         },
                         funs,
