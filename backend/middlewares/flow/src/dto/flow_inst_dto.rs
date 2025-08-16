@@ -696,7 +696,7 @@ pub enum FlowInstStateKind {
 impl Display for FlowInstStateKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FlowInstStateKind::Form => write!(f, "FORM"),
+            FlowInstStateKind::Form => write!(f, "Form"),
             FlowInstStateKind::Approval => write!(f, "Approval"),
             FlowInstStateKind::Back => write!(f, "Back"),
             FlowInstStateKind::Revoke => write!(f, "Revoke"),
