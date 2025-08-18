@@ -4437,7 +4437,7 @@ impl FlowInstServ {
 
     pub async fn sync_state_color(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut page = 1;
-        let page_size = 500;
+        let page_size = 100;
         loop {
             let insts = Self::paginate(filter, page, page_size, funs, ctx).await?.records;
             if insts.is_empty() {
