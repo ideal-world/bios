@@ -49,7 +49,7 @@ impl FlowCtModelApi {
         let orginal_models = FlowModelServ::clean_rel_models(
             req.0.rel_template_id.clone(),
             Some(req.0.rel_model_ids.clone().values().cloned().collect_vec()),
-            None,
+            Some(req.0.rel_model_ids.clone().keys().cloned().collect_vec()),
             &funs,
             &ctx.0,
         )

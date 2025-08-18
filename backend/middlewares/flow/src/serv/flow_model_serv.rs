@@ -1692,6 +1692,9 @@ impl FlowModelServ {
                         continue;
                     }
                 }
+                if models.iter().find(|(_, model)| model.id == main_model_id).is_none() {
+                    continue;
+                }
                 FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &main_model_id, &rel_template_id, funs, &global_ctx).await?;
             }
         } else {
