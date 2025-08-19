@@ -22,7 +22,7 @@ use crate::{
     dto::search_item_dto::{
         AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq,
         SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
-        SearchItemSearchResp, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchWordCombinationsRuleWay,
+        SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchWordCombinationsRuleWay,
     },
     search_config::SearchConfig,
 };
@@ -578,6 +578,7 @@ fn package_adv_query(table_alias_name: &str, adv_query: Option<Vec<AdvSearchItem
 fn package_order(table_alias_name: &str, sort: Option<Vec<SearchItemSearchSortReq>>) -> TardisResult<Vec<String>> {
     let mut order_fragments: Vec<String> = Vec::new();
     if let Some(sort) = &sort {
+        let mut is_key_field = false;
         for sort_item in sort {
             if sort_item.field.to_lowercase() == "key"
                 || sort_item.field.to_lowercase() == "title"
@@ -587,11 +588,21 @@ fn package_order(table_alias_name: &str, sort: Option<Vec<SearchItemSearchSortRe
                 || sort_item.field.to_lowercase() == "create_time"
                 || sort_item.field.to_lowercase() == "update_time"
             {
+                if sort_item.field.to_lowercase() == "key" {
+                    is_key_field = true;
+                }
                 order_fragments.push(format!("{}.{} {}", table_alias_name, sort_item.field, sort_item.order.to_sql()));
             } else {
                 order_fragments.push(format!("{}.ext -> '{}' {}", table_alias_name, sort_item.field, sort_item.order.to_sql()));
             }
         }
+        // Data merging issue during pagination when the category field content is exactly the same
+        if !is_key_field {
+            order_fragments.push(format!("{}.{} {}", table_alias_name, "key", SearchItemSearchSortKind::Asc.to_sql()));
+        }
+    } else {
+        order_fragments.push(format!("{}.{} {}", table_alias_name, "create_time", SearchItemSearchSortKind::Desc.to_sql()));
+        order_fragments.push(format!("{}.{} {}", table_alias_name, "key", SearchItemSearchSortKind::Asc.to_sql()));
     }
     Ok(order_fragments)
 }
