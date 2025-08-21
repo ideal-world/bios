@@ -859,21 +859,7 @@ impl FlowInstServ {
                 {
                     let next_trans = Self::find_next_transitions(&main_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?;
                     for next_tran in next_trans {
-                        let next_state = FlowStateServ::get_item(
-                            &next_tran.next_flow_state_id,
-                            &FlowStateFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    own_paths: Some("".to_string()),
-                                    with_sub_own_paths: true,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                        if next_state.sys_state == FlowSysStateKind::Finish {
+                        if next_tran.next_flow_state_sys_state == FlowSysStateKind::Finish {
                             Self::transfer(
                                 &main_inst,
                                 &FlowInstTransferReq {
@@ -3835,22 +3821,8 @@ impl FlowInstServ {
                 .filter(|child| child.artifacts.as_ref().is_some_and(|artifacts| artifacts.state.unwrap_or_default() == FlowInstStateKind::Pass))
                 .collect_vec();
             if let Some(next_transition) = Self::find_next_transitions(&root_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
-                let next_state = FlowStateServ::get_item(
-                    &next_transition.next_flow_state_id,
-                    &FlowStateFilterReq {
-                        basic: RbumBasicFilterReq {
-                            own_paths: Some("".to_string()),
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?;
                 // 若所有子审批流都拒绝且当前流转不是结束时，直接中断
-                if pass_child_inst.is_empty() && next_state.sys_state != FlowSysStateKind::Finish {
+                if pass_child_inst.is_empty() && next_transition.next_flow_state_sys_state != FlowSysStateKind::Finish {
                     let root_config = FlowConfigServ::get_root_config(&root_inst.tag, funs, ctx).await?;
                     for child_inst in all_child_insts {
                         if let Some(conf) = FlowConfigServ::get_root_config_by_tag(&root_config, &child_inst.tag)? {

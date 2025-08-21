@@ -291,6 +291,7 @@ impl FlowCcModelApi {
                                     id: state.state_id,
                                     sort: Some(state.sort),
                                     show_btns: None,
+                                    is_edit: None,
                                 }),
                                 modify_state: None,
                                 add_transitions: None,

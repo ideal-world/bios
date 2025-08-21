@@ -457,6 +457,7 @@ pub struct FlowStateCountGroupByStateResp {
 pub struct FlowStateRelModelExt {
     pub sort: i64,
     pub show_btns: Option<Vec<String>>,
+    pub is_edit: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult, Clone)]
@@ -464,6 +465,7 @@ pub struct FlowStateRelModelModifyReq {
     pub id: String,
     pub sort: Option<i64>,
     pub show_btns: Option<Vec<String>>,
+    pub is_edit: Option<bool>,
 }
 
 /// 工作流状态聚合信息

@@ -912,6 +912,7 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                         select_field_label: None,
                         change_content: None,
                         change_content_label: None,
+                        is_edit: None,
                     }],
                     ..Default::default()
                 },
@@ -936,6 +937,7 @@ pub async fn init_flow_model(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
                         select_field_label: None,
                         change_content: None,
                         change_content_label: None,
+                        is_edit: None,
                     }],
                     ..Default::default()
                 },

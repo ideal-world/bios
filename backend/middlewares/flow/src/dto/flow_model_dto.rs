@@ -19,7 +19,7 @@ use tardis::{
 use super::{
     flow_cond_dto::BasicQueryCondInfo,
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
-    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt, FlowSysStateKind},
+    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowSysStateKind},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 
@@ -60,6 +60,65 @@ pub struct FlowModelAddReq {
     pub disabled: Option<bool>,
 
     pub data_source: Option<String>,
+
+    pub default: Option<bool>,
+}
+
+impl FlowModelAddReq {
+    pub fn set_edit_state(&mut self) {
+        if let Some(ref mut modify_version) = &mut self.add_version {
+            if let Some(ref mut bind_states) = &mut modify_version.bind_states {
+                for bind_state in bind_states.iter_mut() {
+                    if let Some(ref mut exist_state) = &mut bind_state.exist_state {
+                        exist_state.ext.is_edit = Some(false);
+                    }
+                    if let Some(ref mut bind_new_state) = &mut bind_state.bind_new_state {
+                        bind_new_state.ext.is_edit = Some(false);
+                    }
+                    if let Some(ref mut add_transitions) = &mut bind_state.add_transitions {
+                        for add_transition in add_transitions.iter_mut() {
+                            add_transition.is_edit = Some(false);
+                            if let Some(ref mut vars_collect) = &mut add_transition.vars_collect {
+                                for var in vars_collect.iter_mut() {
+                                    var.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_front_changes) = &mut add_transition.action_by_front_changes {
+                                for action_by_front_change in action_by_front_changes.iter_mut() {
+                                    action_by_front_change.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                }
+                            }
+                        }
+                    }
+                    if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
+                        for modify_transition in modify_transitions.iter_mut() {
+                            modify_transition.is_edit = Some(false);
+                            if let Some(ref mut vars_collect) = &mut modify_transition.vars_collect {
+                                for var in vars_collect.iter_mut() {
+                                    var.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_front_changes) = &mut modify_transition.action_by_front_changes {
+                                for action_by_front_change in action_by_front_changes.iter_mut() {
+                                    action_by_front_change.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl From<FlowModelDetailResp> for FlowModelAddReq {
@@ -112,6 +171,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             scope_level: Some(value.scope_level),
             disabled: Some(value.disabled),
             data_source: value.data_source,
+            default: Some(value.default),
         }
     }
 }
@@ -168,6 +228,110 @@ pub struct FlowModelModifyReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+}
+
+impl FlowModelModifyReq {
+    pub fn set_edit_state(&mut self) {
+        if let Some(ref mut modify_version) = &mut self.modify_version {
+            if let Some(ref mut bind_states) = &mut modify_version.bind_states {
+                for bind_state in bind_states.iter_mut() {
+                    if let Some(ref mut exist_state) = &mut bind_state.exist_state {
+                        exist_state.ext.is_edit = Some(false);
+                    }
+                    if let Some(ref mut bind_new_state) = &mut bind_state.bind_new_state {
+                        bind_new_state.ext.is_edit = Some(false);
+                    }
+                    if let Some(ref mut add_transitions) = &mut bind_state.add_transitions {
+                        for add_transition in add_transitions.iter_mut() {
+                            add_transition.is_edit = Some(false);
+                            if let Some(ref mut vars_collect) = &mut add_transition.vars_collect {
+                                for var in vars_collect.iter_mut() {
+                                    var.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_front_changes) = &mut add_transition.action_by_front_changes {
+                                for action_by_front_change in action_by_front_changes.iter_mut() {
+                                    action_by_front_change.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                }
+                            }
+                        }
+                    }
+                    if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
+                        for modify_transition in modify_transitions.iter_mut() {
+                            modify_transition.is_edit = Some(false);
+                            if let Some(ref mut vars_collect) = &mut modify_transition.vars_collect {
+                                for var in vars_collect.iter_mut() {
+                                    var.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_front_changes) = &mut modify_transition.action_by_front_changes {
+                                for action_by_front_change in action_by_front_changes.iter_mut() {
+                                    action_by_front_change.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(ref mut modify_states) = &mut modify_version.modify_states {
+                for modify_state in modify_states.iter_mut() {
+                    if let Some(ref mut modify_rel) = &mut modify_state.modify_rel {
+                        modify_rel.is_edit = Some(false);
+                    }
+                    if let Some(ref mut add_transitions) = &mut modify_state.add_transitions {
+                        for add_transition in add_transitions.iter_mut() {
+                            add_transition.is_edit = Some(false);
+                            if let Some(ref mut vars_collect) = &mut add_transition.vars_collect {
+                                for var in vars_collect.iter_mut() {
+                                    var.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_front_changes) = &mut add_transition.action_by_front_changes {
+                                for action_by_front_change in action_by_front_changes.iter_mut() {
+                                    action_by_front_change.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                }
+                            }
+                        }
+                    }
+                    if let Some(ref mut modify_transitions) = &mut modify_state.modify_transitions {
+                        for modify_transition in modify_transitions.iter_mut() {
+                            modify_transition.is_edit = Some(false);
+                            if let Some(ref mut vars_collect) = &mut modify_transition.vars_collect {
+                                for var in vars_collect.iter_mut() {
+                                    var.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_front_changes) = &mut modify_transition.action_by_front_changes {
+                                for action_by_front_change in action_by_front_changes.iter_mut() {
+                                    action_by_front_change.is_edit = Some(false);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
+                                for action_by_post_change in action_by_post_changes.iter_mut() {
+                                    action_by_post_change.is_edit = Some(false);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// 工作流模型概要信息
@@ -345,42 +509,12 @@ impl FlowModelDetailResp {
         self.front_conds.clone().map(|front_conds| TardisFuns::json.json_to_obj(front_conds).unwrap_or_default())
     }
 
-    pub fn create_modify_req(self) -> FlowModelModifyReq {
-        let front_conds = self.front_conds();
-        FlowModelModifyReq {
-            name: Some(self.name.as_str().into()),
-            icon: Some(self.icon.clone()),
-            info: Some(self.info.clone()),
-            status: Some(self.status),
-            template: Some(self.template),
-            rel_template_ids: Some(self.rel_template_ids.clone()),
-            modify_version: Some(FlowModelVersionModifyReq {
-                name: Some(self.name.as_str().into()),
-                bind_states: None,
-                unbind_states: None,
-                delete_states: None,
-                modify_states: None,
-                status: None,
-                init_state_id: Some(self.init_state_id),
-                scope_level: Some(self.scope_level.clone()),
-                disabled: Some(self.disabled),
-            }),
-            current_version_id: Some(self.current_version_id.clone()),
-            front_conds,
-            rel_model_id: Some(self.rel_model_id.clone()),
-            tag: Some(self.tag.clone()),
-            scope_level: Some(self.scope_level),
-            disabled: Some(self.disabled),
-        }
-    }
-
     pub fn create_add_req(self) -> FlowModelAddReq {
-        let mut add_transitions = vec![];
-        for transition in self.transitions() {
+        let add_transitions = self.transitions().into_iter().map(|transition| {
             let mut add_transitions_req = FlowTransitionAddReq::from(transition.clone());
             add_transitions_req.id = Some(transition.id.clone());
-            add_transitions.push(add_transitions_req);
-        }
+            add_transitions_req
+        }).collect::<Vec<_>>();
         let states = self
             .states()
             .into_iter()
@@ -425,6 +559,7 @@ impl FlowModelDetailResp {
             scope_level: Some(self.scope_level),
             disabled: Some(self.disabled),
             data_source: self.data_source,
+            default: Some(self.default),
         }
     }
 }
