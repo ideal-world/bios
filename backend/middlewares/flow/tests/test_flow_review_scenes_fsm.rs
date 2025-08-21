@@ -204,6 +204,7 @@ pub async fn test(
                 disabled: None,
                 front_conds: None,
                 data_source: None,
+                default: None,
             },
         )
         .await;
@@ -248,7 +249,7 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        ext: FlowStateRelModelExt { sort: 0, show_btns: None, ..Default::default() },
                     }),
                     is_init: false,
                     add_transitions: Some(vec![FlowTransitionAddReq {
@@ -310,7 +311,7 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
                     }),
                     is_init: false,
                     add_transitions: Some(vec![FlowTransitionAddReq {

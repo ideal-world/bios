@@ -448,6 +448,9 @@ impl FlowStateServ {
         if let Some(show_btns) = modify_req.show_btns.clone() {
             ext.show_btns = Some(show_btns);
         }
+        if let Some(is_edit) = modify_req.is_edit.clone() {
+            ext.is_edit = Some(is_edit);
+        }
         FlowRelServ::modify_simple_rel(
             &FlowRelKind::FlowModelState,
             flow_version_id,

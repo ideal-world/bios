@@ -314,4 +314,15 @@ impl FlowCiModelApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }
+
+    /// 初始化编辑规则（临时脚本）
+    #[oai(path = "/init_edit_state", method = "get")]
+    async fn init_edit_state(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        FlowModelServ::init_edit_state(&funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
 }

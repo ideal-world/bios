@@ -22,7 +22,7 @@ use tardis::{
         EntityName, Set,
     },
     futures::future::join_all,
-    log::error,
+    log::{debug, error},
     serde_json::json,
     tokio,
     web::web_resp::TardisPage,
@@ -41,7 +41,7 @@ use crate::{
             FlowModelVesionState,
         },
         flow_state_dto::{
-            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateVar, FlowSysStateKind,
+            FLowStateIdAndName, FlowStateAddReq, FlowStateAggResp, FlowStateKind, FlowStateModifyReq, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateVar, FlowSysStateKind
         },
         flow_transition_dto::{
             FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionFilterReq, FlowTransitionInitInfo, FlowTransitionModifyReq, FlowTransitionPostActionInfo,
@@ -112,7 +112,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             rel_model_id: Set(add_req.rel_model_id.clone().unwrap_or_default()),
             template: Set(add_req.template),
             main: Set(add_req.main),
-            default: Set(false),
+            default: Set(add_req.default.unwrap_or(false)),
             front_conds: Set(add_req.front_conds.clone().map(|front_conds| json!(front_conds))),
             data_source: Set(add_req.data_source.clone().unwrap_or_default()),
             ..Default::default()
@@ -193,7 +193,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                 main: Some(false),
                                 ..Default::default()
                             },
-                            ext: FlowStateRelModelExt { sort: 0, show_btns: None },
+                            ext: FlowStateRelModelExt { sort: 0, show_btns: None, ..Default::default() },
                         }),
                         add_transitions: Some(vec![FlowTransitionAddReq {
                             name: Some("开始".into()),
@@ -216,7 +216,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                 main: Some(false),
                                 ..Default::default()
                             },
-                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                            ext: FlowStateRelModelExt { sort: 0, show_btns: None, ..Default::default() },
                         }),
                         is_init: false,
                         ..Default::default()
@@ -869,7 +869,7 @@ impl FlowModelServ {
             bind_states.push(FlowModelVersionBindState {
                 exist_state: Some(FlowModelBindStateReq {
                     state_id: state_id.clone(),
-                    ext: FlowStateRelModelExt { sort: i as i64, show_btns: None },
+                    ext: FlowStateRelModelExt { sort: i as i64, show_btns: None, ..Default::default() },
                 }),
                 add_transitions: Some(add_transitions.clone().into_iter().filter(|tran| tran.from_flow_state_id == state_id).collect_vec()),
                 is_init: state_id == init_state_id,
@@ -906,6 +906,7 @@ impl FlowModelServ {
                 main: true,
                 rel_model_id: None,
                 data_source: None,
+                default: Some(true),
             },
             funs,
             ctx,
@@ -1205,14 +1206,7 @@ impl FlowModelServ {
                 rel_model_id.to_string()
             }
             FlowModelAssociativeOperationKind::ReferenceOrCopy => {
-                let mut add_transitions = rel_model.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
-                for add_transition in add_transitions.iter_mut() {
-                    if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
-                        for action_by_post_change in action_by_post_changes.iter_mut() {
-                            action_by_post_change.is_edit = Some(false); // 引用复制时，置为不可编辑
-                        }
-                    }
-                }
+                let add_transitions = rel_model.transitions().into_iter().map(FlowTransitionAddReq::from).collect_vec();
                 let states = rel_model
                     .states()
                     .into_iter()
@@ -1226,23 +1220,25 @@ impl FlowModelServ {
                         ..Default::default()
                     })
                     .collect_vec();
+                let mut add_req = FlowModelAddReq {
+                    rel_model_id: Some(rel_model_id.to_string()),
+                    kind,
+                    rel_template_ids: None,
+                    add_version: Some(FlowModelVersionAddReq {
+                        id: None,
+                        name: rel_model.name.clone().into(),
+                        rel_model_id: None,
+                        bind_states: Some(states),
+                        status: FlowModelVesionState::Enabled,
+                        scope_level: Some(rel_model.scope_level.clone()),
+                        disabled: Some(rel_model.disabled),
+                    }),
+                    data_source,
+                    ..rel_model.clone().into()
+                };
+                add_req.set_edit_state();
                 Self::add_item(
-                    &mut FlowModelAddReq {
-                        rel_model_id: Some(rel_model_id.to_string()),
-                        kind,
-                        rel_template_ids: None,
-                        add_version: Some(FlowModelVersionAddReq {
-                            id: None,
-                            name: rel_model.name.clone().into(),
-                            rel_model_id: None,
-                            bind_states: Some(states),
-                            status: FlowModelVesionState::Enabled,
-                            scope_level: Some(rel_model.scope_level.clone()),
-                            disabled: Some(rel_model.disabled),
-                        }),
-                        data_source,
-                        ..rel_model.clone().into()
-                    },
+                    &mut add_req,
                     funs,
                     ctx,
                 )
@@ -1692,7 +1688,7 @@ impl FlowModelServ {
                         continue;
                     }
                 }
-                if models.iter().find(|(_, model)| model.id == main_model_id).is_none() {
+                if !models.iter().any(|(_, model)| model.id == main_model_id) {
                     continue;
                 }
                 FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &main_model_id, &rel_template_id, funs, &global_ctx).await?;
@@ -1797,19 +1793,10 @@ impl FlowModelServ {
             rel_template_ids: None,
             ..modify_req.clone()
         };
+        modify_req_clone.set_edit_state();
         if let Some(ref mut modify_version) = &mut modify_req_clone.modify_version {
             if let Some(ref mut bind_states) = &mut modify_version.bind_states {
                 for bind_state in bind_states.iter_mut() {
-                    if let Some(ref mut add_transitions) = &mut bind_state.add_transitions {
-                        for add_transition in add_transitions.iter_mut() {
-                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
-                                for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
-                                    // 引用复制时，置为不可编辑
-                                }
-                            }
-                        }
-                    }
                     if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
                             if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()) {
@@ -1847,16 +1834,6 @@ impl FlowModelServ {
             }
             if let Some(ref mut modify_states) = &mut modify_version.modify_states {
                 for modify_state in modify_states.iter_mut() {
-                    if let Some(ref mut add_transitions) = &mut modify_state.add_transitions {
-                        for add_transition in add_transitions.iter_mut() {
-                            if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
-                                for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
-                                    // 引用复制时，置为不可编辑
-                                }
-                            }
-                        }
-                    }
                     if let Some(ref mut modify_transitions) = &mut modify_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
                             if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()) {
@@ -1899,6 +1876,7 @@ impl FlowModelServ {
                 let child_model_id = child_model_clone.id.clone();
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
+                    debug!("[Flow] Start to execute child_model_id: {}, modify_req_clone: {:?}", child_model_id, modify_req_clone);
                     let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
                 });
                 match task_handle.await {
@@ -2381,6 +2359,63 @@ impl FlowModelServ {
                 .and_where(Expr::col(flow_inst::Column::CurrentStateId).eq(original_model.current_version_id.clone()))).await?;
             // 2-3、删除废弃模型
             Self::delete_item(original_model_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn init_edit_state(funs: &TardisFunsInst, ctx: &TardisContext,) -> TardisResult<()> {
+        let mut page = 1;
+        let page_size = 100;
+        loop {
+            let template_models = Self::paginate_detail_items(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kinds: Some(vec![FlowModelKind::AsTemplateAndAsModel]),
+                main: Some(true),
+                ..Default::default()
+            }, page, page_size, None, None, funs, ctx).await?.records;
+            page += 1;
+            if template_models.is_empty() {
+                break;
+            }
+            for template_model in template_models {
+                if let Some(parent_model) = Self::find_one_detail_item(&FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ids: Some(vec![template_model.rel_model_id.clone()]),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }, funs, ctx).await? {
+                    let parent_transitons = parent_model.transitions();
+                    let states = parent_model.states().into_iter().map(|state| FlowModelVersionModifyState {
+                        modify_rel: Some(FlowStateRelModelModifyReq {
+                            id: state.id.clone(),
+                            ..Default::default()
+                        }),
+                        modify_transitions: Some(parent_transitons.clone().into_iter().filter(|tran| tran.from_flow_state_id == state.id).map(|tran| FlowTransitionModifyReq {
+                            id: tran.id.clone().into(),
+                            vars_collect: tran.vars_collect().clone(),
+                            action_by_post_changes: Some(tran.action_by_post_changes().clone()),
+                            action_by_front_changes: Some(tran.action_by_front_changes().clone()),
+                            ..Default::default()
+                        }).collect_vec()),
+                        ..Default::default()
+                    }).collect_vec();
+
+                    Self::sync_child_model(&template_model, &parent_model, &FlowModelModifyReq {
+                        modify_version: Some(FlowModelVersionModifyReq {
+                            modify_states: Some(states),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                }
+            }
         }
         Ok(())
     }

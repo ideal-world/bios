@@ -42,6 +42,7 @@ pub struct FlowVarInfo {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     pub parent_attr_name: Option<String>,
+    pub is_edit: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, poem_openapi::Object)]
