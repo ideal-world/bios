@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp;
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetDetailResp, RbumSetTreeResp};
-use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetDetailResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 
@@ -114,7 +113,6 @@ pub struct IamSubDeployOneImportReq {
     pub app_role: Option<HashMap<String, Vec<IamRoleDetailResp>>>,
     pub app_account: Option<HashMap<String, Vec<String>>>,
     pub app_role_account: Option<HashMap<String, Vec<String>>>,
-    pub app_flow_template: Option<HashMap<String, String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -124,7 +122,6 @@ pub struct IamSubDeployTowExportAggResp {
     pub app_role: Option<HashMap<String, Vec<IamRoleDetailResp>>>,
     pub app_account: Option<HashMap<String, Vec<String>>>,
     pub app_role_account: Option<HashMap<String, Vec<String>>>,
-    pub app_flow_template: Option<HashMap<String, String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

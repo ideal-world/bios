@@ -19,7 +19,7 @@ use tardis::{
 use super::{
     flow_cond_dto::BasicQueryCondInfo,
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
-    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowSysStateKind},
+    flow_state_dto::{FlowStateAddReq, FlowStateAggResp, FlowStateRelModelExt, FlowSysStateKind},
     flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp},
 };
 
@@ -65,52 +65,52 @@ pub struct FlowModelAddReq {
 }
 
 impl FlowModelAddReq {
-    pub fn set_edit_state(&mut self) {
+    pub fn set_edit_state(&mut self, is_edit: bool) {
         if let Some(ref mut modify_version) = &mut self.add_version {
             if let Some(ref mut bind_states) = &mut modify_version.bind_states {
                 for bind_state in bind_states.iter_mut() {
                     if let Some(ref mut exist_state) = &mut bind_state.exist_state {
-                        exist_state.ext.is_edit = Some(false);
+                        exist_state.ext.is_edit = Some(is_edit);
                     }
                     if let Some(ref mut bind_new_state) = &mut bind_state.bind_new_state {
-                        bind_new_state.ext.is_edit = Some(false);
+                        bind_new_state.ext.is_edit = Some(is_edit);
                     }
                     if let Some(ref mut add_transitions) = &mut bind_state.add_transitions {
                         for add_transition in add_transitions.iter_mut() {
-                            add_transition.is_edit = Some(false);
+                            add_transition.is_edit = Some(is_edit);
                             if let Some(ref mut vars_collect) = &mut add_transition.vars_collect {
                                 for var in vars_collect.iter_mut() {
-                                    var.is_edit = Some(false);
+                                    var.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_front_changes) = &mut add_transition.action_by_front_changes {
                                 for action_by_front_change in action_by_front_changes.iter_mut() {
-                                    action_by_front_change.is_edit = Some(false);
+                                    action_by_front_change.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
+                                    action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
                     }
                     if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
-                            modify_transition.is_edit = Some(false);
+                            modify_transition.is_edit = Some(is_edit);
                             if let Some(ref mut vars_collect) = &mut modify_transition.vars_collect {
                                 for var in vars_collect.iter_mut() {
-                                    var.is_edit = Some(false);
+                                    var.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_front_changes) = &mut modify_transition.action_by_front_changes {
                                 for action_by_front_change in action_by_front_changes.iter_mut() {
-                                    action_by_front_change.is_edit = Some(false);
+                                    action_by_front_change.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
+                                    action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
@@ -123,10 +123,7 @@ impl FlowModelAddReq {
 
 impl From<FlowModelDetailResp> for FlowModelAddReq {
     fn from(value: FlowModelDetailResp) -> Self {
-        let mut add_transitions = vec![];
-        for transition in value.transitions() {
-            add_transitions.push(FlowTransitionAddReq::from(transition));
-        }
+        let add_transitions = value.transitions().into_iter().map(FlowTransitionAddReq::from).collect::<Vec<_>>();
         let states = value
             .states()
             .into_iter()
@@ -177,7 +174,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
 }
 
 /// 工作流模型类型
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::N(255))")]
 pub enum FlowModelKind {
     #[sea_orm(string_value = "as_template")]
@@ -231,52 +228,52 @@ pub struct FlowModelModifyReq {
 }
 
 impl FlowModelModifyReq {
-    pub fn set_edit_state(&mut self) {
+    pub fn set_edit_state(&mut self, is_edit: bool) {
         if let Some(ref mut modify_version) = &mut self.modify_version {
             if let Some(ref mut bind_states) = &mut modify_version.bind_states {
                 for bind_state in bind_states.iter_mut() {
                     if let Some(ref mut exist_state) = &mut bind_state.exist_state {
-                        exist_state.ext.is_edit = Some(false);
+                        exist_state.ext.is_edit = Some(is_edit);
                     }
                     if let Some(ref mut bind_new_state) = &mut bind_state.bind_new_state {
-                        bind_new_state.ext.is_edit = Some(false);
+                        bind_new_state.ext.is_edit = Some(is_edit);
                     }
                     if let Some(ref mut add_transitions) = &mut bind_state.add_transitions {
                         for add_transition in add_transitions.iter_mut() {
-                            add_transition.is_edit = Some(false);
+                            add_transition.is_edit = Some(is_edit);
                             if let Some(ref mut vars_collect) = &mut add_transition.vars_collect {
                                 for var in vars_collect.iter_mut() {
-                                    var.is_edit = Some(false);
+                                    var.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_front_changes) = &mut add_transition.action_by_front_changes {
                                 for action_by_front_change in action_by_front_changes.iter_mut() {
-                                    action_by_front_change.is_edit = Some(false);
+                                    action_by_front_change.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
+                                    action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
                     }
                     if let Some(ref mut modify_transitions) = &mut bind_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
-                            modify_transition.is_edit = Some(false);
+                            modify_transition.is_edit = Some(is_edit);
                             if let Some(ref mut vars_collect) = &mut modify_transition.vars_collect {
                                 for var in vars_collect.iter_mut() {
-                                    var.is_edit = Some(false);
+                                    var.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_front_changes) = &mut modify_transition.action_by_front_changes {
                                 for action_by_front_change in action_by_front_changes.iter_mut() {
-                                    action_by_front_change.is_edit = Some(false);
+                                    action_by_front_change.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
+                                    action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
@@ -286,44 +283,44 @@ impl FlowModelModifyReq {
             if let Some(ref mut modify_states) = &mut modify_version.modify_states {
                 for modify_state in modify_states.iter_mut() {
                     if let Some(ref mut modify_rel) = &mut modify_state.modify_rel {
-                        modify_rel.is_edit = Some(false);
+                        modify_rel.is_edit = Some(is_edit);
                     }
                     if let Some(ref mut add_transitions) = &mut modify_state.add_transitions {
                         for add_transition in add_transitions.iter_mut() {
-                            add_transition.is_edit = Some(false);
+                            add_transition.is_edit = Some(is_edit);
                             if let Some(ref mut vars_collect) = &mut add_transition.vars_collect {
                                 for var in vars_collect.iter_mut() {
-                                    var.is_edit = Some(false);
+                                    var.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_front_changes) = &mut add_transition.action_by_front_changes {
                                 for action_by_front_change in action_by_front_changes.iter_mut() {
-                                    action_by_front_change.is_edit = Some(false);
+                                    action_by_front_change.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_post_changes) = &mut add_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
+                                    action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
                     }
                     if let Some(ref mut modify_transitions) = &mut modify_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
-                            modify_transition.is_edit = Some(false);
+                            modify_transition.is_edit = Some(is_edit);
                             if let Some(ref mut vars_collect) = &mut modify_transition.vars_collect {
                                 for var in vars_collect.iter_mut() {
-                                    var.is_edit = Some(false);
+                                    var.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_front_changes) = &mut modify_transition.action_by_front_changes {
                                 for action_by_front_change in action_by_front_changes.iter_mut() {
-                                    action_by_front_change.is_edit = Some(false);
+                                    action_by_front_change.is_edit = Some(is_edit);
                                 }
                             }
                             if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
-                                    action_by_post_change.is_edit = Some(false);
+                                    action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
@@ -335,7 +332,7 @@ impl FlowModelModifyReq {
 }
 
 /// 工作流模型概要信息
-#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object, sea_orm::FromQueryResult, Clone)]
 pub struct FlowModelSummaryResp {
     pub id: String,
     pub name: String,
@@ -762,6 +759,8 @@ pub struct FlowModelCopyOrReferenceReq {
     pub rel_model_ids: HashMap<String, String>,
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
+    /// 关联的模板ID
+    pub target_template_id: Option<String>,
     /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
     /// 切换模板时，状态更新映射
@@ -786,6 +785,8 @@ pub struct FlowModelSingleCopyOrReferenceReq {
 pub struct FlowModelCopyOrReferenceCiReq {
     /// 关联的模板ID
     pub rel_template_id: Option<String>,
+    /// 目标的模板ID
+    pub target_template_id: Option<String>,
     /// 关联操作
     pub op: FlowModelAssociativeOperationKind,
     /// 切换模板时，状态更新映射
@@ -841,4 +842,11 @@ pub struct FlowModelInitCopyReq {
 pub struct FlowModelMergeDataReq {
     pub state_map: HashMap<String, String>,
     pub model_map: HashMap<String, String>,
+}
+
+/// 批量关闭模型
+#[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
+pub struct FlowModelBatchDisableReq {
+    pub rel_template_id: Option<String>,
+    pub main: Option<bool>,
 }

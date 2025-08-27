@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -11,7 +12,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
+    FlowModelAddReq, FlowModelAggResp, FlowModelBatchDisableReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -403,6 +404,8 @@ impl FlowCcModelApi {
     async fn find_or_create(&self, req: Json<FlowModelFIndOrCreatReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = FlowModelServ::find_or_create(&req.0, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -429,6 +432,62 @@ impl FlowCcModelApi {
             );
         }
 
+        TardisResp::ok(result)
+    }
+
+    /// Creating or referencing models
+    ///
+    ///
+    #[oai(path = "/copy_or_reference_model", method = "post")]
+    async fn copy_or_reference_model(
+        &self,
+        req: Json<FlowModelCopyOrReferenceCiReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, String>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        // let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        // find rel models
+        let rel_models = FlowModelServ::find_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    optional: false,
+                    rel_by_from: true,
+                    tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
+                    ..Default::default()
+                }),
+                main: Some(true),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let rel_main_models = rel_models.iter().filter(|model| model.main).cloned().collect::<Vec<_>>();
+        let mut result = HashMap::new();
+        for rel_main_model in rel_main_models {
+            let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&rel_main_model.tag).cloned().unwrap_or_default());
+            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
+            result.insert(rel_main_model.id.clone(), new_model.id.clone());
+        }
+        let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
+        for rel_non_main_model in rel_non_main_models {
+            let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), None, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind,
-    FlowModelSyncModifiedFieldReq,
+    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind,
+    FlowModelSyncModifiedFieldReq, FlowModelBatchDisableReq
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
-use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
@@ -98,9 +97,9 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        // let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
         // find rel models
-        let rel_main_models = FlowModelServ::find_items(
+        let rel_models = FlowModelServ::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     enabled: Some(true),
@@ -125,46 +124,16 @@ impl FlowCiModelApi {
             &ctx.0,
         )
         .await?;
+        let rel_main_models = rel_models.iter().filter(|model| model.main).cloned().collect::<Vec<_>>();
         let mut result = HashMap::new();
         for rel_main_model in rel_main_models {
-            let new_model = FlowModelServ::copy_or_reference_model(&rel_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
-            FlowInstServ::batch_update_when_switch_model(
-                &new_model,
-                new_model.rel_template_ids.first().cloned(),
-                req.update_states.clone().map(|update_states| update_states.get(&new_model.tag).cloned().unwrap_or_default()),
-                &funs,
-                &ctx.0,
-            )
-            .await?;
+            let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&rel_main_model.tag).cloned().unwrap_or_default());
+            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
-        let rel_non_main_models = FlowModelServ::find_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    enabled: Some(true),
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                rel: Some(RbumItemRelFilterReq {
-                    optional: false,
-                    rel_by_from: true,
-                    tag: Some(FlowRelKind::FlowModelTemplate.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
-                    ..Default::default()
-                }),
-                main: Some(false),
-                ..Default::default()
-            },
-            None,
-            None,
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
         for rel_non_main_model in rel_non_main_models {
-            let _ = FlowModelServ::copy_or_reference_model(&rel_non_main_model.id, &req.0.op, FlowModelKind::AsModel, None, &funs, &ctx.0).await?;
+            let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
@@ -182,7 +151,7 @@ impl FlowCiModelApi {
         to_template_id: Path<String>,
         mut ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
+    ) -> TardisApiResult<HashMap<String, String>> {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
@@ -289,6 +258,18 @@ impl FlowCiModelApi {
         TardisResp::ok(Void)
     }
 
+    /// 批量关闭模型
+    #[oai(path = "/batch/disable_model", method = "delete")]
+    async fn batch_disable_model(&self, req: Json<FlowModelBatchDisableReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::batch_disable_model(req.0.rel_template_id, req.0.main, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
     /// 同步模型到search（脚本）
     #[oai(path = "/sync_model_template", method = "post")]
     async fn sync_model_template(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
@@ -302,25 +283,23 @@ impl FlowCiModelApi {
         TardisResp::ok(Void)
     }
 
-    /// 初始化复制模型（脚本）
-    #[oai(path = "/init_copy_model", method = "post")]
-    async fn init_copy_model(&self, req: Json<FlowModelInitCopyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        funs.begin().await?;
-        FlowModelServ::init_copy_model(&req, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        task_handler_helper::execute_async_task(&ctx.0).await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void)
-    }
-
     /// 初始化编辑规则（临时脚本）
     #[oai(path = "/init_edit_state", method = "get")]
     async fn init_edit_state(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         FlowModelServ::init_edit_state(&funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void)
+    }
+
+    /// 初始化引用模板（临时脚本）
+    #[oai(path = "/init_reference_model", method = "get")]
+    async fn init_reference_model(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        FlowModelServ::init_reference_model(&funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)

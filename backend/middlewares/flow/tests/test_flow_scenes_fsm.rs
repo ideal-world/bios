@@ -433,6 +433,7 @@ pub async fn test(
             &FlowModelCopyOrReferenceReq {
                 rel_model_ids,
                 rel_template_id: Some(project_template_id1.to_string()),
+                target_template_id: None,
                 op: FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 update_states: None,
             },
@@ -611,6 +612,7 @@ pub async fn test(
             "/ci/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(project_template_id1.to_string()),
+                target_template_id: None,
                 op: FlowModelAssociativeOperationKind::Reference,
                 update_states: None,
             },
@@ -662,6 +664,7 @@ pub async fn test(
             "/ci/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(project_template_id1.to_string()),
+                target_template_id: None,
                 op: FlowModelAssociativeOperationKind::Copy,
                 update_states: Some(update_states),
             },

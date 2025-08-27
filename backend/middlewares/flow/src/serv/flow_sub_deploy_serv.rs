@@ -409,6 +409,7 @@ impl FlowSubDeployServ {
                         ..Default::default()
                     },
                     &new_state_id,
+                    flow_model,
                     funs,
                     &global_ctx,
                 )
