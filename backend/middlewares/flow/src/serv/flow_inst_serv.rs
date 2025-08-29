@@ -3,8 +3,6 @@ use std::{collections::HashMap, str::FromStr as _};
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::rbum_filer_dto::RbumBasicFilterReq,
-    helper::rbum_scope_helper,
-    rbum_enumeration::RbumScopeLevelKind,
     serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
@@ -320,7 +318,7 @@ impl FlowInstServ {
                 rel_transition_ext,
                 &start_req.tag,
                 &start_req.rel_business_obj_id,
-                None, // 此时还未创建出父审批流，所以传空
+                None, // 此时父审批流还未创建，所以传空
                 &FlowInstArtifacts {
                     form_state_map: form_map,
                     ..Default::default()
@@ -333,21 +331,6 @@ impl FlowInstServ {
             return Err(funs.err().internal_error("flow_inst", "start_secondary_flow", "The process is automatically terminated", "500-flow-inst-auto-finish"));
         }
         let inst_id = TardisFuns::field.nanoid();
-        // if !Self::find_ids(
-        //     &FlowInstFilterReq {
-        //         rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.to_string()]),
-        //         flow_model_id: Some(flow_model.id.clone()),
-        //         finish: Some(false),
-        //         ..Default::default()
-        //     },
-        //     funs,
-        //     ctx,
-        // )
-        // .await?
-        // .is_empty()
-        // {
-        //     return Err(funs.err().internal_error("flow_inst_serv", "start", "The same instance exist", "500-flow-inst-exist"));
-        // }
         let create_vars = Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.to_string(), funs, ctx).await?;
         let mut current_vars = create_vars.clone();
         if let Some(check_vars) = &start_req.check_vars {
@@ -2147,76 +2130,67 @@ impl FlowInstServ {
 
     pub async fn batch_update_when_switch_model(
         new_model: &FlowModelAggResp,
-        rel_template_id: Option<String>,
-        update_states: Option<HashMap<String, String>>,
+        update_states: &Option<HashMap<String, String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let mut own_paths_list = vec![];
-        if let Some(rel_template_id) = rel_template_id {
-            own_paths_list = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, &rel_template_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| {
-                    if FlowModelServ::get_app_id_by_ctx(ctx).is_some() {
-                        rel.rel_own_paths
-                    } else if rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &rel.rel_own_paths).is_some() {
-                        rel.rel_own_paths
-                    } else {
-                        format!("{}/{}", rel.rel_own_paths, rel.rel_id)
-                    }
-                })
-                .collect_vec();
-            if own_paths_list.contains(&ctx.own_paths) {
-                own_paths_list = vec![ctx.own_paths.clone()];
+        let mock_ctx = TardisContext {
+            own_paths: new_model.own_paths.clone(),
+            ..ctx.clone() 
+        };
+        let new_model_detail = FlowModelServ::find_one_detail_item(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: Some(vec![new_model.id.clone()]),
+                with_sub_own_paths: true,
+                own_paths: Some("".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        }, funs, ctx).await?.ok_or_else(|| funs.err().not_found("flow_inst", "batch_update_when_switch_model", "flow model is not found", "404-flow-model-not-found"))?;
+        if let Some(update_states) = update_states {
+            for (old_state, new_state) in update_states {
+                if old_state != new_state {
+                    Self::async_unsafe_modify_state(
+                        &FlowInstFilterReq {
+                            main: Some(true),
+                            tags: Some(vec![new_model.tag.clone()]),
+                            current_state_id: Some(old_state.clone()),
+                            ..Default::default()
+                        },
+                        new_state,
+                        &new_model_detail,
+                        funs,
+                        &mock_ctx,
+                    )
+                    .await?;
+                }
             }
         } else {
-            own_paths_list.push(ctx.own_paths.clone());
+            Self::async_unsafe_modify_state(
+                &FlowInstFilterReq {
+                    main: Some(true),
+                    tags: Some(vec![new_model.tag.clone()]),
+                    ..Default::default()
+                },
+                &new_model.init_state_id,
+                &new_model_detail,
+                funs,
+                &mock_ctx,
+            )
+            .await?;
         }
-        for own_paths in own_paths_list {
-            let mock_ctx = TardisContext { own_paths, ..ctx.clone() };
-            if let Some(update_states) = &update_states {
-                for (old_state, new_state) in update_states {
-                    if old_state != new_state {
-                        Self::async_unsafe_modify_state(
-                            &FlowInstFilterReq {
-                                main: Some(true),
-                                tags: Some(vec![new_model.tag.clone()]),
-                                current_state_id: Some(old_state.clone()),
-                                ..Default::default()
-                            },
-                            new_state,
-                            funs,
-                            &mock_ctx,
-                        )
-                        .await?;
-                    }
-                }
-            } else {
-                Self::async_unsafe_modify_state(
-                    &FlowInstFilterReq {
-                        main: Some(true),
-                        tags: Some(vec![new_model.tag.clone()]),
-                        ..Default::default()
-                    },
-                    &new_model.init_state_id,
-                    funs,
-                    &mock_ctx,
-                )
-                .await?;
-            }
-            Self::unsafe_modify_rel_model_id(&new_model.tag, &new_model.current_version_id, funs, &mock_ctx).await?;
-        }
+        Self::unsafe_modify_rel_model_id(&new_model.tag, &new_model.current_version_id, funs, &mock_ctx).await?;
 
         Ok(())
     }
 
-    async fn unsafe_modify_rel_model_id(tag: &str, modify_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn unsafe_modify_rel_model_id(tag: &str, modify_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
         update_statement.value(flow_inst::Column::RelFlowVersionId, modify_version_id);
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(true));
+        // 此处必须按own_paths修改，不可根据原模型修改。因为存在历史数据,并不一定完全等于原模型ID
         update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
 
         funs.db().execute(&update_statement).await?;
@@ -2345,8 +2319,14 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn async_unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let insts = Self::find_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
+    pub async fn async_unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, new_model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let new_states = new_model.states().into_iter().map(|s| s.id).collect_vec();
+        if let Some(current_state_id) = &filter.current_state_id {
+            if new_states.contains(current_state_id) {
+                return Ok(());
+            }
+        }
+        let insts = Self::find_items(filter, funs, ctx).await?.into_iter().filter(|inst| !new_states.contains(&inst.current_state_id)).filter(|inst| inst.current_state_id != *state_id).collect_vec();
         let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);

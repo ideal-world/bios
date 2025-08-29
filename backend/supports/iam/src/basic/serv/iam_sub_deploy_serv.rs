@@ -821,35 +821,6 @@ impl IamSubDeployServ {
                 }
             }
         }
-        // 同步项目绑定工作流模板
-        if let Some(app_flow_template) = import_req.app_flow_template.clone() {
-            for (app_id, rel_template_id) in app_flow_template {
-                let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &app_id)?;
-                if !rel_template_id.is_empty()
-                    && RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx).await?.is_empty()
-                {
-                    RbumRelServ::add_rel(
-                        &mut RbumRelAggAddReq {
-                            rel: RbumRelAddReq {
-                                tag: "FlowAppTemplate".to_string(),
-                                note: None,
-                                from_rbum_kind: RbumRelFromKind::Item,
-                                from_rbum_id: app_id.clone(),
-                                to_rbum_item_id: rel_template_id.clone(),
-                                to_own_paths: app_ctx.own_paths.clone(),
-                                ext: None,
-                                to_is_outside: true,
-                            },
-                            attrs: vec![],
-                            envs: vec![],
-                        },
-                        funs,
-                        &app_ctx,
-                    )
-                    .await?;
-                }
-            }
-        }
         Ok(())
     }
 
@@ -863,7 +834,6 @@ impl IamSubDeployServ {
         let mut app_role = HashMap::new();
         let mut app_account = HashMap::new();
         let mut app_role_account = HashMap::new();
-        let mut app_flow_template = HashMap::new();
         let app_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let app_vec = IamAppServ::find_detail_items(
             &IamAppFilterReq {
@@ -921,13 +891,6 @@ impl IamSubDeployServ {
             }
             let app_account_vec = IamAppServ::find_rel_account(&app_id.clone(), funs, &app_ctx).await?.iter().map(|r| r.rel_id.clone()).collect::<Vec<_>>();
             app_account.insert(app_id.clone(), app_account_vec);
-
-            let rel_template_id = RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx)
-                .await?
-                .pop()
-                .map(|rel| rel.rel_id)
-                .unwrap_or_default();
-            app_flow_template.insert(app_id.clone(), rel_template_id);
         }
         Ok(IamSubDeployTowExportAggResp {
             app: Some(app_vec),
@@ -935,7 +898,6 @@ impl IamSubDeployServ {
             app_role: Some(app_role),
             app_account: Some(app_account),
             app_role_account: Some(app_role_account),
-            app_flow_template: Some(app_flow_template),
         })
     }
 

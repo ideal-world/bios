@@ -465,11 +465,7 @@ impl FlowTransitionServ {
     // 获取动作关联模型
     pub async fn find_rel_model_map(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
         let mut rel_transitions = HashMap::new();
-        let rel_template_id = if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(ctx) {
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-        } else {
-            None
-        };
+        let rel_template_id = FlowModelServ::find_rel_template_id(funs, ctx).await?;
         // 当前可用的模型id
         let rel_model_ids = FlowModelServ::find_id_items(
             &FlowModelFilterReq {
