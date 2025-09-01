@@ -592,6 +592,7 @@ async fn add_role<'a>(
                 extend_role_id: None,
                 in_embed: Some(true),
                 in_base: Some(true),
+                deletable: Some(false),
             },
             res_ids: Some(init_res_item_ids.get_role_res_or_empty(code)),
         },

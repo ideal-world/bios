@@ -799,6 +799,7 @@ impl IamSubDeployServ {
                                         extend_role_id: Some(role.extend_role_id.clone()),
                                         in_embed: Some(role.in_embed.clone()),
                                         in_base: Some(role.in_base.clone()),
+                                        deletable: Some(role.deletable.clone()),
                                     },
                                     funs,
                                     &app_ctx,
