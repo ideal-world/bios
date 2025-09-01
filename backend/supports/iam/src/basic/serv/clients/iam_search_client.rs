@@ -30,10 +30,6 @@ pub struct IamSearchClient;
 impl IamSearchClient {
     pub async fn async_add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        let mock_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
         let account_resp = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
@@ -49,7 +45,7 @@ impl IamSearchClient {
             true,
             true,
             funs,
-            &mock_ctx,
+            ctx,
         )
         .await?;
         let logout_msg = logout_msg.to_string();
