@@ -63,6 +63,7 @@ impl IamRelServ {
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside,
                 ext: None,
+                disabled: None,
             },
             attrs: vec![],
             envs: if start_timestamp.is_some() || end_timestamp.is_some() {

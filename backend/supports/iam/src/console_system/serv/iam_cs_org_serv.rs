@@ -105,6 +105,7 @@ impl IamCsOrgServ {
                     note: None,
                     to_is_outside: true,
                     ext: None,
+                    disabled: None,
                 },
                 attrs: vec![],
                 envs: vec![],

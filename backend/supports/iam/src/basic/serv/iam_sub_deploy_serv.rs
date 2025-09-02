@@ -839,6 +839,7 @@ impl IamSubDeployServ {
                                 to_own_paths: app_ctx.own_paths.clone(),
                                 ext: None,
                                 to_is_outside: true,
+                                disabled: None,
                             },
                             attrs: vec![],
                             envs: vec![],
