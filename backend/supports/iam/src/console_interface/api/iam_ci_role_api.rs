@@ -307,4 +307,14 @@ impl IamCiRoleApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Find Roles
+    /// 查找角色
+    #[allow(clippy::too_many_arguments)]
+    #[oai(path = "/refresh_role_cache", method = "get")]
+    async fn refresh_role_cache(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamRoleServ::refresh_role_cache(&funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
 }

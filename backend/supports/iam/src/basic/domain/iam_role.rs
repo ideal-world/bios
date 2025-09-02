@@ -16,6 +16,8 @@ pub struct Model {
     pub in_embed: bool,
     pub extend_role_id: String,
 
+    pub deletable: bool,
+
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
 }

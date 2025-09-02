@@ -259,7 +259,7 @@ impl FlowCiModelApi {
     }
 
     /// 批量关闭模型
-    #[oai(path = "/batch/disable_model", method = "delete")]
+    #[oai(path = "/batch/disable_model", method = "put")]
     async fn batch_disable_model(&self, req: Json<FlowModelBatchDisableReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;

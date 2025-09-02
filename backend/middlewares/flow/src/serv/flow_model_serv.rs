@@ -1937,15 +1937,22 @@ impl FlowModelServ {
                     if let Some(ref mut modify_transitions) = &mut modify_state.modify_transitions {
                         for modify_transition in modify_transitions.iter_mut() {
                             if let Some(parent_model_transition) = parent_model_transitions.iter().find(|trans| trans.id == modify_transition.id.to_string()) {
-                                modify_transition.id = child_model_transitions
-                                    .iter()
-                                    .find(|child_tran| {
-                                        child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
-                                            && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
-                                    })
-                                    .map(|trans| trans.id.clone())
-                                    .unwrap_or_default()
-                                    .into();
+                                let child_transition = child_model_transitions
+                                .iter()
+                                .find(|child_tran| {
+                                    child_tran.from_flow_state_id == parent_model_transition.from_flow_state_id
+                                        && child_tran.to_flow_state_id == parent_model_transition.to_flow_state_id
+                                });
+                                modify_transition.id = child_transition.as_ref().map(|tran| tran.id.clone()).unwrap_or_default().into();
+                                // 更新验证内容时，需要保留子类自定义的验证内容
+                                if let Some(vars_collect) = modify_transition.vars_collect.clone() {
+                                    let child_var_collects = child_transition.map(|tran| tran.vars_collect().unwrap_or_default().into_iter().filter(|var| var.is_edit.is_none_or(|r| r)).collect_vec()).unwrap_or_default();
+                                    let mut new_vars_collect = vars_collect;
+                                    new_vars_collect.extend(child_var_collects);
+                                    modify_transition.vars_collect = Some(new_vars_collect);
+                                }
+
+
                             }
                         }
                     }
@@ -1971,22 +1978,16 @@ impl FlowModelServ {
             }
         }
         let child_model_clone = child_model.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let child_model_id = child_model_clone.id.clone();
-                let task_handle = tokio::spawn(async move {
-                    let funs = flow_constants::get_tardis_inst();
-                    debug!("[Flow] Start to execute child_model_id: {}, modify_req_clone: {:?}", child_model_id, modify_req_clone);
-                    let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => error!("Flow Model {} sync_child_model error:{:?}", child_model_clone.id, e),
-                }
-                Ok(())
-            })
-        }))
-        .await?;
+        let child_model_id = child_model_clone.id.clone();
+        tokio::spawn(async move {
+            let funs = flow_constants::get_tardis_inst();
+            debug!("[Flow] Start to execute child_model_id: {}, modify_req_clone: {:?}", child_model_id, modify_req_clone);
+            let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
+            match Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await {
+                Ok(_) => {}
+                Err(e) => error!("Flow Model {} sync_child_model error:{:?}", child_model_clone.id, e),
+            }
+        });
         Ok(())
     }
 

@@ -40,6 +40,7 @@ pub struct IamRoleAddReq {
     pub extend_role_id: Option<String>,
     pub in_embed: Option<bool>,
     pub in_base: Option<bool>,
+    pub deletable: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -117,6 +118,7 @@ pub struct IamRoleDetailResp {
     pub sort: i64,
     pub in_base: bool,
     pub in_embed: bool,
+    pub deletable: bool,
     pub extend_role_id: String,
 }
 

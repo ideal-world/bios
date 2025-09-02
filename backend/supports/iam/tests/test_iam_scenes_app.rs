@@ -192,6 +192,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
                     in_embed: None,
                     extend_role_id: None,
                     in_base: None,
+                    deletable: None,
                 },
                 res_ids: Some(vec![res_id.clone()]),
             },

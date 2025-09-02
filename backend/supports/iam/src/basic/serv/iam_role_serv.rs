@@ -84,6 +84,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             kind: Set(add_req.kind.as_ref().unwrap_or(&IamRoleKind::Tenant).to_int()),
             in_embed: Set(add_req.in_embed.unwrap_or(false)),
             in_base: Set(add_req.in_base.unwrap_or(false)),
+            deletable: Set(add_req.deletable.unwrap_or(true)),
             extend_role_id: Set(add_req.extend_role_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
@@ -242,13 +243,14 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         )
         .await?;
         if item.scope_level != RbumScopeLevelKind::Private
-            || item.in_embed
-            || item.in_base
             || id == funs.iam_basic_role_app_admin_id()
             || id == funs.iam_basic_role_sys_admin_id()
             || id == funs.iam_basic_role_tenant_admin_id()
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"));
+        }
+        if !item.deletable {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role can not be deleted", "409-iam-delete-role-conflict"));
         }
         let sub_role = Self::find_id_items(
             &IamRoleFilterReq {
@@ -334,6 +336,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         query.column((iam_role::Entity, iam_role::Column::Kind));
         query.column((iam_role::Entity, iam_role::Column::InBase));
         query.column((iam_role::Entity, iam_role::Column::InEmbed));
+        query.column((iam_role::Entity, iam_role::Column::Deletable));
         query.column((iam_role::Entity, iam_role::Column::ExtendRoleId));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_role::Column::Kind).eq(kind.to_int()));
@@ -419,6 +422,7 @@ impl IamRoleServ {
                         extend_role_id: Some(base_role.id),
                         disabled: Some(base_role.disabled),
                         in_base: Some(false),
+                        deletable: Some(base_role.deletable),
                     },
                     res_ids: None,
                 },
@@ -462,6 +466,7 @@ impl IamRoleServ {
                         extend_role_id: Some(app_role.id),
                         disabled: Some(app_role.disabled),
                         in_base: Some(false),
+                        deletable: Some(app_role.deletable),
                     },
                     res_ids: None,
                 },
@@ -544,6 +549,7 @@ impl IamRoleServ {
                         extend_role_id: Some(app_role_id.clone()),
                         disabled: Some(app_role.disabled),
                         in_base: Some(false),
+                        deletable: Some(app_role.deletable),
                     },
                     res_ids: None,
                 },
@@ -610,6 +616,7 @@ impl IamRoleServ {
                                     extend_role_id: Some(app_role_clone.id.clone()),
                                     disabled: Some(app_role_clone.disabled),
                                     in_base: Some(false),
+                                    deletable: Some(app_role.deletable),
                                 },
                                 res_ids: None,
                             },
@@ -1228,6 +1235,39 @@ impl IamRoleServ {
                     Self::extend_copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, &tenant_or_app_ctx).await?;
                 }
             }
+        }
+        Ok(())
+    }
+
+    pub async fn delete_role(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let role = Self::get_item(id, &IamRoleFilterReq::default(), funs, ctx).await?;
+        if role.in_embed {
+            let sub_role_ids = Self::find_id_items(&IamRoleFilterReq {
+                extend_role_id: Some(role.id),
+                ..Default::default()
+            }, None, None, funs, ctx).await?;
+            for sub_role_id in sub_role_ids {
+                Self::delete_item_with_all_rels(&sub_role_id, funs, ctx).await?;
+            }
+            Self::delete_item_with_all_rels(id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+    pub async fn refresh_role_cache(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let roles = Self::find_detail_items(&IamRoleFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for role in roles {
+            funs.cache()
+            .set(
+                &format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, role.id),
+                TardisFuns::json.obj_to_string(&role)?.as_str(),
+            )
+            .await?;
         }
         Ok(())
     }
