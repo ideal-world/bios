@@ -172,7 +172,7 @@ async fn init_data() -> TardisResult<()> {
             capacity: None,
             overload: None,
             hide: None,
-            secret: None,
+            secret: Some(true),
             show_by_conds: None,
             idx: None,
             data_type: RbumDataTypeKind::String,
@@ -209,7 +209,7 @@ async fn init_data() -> TardisResult<()> {
         &ctx,
     )
     .await?;
-    let base_url = format!("https://127.0.0.1:8080/{}", DOMAIN_CODE);
+    let base_url = format!("http://127.0.0.1:8080/{}", DOMAIN_CODE);
     let mut client = TestHttpClient::new(base_url.clone());
 
     client.set_auth(&ctx)?;
@@ -290,7 +290,7 @@ async fn init_data() -> TardisResult<()> {
             },
         )
         .await;
-    let _: String = client
+    let rel_id: String = client
         .put(
             &format!("/ci/manage/bs/rel",),
             &PluginBsAddReq {
@@ -302,6 +302,21 @@ async fn init_data() -> TardisResult<()> {
             },
         )
         .await;
+    let bs_resp: PluginBsInfoResp = client.get(&format!("/ci/manage/bs/rel/{}", rel_id)).await;
+    assert_eq!(bs_resp.name, "test-spi");
+    assert_eq!(bs_resp.kind_code, "gitlib");
+    assert!(bs_resp.rel.is_some());
+    assert!(bs_resp.rel.as_ref().unwrap().attrs.len() == 3);
+    assert!(bs_resp.rel.as_ref().unwrap().attrs.iter().any(|attr| attr.name == "url" && attr.value == "http://xxx"));
+    assert!(bs_resp.rel.as_ref().unwrap().attrs.iter().any(|attr| attr.name == "ak" && attr.value == "ak123"));
+    assert!(bs_resp.rel.as_ref().unwrap().attrs.iter().any(|attr| attr.name == "sk" && attr.value == "sk123"));
+    let bs_hide_secret: PluginBsInfoResp = client.get(&format!("/ci/manage/bs/rel/hide/secret/{}", rel_id)).await;
+    assert_eq!(bs_hide_secret.name, "test-spi");
+    assert_eq!(bs_hide_secret.kind_code, "gitlib");
+    assert!(bs_hide_secret.rel.is_some());
+    assert!(bs_hide_secret.rel.as_ref().unwrap().attrs.len() == 2);
+    assert!(bs_hide_secret.rel.as_ref().unwrap().attrs.iter().any(|attr| attr.name == "url" && attr.value == "http://xxx"));
+    assert!(bs_hide_secret.rel.as_ref().unwrap().attrs.iter().any(|attr| attr.name == "ak" && attr.value == "ak123"));
     let _: Void = client
         .put(
             &format!("/ci/kind/agg",),
@@ -312,6 +327,7 @@ async fn init_data() -> TardisResult<()> {
                 kind_id: kind_id.clone(),
                 rel_id: Some(rel_id),
                 bs_rel: None,
+                ignore_exist: None,
             },
         )
         .await;

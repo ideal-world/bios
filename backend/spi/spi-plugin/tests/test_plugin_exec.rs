@@ -29,6 +29,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 body: Some(json!({ "msg": "object" })),
                 query: None,
                 percent_encode: None,
+                rel_id: None,
             },
         )
         .await;

@@ -17,9 +17,13 @@ use crate::serv::plugin_api_serv::PluginApiServ;
 pub struct PluginApiApi;
 
 /// Plugin Api API
+/// 
+/// 插件 API 的请求
 #[poem_openapi::OpenApi(prefix_path = "/ci/spi/plugin/api", tag = "bios_basic::ApiTag::Interface")]
 impl PluginApiApi {
     /// Add or modify Plugin Api
+    ///
+    /// 添加或修改插件 API
     #[oai(path = "/", method = "put")]
     async fn add(&self, mut add_or_modify_req: Json<PluginApiAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = crate::get_tardis_inst();
@@ -30,6 +34,8 @@ impl PluginApiApi {
     }
 
     /// Delete Plugin Api
+    ///
+    /// 删除插件 API
     #[oai(path = "/:code", method = "delete")]
     async fn delete(&self, code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
@@ -37,6 +43,9 @@ impl PluginApiApi {
         TardisResp::ok(Void {})
     }
 
+    /// Delete Plugin Api by Kind
+    ///
+    /// 根据 Kind 删除插件 API
     #[oai(path = "/kind/:kind_id", method = "delete")]
     async fn delete_by_kind(&self, kind_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
@@ -45,6 +54,8 @@ impl PluginApiApi {
     }
 
     /// Get Plugin Api
+    ///
+    /// 获取插件 API
     #[oai(path = "/:kind_id/:code", method = "get")]
     async fn get_api_by_code(&self, kind_id: Path<String>, code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginApiDetailResp> {
         let funs = crate::get_tardis_inst();
@@ -55,6 +66,8 @@ impl PluginApiApi {
     }
 
     /// find Plugin Api page
+    ///
+    /// 查找插件 API 列表
     #[oai(path = "/", method = "get")]
     async fn find_page(
         &self,

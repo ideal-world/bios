@@ -459,6 +459,7 @@ impl FlowStateServ {
                 tag: None,
                 note: None,
                 ext: Some(json!(ext).to_string()),
+                disabled: None,
             },
             funs,
             ctx,

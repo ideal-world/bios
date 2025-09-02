@@ -252,6 +252,10 @@ pub enum RbumRelFromKind {
     ///
     /// 资源凭证
     Cert,
+    /// Resource Other
+    ///
+    /// 其他
+    Other,
 }
 
 impl RbumRelFromKind {
@@ -261,6 +265,7 @@ impl RbumRelFromKind {
             1 => Ok(RbumRelFromKind::Set),
             2 => Ok(RbumRelFromKind::SetCate),
             3 => Ok(RbumRelFromKind::Cert),
+            4 => Ok(RbumRelFromKind::Other),
             _ => Err(TardisError::format_error(&format!("invalid RbumRelFromKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
@@ -271,6 +276,7 @@ impl RbumRelFromKind {
             RbumRelFromKind::Set => 1,
             RbumRelFromKind::SetCate => 2,
             RbumRelFromKind::Cert => 3,
+            RbumRelFromKind::Other => 4,
         }
     }
 }

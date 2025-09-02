@@ -282,6 +282,10 @@ pub struct RbumRelFilterReq {
     ///
     /// 扩展信息（包含）
     pub ext_like: Option<String>,
+    /// Whether it is disabled
+    ///
+    /// 是否被禁用
+    pub disabled: Option<bool>,
 }
 
 /// Resource relation extension filter
@@ -603,6 +607,7 @@ pub struct RbumItemRelFilterReq {
     /// 扩展信息（包含）
     pub ext_like: Option<String>,
     pub own_paths: Option<String>,
+    pub disabled: Option<bool>,
 }
 
 /// Resource item filter fetcher

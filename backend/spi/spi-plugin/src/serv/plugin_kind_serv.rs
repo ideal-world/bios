@@ -32,12 +32,9 @@ impl PluginKindServ {
         if bs.kind_id != add_req.kind_id {
             return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin bs kind mismatch", "409-spi-plugin-kind-mismatch"));
         }
-        if Self::exist_kind_rel(&add_req.kind_id, funs, ctx).await? {
-            return Err(funs.err().conflict("plugin_kind", "add_rel", "plugin kind rel already exists", "409-spi-plugin-kind-already-exists"));
-        }
         let rel_id = if let Some(mut bs_rel) = add_req.bs_rel.clone() {
             if bs_rel.rel_id.is_none() {
-                bs_rel.rel_id = PluginBsServ::find_bs_rel_id(&bs_rel.bs_id, &bs_rel.app_tenant_id, funs, ctx).await?.first().cloned();
+                bs_rel.rel_id = PluginBsServ::find_bs_rel_id(vec![bs_rel.bs_id.clone()], &bs_rel.app_tenant_id, funs, ctx).await?.first().cloned();
             }
             let rel_id = PluginBsServ::add_or_modify_plugin_rel_agg(&mut bs_rel.clone(), funs, ctx).await?;
             rel_id
@@ -48,14 +45,13 @@ impl PluginKindServ {
                 return Err(funs.err().conflict("plugin_kind", "add_rel", "rel_id is required", "409-spi-plugin-required"));
             }
         };
-        Self::delete_kind_agg_rel(&add_req.kind_id, funs, ctx).await?;
         PluginRelServ::add_simple_rel(
             &PluginAppBindRelKind::PluginAppBindKind,
             &bing_item_id,
             &rel_id,
             None,
             Some(add_req.kind_id.clone()),
-            false,
+            add_req.ignore_exist.unwrap_or(false),
             true,
             add_req.attrs.clone(),
             funs,
@@ -85,10 +81,21 @@ impl PluginKindServ {
         Ok(())
     }
 
+    pub async fn delete_kind_agg_rel_by_rel_id(rel_id: &str, kind_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let bing_item_id = rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_default();
+        let rel = PluginRelServ::get_rel(rel_id, funs, ctx).await?;
+        if rel.from_rbum_id == bing_item_id && rel.ext == kind_id && rel.tag == PluginAppBindRelKind::PluginAppBindKind.to_string() {
+            PluginRelServ::delete_simple_rel_by_id(rel_id, &PluginAppBindRelKind::PluginAppBindKind, &bing_item_id, rel_id, funs, ctx).await?;
+            return Ok(());
+        }
+        Err(funs.err().not_found("plugin_kind", "delete_rel_by_rel_id", "not found rel", "404-spi-plugin-rel-not-exist"))
+    }
+
     pub async fn find_kind_agg(
         parent_id: Option<String>,
         kind_codes: Option<Vec<String>>,
         app_tenant_id: &str,
+        is_hide_secret: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<PluginKindAggResp>> {
@@ -111,7 +118,7 @@ impl PluginKindServ {
         .await?;
         let mut kind_aggs = Vec::new();
         for kind in kinds {
-            let kind_agg = Self::get_kind_agg(&kind.id, app_tenant_id, funs, ctx).await?;
+            let kind_agg = Self::get_kind_agg(&kind.id, app_tenant_id, is_hide_secret, funs, ctx).await?;
             if kind_agg.rel_bs.is_some() || kind_agg.rel_bind.is_some() {
                 kind_aggs.push(kind_agg);
             }
@@ -119,7 +126,7 @@ impl PluginKindServ {
         Ok(kind_aggs)
     }
 
-    pub async fn get_kind_agg(kind_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginKindAggResp> {
+    pub async fn get_kind_agg(kind_id: &str, app_tenant_id: &str, is_hide_secret: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginKindAggResp> {
         let kind = RbumKindServ::get_rbum(
             kind_id,
             &RbumKindFilterReq {
@@ -141,6 +148,7 @@ impl PluginKindServ {
             app_tenant_id,
             Some(kind_id.to_owned()),
             true,
+            false,
             None,
             None,
             funs,
@@ -151,7 +159,7 @@ impl PluginKindServ {
         {
             match PluginRelServ::get_rel(&rel_bind.rel.to_rbum_item_id, funs, ctx).await {
                 Ok(rel) => {
-                    let mut rel_bs = PluginBsServ::get_bs(&rel.id, funs, ctx).await?;
+                    let mut rel_bs = PluginBsServ::get_bs(&rel.id, is_hide_secret, funs, ctx).await?;
                     if let Some(mut rel) = rel_bs.rel.clone() {
                         let mut new_attrs = rel_bind.attrs.clone();
                         rel.attrs.iter().for_each(|r| {

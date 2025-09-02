@@ -993,6 +993,7 @@ impl IamCertServ {
                 to_own_paths: own_paths.unwrap_or_else(|| ctx.own_paths.clone()),
                 to_is_outside: true,
                 ext,
+                disabled: None,
             },
             attrs: vec![],
             envs: vec![],

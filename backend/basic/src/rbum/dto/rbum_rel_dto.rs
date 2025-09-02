@@ -65,6 +65,15 @@ pub struct RbumRelAddReq {
     ///
     /// 当为 ``true`` 不会校验关联目标方的合法性。
     pub to_is_outside: bool,
+
+    /// Whether it is disabled
+    ///
+    /// 是否禁用
+    ///
+    /// A disabled relationship is not considered in business logic, but the data is still retained.
+    ///
+    /// 禁用的关联在业务逻辑中不予考虑，但数据仍然保留。
+    pub disabled: Option<bool>,
 }
 
 /// Modify request for resource relationship
@@ -96,6 +105,15 @@ pub struct RbumRelModifyReq {
     /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
+
+    /// Whether it is disabled
+    ///
+    /// 是否禁用
+    ///
+    /// A disabled relationship is not considered in business logic, but the data is still retained.
+    ///
+    /// 禁用的关联在业务逻辑中不予考虑，但数据仍然保留。
+    pub disabled: Option<bool>,
 }
 
 /// Simple find request for resource relationship
@@ -279,6 +297,7 @@ impl RbumRelBoneResp {
                     RbumRelFromKind::Set => detail.from_rbum_set_name,
                     RbumRelFromKind::SetCate => detail.from_rbum_set_cate_name,
                     RbumRelFromKind::Cert => "".to_string(),
+                    RbumRelFromKind::Other => "".to_string(),
                 },
                 tag: detail.tag,
                 note: detail.note,

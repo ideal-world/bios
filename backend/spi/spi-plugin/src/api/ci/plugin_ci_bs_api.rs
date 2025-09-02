@@ -19,9 +19,13 @@ use crate::serv::plugin_bs_serv::PluginBsServ;
 pub struct PluginCiBsApi;
 
 /// Interface Console Backend rel Service API
+///
+/// 插件 CI 后台服务 API
 #[poem_openapi::OpenApi(prefix_path = "/ci/manage/bs", tag = "bios_basic::ApiTag::Interface")]
 impl PluginCiBsApi {
     /// Add Backend Service
+    ///
+    /// 添加后端服务
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<SpiBsAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = crate::get_tardis_inst();
@@ -32,6 +36,8 @@ impl PluginCiBsApi {
     }
 
     /// Modify Backend Service
+    ///
+    /// 修改后端服务
     #[oai(path = "/:id", method = "patch")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<SpiBsModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
@@ -42,6 +48,8 @@ impl PluginCiBsApi {
     }
 
     /// Get Backend Service
+    ///
+    /// 获取后端服务
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<SpiBsDetailResp> {
         let funs = crate::get_tardis_inst();
@@ -50,6 +58,8 @@ impl PluginCiBsApi {
     }
 
     /// Find Backend Services
+    ///
+    /// 查找后端服务列表
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
@@ -100,6 +110,8 @@ impl PluginCiBsApi {
     }
 
     /// Delete Backend Service
+    ///
+    /// 删除后端服务
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
@@ -110,6 +122,8 @@ impl PluginCiBsApi {
     }
 
     /// Add Plugin Service Rel App/Tenant
+    ///
+    /// 添加插件服务关系
     #[oai(path = "/rel", method = "put")]
     async fn add_plugin_rel_agg(&self, mut add_req: Json<PluginBsAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = crate::get_tardis_inst();
@@ -121,31 +135,48 @@ impl PluginCiBsApi {
     }
 
     /// Get Plugin Service Rel App/Tenant Support empty
+    ///
+    /// 获取插件服务关系（支持空）
     #[oai(path = "/rel/:rel_id/empty", method = "get")]
     async fn get_empty_bs_rel_agg(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::get_bs(&rel_id.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::get_bs(&rel_id.0, false, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Get Plugin Service Rel App/Tenant Hide Secret
+    ///
+    /// 获取插件服务关系（隐藏密钥）
+    #[oai(path = "/rel/hide/secret/:rel_id", method = "get")]
+    async fn get_bs_rel_hide_secret_agg(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
+        let funs = crate::get_tardis_inst();
+        let result = PluginBsServ::get_bs(&rel_id.0, true, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Get Plugin Service Rel App/Tenant
+    ///
+    /// 获取插件服务关系
     #[oai(path = "/rel/:rel_id", method = "get")]
     async fn get_bs_rel_agg(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsInfoResp> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::get_bs(&rel_id.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::get_bs(&rel_id.0, false, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
-    // todo api modify
     /// Get Plugin Service Rel App/Tenant
+    ///
+    /// 获取插件服务关系
     #[oai(path = "/rel/up/:kind_code", method = "get")]
     async fn get_bs_by_kind_code(&self, kind_code: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<PluginBsCertInfoResp> {
         let funs = crate::get_tardis_inst();
-        let result = PluginBsServ::get_bs_by_kind_code(&kind_code.0, &funs, &ctx.0).await?;
+        let result = PluginBsServ::get_bs_by_up_kind_code(&kind_code.0, None, false, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Find Plugin Services rel App/Tenant
+    ///
+    /// 获取插件服务关系
     #[oai(path = "/rel", method = "get")]
     async fn paginate_bs_rel_agg(
         &self,
@@ -163,6 +194,36 @@ impl PluginCiBsApi {
             kind_id.0,
             bs_id.0,
             &app_tenant_id.0,
+            false,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(result)
+    }
+
+    #[oai(path = "/rel/hide/secret", method = "get")]
+    async fn paginate_bs_rel_hide_secret_agg(
+        &self,
+        kind_id: Query<Option<String>>,
+        bs_id: Query<Option<String>>,
+        app_tenant_id: Query<String>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<PluginBsInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let result = PluginBsServ::paginate_bs_rel_agg(
+            kind_id.0,
+            bs_id.0,
+            &app_tenant_id.0,
+            true,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -175,6 +236,8 @@ impl PluginCiBsApi {
     }
 
     /// Delete Plugin Service Rel App/Tenant
+    ///
+    /// 删除插件服务关系
     #[oai(path = "/rel/:rel_id", method = "delete")]
     async fn delete_rel(&self, rel_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
@@ -186,6 +249,8 @@ impl PluginCiBsApi {
     }
 
     /// find Plugin Service Rel App/Tenant sub bind ids
+    ///
+    /// 获取插件服务关系下级绑定ID
     #[oai(path = "/find/:id/rel/:app_tenant_id/sub/bind", method = "get")]
     async fn find_sub_bind_ids(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let funs = crate::get_tardis_inst();

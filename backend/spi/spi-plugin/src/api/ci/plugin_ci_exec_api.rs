@@ -13,9 +13,14 @@ use crate::serv::plugin_exec_serv::PluginExecServ;
 pub struct PluginExecApi;
 
 /// Plugin exec API
+/// 
+/// 插件执行 API
 #[poem_openapi::OpenApi(prefix_path = "/ci/spi/plugin", tag = "bios_basic::ApiTag::Interface")]
 impl PluginExecApi {
+
     /// Put Plugin exec
+    /// 
+    /// 插件执行
     #[oai(path = "/:kind_code/api/:api_code/exec", method = "put")]
     async fn plugin_exec(&self, kind_code: Path<String>, api_code: Path<String>, exec_req: Json<PluginExecReq>, ctx: TardisContextExtractor) -> TardisApiResult<PluginExecResp> {
         let funs = crate::get_tardis_inst();
@@ -28,6 +33,8 @@ impl PluginExecApi {
     }
 
     /// Put Plugin exec
+    ///
+    /// 测试插件执行
     #[oai(path = "/test/exec/:msg", method = "delete")]
     async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<PluginExecReq> {
         for (k, v) in request.headers() {
@@ -38,6 +45,7 @@ impl PluginExecApi {
             query: None,
             header: None,
             percent_encode: None,
+            rel_id: None,
         })
     }
 }
