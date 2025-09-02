@@ -60,6 +60,15 @@ pub struct Model {
     /// 例如：记录来源或目标在另一个服务中，为避免远程调用，可以将所需信息冗余添加到此字段。
     pub ext: String,
 
+    /// Whether it is disabled
+    /// 
+    /// 是否禁用
+    /// 
+    /// A disabled relationship is not considered in business logic, but the data is still retained.
+    /// 
+    /// 禁用的关联在业务逻辑中不予考虑，但数据仍然保留。
+    pub disabled: bool,
+
     #[index]
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,

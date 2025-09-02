@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 
 use crate::rbum::dto::rbum_rel_attr_dto::RbumRelAttrDetailResp;
-use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp};
+use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp, RbumRelModifyReq};
 use crate::rbum::dto::rbum_rel_env_dto::RbumRelEnvDetailResp;
 use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 
@@ -88,6 +88,25 @@ pub struct RbumRelEnvAggAddReq {
     /// 关联环境值2
     #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value2: Option<String>,
+}
+
+/// Modify request for resource relationship aggregation
+///
+/// 资源关联聚合修改请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct RbumRelAggModifyReq {
+    /// Relationship information
+    ///
+    /// 关联信息
+    pub rel: RbumRelModifyReq,
+    /// Relationship attribute information
+    ///
+    /// 关联属性信息
+    pub attrs: Vec<RbumRelAttrAggAddReq>,
+    /// Relationship environment information
+    ///
+    /// 关联环境信息
+    pub envs: Vec<RbumRelEnvAggAddReq>,
 }
 
 /// Resource relationship aggregation detail information

@@ -8,12 +8,18 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::IdenStatic;
 use tardis::db::sea_orm::*;
+use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
+use crate::rbum::domain::rbum_kind;
 use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate};
+use crate::rbum::dto::rbum_filer_dto::RbumKindAttrFilterReq;
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
+use crate::rbum::dto::rbum_rel_agg_dto::RbumRelAggModifyReq;
+use crate::rbum::dto::rbum_rel_agg_dto::RbumRelAttrAggAddReq;
+use crate::rbum::dto::rbum_rel_agg_dto::RbumRelEnvAggAddReq;
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
 use crate::rbum::dto::rbum_rel_dto::RbumRelEnvCheckReq;
@@ -45,10 +51,11 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
             RbumRelFromKind::Set => RbumSetServ::get_table_name(),
             RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
             RbumRelFromKind::Cert => RbumCertServ::get_table_name(),
+            RbumRelFromKind::Other => "",
         };
         if RbumRelFromKind::Cert == add_req.from_rbum_kind {
             RbumCertServ::check_ownership(&add_req.from_rbum_id, funs, ctx).await?;
-        } else {
+        } else if rel_rbum_table_name != "" {
             // The relationship check is changed from check_ownership to check_scope.
             // for example, the account corresponding to the tenant can be associated to the app,
             // where the account belongs to the tenant but scope=1, so it can be used by the application.
@@ -76,6 +83,7 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
             to_rbum_item_id: Set(add_req.to_rbum_item_id.to_string()),
             to_own_paths: Set(add_req.to_own_paths.to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
+            disabled: Set(add_req.disabled.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -93,6 +101,9 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
         }
         if let Some(ext) = &modify_req.ext {
             rbum_rel.ext = Set(ext.to_string());
+        }
+        if let Some(disabled) = modify_req.disabled {
+            rbum_rel.disabled = Set(disabled);
         }
         Ok(rbum_rel)
     }
@@ -206,6 +217,9 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
         if let Some(to_own_paths) = &filter.to_own_paths {
             query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToOwnPaths)).eq(to_own_paths.to_string()));
         }
+        if let Some(disabled) = filter.disabled {
+            query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Disabled)).eq(disabled));
+        }
         if let Some(ext_eq) = &filter.ext_eq {
             query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Ext)).eq(ext_eq.to_string()));
         }
@@ -236,6 +250,7 @@ impl RbumRelServ {
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside: false,
                 ext: None,
+                disabled: None,
             },
             funs,
             ctx,
@@ -278,6 +293,52 @@ impl RbumRelServ {
             .await?;
         }
         Ok(rbum_rel_id)
+    }
+
+    /// Modify a relationship
+    ///
+    /// 修改关联关系
+    pub async fn modify_rel(id: &str, modify_req: &mut RbumRelAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::modify_rbum(id, &mut modify_req.rel, funs, ctx).await?;
+        RbumRelAttrServ::part_modify_attrs_agg(id, modify_req.attrs.clone(), funs, ctx).await?;
+        RbumRelEnvServ::full_modify_envs_agg(id, modify_req.envs.clone(), funs, ctx).await?;
+        Ok(())
+    }
+
+    /// Disable a relationship
+    ///
+    /// 禁用关联关系
+    pub async fn disable_rel(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::modify_rbum(
+            id,
+            &mut RbumRelModifyReq {
+                tag: None,
+                note: None,
+                ext: None,
+                disabled: Some(true),
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    /// Enable a relationship
+    ///
+    /// 启用关联关系
+    pub async fn enable_rel(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::modify_rbum(
+            id,
+            &mut RbumRelModifyReq {
+                tag: None,
+                note: None,
+                ext: None,
+                disabled: Some(false),
+            },
+            funs,
+            ctx,
+        )
+        .await
     }
 
     /// Find the relationship target ids of the specified condition
@@ -345,6 +406,38 @@ impl RbumRelServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         Self::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                ..Default::default()
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    /// Find the hidden secret relationship summary information set of the specified condition
+    ///
+    /// 查找指定条件的隐私关联概要信息集合
+    pub async fn find_from_hide_secret_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        Self::find_hide_secret_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
@@ -477,6 +570,42 @@ impl RbumRelServ {
         .await
     }
 
+    /// Paginate to get the secret relationship summary information set of the specified condition
+    ///
+    /// 分页查找指定条件的隐私关联概要信息集合
+    pub async fn paginate_from_secret_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        Self::paginate_hide_secret_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                ..Default::default()
+            },
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
     /// Statistics the number of the specified condition
     ///
     /// 统计指定条件的关联记录数
@@ -556,6 +685,37 @@ impl RbumRelServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         Self::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                ..Default::default()
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    /// Find the hidden secret relationship summary information set of the specified condition
+    ///
+    /// 查找指定条件的隐私关联概要信息集合
+    pub async fn find_to_hide_secret_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        Self::find_hide_secret_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(ctx.own_paths.to_string()),
@@ -674,6 +834,42 @@ impl RbumRelServ {
         .await
     }
 
+    /// Paginate to get the hidden secret relationship summary information set of the specified condition
+    ///
+    /// 分页查找指定条件的隐私关联概要信息集合
+    pub async fn paginate_to_hide_secret_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
+        page_number: u32,
+        page_size: u32,
+        own_paths: Option<String>,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        Self::paginate_hide_secret_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(own_paths.unwrap_or(ctx.own_paths.to_string())),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                ..Default::default()
+            },
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
     /// Statistics the number of the specified condition
     ///
     /// 统计指定条件的关联记录数
@@ -737,6 +933,20 @@ impl RbumRelServ {
         Self::package_agg_rels(rbum_rels, filter, funs, ctx).await
     }
 
+    /// Find the hidden secret relationship aggregation detail information set of the specified condition
+    ///
+    /// 查找指定条件的隐私关联聚合信息集合
+    pub async fn find_hide_secret_rels(
+        filter: &RbumRelFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        let rbum_rels = RbumRelServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Self::package_agg_hide_secret_rels(rbum_rels, filter, funs, ctx).await
+    }
+
     /// Page to get the relationship summary information set of the specified condition
     ///
     /// 分页查找指定条件的关联概要信息集合
@@ -785,6 +995,28 @@ impl RbumRelServ {
         })
     }
 
+    /// Paginate to get the hidden secret relationship aggregation detail information set of the specified condition
+    ///
+    /// 分页查找指定条件的隐私关联聚合信息集合
+    pub async fn paginate_hide_secret_rels(
+        filter: &RbumRelFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        let result = Self::package_agg_hide_secret_rels(rbum_rels.records, filter, funs, ctx).await?;
+        Ok(TardisPage {
+            page_size: page_size as u64,
+            page_number: page_number as u64,
+            total_size: rbum_rels.total_size,
+            records: result,
+        })
+    }
+
     /// Package relationship aggregation information
     ///
     /// 组装关联聚合信息
@@ -795,6 +1027,51 @@ impl RbumRelServ {
             let resp = RbumRelAggResp {
                 rel,
                 attrs: RbumRelAttrServ::find_rbums(
+                    &RbumRelExtFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: filter.basic.own_paths.clone(),
+                            with_sub_own_paths: filter.basic.with_sub_own_paths.clone(),
+                            ..Default::default()
+                        },
+                        rel_rbum_rel_id: Some(rbum_rel_id.clone()),
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?,
+                envs: RbumRelEnvServ::find_rbums(
+                    &RbumRelExtFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: filter.basic.own_paths.clone(),
+                            with_sub_own_paths: filter.basic.with_sub_own_paths.clone(),
+                            ..Default::default()
+                        },
+                        rel_rbum_rel_id: Some(rbum_rel_id.clone()),
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?,
+            };
+            result.push(resp);
+        }
+        Ok(result)
+    }
+
+    /// Package hidden secret relationship aggregation information
+    ///
+    /// 组装隐私关联聚合信息
+    async fn package_agg_hide_secret_rels(rels: Vec<RbumRelDetailResp>, filter: &RbumRelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
+        let mut result = Vec::with_capacity(rels.len());
+        for rel in rels {
+            let rbum_rel_id = rel.id.to_string();
+            let resp = RbumRelAggResp {
+                rel,
+                attrs: RbumRelAttrServ::find_hide_secret(
                     &RbumRelExtFilterReq {
                         basic: RbumBasicFilterReq {
                             own_paths: filter.basic.own_paths.clone(),
@@ -1372,6 +1649,139 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
     }
 }
 
+impl RbumRelAttrServ {
+    /// Find relationship attributes and filter out those with secret=true
+    ///
+    /// 隐藏掉 rel_kind_attr_id 为 secert=true 的数据
+    pub async fn find_hide_secret(
+        filter: &RbumRelExtFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAttrDetailResp>> {
+        let mut attrs = RbumRelAttrServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        let rel_kind_attr_ids = attrs
+            .iter()
+            .filter_map(|attr| {
+                if !attr.rel_rbum_kind_attr_id.is_empty() {
+                    Some(attr.rel_rbum_kind_attr_id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<String>>();
+        if !rel_kind_attr_ids.is_empty() {
+            let rbum_kind_attr_ids = RbumKindAttrServ::find_id_rbums(
+                &RbumKindAttrFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    secret: Some(true),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            if rbum_kind_attr_ids.is_empty() {
+                return Ok(attrs);
+            }
+            attrs.retain(|attr| !rbum_kind_attr_ids.contains(&attr.rel_rbum_kind_attr_id));
+            return Ok(attrs);
+        }
+        Ok(attrs)
+    }
+
+    /// Partially modify relationship attributes
+    ///
+    /// 部分修改关系属性
+    pub async fn part_modify_attrs_agg(rel_id: &str, attrs: Vec<RbumRelAttrAggAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let exist_attrs = RbumRelAttrServ::find_rbums(
+            &RbumRelExtFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_rel_id: Some(rel_id.to_string()),
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for attr in attrs {
+            if let Some(exist_attr) = exist_attrs.iter().find(|a| {
+                (attr.rel_rbum_kind_attr_id.is_some() && a.rel_rbum_kind_attr_id == attr.rel_rbum_kind_attr_id.clone().unwrap_or_default())
+                    || (attr.rel_rbum_kind_attr_id.is_none() && a.name == attr.name.clone().unwrap_or_default())
+            }) {
+                Self::modify_rbum(&exist_attr.id, &mut RbumRelAttrModifyReq { value: attr.value.to_string() }, funs, ctx).await?;
+            } else {
+                Self::add_rbum(
+                    &mut RbumRelAttrAddReq {
+                        is_from: attr.is_from,
+                        value: attr.value.to_string(),
+                        name: attr.name.clone(),
+                        rel_rbum_rel_id: rel_id.to_string(),
+                        rel_rbum_kind_attr_id: attr.rel_rbum_kind_attr_id.clone(),
+                        record_only: attr.record_only,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Fully modify relationship attributes
+    ///
+    /// 完全修改关系属性
+    pub async fn full_modify_attrs_agg(rel_id: &str, attrs: Vec<RbumRelAttrAggAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let exist_attrs = RbumRelAttrServ::find_rbums(
+            &RbumRelExtFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_rel_id: Some(rel_id.to_string()),
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for exist_attr in exist_attrs {
+            Self::delete_rbum(&exist_attr.id, funs, ctx).await?;
+        }
+        for attr in attrs {
+            Self::add_rbum(
+                &mut RbumRelAttrAddReq {
+                    is_from: attr.is_from,
+                    value: attr.value.to_string(),
+                    name: attr.name.clone(),
+                    rel_rbum_rel_id: rel_id.to_string(),
+                    rel_rbum_kind_attr_id: attr.rel_rbum_kind_attr_id.clone(),
+                    record_only: attr.record_only,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl RbumCrudOperation<rbum_rel_env::ActiveModel, RbumRelEnvAddReq, RbumRelEnvModifyReq, RbumRelEnvDetailResp, RbumRelEnvDetailResp, RbumRelExtFilterReq> for RbumRelEnvServ {
     fn get_table_name() -> &'static str {
@@ -1429,5 +1839,45 @@ impl RbumCrudOperation<rbum_rel_env::ActiveModel, RbumRelEnvAddReq, RbumRelEnvMo
         }
         query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
+    }
+}
+
+impl RbumRelEnvServ {
+    /// Fully modify relationship environment attributes
+    ///
+    /// 完全修改关系环境属性
+    pub async fn full_modify_envs_agg(rel_id: &str, envs: Vec<RbumRelEnvAggAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let exist_envs = RbumRelEnvServ::find_rbums(
+            &RbumRelExtFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_rel_id: Some(rel_id.to_string()),
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for exist_env in exist_envs {
+            Self::delete_rbum(&exist_env.id, funs, ctx).await?;
+        }
+        for env in envs {
+            Self::add_rbum(
+                &mut RbumRelEnvAddReq {
+                    kind: env.kind,
+                    value1: env.value1.to_string(),
+                    value2: env.value2.clone(),
+                    rel_rbum_rel_id: rel_id.to_string(),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        Ok(())
     }
 }

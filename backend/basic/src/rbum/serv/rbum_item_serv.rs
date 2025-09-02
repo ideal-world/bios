@@ -344,6 +344,7 @@ where
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside: false,
                 ext: None,
+                disabled: None,
             },
             funs,
             ctx,
@@ -367,6 +368,7 @@ where
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside: false,
                 ext: None,
+                disabled: None,
             },
             funs,
             ctx,
@@ -718,6 +720,9 @@ where
         }
         if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
             sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Ext)).like(format!("%{ext_like}%").as_str()));
+        }
+        if let Some(disable) = rbum_item_rel_filter_req.disabled {
+            sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Disabled)).eq(disable));
         }
         if let Some(own_paths) = &rbum_item_rel_filter_req.own_paths {
             sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::OwnPaths)).eq(own_paths.to_string()));

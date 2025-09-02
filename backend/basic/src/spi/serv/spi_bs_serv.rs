@@ -294,6 +294,7 @@ impl SpiBsServ {
                     to_own_paths: ctx.own_paths.to_string(),
                     to_is_outside: true,
                     ext: None,
+                    disabled: None,
                 },
                 attrs,
                 envs,
@@ -308,6 +309,14 @@ impl SpiBsServ {
     pub async fn delete_rel(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
         Ok(())
+    }
+
+    pub async fn disable_rel(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumRelServ::disable_rel(&rel_id, funs, ctx).await
+    }
+
+    pub async fn enable_rel(rel_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumRelServ::enable_rel(&rel_id, funs, ctx).await
     }
 
     pub async fn delete_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
