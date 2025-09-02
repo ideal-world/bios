@@ -98,6 +98,7 @@ impl FlowTransitionServ {
                 vars_collect: Set(req.vars_collect.clone().unwrap_or_default()),
                 double_check: Set(req.double_check.clone().unwrap_or_default()),
                 is_notify: Set(req.is_notify.unwrap_or(true)),
+                is_edit: Set(req.is_edit),
 
                 action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -274,6 +275,9 @@ impl FlowTransitionServ {
                 if let Some(is_notify) = &req.is_notify {
                     flow_transition.is_notify = Set(*is_notify);
                 }
+                if let Some(is_edit) = &req.is_edit {
+                    flow_transition.is_edit = Set(Some(*is_edit));
+                }
                 if let Some(sort) = &req.sort {
                     flow_transition.sort = Set(*sort);
                 }
@@ -341,6 +345,7 @@ impl FlowTransitionServ {
                 (flow_transition::Entity, flow_transition::Column::ActionByFrontChanges),
                 (flow_transition::Entity, flow_transition::Column::DoubleCheck),
                 (flow_transition::Entity, flow_transition::Column::IsNotify),
+                (flow_transition::Entity, flow_transition::Column::IsEdit),
                 (flow_transition::Entity, flow_transition::Column::RelFlowModelVersionId),
                 (flow_transition::Entity, flow_transition::Column::Sort),
             ])
@@ -460,11 +465,7 @@ impl FlowTransitionServ {
     // 获取动作关联模型
     pub async fn find_rel_model_map(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
         let mut rel_transitions = HashMap::new();
-        let rel_template_id = if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(ctx) {
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-        } else {
-            None
-        };
+        let rel_template_id = FlowModelServ::find_rel_template_id(funs, ctx).await?;
         // 当前可用的模型id
         let rel_model_ids = FlowModelServ::find_id_items(
             &FlowModelFilterReq {

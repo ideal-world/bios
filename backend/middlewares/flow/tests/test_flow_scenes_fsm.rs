@@ -128,6 +128,7 @@ pub async fn test(
                 disabled: None,
                 front_conds: None,
                 data_source: None,
+                default: None,
             },
         )
         .await;
@@ -141,7 +142,7 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: init_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                                ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
                             }),
                             add_transitions: Some(vec![
                                 FlowTransitionAddReq {
@@ -163,7 +164,7 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: processing_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 2, show_btns: None },
+                                ext: FlowStateRelModelExt { sort: 2, show_btns: None, ..Default::default() },
                             }),
                             add_transitions: Some(vec![
                                 FlowTransitionAddReq {
@@ -184,7 +185,7 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: finish_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 3, show_btns: None },
+                                ext: FlowStateRelModelExt { sort: 3, show_btns: None, ..Default::default() },
                             }),
                             add_transitions: Some(vec![
                                 FlowTransitionAddReq {
@@ -205,7 +206,7 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: closed_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 4, show_btns: None },
+                                ext: FlowStateRelModelExt { sort: 4, show_btns: None, ..Default::default() },
                             }),
                             add_transitions: Some(vec![FlowTransitionAddReq {
                                 from_flow_state_id: closed_state_id.clone(),
@@ -244,6 +245,7 @@ pub async fn test(
                 rel_model_id: None,
                 front_conds: None,
                 data_source: None,
+                default: None,
                 disabled: None,
             },
         )
@@ -258,7 +260,7 @@ pub async fn test(
                     bind_states: Some(vec![FlowModelVersionBindState {
                         exist_state: Some(FlowModelBindStateReq {
                             state_id: init_state_id.clone(),
-                            ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                            ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
                         }),
                         is_init: true,
                         ..Default::default()
@@ -291,6 +293,7 @@ pub async fn test(
                 current_version_id: None,
                 front_conds: None,
                 data_source: None,
+                default: None,
             },
         )
         .await;
@@ -430,6 +433,7 @@ pub async fn test(
             &FlowModelCopyOrReferenceReq {
                 rel_model_ids,
                 rel_template_id: Some(project_template_id1.to_string()),
+                target_template_id: None,
                 op: FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 update_states: None,
             },
@@ -495,7 +499,7 @@ pub async fn test(
                     bind_states: Some(vec![FlowModelVersionBindState {
                         exist_state: Some(FlowModelBindStateReq {
                             state_id: finish_state_id.clone(),
-                            ext: FlowStateRelModelExt { sort: 3, show_btns: None },
+                            ext: FlowStateRelModelExt { sort: 3, show_btns: None, ..Default::default() },
                         }),
                         add_transitions: Some(vec![
                             FlowTransitionAddReq {
@@ -608,6 +612,7 @@ pub async fn test(
             "/ci/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(project_template_id1.to_string()),
+                target_template_id: None,
                 op: FlowModelAssociativeOperationKind::Reference,
                 update_states: None,
             },
@@ -659,6 +664,7 @@ pub async fn test(
             "/ci/model/copy_or_reference_model",
             &FlowModelCopyOrReferenceCiReq {
                 rel_template_id: Some(project_template_id1.to_string()),
+                target_template_id: None,
                 op: FlowModelAssociativeOperationKind::Copy,
                 update_states: Some(update_states),
             },
@@ -699,6 +705,7 @@ pub async fn test(
                 disabled: None,
                 front_conds: None,
                 data_source: None,
+                default: None,
             },
         )
         .await;
@@ -740,6 +747,7 @@ pub async fn test(
                     value: json!("1111"),
                 }]]),
                 data_source: None,
+                default: None,
             },
         )
         .await;
@@ -773,7 +781,7 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        ext: FlowStateRelModelExt { sort: 3, show_btns: None, ..Default::default() },
                     }),
                     add_transitions: Some(vec![FlowTransitionAddReq {
                         name: Some("提交".into()),
@@ -799,6 +807,7 @@ pub async fn test(
                             id: finish_state_id.clone(),
                             sort: Some(2),
                             show_btns: None,
+                            is_edit: None,
                         }),
                         ..Default::default()
                     },
@@ -835,7 +844,7 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
                     }),
                     add_transitions: Some(vec![FlowTransitionAddReq {
                         name: Some("提交".into()),
@@ -895,7 +904,7 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
                     }),
                     is_init: false,
                     add_transitions: Some(vec![FlowTransitionAddReq {
@@ -955,6 +964,7 @@ pub async fn test(
                 disabled: None,
                 front_conds: None,
                 data_source: None,
+                default: None,
             },
         )
         .await;
@@ -998,7 +1008,7 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None },
+                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
                     }),
                     is_init: false,
                     add_transitions: Some(vec![FlowTransitionAddReq {

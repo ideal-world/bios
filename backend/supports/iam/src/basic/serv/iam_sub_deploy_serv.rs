@@ -864,7 +864,6 @@ impl IamSubDeployServ {
         let mut app_role = HashMap::new();
         let mut app_account = HashMap::new();
         let mut app_role_account = HashMap::new();
-        let mut app_flow_template = HashMap::new();
         let app_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let app_vec = IamAppServ::find_detail_items(
             &IamAppFilterReq {
@@ -922,13 +921,6 @@ impl IamSubDeployServ {
             }
             let app_account_vec = IamAppServ::find_rel_account(&app_id.clone(), funs, &app_ctx).await?.iter().map(|r| r.rel_id.clone()).collect::<Vec<_>>();
             app_account.insert(app_id.clone(), app_account_vec);
-
-            let rel_template_id = RbumRelServ::find_from_simple_rels("FlowAppTemplate", &RbumRelFromKind::Item, true, &app_id, None, None, funs, &app_ctx)
-                .await?
-                .pop()
-                .map(|rel| rel.rel_id)
-                .unwrap_or_default();
-            app_flow_template.insert(app_id.clone(), rel_template_id);
         }
         Ok(IamSubDeployTowExportAggResp {
             app: Some(app_vec),
@@ -936,7 +928,6 @@ impl IamSubDeployServ {
             app_role: Some(app_role),
             app_account: Some(app_account),
             app_role_account: Some(app_role_account),
-            app_flow_template: Some(app_flow_template),
         })
     }
 

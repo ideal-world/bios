@@ -12,7 +12,7 @@ use crate::{
     flow_constants,
 };
 
-use super::flow_rel_serv::{FlowRelKind, FlowRelServ};
+use super::{flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}};
 
 pub struct FlowConfigServ;
 
@@ -44,7 +44,7 @@ impl FlowConfigServ {
     pub async fn get_root_config(root_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowRootConfigResp>> {
         let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
         let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
-        let key = if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_paths, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+        let key = if let Some(template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await?
         {
             format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
         } else {
@@ -68,7 +68,7 @@ impl FlowConfigServ {
     ) -> TardisResult<()> {
         let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
         let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
-        let key = if let Some(template_id) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_paths, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
+        let key = if let Some(template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await?
         {
             format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
         } else {

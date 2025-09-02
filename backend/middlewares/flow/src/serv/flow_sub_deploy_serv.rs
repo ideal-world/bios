@@ -271,6 +271,7 @@ impl FlowSubDeployServ {
                             id: exist_state.id.clone(),
                             sort: Some(exist_state.ext.sort),
                             show_btns: exist_state.ext.show_btns.clone(),
+                            is_edit: None,
                         }),
                         ..Default::default()
                     })
@@ -324,6 +325,7 @@ impl FlowSubDeployServ {
                             double_check: new_transition.double_check(),
                             vars_collect: new_transition.vars_collect(),
                             is_notify: Some(new_transition.is_notify),
+                            is_edit: new_transition.is_edit,
                             action_by_pre_callback: Some(new_transition.action_by_pre_callback.clone()),
                             action_by_post_callback: Some(new_transition.action_by_post_callback.clone()),
                             action_by_post_changes: Some(new_transition.action_by_post_changes()),
@@ -407,6 +409,7 @@ impl FlowSubDeployServ {
                         ..Default::default()
                     },
                     &new_state_id,
+                    flow_model,
                     funs,
                     &global_ctx,
                 )

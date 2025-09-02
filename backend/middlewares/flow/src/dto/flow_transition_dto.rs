@@ -53,6 +53,8 @@ pub struct FlowTransitionAddReq {
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     /// 是否通知
     pub is_notify: Option<bool>,
+    /// 是否可编辑
+    pub is_edit: Option<bool>,
     /// 触发前回调的配置信息
     pub action_by_pre_callback: Option<String>,
     /// 触发后回调的配置信息
@@ -107,6 +109,8 @@ pub struct FlowTransitionModifyReq {
     pub vars_collect: Option<Vec<FlowVarInfo>>,
     /// 是否通知
     pub is_notify: Option<bool>,
+    /// 是否可编辑
+    pub is_edit: Option<bool>,
     /// 触发前回调的配置信息
     pub action_by_pre_callback: Option<String>,
     /// 触发后回调的配置信息
@@ -185,6 +189,8 @@ pub struct FlowTransitionDetailResp {
     pub double_check: Value,
     /// 是否通知
     pub is_notify: bool,
+    /// 是否通知
+    pub is_edit: Option<bool>,
     /// 触发前回调的配置信息
     pub action_by_pre_callback: String,
     /// 触发后回调的配置信息
@@ -271,6 +277,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             action_by_front_changes: Some(action_by_front_changes),
             double_check,
             is_notify: Some(value.is_notify),
+            is_edit: None,
             sort: Some(value.sort),
         }
     }
@@ -541,6 +548,7 @@ impl TryFrom<FlowTransitionInitInfo> for FlowTransitionAddReq {
             to_flow_state_id: value.to_flow_state_id,
             name: Some(value.name.into()),
             is_notify: Some(true),
+            is_edit: None,
             transfer_by_auto: value.transfer_by_auto,
             transfer_by_timer: value.transfer_by_timer,
             guard_by_creator: value.guard_by_creator,
@@ -582,6 +590,9 @@ pub struct FlowTransitionFrontActionInfo {
     pub change_content: Option<Value>,
     /// 当right_value为ChangeContent时生效，填写值的标签。
     pub change_content_label: Option<String>,
+
+    /// 是否可修改（前端用于判断当前配置是否可编辑）
+    pub is_edit: Option<bool>,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
