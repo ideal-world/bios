@@ -12,6 +12,7 @@ pub struct PluginKindAddAggReq {
     pub rel_id: Option<String>,
     pub bs_rel: Option<PluginBsAddReq>,
     pub attrs: Option<Vec<RbumRelAttrAggAddReq>>,
+    pub ignore_exist: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

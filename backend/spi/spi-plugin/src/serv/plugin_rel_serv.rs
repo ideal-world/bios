@@ -12,6 +12,7 @@ use bios_basic::rbum::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    web::web_resp::TardisPage,
     TardisFunsInst,
 };
 
@@ -25,18 +26,16 @@ impl PluginRelServ {
         to_rbum_item_id: &str,
         note: Option<String>,
         ext: Option<String>,
-        ignore_exist_error: bool,
+        ignore_exist: bool,
         to_is_outside: bool,
         attrs: Option<Vec<RbumRelAttrAggAddReq>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        if Self::exist_rels(tag, from_rbum_id, to_rbum_item_id, funs, ctx).await? {
-            return if ignore_exist_error {
-                Ok(())
-            } else {
-                Err(funs.err().conflict(&tag.to_string(), "add_simple_rel", "associated already exists", "409-rbum-rel-exist"))
-            };
+        if !ignore_exist {
+            if Self::exist_rels(tag, from_rbum_id, to_rbum_item_id, funs, ctx).await? {
+                return Ok(());
+            }
         }
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
@@ -48,6 +47,7 @@ impl PluginRelServ {
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside,
                 ext,
+                disabled: None,
             },
             attrs: attrs.unwrap_or(vec![]),
             envs: vec![],
@@ -61,6 +61,43 @@ impl PluginRelServ {
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if rel_ids.is_empty() {
+            return Ok(());
+        }
+        for rel_id in rel_ids {
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_simple_rel_by_id(
+        id: &str,
+        tag: &PluginAppBindRelKind,
+        from_rbum_id: &str,
+        to_rbum_item_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let rel_ids = RbumRelServ::find_id_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ids: Some(vec![id.to_string()]),
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
@@ -114,7 +151,6 @@ impl PluginRelServ {
         .await
     }
 
-    //TODO not used. remove?
     pub async fn find_to_simple_rels(
         tag: &PluginAppBindRelKind,
         to_rbum_item_id: &str,
@@ -134,6 +170,7 @@ impl PluginRelServ {
                 tag: Some(tag.to_string()),
                 to_rbum_item_id: Some(to_rbum_item_id.to_owned()),
                 ext_eq: ext,
+                disabled: Some(false),
                 ..Default::default()
             },
             desc_sort_by_create,
@@ -166,6 +203,7 @@ impl PluginRelServ {
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_owned()),
                 ext_eq: ext,
+                disabled: Some(false),
                 ..Default::default()
             },
             desc_sort_by_create,
@@ -183,29 +221,129 @@ impl PluginRelServ {
         from_rbum_id: &str,
         ext: Option<String>,
         with: bool,
+        is_hide_secret: bool,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
-        RbumRelServ::find_rels(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: with,
+        if is_hide_secret {
+            RbumRelServ::find_hide_secret_rels(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: with,
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    from_rbum_kind: Some(from_rbum_kind.clone()),
+                    from_rbum_id: Some(from_rbum_id.to_owned()),
+                    ext_eq: ext,
+                    disabled: Some(false),
                     ..Default::default()
                 },
-                tag: Some(tag.to_string()),
-                from_rbum_kind: Some(from_rbum_kind.clone()),
-                from_rbum_id: Some(from_rbum_id.to_owned()),
-                ext_eq: ext,
-                ..Default::default()
-            },
-            desc_sort_by_create,
-            desc_sort_by_update,
-            funs,
-            ctx,
-        )
-        .await
+                desc_sort_by_create,
+                desc_sort_by_update,
+                funs,
+                ctx,
+            )
+            .await
+        } else {
+            RbumRelServ::find_rels(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: with,
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    from_rbum_kind: Some(from_rbum_kind.clone()),
+                    from_rbum_id: Some(from_rbum_id.to_owned()),
+                    ext_eq: ext,
+                    disabled: Some(false),
+                    ..Default::default()
+                },
+                desc_sort_by_create,
+                desc_sort_by_update,
+                funs,
+                ctx,
+            )
+            .await
+        }
+    }
+
+    pub async fn find_rels(
+        tag: &PluginAppBindRelKind,
+        from_rbum_kind: &RbumRelFromKind,
+        from_rbum_id: &str,
+        to_rbum_item_id: &str,
+        ext: Option<String>,
+        is_hide_secret: bool,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        if is_hide_secret {
+            RbumRelServ::find_hide_secret_rels(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    from_rbum_kind: Some(from_rbum_kind.clone()),
+                    from_rbum_id: Some(from_rbum_id.to_owned()),
+                    to_rbum_item_id: Some(to_rbum_item_id.to_owned()),
+                    ext_eq: ext,
+                    disabled: Some(false),
+                    ..Default::default()
+                },
+                desc_sort_by_create,
+                desc_sort_by_update,
+                funs,
+                ctx,
+            )
+            .await
+        } else {
+            RbumRelServ::find_rels(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                    from_rbum_kind: Some(from_rbum_kind.clone()),
+                    from_rbum_id: Some(from_rbum_id.to_owned()),
+                    to_rbum_item_id: Some(to_rbum_item_id.to_owned()),
+                    ext_eq: ext,
+                    disabled: Some(false),
+                    ..Default::default()
+                },
+                desc_sort_by_create,
+                desc_sort_by_update,
+                funs,
+                ctx,
+            )
+            .await
+        }
+    }
+
+    pub async fn paginate_rels(
+        filter: &RbumRelFilterReq,
+        is_hide_secret: bool,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        if is_hide_secret {
+            RbumRelServ::paginate_hide_secret_rels(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+        } else {
+            RbumRelServ::paginate_rels(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+        }
     }
 
     pub async fn get_rel(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelDetailResp> {
@@ -221,8 +359,7 @@ impl PluginRelServ {
         Ok(rel)
     }
 
-    //TODO not used.remove?
-    pub async fn get_rel_agg(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
+    pub async fn get_rel_agg(id: &str, is_hide_secret: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
         let filter = RbumRelFilterReq {
             basic: RbumBasicFilterReq {
                 with_sub_own_paths: true,
@@ -234,17 +371,31 @@ impl PluginRelServ {
         let rel = Self::get_rel(id, funs, ctx).await?;
         let resp = RbumRelAggResp {
             rel,
-            attrs: RbumRelAttrServ::find_rbums(
-                &RbumRelExtFilterReq {
-                    basic: filter.basic.clone(),
-                    rel_rbum_rel_id: Some(rbum_rel_id.clone()),
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?,
+            attrs: if is_hide_secret {
+                RbumRelAttrServ::find_hide_secret(
+                    &RbumRelExtFilterReq {
+                        basic: filter.basic.clone(),
+                        rel_rbum_rel_id: Some(rbum_rel_id.clone()),
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?
+            } else {
+                RbumRelAttrServ::find_rbums(
+                    &RbumRelExtFilterReq {
+                        basic: filter.basic.clone(),
+                        rel_rbum_rel_id: Some(rbum_rel_id.clone()),
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?
+            },
             envs: RbumRelEnvServ::find_rbums(
                 &RbumRelExtFilterReq {
                     basic: filter.basic.clone(),

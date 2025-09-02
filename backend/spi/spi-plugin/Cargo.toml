@@ -1,32 +1,32 @@
 [package]
-name = "bios-spi-plugin"
-version.workspace = true
 authors.workspace = true
-homepage.workspace = true
 documentation.workspace = true
-repository.workspace = true
-license.workspace = true
 edition.workspace = true
-readme.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "bios-spi-plugin"
 publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [lib]
 name = "bios_spi_plugin"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-pg"]
+default = ["spi-pg", "event"]
+event = ["bios-sdk-invoke/event"]
 spi-pg = ["tardis/reldb-postgres"]
-
 [dependencies]
-serde.workspace = true
 async-trait.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
-bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
-strum = { workspace = true, features = ["derive"] }
+bios-basic = {version = "0.2.0", path = "../../basic", features = ["default"]}
+bios-sdk-invoke = {version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"]}
 percent-encoding = "2"
+serde.workspace = true
+strum = {workspace = true, features = ["derive"]}
+tardis = {workspace = true, features = ["reldb-postgres", "web-server"]}
 [dev-dependencies]
-tardis = { workspace = true, features = ["test", "ws-client"] }
-bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
-bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"] }
+bios-basic = {version = "0.2.0", path = "../../basic", features = ["default", "test"]}
+bios-sdk-invoke = {version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"]}
+tardis = {workspace = true, features = ["test", "ws-client"]}
