@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
     serde_json::Value,
-    web::poem_openapi,
+    web::{poem_openapi, web_resp::TardisPage},
 };
 
 use crate::stats_enumeration::{StatsQueryAggFunKind, StatsQueryTimeWindowKind};
@@ -505,4 +505,23 @@ pub struct StatsQueryStatementHavingReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryStatementResp {
     pub group: Value,
+}
+/// Query Metrics Record Detail Response
+///
+/// 查询指标记录明细响应
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsQueryRecordDetailResp {
+    pub columns: Vec<StatsQueryRecordDetailColumnResp>,
+
+    pub data: TardisPage<HashMap<String, Value>>,
+}
+
+/// Query Metrics Record Detail Column Response
+///
+/// 查询指标记录明细字段响应
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsQueryRecordDetailColumnResp {
+    pub key: String,
+
+    pub show_names: String,
 }

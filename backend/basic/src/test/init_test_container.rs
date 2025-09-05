@@ -39,6 +39,7 @@ pub async fn init(sql_init_path: Option<String>) -> TardisResult<LifeHold> {
     let port = reldb_container.get_host_port_ipv4(5432).await?;
     let url = format!("postgres://postgres:123456@127.0.0.1:{port}/test");
     env::set_var("TARDIS_FW.DB.URL", url);
+    env::set_var("TARDIS_FW.DB.PORT", port.to_string());
 
     let redis_container = TardisTestContainer::redis_custom().await?;
     let port = redis_container.get_host_port_ipv4(6379).await?;

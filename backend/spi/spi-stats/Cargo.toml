@@ -1,14 +1,14 @@
 [package]
-name = "bios-spi-stats"
-version.workspace = true
 authors.workspace = true
-homepage.workspace = true
 documentation.workspace = true
-repository.workspace = true
-license.workspace = true
 edition.workspace = true
-readme.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "bios-spi-stats"
 publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [lib]
 name = "bios_spi_stats"
@@ -19,22 +19,23 @@ default = ["spi-pg"]
 spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
-bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
-serde.workspace = true
-lazy_static.workspace = true
-itertools.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-serde_json = { workspace = true, features = ["preserve_order"] }
-strum = { workspace = true, features = ["derive"] }
-bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
+bios-basic = {version = "0.2.0", path = "../../basic", features = ["default"]}
+bios-sdk-invoke = {version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
   "event",
   "spi_log",
   "schedule",
-], default-features = false }
+  "spi_stats",
+], default-features = false}
+itertools.workspace = true
+lazy_static.workspace = true
+serde.workspace = true
+serde_json = {workspace = true, features = ["preserve_order"]}
+strum = {workspace = true, features = ["derive"]}
+tardis = {workspace = true, features = ["reldb-postgres", "web-server"]}
 
 [dev-dependencies]
-tardis = { workspace = true, features = ["test"] }
-bios-basic = { version = "0.2.0", path = "../../basic", features = [
+bios-basic = {version = "0.2.0", path = "../../basic", features = [
   "default",
   "test",
-] }
+]}
+tardis = {workspace = true, features = ["test"]}

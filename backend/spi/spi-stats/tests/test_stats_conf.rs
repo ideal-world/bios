@@ -1,9 +1,13 @@
+use std::env;
+
 use bios_basic::test::test_http_client::TestHttpClient;
+use bios_spi_stats::dto::stats_conf_dto::StatsSyncDbConfigInfoResp;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::{json, Value};
 use tardis::web::web_resp::{TardisPage, Void};
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
+    test_fact_sync_db(client).await?;
     test_dim_conf(client).await?;
     test_fact_conf(client).await?;
     Ok(())
@@ -194,6 +198,20 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     Ok(())
 }
 
+pub async fn test_fact_sync_db(client: &mut TestHttpClient) -> TardisResult<()> {
+    let _: Void = client
+        .post(
+            "/ci/conf/sync/db",
+            &json!({
+                "db_url":format!("127.0.0.1:{}/test", env::var("TARDIS_FW.DB.PORT").unwrap()),
+                "db_user":"postgres",
+                "db_password": "123456"
+            }),
+        )
+        .await;
+    Ok(())
+}
+
 pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // key format error
     assert_eq!(
@@ -311,7 +329,8 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     );
 
     test_fact_col_conf(client).await?;
-
+    test_fact_detail_conf(client).await?;
+    test_fact_col_detail_conf(client).await?;
     // online
     assert_eq!(
         client.put_resp::<Void, Void>("/ci/conf/fact/kb_doc/online", &Void {}).await.code,
@@ -360,6 +379,206 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 2);
     assert_eq!(list.records.iter().filter(|d| d["online"].as_bool().unwrap()).count(), 1);
+    Ok(())
+}
+
+pub async fn test_fact_detail_conf(client: &mut TestHttpClient) -> TardisResult<()> {
+    // key format error
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/detail",
+                &json!({
+                    "key":"Status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                }),
+            )
+            .await
+            .code,
+        "400"
+    );
+
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"status",
+                "show_name":"状态",
+                "remark": "状态说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+
+    // key exist error
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/detail",
+                &json!({
+                    "key":"status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"priority",
+                "show_name":"优先级",
+                "remark": "优先级说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"tag",
+                "show_name":"标签",
+                "remark": "标签说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"creator",
+                "show_name":"创建人",
+                "remark": "创建人说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"source",
+                "show_name":"来源_to_be_modified",
+                "remark": "需求来源说明1",
+                "kind": "dimension"
+            }),
+        )
+        .await;
+    let _: Void = client
+        .patch(
+            "/ci/conf/fact/req/detail/source",
+            &json!({
+                "show_name":"来源",
+                "remark": "需求来源说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+
+    // kind = external and method = sql check rel_sql.
+    let sync_db_config_vec: Vec<StatsSyncDbConfigInfoResp> = client.get("/ci/conf/sync/db").await;
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/detail",
+                &json!({
+                   "key":"external_sql",
+                    "show_name":"需求外部sql",
+                    "remark": "需求外部sql说明",
+                    "kind": "external",
+                    "method":"sql",
+                    "rel_cert_id": sync_db_config_vec.get(0).unwrap().id,
+                    "rel_sql":"insert into external_sql values (1, 'test')",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"external_sql",
+                "show_name":"需求外部sql",
+                "remark": "需求外部sql说明",
+                "kind": "external",
+                "method":"sql",
+                "rel_cert_id": sync_db_config_vec.get(0).unwrap().id,
+                "rel_sql":"select key from spi617070303031.starsys_stats_inst_fact_req where key = ${key} limit 1",
+            }),
+        )
+        .await;
+
+    //  kind = external and method = url check rel_url.
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/detail",
+                &json!({
+                   "key":"external_url",
+                    "show_name":"需求外部url",
+                    "remark": "需求外部url说明",
+                    "kind": "external",
+                    "method":"url",
+                    "rel_url":"select key from spi617070303031.starsys_stats_inst_fact_req where key = ${key} limit 1",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"external_url",
+                "show_name":"需求外部url",
+                "remark": "需求外部url说明",
+                "kind": "external",
+                "method":"url",
+                "rel_url":"https://external_url",
+            }),
+        )
+        .await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 7);
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10&show_name=来源").await;
+    assert_eq!(list.total_size, 1);
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10&fact_detail_key=source").await;
+    assert_eq!(list.total_size, 1);
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "source");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "来源");
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求来源说明");
+    assert_eq!(list.records[0]["kind"].as_str().unwrap(), "dimension");
+    assert!(list.records[0]["method"].is_null());
+    assert!(list.records[0]["rel_cert_id"].is_null());
+    assert!(list.records[0]["rel_sql"].is_null());
+    assert!(list.records[0]["rel_url"].is_null());
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10&show_name=标签&fact_detail_key=tag").await;
+    assert_eq!(list.total_size, 1);
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "tag");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "标签");
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "标签说明");
+    assert_eq!(list.records[0]["kind"].as_str().unwrap(), "dimension");
+    assert!(list.records[0]["method"].is_null());
+    assert!(list.records[0]["rel_cert_id"].is_null());
+    assert!(list.records[0]["rel_sql"].is_null());
+    assert!(list.records[0]["rel_url"].is_null());
+
+    client.delete("/ci/conf/fact/req/detail/priority").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 6);
+
     Ok(())
 }
 
@@ -604,6 +823,222 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 0);
     */
+
+    Ok(())
+}
+
+pub async fn test_fact_col_detail_conf(client: &mut TestHttpClient) -> TardisResult<()> {
+    // format col not dimension error
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/col/status/detail",
+                &json!({
+                    "key":"act_hours",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+
+    // key format error
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/col/act_hours/detail",
+                &json!({
+                    "key":"Status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                }),
+            )
+            .await
+            .code,
+        "400"
+    );
+
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"status",
+                "show_name":"状态",
+                "remark": "状态说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+
+    // key exist error
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/col/act_hours/detail",
+                &json!({
+                    "key":"status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"priority",
+                "show_name":"优先级",
+                "remark": "优先级说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"tag",
+                "show_name":"标签",
+                "remark": "标签说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"creator",
+                "show_name":"创建人",
+                "remark": "创建人说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"source",
+                "show_name":"来源_to_be_modified",
+                "remark": "需求来源说明1",
+                "kind": "dimension"
+            }),
+        )
+        .await;
+    let _: Void = client
+        .patch(
+            "/ci/conf/fact/req/col/act_hours/detail/source",
+            &json!({
+                "show_name":"来源",
+                "remark": "需求来源说明",
+                "kind": "dimension",
+            }),
+        )
+        .await;
+    let sync_db_config_vec: Vec<StatsSyncDbConfigInfoResp> = client.get("/ci/conf/sync/db").await;
+    // kind = external and method = sql check rel_sql.
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/col/act_hours/detail",
+                &json!({
+                   "key":"external_sql",
+                    "show_name":"需求外部sql",
+                    "remark": "需求外部sql说明",
+                    "kind": "external",
+                    "method":"sql",
+                    "rel_cert_id":sync_db_config_vec.get(0).unwrap().id,
+                    "rel_sql":"insert into external_sql values (1, 'test')",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"external_sql",
+                "show_name":"需求外部sql",
+                "remark": "需求外部sql说明",
+                "kind": "external",
+                "method":"sql",
+                "rel_cert_id":sync_db_config_vec.get(0).unwrap().id,
+                "rel_sql":"select key from spi617070303031.starsys_stats_inst_fact_req where key = ${key} limit 1",
+            }),
+        )
+        .await;
+
+    //  kind = external and method = url check rel_url.
+    assert_eq!(
+        client
+            .put_resp::<Value, Void>(
+                "/ci/conf/fact/req/col/act_hours/detail",
+                &json!({
+                   "key":"external_url",
+                    "show_name":"需求外部url",
+                    "remark": "需求外部url说明",
+                    "kind": "external",
+                    "method":"url",
+                    "rel_url":"select key from spi617070303031.starsys_stats_inst_fact_req where key = ${key} limit 1",
+                }),
+            )
+            .await
+            .code,
+        "409-spi-stats-fact_detail_conf-add"
+    );
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"external_url",
+                "show_name":"需求外部url",
+                "remark": "需求外部url说明",
+                "kind": "external",
+                "method":"url",
+                "rel_url":"https://external_url",
+            }),
+        )
+        .await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 7);
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10&show_name=来源").await;
+    assert_eq!(list.total_size, 1);
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10&fact_detail_key=source").await;
+    assert_eq!(list.total_size, 1);
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "source");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "来源");
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求来源说明");
+    assert_eq!(list.records[0]["kind"].as_str().unwrap(), "dimension");
+    assert!(list.records[0]["method"].is_null());
+    assert!(list.records[0]["rel_cert_id"].is_null());
+    assert!(list.records[0]["rel_sql"].is_null());
+    assert!(list.records[0]["rel_url"].is_null());
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10&show_name=标签&fact_detail_key=tag").await;
+    assert_eq!(list.total_size, 1);
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "tag");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "标签");
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "标签说明");
+    assert_eq!(list.records[0]["kind"].as_str().unwrap(), "dimension");
+    assert!(list.records[0]["method"].is_null());
+    assert!(list.records[0]["rel_cert_id"].is_null());
+    assert!(list.records[0]["rel_sql"].is_null());
+    assert!(list.records[0]["rel_url"].is_null());
+
+    client.delete("/ci/conf/fact/req/col/act_hours/detail/priority").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 6);
 
     Ok(())
 }

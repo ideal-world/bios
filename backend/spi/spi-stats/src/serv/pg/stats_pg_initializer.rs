@@ -27,6 +27,7 @@ pub async fn init_conf_dim_group_table_and_conn(bs_inst: TypedSpiBsInst<'_, Tard
     )
     .await
 }
+
 pub async fn init_conf_dim_table_and_conn(bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext, mgr: bool) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
@@ -113,6 +114,39 @@ pub async fn init_conf_fact_col_table_and_conn(bs_inst: TypedSpiBsInst<'_, Tardi
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     unique (key, rel_conf_fact_key, kind, rel_external_id)"#,
+        None,
+        vec![("rel_conf_fact_key", "btree")],
+        None,
+        Some("update_time"),
+    )
+    .await
+}
+
+pub async fn init_conf_fact_detail_table_and_conn(
+    bs_inst: TypedSpiBsInst<'_, TardisRelDBClient>,
+    ctx: &TardisContext,
+    mgr: bool,
+) -> TardisResult<(TardisRelDBlConnection, String)> {
+    spi_initializer::common_pg::init_table_and_conn(
+        bs_inst,
+        ctx,
+        mgr,
+        None,
+        "stats_conf_fact_detail",
+        r#"
+    key character varying NOT NULL,
+    show_name character varying NOT NULL,
+    kind character varying NOT NULL,
+    method character varying,
+    rel_conf_fact_key character varying NOT NULL,
+    rel_conf_fact_col_key character varying NOT NULL,
+    rel_cert_id character varying,
+    rel_sql character varying,
+    rel_url character varying,
+    remark character varying NOT NULL,
+    create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    unique (key, rel_conf_fact_key, rel_conf_fact_col_key)"#,
         None,
         vec![("rel_conf_fact_key", "btree")],
         None,

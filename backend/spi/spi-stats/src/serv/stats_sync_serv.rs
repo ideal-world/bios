@@ -1,4 +1,3 @@
-use crate::dto::stats_conf_dto::{StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq};
 use crate::stats_initializer;
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
@@ -17,8 +16,5 @@ spi_dispatch_service! {
   @method: {
     fact_record_sync(fact_key: &str) -> TardisResult<()>;
     fact_col_record_sync(fact_key: &str, col_key: &str) -> TardisResult<()>;
-    db_config_add(add_req: StatsSyncDbConfigAddReq) -> TardisResult<String>;
-    db_config_modify(modify_req: StatsSyncDbConfigModifyReq) -> TardisResult<()>;
-    db_config_list() -> TardisResult<Vec<StatsSyncDbConfigInfoResp>>;
   }
 }

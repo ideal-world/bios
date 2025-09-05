@@ -17,9 +17,7 @@ use tardis::{
 };
 
 use crate::{
-    dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq},
-    stats_config::StatsConfig,
-    stats_constants::SYNC_FACT_TASK_CODE,
+    dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq}, serv::stats_valid_serv, stats_config::StatsConfig, stats_constants::SYNC_FACT_TASK_CODE
 };
 
 use super::{stats_pg_conf_fact_col_serv, stats_pg_initializer, stats_pg_sync_serv};
@@ -41,7 +39,7 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
         ));
     }
     if let Some(sync_sql) = &add_req.sync_sql {
-        if !stats_pg_sync_serv::validate_select_sql(sync_sql) {
+        if !stats_valid_serv::validate_select_sql(sync_sql) {
             return Err(funs.err().conflict("fact_conf", "add", "The sync_sql is not a valid sql.", "409-spi-stats-fact-conf-sync-sql-not-valid"));
         }
     }
