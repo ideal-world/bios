@@ -480,13 +480,16 @@ async fn do_paginate(
         params.push(Value::from(format!("%{show_name}%")));
     }
     if let Some(rel_external_id) = &rel_external_id {
-        sql_where.push(format!(
-            "(fact_col.rel_external_id = ${} OR fact_col.rel_external_id = ${} )",
-            params.len() + 1,
-            params.len() + 2
-        ));
-        params.push(Value::from("".to_string()));
-        params.push(Value::from(rel_external_id));
+        // rel_external_id support multi value query, split by ','
+        let rel_external_ids = rel_external_id.split(',').map(|id| id.trim()).collect::<Vec<_>>();
+        let placeholders = (0..rel_external_ids.len())
+            .map(|i| {
+                params.push(Value::from(rel_external_ids[i].to_string()));
+                format!("${}", params.len())
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        sql_where.push(format!("fact_col.rel_external_id IN ('',{})", placeholders));
     } else {
         sql_where.push(format!("rel_external_id = ${}", params.len() + 1));
         params.push(Value::from("".to_string()));
