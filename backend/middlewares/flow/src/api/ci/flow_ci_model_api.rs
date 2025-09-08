@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind,
-    FlowModelSyncModifiedFieldReq, FlowModelBatchDisableReq
+    FlowModelAggResp, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
@@ -97,7 +96,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         warn!("ci copy_or_reference_model req: {:?}", req.0);
-        // let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        let orginal_models = FlowModelServ::find_rel_model_map(req.0.target_template_id.clone(), None, true, &funs, &ctx.0).await?;
         // find rel models
         let rel_models = FlowModelServ::find_items(
             &FlowModelFilterReq {
@@ -124,13 +123,21 @@ impl FlowCiModelApi {
             &ctx.0,
         )
         .await?;
-        let rel_main_models = rel_models.iter().filter(|model| model.main).cloned().collect::<Vec<_>>();
         let mut result = HashMap::new();
+        // 需要新增和替换的主模型
+        let rel_main_models = rel_models.iter().filter(|model| model.main).cloned().collect::<Vec<_>>();
+        let rel_main_tags = rel_main_models.iter().map(|m| m.tag.clone()).collect_vec();
         for rel_main_model in rel_main_models {
             let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&rel_main_model.tag).cloned().unwrap_or_default());
             let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
+        // 需要删除的主模型
+        let delete_main_models = orginal_models.iter().filter(|(orginal_tag, _)| !rel_main_tags.contains(*orginal_tag)).map(|(_, orginal_model)| orginal_model).cloned().collect_vec();
+        for delete_main_model in delete_main_models {
+            FlowModelServ::delete_item(&delete_main_model.id, &funs, &ctx.0).await?;
+        }
+
         let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
         for rel_non_main_model in rel_non_main_models {
             let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), None, &funs, &ctx.0).await?;

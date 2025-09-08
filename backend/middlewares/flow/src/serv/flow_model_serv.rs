@@ -2218,15 +2218,19 @@ impl FlowModelServ {
                 result.insert(model.tag.clone(), model);
             }
         }
+        if !result.is_empty() {
+            return Ok(result);
+        }
+        // 若不存在模型，则新建
         if result.keys().len() != req.tags.len() {
             let default_models = Self::find_detail_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some("".to_string()),
                         ignore_scope: true,
-                        scope_level: Some(RbumScopeLevelKind::Root),
                         ..Default::default()
                     },
+                    default: Some(true),
                     main: Some(true),
                     tags: Some(req.tags.clone()),
                     ..Default::default()
@@ -2239,7 +2243,6 @@ impl FlowModelServ {
             .await?;
             for tag in &req.tags {
                 if !result.contains_key(tag) {
-                    // 若不存在模型，则新建
                     let default_model_id = default_models.iter().find(|model| model.tag == *tag).map(|model| model.id.clone()).ok_or_else(|| {
                         funs.err().not_found(
                             "flow_model_serv",
@@ -2314,7 +2317,11 @@ impl FlowModelServ {
     pub async fn find_rel_template_id(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         if Self::get_app_id_by_ctx(ctx).is_some() {
             if let Some(rel_model_id) = Self::find_rel_models(None, true, None, funs, ctx).await?.pop().map(|model| model.rel_model_id.clone()) {
-                FlowRelServ::find_template_id_by_model_id(&rel_model_id, funs, ctx).await
+                if rel_model_id.is_empty()  {
+                    Ok(None)
+                } else {
+                    FlowRelServ::find_template_id_by_model_id(&rel_model_id, funs, ctx).await
+                }
             } else {
                 Ok(None)
             }

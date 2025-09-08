@@ -103,6 +103,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cs_res_api::IamCsResApi,
                     iam_cs_spi_data_api::IamCsSpiDataApi,
                     iam_cs_sub_deploy_api::IamCsSubDeployApi,
+                    iam_cs_sub_deploy_api::IamCsSubDeployHostApi,
+                    iam_cs_sub_deploy_api::IamCsSubDeployLicenseApi,
                 ),
                 (
                     iam_ct_tenant_api::IamCtTenantApi,

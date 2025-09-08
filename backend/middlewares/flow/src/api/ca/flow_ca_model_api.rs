@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::web::{
     context_extractor::TardisContextExtractor,
     poem::{web::Json, Request},
@@ -32,14 +33,18 @@ impl FlowCaModelApi {
     ) -> TardisApiResult<HashMap<String, FlowModelAggResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        // let _orginal_models = FlowModelServ::clean_rel_models(None, None, None, &funs, &ctx.0).await?;
+        let orginal_models = FlowModelServ::find_rel_model_map(req.0.rel_template_id.clone(), None, true, &funs, &ctx.0).await?;
         let mut result = HashMap::new();
-        for (tag, rel_model_id) in &req.0.rel_model_ids {
-            let update_states = req.update_states.as_ref().map(|update_states| update_states.get(tag).cloned().unwrap_or_default());
-            let new_model = FlowModelServ::copy_or_reference_main_model(rel_model_id, &req.0.op, FlowModelKind::AsModel, req.0.rel_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
-            result.insert(rel_model_id.clone(), new_model);
+        for (tag, orginal_model) in orginal_models {
+            // 若不存在对应tag的模型，则直接删除
+            if let Some(rel_model_id) = req.0.rel_model_ids.get(&tag) {
+                let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&tag).cloned().unwrap_or_default());
+                let new_model = FlowModelServ::copy_or_reference_main_model(rel_model_id, &req.0.op, FlowModelKind::AsModel, req.0.rel_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
+                result.insert(rel_model_id.clone(), new_model);
+            } else {
+                FlowModelServ::delete_item(&orginal_model.id, &funs, &ctx.0).await?;
+            }
         }
-
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
