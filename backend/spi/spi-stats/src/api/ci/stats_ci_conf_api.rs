@@ -271,6 +271,7 @@ impl StatsCiConfApi {
         key: Query<Option<String>>,
         group_key: Query<Option<String>>,
         show_name: Query<Option<String>>,
+        kind: Query<Option<StatsFactColKind>>,
         rel_external_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -285,6 +286,7 @@ impl StatsCiConfApi {
             None,
             group_key.0,
             show_name.0,
+            kind.0,
             rel_external_id.0,
             page_number.0,
             page_size.0,
@@ -322,6 +324,7 @@ impl StatsCiConfApi {
             Some(dim_key.0),
             group_key.0,
             show_name.0,
+            None,
             rel_external_id.0,
             page_number.0,
             page_size.0,
@@ -374,12 +377,7 @@ impl StatsCiConfApi {
     ///
     /// 查询事实明细配置
     #[oai(path = "/fact/:fact_key/detail/:fact_detail_key", method = "get")]
-    async fn get_fact_detail(
-        &self,
-        fact_key: Path<String>,
-        fact_detail_key: Path<String>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<Option<StatsConfFactDetailInfoResp>> {
+    async fn get_fact_detail(&self, fact_key: Path<String>, fact_detail_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Option<StatsConfFactDetailInfoResp>> {
         let funs = crate::get_tardis_inst();
         let resp = stats_conf_fact_detail_serv::get_fact_detail(&fact_key.0, &"", &fact_detail_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)

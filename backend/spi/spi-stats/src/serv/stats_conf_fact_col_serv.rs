@@ -38,6 +38,7 @@ spi_dispatch_service! {
             dim_key: Option<String>,
             dim_group_key: Option<String>,
             show_name: Option<String>,
+            kind: Option<StatsFactColKind>,
             rel_external_id: Option<String>,
             page_number: u32,
             page_size: u32,

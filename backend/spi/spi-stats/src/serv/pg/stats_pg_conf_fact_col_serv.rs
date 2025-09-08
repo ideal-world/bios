@@ -17,7 +17,9 @@ use tardis::{
 };
 
 use crate::{
-    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq}, serv::stats_valid_serv, stats_enumeration::{StatsDataTypeKind, StatsFactColKind}
+    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq},
+    serv::stats_valid_serv,
+    stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer, stats_pg_sync_serv};
@@ -375,7 +377,7 @@ pub(crate) async fn find_by_fact_conf_key(fact_conf_key: &str, _funs: &TardisFun
     if !common_pg::check_table_exit("stats_conf_fact_col", &conn, ctx).await? {
         return Ok(vec![]);
     }
-    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, None, 1, u32::MAX, None, None, &conn, ctx).await.map(|page| page.records)
+    do_paginate(Some(fact_conf_key.to_string()), None, None, None, None, None, None, 1, u32::MAX, None, None, &conn, ctx).await.map(|page| page.records)
 }
 
 pub(crate) async fn find_by_fact_key_and_col_conf_key(
@@ -393,6 +395,7 @@ pub(crate) async fn find_by_fact_key_and_col_conf_key(
     let result = do_paginate(
         Some(fact_conf_key.to_string()),
         Some(fact_col_conf_key.to_string()),
+        None,
         None,
         None,
         None,
@@ -415,6 +418,7 @@ pub(crate) async fn paginate(
     dim_key: Option<String>,
     dim_group_key: Option<String>,
     show_name: Option<String>,
+    kind: Option<StatsFactColKind>,
     rel_external_id: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -433,6 +437,7 @@ pub(crate) async fn paginate(
         dim_key,
         dim_group_key,
         show_name,
+        kind,
         rel_external_id,
         page_number,
         page_size,
@@ -450,6 +455,7 @@ async fn do_paginate(
     dim_key: Option<String>,
     dim_group_key: Option<String>,
     show_name: Option<String>,
+    kind: Option<StatsFactColKind>,
     rel_external_id: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -478,6 +484,10 @@ async fn do_paginate(
     if let Some(show_name) = &show_name {
         sql_where.push(format!("fact_col.show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
+    }
+    if let Some(kind) = &kind {
+        sql_where.push(format!("fact_col.kind = ${}", params.len() + 1));
+        params.push(Value::from(kind.to_string()));
     }
     if let Some(rel_external_id) = &rel_external_id {
         // rel_external_id support multi value query, split by ','
