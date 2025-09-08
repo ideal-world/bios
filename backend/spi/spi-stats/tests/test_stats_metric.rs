@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_stats::dto::stats_query_dto::StatsQueryMetricsResp;
+use bios_spi_stats::dto::stats_query_dto::{StatsQueryMetricsResp, StatsQueryRecordDetailResp};
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::serde_json::{json, Value};
@@ -48,7 +48,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 
     test_metric_query_check(client).await?;
     test_metric_query(client).await?;
-
+    test_metric_record_detail_query(client).await?;
     Ok(())
 }
 
@@ -515,6 +515,116 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
     // assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["act_hours__sum"], "80");
     // assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], "160");
+
+    Ok(())
+}
+
+pub async fn test_metric_record_detail_query(client: &mut TestHttpClient) -> TardisResult<()> {
+    let resp: StatsQueryRecordDetailResp = client
+        .put(
+            "/ci/metric/record/detail",
+            &json!({
+                "from":"req",
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                "group":[],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time":"2023-02-01T12:00:00.000Z",
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(resp.columns[0].key, "name");
+    assert_eq!(resp.columns[resp.columns.len() - 1].key, "ct");
+    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.data.total_size, 10);
+    assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
+    assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");
+
+    let resp: StatsQueryRecordDetailResp = client
+        .put(
+            "/ci/metric/record/detail",
+            &json!({
+                "from":"req",
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                "group":[{"code":"source"}],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time":"2023-02-01T12:00:00.000Z",
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.columns[0].key, "name");
+    assert_eq!(resp.columns[resp.columns.len() - 1].key, "ct");
+    assert_eq!(resp.data.total_size, 10);
+    assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
+    assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");
+
+    // test where
+    let resp: StatsQueryRecordDetailResp = client
+        .put(
+            "/ci/metric/record/detail",
+            &json!({
+                "from":"req",
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
+                "where":[
+                    [{"code":"act_hours", "op":">", "value":10},{"code":"ct", "op":"!=", "value":"2023-01-01", "time_window":"day"}],
+                    [{"code":"status", "op":"=", "value":"close"}]
+                    ],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time":"2023-02-01T12:00:00.000Z",
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.data.total_size, 1);
+    assert_eq!(resp.data.records[0].get("key").unwrap(), "r011");
+    assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r011");
+    assert_eq!(resp.data.records[0].get("status").unwrap(), "close");
+    // test with delete record
+    let resp: StatsQueryRecordDetailResp = client
+        .put(
+            "/ci/metric/record/detail",
+            &json!({
+                "from":"req",
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                "group":[{"code":"source"}],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time": Utc::now().to_rfc3339(),
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.data.total_size, 9);
+    assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
+    assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");
+    assert_eq!(client.delete_resp("/ci/record/fact/req/r010").await.code, "200");
+    sleep(Duration::from_millis(100)).await;
+    let resp: StatsQueryRecordDetailResp = client
+        .put(
+            "/ci/metric/record/detail",
+            &json!({
+                "from":"req",
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                "group":[{"code":"source"}],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time": Utc::now().to_rfc3339(),
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.data.total_size, 8);
+    assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
+    assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");
 
     Ok(())
 }

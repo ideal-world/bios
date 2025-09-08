@@ -5,7 +5,7 @@ use tardis::{
     web::poem_openapi,
 };
 
-use crate::stats_enumeration::{StatsDataTypeKind, StatsFactColKind};
+use crate::stats_enumeration::{StatsDataTypeKind, StatsFactColKind, StatsFactDetailKind, StatsFactDetailMethodKind};
 
 /// Add Dimension Group Configuration Request Object
 ///
@@ -534,6 +534,155 @@ pub struct StatsConfFactColInfoResp {
     pub rel_field: Option<String>,
     pub rel_sql: Option<String>,
     pub rel_cert_id: Option<String>,
+}
+
+/// Add Fact Column Configuration Request Object
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfFactDetailAddReq {
+    /// The primary key or encoding passed in from the external system
+    ///
+    /// 外部系统传入的主键或编码
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub key: String,
+    /// The name of the fact column
+    ///
+    /// 事实列的名称
+    #[oai(validator(min_length = "2"))]
+    pub show_name: String,
+    /// kind = dimension, Select the data of kind = Dimension in col
+    /// kind = external, manually enter the corresponding key and name
+    ///
+    /// 当kind = 维度，选择 col 中 kind = Dimension 的数据
+    /// 当kind = External时有效，用于指定外部系统传入的主键或编码
+    pub kind: StatsFactDetailKind,
+    /// kind = external, can choose to use sql or url method
+    ///
+    /// 当 kind = External 时有效，可选择使用 sql，或者 url 的方式
+    pub method: Option<StatsFactDetailMethodKind>,
+    /// kind = External and method = sql is valid
+    ///
+    /// 当 kind = External 且 method = sql 时有效
+    pub rel_cert_id: Option<String>,
+    /// kind = external and method = sql is valid
+    /// e.g: select name from table where id = ${key} and code = ${code}
+    /// where ${key} and ${code} represent key and code obtained from the details
+    /// ps: The returned data format is a single field, and only one piece of returned data is required
+    ///
+    /// kind = External 且 method = url 时有效
+    /// e.g: select name from table where id = ${key} and code = ${code}
+    /// 其中 ${key} 和 ${code} 代表从明细中获取的 key 和 code
+    /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
+    pub rel_sql: Option<String>,
+    /// kind = external and method url is valid
+    /// e.g: https://xxx.xxx.xxx/data?id=${key}&code=${code}
+    /// where ${key} and ${code} represent key and code obtained from the details
+    /// ps: The returned data format is a single field, and only one piece of returned data is required
+    ///
+    /// kind = External 且 method = url 时有效
+    /// e.g: https://xxx.xxx.xxx/data?id=${key}&code=${code}
+    /// 其中 ${key} 和 ${code} 代表从明细中获取的 key 和 code
+    /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
+    pub rel_url: Option<String>,
+    pub remark: Option<String>,
+}
+
+/// Modify Fact Column Configuration Request Object
+///
+/// 修改事实列配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfFactDetailModifyReq {
+
+    /// The name of the fact column
+    ///
+    /// 事实列的名称
+    #[oai(validator(min_length = "2"))]
+    pub show_name: Option<String>,
+    
+    /// kind = External and method = sql is valid
+    ///
+    /// 当 kind = External 且 method = sql 时有效
+    pub rel_cert_id: Option<String>,
+    /// kind = external and method = sql is valid
+    /// e.g: select name from table where id = ${key} and code = ${code}
+    /// where ${key} and ${code} represent key and code obtained from the details
+    /// ps: The returned data format is a single field, and only one piece of returned data is required
+    ///
+    /// kind = External 且 method = url 时有效
+    /// e.g: select name from table where id = ${key} and code = ${code}
+    /// 其中 ${key} 和 ${code} 代表从明细中获取的 key 和 code
+    /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
+    pub rel_sql: Option<String>,
+    /// kind = external and method url is valid
+    /// e.g: https://xxx.xxx.xxx/data?id=${key}&code=${code}
+    /// where ${key} and ${code} represent key and code obtained from the details
+    /// ps: The returned data format is a single field, and only one piece of returned data is required
+    ///
+    /// kind = External 且 method = url 时有效
+    /// e.g: https://xxx.xxx.xxx/data?id=${key}&code=${code}
+    /// 其中 ${key} 和 ${code} 代表从明细中获取的 key 和 code
+    /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
+    pub rel_url: Option<String>,
+    pub remark: Option<String>,
+}
+
+/// Fact Column Configuration Response Object
+///
+/// 事实列配置响应对象
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
+pub struct StatsConfFactDetailInfoResp {
+    /// The primary key or encoding passed in from the external system
+    ///
+    /// 外部系统传入的主键或编码
+    pub key: String,
+    /// The name of the fact column
+    ///
+    /// 事实列的名称
+    pub show_name: String,
+    /// kind = dimension, Select the data of kind = Dimension in col
+    /// kind = external, manually enter the corresponding key and name
+    ///
+    /// 当kind = 维度，选择 col 中 kind = Dimension 的数据
+    /// 当kind = External时有效，用于指定外部系统传入的主键或编码
+    pub kind: StatsFactDetailKind,
+    /// kind = external, can choose to use sql or url method
+    ///
+    /// 当 kind = External 时有效，可选择使用 sql，或者 url 的方式
+    pub method: Option<StatsFactDetailMethodKind>,
+    /// Associated fact key
+    ///
+    /// 关联的事实key
+    pub rel_conf_fact_key: String,
+    /// Associated fact and fact column configuration.
+    /// Format: <fact configuration table key>.<fact field configuration table key>
+    ///
+    /// 关联的事实和事实列配置。
+    /// 格式：<事实配置表key>.<事实字段配置表key>
+    pub rel_conf_fact_col_key: String,
+    /// kind = External and method = sql is valid
+    ///
+    /// 当 kind = External 且 method = sql 时有效
+    pub rel_cert_id: Option<String>,
+    /// kind = external and method = sql is valid
+    /// e.g: select name from table where id = ${key} and code = ${code}
+    /// where ${key} and ${code} represent key and code obtained from the details
+    /// ps: The returned data format is a single field, and only one piece of returned data is required
+    ///
+    /// kind = External 且 method = url 时有效
+    /// e.g: select name from table where id = ${key} and code = ${code}
+    /// 其中 ${key} 和 ${code} 代表从明细中获取的 key 和 code
+    /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
+    pub rel_sql: Option<String>,
+    /// kind = external and method url is valid
+    /// e.g: https://xxx.xxx.xxx/data?id=${key}&code=${code}
+    /// where ${key} and ${code} represent key and code obtained from the details
+    /// ps: The returned data format is a single field, and only one piece of returned data is required
+    ///
+    /// kind = External 且 method = url 时有效
+    /// e.g: https://xxx.xxx.xxx/data?id=${key}&code=${code}
+    /// 其中 ${key} 和 ${code} 代表从明细中获取的 key 和 code
+    /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
+    pub rel_url: Option<String>,
+    pub remark: Option<String>,
 }
 
 /// Add Sync DateBase Config Request Object

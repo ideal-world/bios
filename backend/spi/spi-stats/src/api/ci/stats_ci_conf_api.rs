@@ -7,10 +7,10 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::stats_conf_dto::{
     StatsConfDimAddReq, StatsConfDimGroupAddReq, StatsConfDimGroupInfoResp, StatsConfDimGroupModifyReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq,
-    StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq, StatsConfFactInfoResp, StatsConfFactModifyReq, StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp,
-    StatsSyncDbConfigModifyReq,
+    StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq, StatsConfFactDetailAddReq, StatsConfFactDetailInfoResp, StatsConfFactDetailModifyReq,
+    StatsConfFactInfoResp, StatsConfFactModifyReq, StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq,
 };
-use crate::serv::{stats_conf_dim_group_serv, stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_serv, stats_sync_serv};
+use crate::serv::{stats_cert_serv, stats_conf_dim_group_serv, stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_detail_serv, stats_conf_fact_serv, stats_sync_serv};
 use crate::stats_enumeration::StatsFactColKind;
 
 #[derive(Clone)]
@@ -334,6 +334,187 @@ impl StatsCiConfApi {
         TardisResp::ok(resp)
     }
 
+    /// Add Fact Detail Configuration
+    ///
+    /// 添加事实明细配置
+    #[oai(path = "/fact/:fact_key/detail", method = "put")]
+    async fn fact_detail_add(&self, fact_key: Path<String>, add_req: Json<StatsConfFactDetailAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_fact_detail_serv::add(&fact_key.0, None, &add_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify Fact Detail Configuration
+    ///
+    /// 修改事实明细配置
+    #[oai(path = "/fact/:fact_key/detail/:fact_detail_key", method = "patch")]
+    async fn fact_detail_modify(
+        &self,
+        fact_key: Path<String>,
+        fact_detail_key: Path<String>,
+        modify_req: Json<StatsConfFactDetailModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_fact_detail_serv::modify(&fact_key.0, None, &fact_detail_key.0, &modify_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Fact Detail Configuration
+    ///
+    /// 删除事实明细配置
+    #[oai(path = "/fact/:fact_key/detail/:fact_detail_key", method = "delete")]
+    async fn fact_detail_delete(&self, fact_key: Path<String>, fact_detail_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_fact_detail_serv::delete(&fact_key.0, None, &fact_detail_key.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Get Fact Detail Configurations
+    ///
+    /// 查询事实明细配置
+    #[oai(path = "/fact/:fact_key/detail/:fact_detail_key", method = "get")]
+    async fn get_fact_detail(
+        &self,
+        fact_key: Path<String>,
+        fact_detail_key: Path<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Option<StatsConfFactDetailInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = stats_conf_fact_detail_serv::get_fact_detail(&fact_key.0, &"", &fact_detail_key.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Find Fact Detail Configurations
+    ///
+    /// 查询事实明细配置
+    #[oai(path = "/fact/:fact_key/detail", method = "get")]
+    async fn fact_detail_paginate(
+        &self,
+        fact_key: Path<String>,
+        fact_detail_key: Query<Option<String>>,
+        show_name: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<StatsConfFactDetailInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = stats_conf_fact_detail_serv::paginate(
+            Some(fact_key.0),
+            Some("".to_string()),
+            fact_detail_key.0,
+            show_name.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Add Fact Column Detail Configuration
+    ///
+    /// 添加事实列明细配置
+    #[oai(path = "/fact/:fact_key/col/:fact_col_key/detail", method = "put")]
+    async fn fact_col_detail_add(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        add_req: Json<StatsConfFactDetailAddReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_fact_detail_serv::add(&fact_key.0, Some(&fact_col_key.0), &add_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify Fact Column Detail Configuration
+    ///
+    /// 修改事实列明细配置
+    #[oai(path = "/fact/:fact_key/col/:fact_col_key/detail/:fact_detail_key", method = "patch")]
+    async fn fact_col_detail_modify(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        fact_detail_key: Path<String>,
+        modify_req: Json<StatsConfFactDetailModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_fact_detail_serv::modify(&fact_key.0, Some(&fact_col_key.0), &fact_detail_key.0, &modify_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Fact Column Detail Configuration
+    ///
+    /// 删除事实列明细配置
+    #[oai(path = "/fact/:fact_key/col/:fact_col_key/detail/:fact_detail_key", method = "delete")]
+    async fn fact_col_detail_delete(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        fact_detail_key: Path<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_fact_detail_serv::delete(&fact_key.0, Some(&fact_col_key.0), &fact_detail_key.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Get Fact Column Detail Configurations
+    ///
+    /// 查询事实列明细配置
+    #[oai(path = "/fact/:fact_key/col/:fact_col_key/detail/:fact_detail_key", method = "get")]
+    async fn get_fact_col_detail(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        fact_detail_key: Path<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Option<StatsConfFactDetailInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = stats_conf_fact_detail_serv::get_fact_detail(&fact_key.0, &fact_col_key.0, &fact_detail_key.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Find Fact Column Detail Configurations
+    ///
+    /// 查询事实列明细配置
+    #[oai(path = "/fact/:fact_key/col/:fact_col_key/detail", method = "get")]
+    async fn fact_col_detail_paginate(
+        &self,
+        fact_key: Path<String>,
+        fact_col_key: Path<String>,
+        fact_detail_key: Query<Option<String>>,
+        show_name: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<StatsConfFactDetailInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = stats_conf_fact_detail_serv::paginate(
+            Some(fact_key.0),
+            Some(fact_col_key.0),
+            fact_detail_key.0,
+            show_name.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(resp)
+    }
+
     /// Online dimension configuration
     ///
     /// 上线维度配置
@@ -360,7 +541,7 @@ impl StatsCiConfApi {
     #[oai(path = "/sync/db", method = "post")]
     async fn db_config_add(&self, add_req: Json<StatsSyncDbConfigAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        stats_sync_serv::db_config_add(add_req.0, &funs, &ctx.0).await?;
+        stats_cert_serv::db_config_add(add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -370,7 +551,7 @@ impl StatsCiConfApi {
     #[oai(path = "/sync/db", method = "put")]
     async fn db_config_modify(&self, modify_req: Json<StatsSyncDbConfigModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
-        stats_sync_serv::db_config_modify(modify_req.0, &funs, &ctx.0).await?;
+        stats_cert_serv::db_config_modify(modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -380,6 +561,6 @@ impl StatsCiConfApi {
     #[oai(path = "/sync/db", method = "get")]
     async fn db_config_list(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<StatsSyncDbConfigInfoResp>> {
         let funs = crate::get_tardis_inst();
-        TardisResp::ok(stats_sync_serv::db_config_list(&funs, &ctx.0).await?)
+        TardisResp::ok(stats_cert_serv::db_config_list(&funs, &ctx.0).await?)
     }
 }

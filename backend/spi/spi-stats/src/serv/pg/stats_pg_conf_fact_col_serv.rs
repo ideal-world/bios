@@ -17,8 +17,7 @@ use tardis::{
 };
 
 use crate::{
-    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq},
-    stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
+    dto::stats_conf_dto::{StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq}, serv::stats_valid_serv, stats_enumeration::{StatsDataTypeKind, StatsFactColKind}
 };
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_serv, stats_pg_initializer, stats_pg_sync_serv};
@@ -33,7 +32,7 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         return Err(funs.err().conflict("fact_col_conf", "add", "The fact config not exists.", "409-spi-stats-fact-conf-not-exist"));
     }
     if let Some(rel_sql) = &add_req.rel_sql {
-        if !stats_pg_sync_serv::validate_select_sql(rel_sql) {
+        if !stats_valid_serv::validate_select_sql(rel_sql) {
             return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
         }
     }
@@ -219,7 +218,7 @@ pub(crate) async fn modify(
     //     ));
     // }
     if let Some(rel_sql) = &modify_req.rel_sql {
-        if !stats_pg_sync_serv::validate_select_sql(rel_sql) {
+        if !stats_valid_serv::validate_select_sql(rel_sql) {
             return Err(funs.err().conflict("fact_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-fact-col-conf-rel-sql-not-valid"));
         }
     }
@@ -481,13 +480,16 @@ async fn do_paginate(
         params.push(Value::from(format!("%{show_name}%")));
     }
     if let Some(rel_external_id) = &rel_external_id {
-        sql_where.push(format!(
-            "(fact_col.rel_external_id = ${} OR fact_col.rel_external_id = ${} )",
-            params.len() + 1,
-            params.len() + 2
-        ));
-        params.push(Value::from("".to_string()));
-        params.push(Value::from(rel_external_id));
+        // rel_external_id support multi value query, split by ','
+        let rel_external_ids = rel_external_id.split(',').map(|id| id.trim()).collect::<Vec<_>>();
+        let placeholders = (0..rel_external_ids.len())
+            .map(|i| {
+                params.push(Value::from(rel_external_ids[i].to_string()));
+                format!("${}", params.len())
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        sql_where.push(format!("fact_col.rel_external_id IN ('',{})", placeholders));
     } else {
         sql_where.push(format!("rel_external_id = ${}", params.len() + 1));
         params.push(Value::from("".to_string()));

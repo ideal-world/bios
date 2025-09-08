@@ -12,20 +12,21 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{self, FromQueryResult, Value},
     },
+    futures::future::try_join_all,
     serde_json::{self, json, Map},
     web::web_resp::TardisPage,
     TardisFunsInst,
 };
 
+use super::{stats_pg_conf_fact_detail_serv, stats_pg_record_serv};
 use crate::{
     dto::stats_query_dto::{
         StatsQueryDimensionGroupOrderReq, StatsQueryDimensionGroupReq, StatsQueryDimensionOrderReq, StatsQueryMetricsHavingReq, StatsQueryMetricsOrderReq,
-        StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq,
+        StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq, StatsQueryRecordDetailColumnResp,
+        StatsQueryRecordDetailResp,
     },
-    serv::stats_record_serv::dim_record_paginate,
-    stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
+    stats_enumeration::{StatsDataTypeKind, StatsFactColKind, StatsFactDetailKind, StatsQueryAggFunKind},
 };
-
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 
 /// 查询指标.
@@ -267,7 +268,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let select_measure_keys =
         sql_part_outer_select_infos.iter().filter(|(_, _, _, is_dimension)| !*is_dimension).map(|(_, alias_name, _, _)| alias_name.to_string()).collect::<Vec<String>>();
     let show_names = sql_part_outer_select_infos.into_iter().map(|(_, alias_name, show_name, _)| (alias_name, show_name)).collect::<HashMap<String, String>>();
-    let dim_record_agg = package_dim_record_agg(conf_info.clone(), funs, ctx).await?;
+    let dim_record_agg = package_dim_record_agg(conf_info.clone(), funs, ctx, &inst).await?;
     Ok(StatsQueryMetricsResp {
         from: query_req.from.to_string(),
         show_names,
@@ -843,6 +844,7 @@ async fn package_dim_record_agg(
     conf_info: HashMap<String, StatsConfInfo>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
+    inst: &SpiBsInst,
 ) -> TardisResult<HashMap<String, HashMap<String, serde_json::Value>>> {
     let mut result: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
     for (col_key, conf) in conf_info.clone() {
@@ -856,7 +858,7 @@ async fn package_dim_record_agg(
             None
         };
         if !dimension_hierarchy.unwrap_or(vec![]).is_empty() {
-            let dim: HashMap<String, serde_json::Value> = dim_record_paginate(dimension_key.clone(), None, None, 1, 9999, None, None, funs, ctx)
+            let dim: HashMap<String, serde_json::Value> = stats_pg_record_serv::dim_record_paginate(dimension_key.clone(), None, None, 1, 9999, None, None, funs, ctx, &inst)
                 .await?
                 .records
                 .into_iter()
@@ -1188,6 +1190,188 @@ pub async fn query_metrics_record_paginated(
         records,
     })
 }
+
+pub async fn query_metrics_record_detail_paginated(
+    query_req: &StatsQueryMetricsRecordReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<StatsQueryRecordDetailResp> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let fact_inst_table_name = package_table_name(&format!("stats_inst_fact_{}", query_req.from), ctx);
+    let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
+    let rel_external_ids = self::package_rel_external_id_agg(query_req.rel_external_id.clone(), vec![], vec![], query_req._where.clone(), None, None, None);
+    let (conf_info, query_limit) = fetch_conf_info(query_req.from.clone(), rel_external_ids.clone(), &conn, funs, ctx).await?;
+    let (conf_info, dim_conf_info, measure_conf_info) = package_dim_mea_conf_info(conf_info)?;
+    let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    let conf_limit = query_limit;
+    check_dim_mea(
+        conf_info.clone(),
+        measure_conf_info.clone(),
+        dim_conf_info.clone(),
+        query_req.select.clone(),
+        query_req.group.clone(),
+        query_req._where.clone(),
+        None,
+        None,
+        None,
+        funs,
+    )?;
+    let mes_distinct = query_req.select.iter().any(|i| {
+        if let Some(conf) = measure_conf_info.get(&i.code.to_string()) {
+            return conf.mes_data_distinct.unwrap_or(true);
+        }
+        false
+    });
+    let mut params = if let Some(own_paths) = &query_req.own_paths {
+        own_paths.iter().map(Value::from).collect_vec()
+    } else {
+        vec![Value::from(format!("{}%", ctx.own_paths))]
+    };
+    let own_paths_count = params.len();
+    params.push(Value::from(query_req.start_time));
+    params.push(Value::from(query_req.end_time));
+    params.push(Value::from(query_req.page_size));
+    params.push(Value::from((query_req.page_number - 1) * query_req.page_size));
+    // Package filter
+    let sql_part_wheres = sql_part_where(conf_info.clone(), query_req._where.clone(), &mut params, funs)?;
+
+    let fact_col_key = query_req
+        .select
+        .first()
+        .unwrap_or(&StatsQueryMetricsSelectReq {
+            rel_external_id: None,
+            code: "".to_string(),
+            fun: StatsQueryAggFunKind::Count,
+        })
+        .code
+        .clone();
+    let details = stats_pg_conf_fact_detail_serv::find_up_by_fact_key_and_col_conf_key(&query_req.from, &fact_col_key, &funs, &ctx, &inst).await?;
+    let dimension_details = details.iter().filter(|d| d.kind == StatsFactDetailKind::Dimension).collect::<Vec<_>>();
+    let external_details = details.iter().filter(|d| d.kind == StatsFactDetailKind::External).collect::<Vec<_>>();
+    let own_paths_placeholder = (1..=own_paths_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
+    let create_time_placeholder = format!("${}", own_paths_count + 1);
+    let end_time_placeholder = format!("${}", own_paths_count + 2);
+    let page_size_placeholder = format!("${}", own_paths_count + 3);
+    let page_offset_placeholder = format!("${}", own_paths_count + 4);
+    let filter_own_paths = if query_req.own_paths.is_some() {
+        format!("fact.own_paths IN ({own_paths_placeholder})")
+    } else {
+        "fact.own_paths LIKE $1".to_string()
+    };
+    let final_sql = format!(
+        r#"
+        SELECT _.*, count(*) OVER() AS total
+    FROM (
+        SELECT
+             fact.*,fact.key as _key, fact.own_paths as _own_paths, fact.ct as _ct
+             FROM(
+                SELECT {}fact.*, 1 as _count
+                FROM {fact_inst_table_name} fact
+                LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= {create_time_placeholder} AND del.ct <= {end_time_placeholder}
+                WHERE
+                    {filter_own_paths}
+                    AND del.key IS NULL
+                    AND fact.ct >= {create_time_placeholder} AND fact.ct <= {end_time_placeholder}
+                ORDER BY {}fact.ct DESC
+             ) fact 
+             where 1 = 1
+            {sql_part_wheres}
+            LIMIT {conf_limit}
+            ) _
+        LIMIT {page_size_placeholder} OFFSET {page_offset_placeholder}
+        "#,
+        if query_req.ignore_distinct.unwrap_or(false) {
+            ""
+        } else if mes_distinct {
+            if ct_agg {
+                "DISTINCT ON (fact.key,date_part('day',fact.ct)) fact.key AS _key,"
+            } else {
+                "DISTINCT ON (fact.key) fact.key AS _key,"
+            }
+        } else {
+            ""
+        },
+        if query_req.ignore_distinct.unwrap_or(false) {
+            ""
+        } else if mes_distinct {
+            if ct_agg {
+                "_key,date_part('day',fact.ct),"
+            } else {
+                "_key,"
+            }
+        } else {
+            ""
+        },
+    );
+    let result = conn.query_all(&final_sql, params).await?;
+    let mut total_size: i64 = 0;
+    if let Some(first) = result.first() {
+        total_size = first.try_get("", "total")?;
+    }
+    let mut columns: Vec<StatsQueryRecordDetailColumnResp> = vec![];
+    let mut keys: HashSet<&str> = HashSet::new();
+    // Ensure "ct" and "name" are included in the columns
+    for detail in &dimension_details {
+        keys.insert(detail.key.as_str());
+        columns.push(StatsQueryRecordDetailColumnResp {
+            key: detail.key.clone(),
+            show_names: detail.show_name.clone(),
+        });
+    }
+    if !keys.contains("name") {
+        columns.insert(
+            0,
+            StatsQueryRecordDetailColumnResp {
+                key: "name".to_string(),
+                show_names: "名称".to_string(),
+            },
+        );
+    }
+    if !keys.contains("ct") {
+        columns.push(StatsQueryRecordDetailColumnResp {
+            key: "ct".to_string(),
+            show_names: "操作时间".to_string(),
+        });
+    }
+    let records = result
+        .iter()
+        .map(|item| serde_json::Value::from_query_result_optional(item, "").map(|x| x.unwrap_or(serde_json::Value::Null)))
+        .collect::<Result<Vec<serde_json::Value>, _>>()?;
+
+    let records = try_join_all(records.into_iter().map(|record| {
+        let ctx = ctx.clone();
+        let dimension_details_clone = dimension_details.clone();
+        let external_details_clone = external_details.clone();
+        async move {
+            let mut map = HashMap::new();
+            map.insert("key".to_string(), record.get("key").cloned().unwrap_or(serde_json::Value::Null));
+            map.insert("own_paths".to_string(), record.get("own_paths").cloned().unwrap_or(serde_json::Value::Null));
+            map.insert("ct".to_string(), record.get("ct").cloned().unwrap_or(serde_json::Value::Null));
+            for detail in dimension_details_clone {
+                map.insert(detail.key.clone(), record.get(&detail.key).cloned().unwrap_or(serde_json::Value::Null));
+            }
+            for detail in external_details_clone {
+                let value = stats_pg_conf_fact_detail_serv::sql_or_url_execute(detail.clone(), record.clone(), funs, &ctx).await?;
+                map.insert(detail.key.clone(), value.unwrap_or(serde_json::Value::Null));
+            }
+            Ok::<HashMap<String, serde_json::Value>, TardisError>(map)
+        }
+    }))
+    .await?;
+
+    Ok(StatsQueryRecordDetailResp {
+        columns: columns,
+        data: TardisPage {
+            page_size: query_req.page_size,
+            page_number: query_req.page_number,
+            total_size: total_size as u64,
+            records,
+        },
+    })
+}
+
 #[derive(sea_orm::FromQueryResult, Clone)]
 struct StatsConfInfo {
     pub col_key: String,
