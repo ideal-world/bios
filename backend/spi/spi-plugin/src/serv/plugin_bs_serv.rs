@@ -2,18 +2,12 @@ use bios_basic::{
     rbum::{
         dto::{
             rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumKindFilterReq, RbumRelFilterReq},
-            rbum_rel_agg_dto::{RbumRelAggModifyReq, RbumRelAggResp},
-            rbum_rel_attr_dto::RbumRelAttrAddReq,
-            rbum_rel_dto::{RbumRelDetailResp, RbumRelModifyReq},
+            rbum_rel_agg_dto::RbumRelAggModifyReq,
+            rbum_rel_dto::RbumRelModifyReq,
         },
         helper::rbum_scope_helper,
         rbum_enumeration::RbumRelFromKind,
-        serv::{
-            rbum_crud_serv::RbumCrudOperation,
-            rbum_item_serv::RbumItemCrudOperation,
-            rbum_kind_serv::RbumKindServ,
-            rbum_rel_serv::{RbumRelAttrServ, RbumRelServ},
-        },
+        serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_kind_serv::RbumKindServ, rbum_rel_serv::RbumRelServ},
     },
     spi::{
         dto::spi_bs_dto::SpiBsFilterReq,
@@ -21,25 +15,14 @@ use bios_basic::{
         spi_constants::{self},
     },
 };
-use bios_sdk_invoke::{
-    clients::{
-        event_client::{
-            asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject},
-            mq_client_node_opt, mq_error, SPI_RPC_TOPIC,
-        },
-        spi_kv_client::SpiKvClient,
-        spi_log_client::{LogDynamicContentReq, SpiLogClient},
-    },
-    invoke_config::InvokeConfigApi,
-    invoke_enumeration::InvokeModuleKind,
+use bios_sdk_invoke::clients::{
+    spi_kv_client::SpiKvClient,
+    spi_log_client::{LogDynamicContentReq, SpiLogClient},
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{Duration, Utc},
-    futures::TryFutureExt,
     log::info,
-    testcontainers::bollard::models::Plugin,
     tokio,
     web::web_resp::TardisPage,
     TardisFunsInst,
@@ -54,25 +37,7 @@ use crate::{
 use super::plugin_rel_serv::PluginRelServ;
 
 pub struct PluginBsServ;
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct PluginEvent {
-    rel_id: String,
-}
-impl EventAttribute for PluginEvent {
-    const SUBJECT: Subject = Subject::const_new("spi-plugin/delete");
-    fn durable_config() -> Option<MessageDurableConfig> {
-        Some(MessageDurableConfig {
-            // 两个月后过期
-            expire: Utc::now() + Duration::days(60),
-            max_receiver: Some(1),
-        })
-    }
 
-    const BROADCAST: bool = false;
-
-    const EXPECT_ACK_KIND: bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::model::MessageAckExpectKind =
-        bios_sdk_invoke::clients::event_client::asteroid_mq_sdk::model::MessageAckExpectKind::Sent;
-}
 impl PluginBsServ {
     pub async fn add_or_modify_plugin_rel_agg(add_req: &mut PluginBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let ctx_clone = ctx.clone();
@@ -215,11 +180,19 @@ impl PluginBsServ {
             &ctx_clone,
         )
         .await;
-        #[cfg(feature = "event")]
-        if funs.invoke_conf_in_event(InvokeModuleKind::Event) {
-            use bios_sdk_invoke::clients::event_client::EventAttributeExt;
-            if let Some(node) = mq_client_node_opt() {
-                node.send_event(SPI_RPC_TOPIC, PluginEvent { rel_id: rel_id.to_string() }.inject_context(funs, ctx).json()).map_err(mq_error).await?;
+        #[cfg(feature = "with-mq")]
+        {
+            use std::collections::HashMap;
+            if funs.conf::<PluginConfig>().use_mq {
+                use tardis::serde_json::json;
+
+                funs.mq()
+                    .publish(
+                        &funs.conf::<PluginConfig>().mq_topic_event_plugin_delete,
+                        json!({ "rel_id": rel_id.to_string() }).to_string(),
+                        &HashMap::new(),
+                    )
+                    .await?;
             }
         }
         SpiBsServ::disable_rel(rel_id, funs, ctx).await?;

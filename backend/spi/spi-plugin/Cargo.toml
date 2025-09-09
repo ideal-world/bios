@@ -15,9 +15,9 @@ name = "bios_spi_plugin"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-pg", "event"]
-event = ["bios-sdk-invoke/event"]
+default = ["spi-pg"]
 spi-pg = ["tardis/reldb-postgres"]
+with-mq = ["tardis/mq"]
 [dependencies]
 async-trait.workspace = true
 bios-basic = {version = "0.2.0", path = "../../basic", features = ["default"]}
@@ -30,3 +30,7 @@ tardis = {workspace = true, features = ["reldb-postgres", "web-server"]}
 bios-basic = {version = "0.2.0", path = "../../basic", features = ["default", "test"]}
 bios-sdk-invoke = {version = "0.2.0", path = "../../../frontend/sdks/invoke", features = ["default"]}
 tardis = {workspace = true, features = ["test", "ws-client"]}
+
+[[test]]
+name = "test_plugin"
+required-features = ["default", "with-mq"]
