@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 
@@ -18,12 +19,14 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_plugin::dto::plugin_api_dto::PluginApiAddOrModifyReq;
 use bios_spi_plugin::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsInfoResp};
 use bios_spi_plugin::dto::plugin_kind_dto::PluginKindAddAggReq;
+use bios_spi_plugin::plugin_config::PluginConfig;
 use bios_spi_plugin::plugin_constants::DOMAIN_CODE;
 use bios_spi_plugin::plugin_enumeration::PluginApiMethodKind;
 use bios_spi_plugin::plugin_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::serde_json::{self, json};
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{tokio, TardisFuns};
@@ -51,6 +54,24 @@ async fn init_data() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    funs.mq()
+        .subscribe(&funs.conf::<PluginConfig>().mq_topic_event_plugin_delete, |(_, msg)| async move {
+            let msg: serde_json::Value = serde_json::from_str(&msg).unwrap_or_default();
+            let rel_id = msg.get("rel_id").and_then(|v| v.as_str()).unwrap_or_default();
+            println!("Received plugin delete event for rel_id: {}", rel_id);
+            assert_eq!(rel_id, "1");
+            Ok(())
+        })
+        .await?;
+    sleep(Duration::from_millis(500)).await;
+    funs.mq()
+        .publish(
+            &funs.conf::<PluginConfig>().mq_topic_event_plugin_delete,
+            json!({ "rel_id": "1".to_string() }).to_string(),
+            &HashMap::new(),
+        )
+        .await?;
+
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
