@@ -74,7 +74,7 @@ impl PluginBsServ {
                         )
                         .await;
                         let _ = SpiKvClient::add_or_modify_key_name(
-                            &format!("{}{}", &funs.conf::<PluginConfig>().kv_plugin_prefix.clone(), rel_id_clone),
+                            &format!("{}:{}", &funs.conf::<PluginConfig>().kv_plugin_prefix.clone(), rel_id_clone),
                             &rel_name_clone,
                             None,
                             &funs,
@@ -139,7 +139,7 @@ impl PluginBsServ {
                         )
                         .await;
                         let _ = SpiKvClient::add_or_modify_key_name(
-                            &format!("{}{}", &funs.conf::<PluginConfig>().kv_plugin_prefix.clone(), rel_id_clone),
+                            &format!("{}:{}", &funs.conf::<PluginConfig>().kv_plugin_prefix.clone(), rel_id_clone),
                             &rel_name_clone,
                             None,
                             &funs,
