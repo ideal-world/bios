@@ -9,10 +9,10 @@ use tardis::web::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceReq},
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceReq},
     flow_constants,
     helper::task_handler_helper,
-    serv::flow_model_serv::FlowModelServ,
+    serv::{flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}},
 };
 
 #[derive(Clone)]
@@ -43,6 +43,16 @@ impl FlowCaModelApi {
                 result.insert(rel_model_id.clone(), new_model);
             } else {
                 FlowModelServ::delete_item(&orginal_model.id, &funs, &ctx.0).await?;
+            }
+        }
+
+        if req.0.op == FlowModelAssociativeOperationKind::Reference || req.0.op == FlowModelAssociativeOperationKind::ReferenceOrCopy {
+            if let (Some(app_id), Some(rel_template_id)) = (FlowModelServ::get_app_id_by_ctx(&ctx.0), &req.0.rel_template_id) {
+                // 若存在引用操作，且当前处于应用层，则需要更新应用的关联模型
+                if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                }
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
             }
         }
         funs.commit().await?;

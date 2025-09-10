@@ -245,18 +245,22 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await?;
         }
 
+        // 若存在关联的模板，则需要将关联该模板的应用层同步新增一个子模板
         if let Some(rel_template_ids) = &add_req.rel_template_ids {
-            join_all(
-                rel_template_ids
-                    .iter()
-                    .map(|rel_template_id| async {
-                        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, rel_template_id, None, None, false, true, None, funs, ctx).await
-                    })
-                    .collect_vec(),
-            )
-            .await
-            .into_iter()
-            .collect::<TardisResult<Vec<()>>>()?;
+            for rel_template_id in rel_template_ids {
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, rel_template_id, None, None, false, true, None, funs, ctx).await?;
+                for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx).await? {
+                    let mock_ctx = TardisContext {
+                        own_paths: if rel.rel_own_paths.contains("/") {rel.rel_own_paths.clone()} else {format!("{}/{}", ctx.own_paths, rel.rel_id)},
+                        ..ctx.clone()
+                    };
+                    if add_req.main {
+                        Self::copy_or_reference_main_model(flow_model_id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, funs, &mock_ctx).await?;
+                    } else {
+                        Self::copy_or_reference_non_main_model(flow_model_id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, None, funs, &mock_ctx).await?;
+                    }
+                }
+            }
         }
         if add_req.template && add_req.main && add_req.rel_model_id.clone().is_none_or(|id| id.is_empty()) {
             FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
@@ -2315,16 +2319,8 @@ impl FlowModelServ {
     }
 
     pub async fn find_rel_template_id(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
-        if Self::get_app_id_by_ctx(ctx).is_some() {
-            if let Some(rel_model_id) = Self::find_rel_models(None, true, None, funs, ctx).await?.pop().map(|model| model.rel_model_id.clone()) {
-                if rel_model_id.is_empty()  {
-                    Ok(None)
-                } else {
-                    FlowRelServ::find_template_id_by_model_id(&rel_model_id, funs, ctx).await
-                }
-            } else {
-                Ok(None)
-            }
+        if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
+            Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &app_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id))
         } else {
             Ok(None)
         }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq
+    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
@@ -141,6 +141,16 @@ impl FlowCiModelApi {
         let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
         for rel_non_main_model in rel_non_main_models {
             let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), None, &funs, &ctx.0).await?;
+        }
+
+        if req.0.op == FlowModelAssociativeOperationKind::Reference || req.0.op == FlowModelAssociativeOperationKind::ReferenceOrCopy {
+            if let (Some(app_id), Some(rel_template_id)) = (FlowModelServ::get_app_id_by_ctx(&ctx.0), &req.0.rel_template_id) {
+                // 若存在引用操作，且当前处于应用层，则需要更新应用的关联模型
+                if let Some(rel_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &app_id, &rel_template_id, &funs, &ctx.0).await?;
+                }
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
+            }
         }
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
