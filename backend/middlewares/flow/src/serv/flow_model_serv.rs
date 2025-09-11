@@ -1901,7 +1901,7 @@ impl FlowModelServ {
         };
         if let Some(mut add_version) = FlowModelAddReq::from(parent_model.clone()).add_version {
             add_version.rel_model_id = Some(child_model.id.clone());
-            FlowModelVersionServ::add_item(&mut add_version, funs, ctx).await?;
+            FlowModelVersionServ::add_item(&mut add_version, funs, &mock_ctx).await?;
         };
         Ok(())
     }
