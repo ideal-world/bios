@@ -56,8 +56,9 @@ impl ConfCiAuthApi {
         let req = json.0;
         let mut funs = crate::get_tardis_inst();
         let mut ctx = ctx.0;
+        let app_tenant_id = req.app_tenant_id.as_deref().unwrap_or(ctx.owner.as_str());
         if ctx.ak.is_empty() {
-            ctx.ak = ctx.owner.clone();
+            ctx.ak = app_tenant_id.to_string();
         };
         let source = if let Some(source) = req.backend_service {
             serde_json::from_value(source).unwrap_or(BackendServiceSource::New { name: None })
@@ -118,7 +119,6 @@ impl ConfCiAuthApi {
                 SpiBsServ::add_item(&mut req, &funs, &default_ctx).await?
             }
         };
-        let app_tenant_id = req.app_tenant_id.as_deref().unwrap_or(ctx.owner.as_str());
         SpiBsServ::add_rel(&bs_id, app_tenant_id, true, &funs, &ctx).await?;
         ctx.owner = app_tenant_id.to_string();
         let resp = register(req.register_request, &funs, &ctx).await?;

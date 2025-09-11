@@ -223,7 +223,7 @@ impl IamCertPhoneVCodeServ {
     }
 
     async fn send_activation_phone(phone: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        SmsClient::send_vcode(phone, vcode, funs, ctx).await?;
+        SmsClient::async_send_vcode(phone, vcode, funs, ctx).await?;
         Ok(())
     }
 
