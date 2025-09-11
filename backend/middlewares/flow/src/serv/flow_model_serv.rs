@@ -367,6 +367,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 "404-flow-model-not-found",
             ));
         }
+        // 当模型启用且当前版本为空时，将第一个版本作为当前版本并启动
         if modify_req.status == Some(FlowModelStatus::Enabled) && current_model.current_version_id.is_empty() {
             modify_req.current_version_id = FlowModelVersionServ::find_id_items(
                 &FlowModelVersionFilterReq {
@@ -505,7 +506,11 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             )
             .await?;
             for child_model in child_models {
-                Self::sync_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
+                if modify_req.current_version_id.is_some() {
+                    Self::sync_add_version_child_model(&child_model, &model_detail, funs, ctx).await?;
+                } else {
+                    Self::sync_modify_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
+                }
             }
         }
 
@@ -549,7 +554,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
         }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-
+        if !detail.main {
+            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
+        }
         join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, flow_model_id, None, None, funs, ctx)
                 .await?
@@ -1277,6 +1284,7 @@ impl FlowModelServ {
         let mut add_req = FlowModelAddReq {
             kind,
             rel_template_ids: rel_template_id.clone().map(|r| vec![r]),
+            template: kind != FlowModelKind::AsModel,
             data_source,
             ..rel_model.clone().into()
         };
@@ -1331,6 +1339,7 @@ impl FlowModelServ {
             rel_model_id: Some(rel_model.id.to_string()),
             kind,
             rel_template_ids: rel_template_id.clone().map(|r| vec![r]),
+            template: kind != FlowModelKind::AsModel,
             data_source,
             ..rel_model.clone().into()
         };
@@ -1880,7 +1889,24 @@ impl FlowModelServ {
         rbum_scope_helper::get_path_item(2, &ctx.own_paths)
     }
 
-    async fn sync_child_model(
+    async fn sync_add_version_child_model(
+        child_model: &FlowModelDetailResp,
+        parent_model: &FlowModelDetailResp,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mock_ctx = TardisContext {
+            own_paths: child_model.own_paths.clone(),
+            ..ctx.clone()
+        };
+        if let Some(mut add_version) = FlowModelAddReq::from(parent_model.clone()).add_version {
+            add_version.rel_model_id = Some(child_model.id.clone());
+            FlowModelVersionServ::add_item(&mut add_version, funs, ctx).await?;
+        };
+        Ok(())
+    }
+
+    async fn sync_modify_child_model(
         child_model: &FlowModelDetailResp,
         parent_model: &FlowModelDetailResp,
         modify_req: &FlowModelModifyReq,
@@ -1986,10 +2012,9 @@ impl FlowModelServ {
         tokio::spawn(async move {
             let funs = flow_constants::get_tardis_inst();
             debug!("[Flow] Start to execute child_model_id: {}, modify_req_clone: {:?}", child_model_id, modify_req_clone);
-            let _ = Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await;
             match Self::modify_item(&child_model_id, &mut modify_req_clone, &funs, &ctx_clone).await {
                 Ok(_) => {}
-                Err(e) => error!("Flow Model {} sync_child_model error:{:?}", child_model_clone.id, e),
+                Err(e) => error!("Flow Model {} sync_modify_child_model error:{:?}", child_model_clone.id, e),
             }
         });
         Ok(())
@@ -2454,7 +2479,7 @@ impl FlowModelServ {
                         ..Default::default()
                     }).collect_vec();
 
-                    Self::sync_child_model(&template_model, &parent_model, &FlowModelModifyReq {
+                    Self::sync_modify_child_model(&template_model, &parent_model, &FlowModelModifyReq {
                         modify_version: Some(FlowModelVersionModifyReq {
                             modify_states: Some(states),
                             ..Default::default()

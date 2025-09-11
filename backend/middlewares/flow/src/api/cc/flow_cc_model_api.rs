@@ -465,7 +465,6 @@ impl FlowCcModelApi {
                     rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
                     ..Default::default()
                 }),
-                main: Some(true),
                 ..Default::default()
             },
             None,
