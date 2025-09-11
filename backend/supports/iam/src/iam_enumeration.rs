@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm;
-use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
+use tardis::db::sea_orm::{self, DbErr, QueryResult, TryGetError, TryGetable};
 use tardis::web::poem_openapi;
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, poem_openapi::Enum)]
@@ -117,6 +116,7 @@ pub enum IamRelKind {
     IamSubDeployAuthAccount,
     IamSubDeployOrg,
     IamSubDeployApps,
+    IamSubDeployApp,
     IamSubDeployRel,
 }
 
@@ -437,6 +437,16 @@ pub enum IamSubDeployHostKind {
     IamSubDeployHostWhite,
     ///二级部署黑名单
     IamSubDeployHostBlack,
+}
+
+impl From<String> for IamSubDeployHostKind {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "IamSubDeployHostWhite" => IamSubDeployHostKind::IamSubDeployHostWhite,
+            "IamSubDeployHostBlack" => IamSubDeployHostKind::IamSubDeployHostBlack,
+            _ => IamSubDeployHostKind::IamSubDeployHostWhite,
+        }
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString, Default)]

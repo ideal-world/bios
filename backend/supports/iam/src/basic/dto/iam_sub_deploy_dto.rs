@@ -103,6 +103,8 @@ pub struct IamSubDeployOneExportAggResp {
     pub org_set_cate: Option<Vec<RbumSetCateDetailResp>>,
     pub apps_set: Option<RbumSetDetailResp>,
     pub apps_set_cate: Option<Vec<RbumSetCateDetailResp>>,
+    pub projects: Option<Vec<IamAppDetailResp>>,
+    pub account_projects: Option<HashMap<String, Vec<String>>>,
     pub iam_config: Option<HashMap<String, Vec<IamConfigDetailResp>>>,
 }
 
@@ -141,5 +143,7 @@ pub struct IamSubDeployTowImportReq {
     pub org_set_cate: Option<Vec<RbumSetCateDetailResp>>,
     pub apps_set: Option<RbumSetDetailResp>,
     pub apps_set_cate: Option<Vec<RbumSetCateDetailResp>>,
+    pub projects: Option<Vec<IamAppDetailResp>>,
+    pub account_projects: Option<HashMap<String, Vec<String>>>,
     pub iam_config: Option<HashMap<String, Vec<IamConfigDetailResp>>>,
 }

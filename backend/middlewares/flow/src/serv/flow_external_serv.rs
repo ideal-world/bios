@@ -65,7 +65,10 @@ impl FlowExternalServ {
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_fetch_rel_obj", "illegal response", "500-external-illegal-response"));
         }
-        if let Some(data) = resp.body {
+        if let Some(mut data) = resp.body {
+            for rel_bus_obj in data.rel_bus_objs.iter_mut() {
+                rel_bus_obj.rel_bus_obj_ids = rel_bus_obj.rel_bus_obj_ids.clone().into_iter().unique().collect_vec();
+            }
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_fetch_rel_obj", "illegal response", "500-external-illegal-response"))

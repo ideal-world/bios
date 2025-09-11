@@ -12,6 +12,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -26,7 +27,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::{iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license};
 use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq};
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppKind, IamAppModifyReq};
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppKind, IamAppModifyReq};
 use crate::basic::dto::iam_config_dto::{IamConfigAggOrModifyReq, IamConfigDetailResp};
 use crate::basic::dto::iam_filer_dto::{
     IamAccountFilterReq, IamAppFilterReq, IamConfigFilterReq, IamResFilterReq, IamRoleFilterReq, IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq,
@@ -244,6 +245,14 @@ impl IamSubDeployServ {
         IamRelServ::delete_simple_rel(&IamRelKind::IamSubDeployApps, id, apps_id, funs, ctx).await
     }
 
+    pub(crate) async fn add_rel_app(id: &str, app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamSubDeployApp, id, app_id, None, None, true, true, funs, ctx).await
+    }
+
+    pub(crate) async fn delete_rel_app(id: &str, app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamSubDeployApp, id, app_id, funs, ctx).await
+    }
+
     pub(crate) async fn add_rel_other(id: &str, apps_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_simple_rel(&IamRelKind::IamSubDeployRel, id, apps_id, None, None, true, true, funs, ctx).await
     }
@@ -310,6 +319,7 @@ impl IamSubDeployServ {
         let (orgs_set, orgs_set_cate) = Self::export_orgs(id, funs, ctx).await?;
         let (apps_set, apps_set_cate) = Self::export_apps(id, funs, ctx).await?;
         let (res_set, res_set_cate, res_items, res_set_item, res_api_map, res_role_map) = Self::export_res(funs, ctx).await?;
+        let (projects, account_projects) = Self::export_project(id, funs, ctx).await?;
         Ok(IamSubDeployOneExportAggResp {
             accounts: Some(accounts),
             account_cert: Some(Self::export_account_cert(account_ids.clone(), funs, ctx).await?),
@@ -327,6 +337,8 @@ impl IamSubDeployServ {
             org_set_cate: Some(orgs_set_cate),
             apps_set: Some(apps_set),
             apps_set_cate: Some(apps_set_cate),
+            projects: Some(projects),
+            account_projects: Some(account_projects),
         })
     }
 
@@ -677,6 +689,23 @@ impl IamSubDeployServ {
         Ok(account_role)
     }
 
+    async fn export_project(sub_deploy_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(Vec<IamAppDetailResp>, HashMap<String, Vec<String>>)> {
+        let sub_deploy_app_ids = Self::find_rel_id_by_sub_deploy_id(&IamRelKind::IamSubDeployApp, sub_deploy_id, funs, ctx).await?;
+        let projects = IamAppServ::find_detail_items(&IamAppFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: Some(sub_deploy_app_ids),
+                ..Default::default()
+            },
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        // 项目账号关系
+        let mut account_projects: HashMap<String, Vec<String>> = HashMap::new();
+        for project in &projects {
+            account_projects.insert(project.id.clone(), IamAppServ::find_rel_account(&project.id, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec());
+        }
+        Ok((projects, account_projects))
+    }
+
     pub(crate) async fn one_deploy_import(import_req: IamSubDeployOneImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let app_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         // 同步项目
@@ -799,6 +828,7 @@ impl IamSubDeployServ {
                                         extend_role_id: Some(role.extend_role_id.clone()),
                                         in_embed: Some(role.in_embed.clone()),
                                         in_base: Some(role.in_base.clone()),
+                                        deletable: Some(role.deletable.clone()),
                                     },
                                     funs,
                                     &app_ctx,
@@ -904,6 +934,7 @@ impl IamSubDeployServ {
     pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let _ = Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await;
         let _ = Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await;
+        let _ = Self::import_project(import_req.projects.clone(), import_req.account_projects.clone(), funs, ctx).await;
         let _ = Self::import_iam_config(import_req.iam_config, funs, ctx).await;
         let _ = Self::import_account(
             import_req.accounts,
@@ -1277,6 +1308,75 @@ impl IamSubDeployServ {
                 }
                 for cate in delete_old_org_set_cate {
                     RbumSetCateServ::delete_with_all_rels(&cate.id, funs, ctx).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn import_project(projects: Option<Vec<IamAppDetailResp>>, project_account: Option<HashMap<String, Vec<String>>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(projects) = projects {
+            for project in projects {
+                let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &project.id)?;
+                if IamAppServ::count_items(
+                    &IamAppFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ids: Some(vec![project.id.clone()]),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                    > 0
+                {
+                    let _ = IamAppServ::modify_item(
+                        &project.id,
+                        &mut IamAppModifyReq {
+                            name: Some(TrimString::from(project.name.clone())),
+                            description: project.description.clone(),
+                            scope_level: Some(project.scope_level.clone()),
+                            disabled: Some(project.disabled.clone()),
+                            icon: Some(project.icon.clone()),
+                            sort: Some(project.sort.clone()),
+                            contact_phone: Some(project.contact_phone.clone()),
+                        },
+                        funs,
+                        &app_ctx,
+                    )
+                    .await;
+                } else {
+                    let _ = IamAppServ::add_item(
+                        &mut IamAppAddReq {
+                            id: Some(TrimString::from(project.id.clone())),
+                            name: TrimString::from(project.name),
+                            description: project.description,
+                            scope_level: Some(project.scope_level),
+                            disabled: Some(project.disabled),
+                            icon: Some(project.icon),
+                            sort: Some(project.sort),
+                            contact_phone: Some(project.contact_phone),
+                            kind: Some(project.kind.clone()),
+                            sync_apps_group: Some(project.kind == IamAppKind::Product),
+                        },
+                        funs,
+                        &app_ctx,
+                    )
+                    .await;
+                }
+                // 同步项目的用户
+                if let Some(project_account) = &project_account {
+                    if let Some(account_ids) = project_account.get(&project.id) {
+                        for account in IamAppServ::find_rel_account(&project.id, funs, ctx).await? {
+                            let _ = IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, &account.rel_id, &project.id, funs, &app_ctx).await;
+                        }
+                        for account_id in account_ids {
+                            let _ = IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, &project.id, None, None, true, false, funs, &app_ctx).await;
+                        }
+                    }
                 }
             }
         }
@@ -1733,6 +1833,7 @@ impl
                     ids: Some(vec![add_req.sub_deploy_id.to_string()]),
                     ..Default::default()
                 },
+                extend_sub_deploy_id: Some("".to_string()),
                 ..Default::default()
             },
             funs,
