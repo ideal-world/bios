@@ -21,7 +21,7 @@ pub async fn export_data(export_req: &KvExportDataReq, funs: &TardisFunsInst, ct
             &format!(
                 r#"SELECT k AS key, v AS value, info, owner, own_paths, disable, scope_level, create_time, update_time
 FROM {}
-WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2))
+WHERE ((create_time > $1 and create_time < $2) or (update_time > $1 and update_time <= $2)) AND k NOT LIKE 'flow:config:%'
 ORDER BY create_time DESC
 "#,
                 table_name
