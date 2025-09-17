@@ -36,7 +36,7 @@ impl CustomS3Service {
                 kind_code: bs_cert.kind_code.clone(),
                 conn_uri: bs_cert.conn_uri.clone(),
                 ak: bs_cert.ak.clone(),
-                sk: bs_cert.sk.clone(),
+                sk: bs_cert.sk.clone().unwrap_or_default(),
                 ext: bs_cert.ext.clone(),
                 private: bs_cert.private,
             },

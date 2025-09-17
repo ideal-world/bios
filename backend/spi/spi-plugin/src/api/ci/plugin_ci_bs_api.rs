@@ -91,6 +91,7 @@ impl PluginCiBsApi {
                     name: name.0,
                     ..Default::default()
                 },
+                hide_sk: Some(true),
                 kind_id: kind_id.0,
                 kind_code: kind_code.0,
                 kind_codes: kind_codes.clone(),
