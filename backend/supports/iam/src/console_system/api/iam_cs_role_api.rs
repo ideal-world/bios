@@ -63,10 +63,11 @@ impl IamCsRoleApi {
     /// copy embed role
     /// 复制内置角色
     #[oai(path = "/copy_embed", method = "post")]
-    async fn copy_base_embed_role(&self, copy_req: Json<IamRoleAggCopyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+    async fn copy_base_embed_role(&self, mut copy_req: Json<IamRoleAggCopyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        copy_req.0.role.in_embed = Some(true);
         let result = IamRoleServ::add_base_embed_role(&copy_req.0.role, Some(copy_req.0.copy_role_id.clone()), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
