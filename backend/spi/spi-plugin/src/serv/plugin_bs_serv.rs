@@ -422,7 +422,7 @@ impl PluginBsServ {
             name: bs.name,
             conn_uri: bs.conn_uri,
             ak: bs.ak,
-            sk: "".to_string(), // hide sk
+            sk: bs.sk.unwrap_or_default(),
             ext: bs.ext,
             private: bs.private,
             rel: Some(rel_agg),

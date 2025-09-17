@@ -166,7 +166,6 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
             .expr_as(Expr::col((rbum_kind::Entity, rbum_kind::Column::Name)), Alias::new("kind_name"))
             .column((rbum_cert::Entity, rbum_cert::Column::ConnUri))
             .column((rbum_cert::Entity, rbum_cert::Column::Ak))
-            .column((rbum_cert::Entity, rbum_cert::Column::Sk))
             .column((rbum_cert::Entity, rbum_cert::Column::SkInvisible))
             .column((rbum_cert::Entity, rbum_cert::Column::Ext))
             .left_join(
@@ -181,6 +180,9 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                     .add(Expr::col((rbum_cert::Entity, rbum_cert::Column::Supplier)).equals((spi_bs::Entity, spi_bs::Column::Id)))
                     .add(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).equals((spi_bs::Entity, spi_bs::Column::Id))),
             );
+        if !filter.hide_sk.unwrap_or(false) {
+            query.column((rbum_cert::Entity, rbum_cert::Column::Sk));
+        }
         if let Some(private) = filter.private {
             query.and_where(Expr::col((spi_bs::Entity, spi_bs::Column::Private)).eq(private));
         }
@@ -367,7 +369,7 @@ impl SpiBsServ {
             kind_code: bs.kind_code,
             conn_uri: bs.conn_uri,
             ak: bs.ak,
-            sk: bs.sk,
+            sk: bs.sk.unwrap_or_default(),
             ext: bs.ext,
             private: bs.private,
         })

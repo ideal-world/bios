@@ -49,7 +49,7 @@ pub trait S3 {
                             kind_code: spi.kind_code.clone(),
                             conn_uri: spi.conn_uri.clone(),
                             ak: spi.ak.clone(),
-                            sk: spi.sk.clone(),
+                            sk: spi.sk.clone().unwrap_or_default(),
                             ext: spi.ext.clone(),
                             private: spi.private,
                         })?
