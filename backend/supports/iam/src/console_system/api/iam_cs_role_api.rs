@@ -158,7 +158,7 @@ impl IamCsRoleApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
+        IamRoleServ::delete_role(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {

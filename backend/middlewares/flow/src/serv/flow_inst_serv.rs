@@ -282,6 +282,22 @@ impl FlowInstServ {
         };
         funs.db().insert_one(flow_inst, ctx).await?;
 
+        let flow_inst_cp = Self::get(&inst_id, funs, ctx).await?;
+        let ctx_cp = ctx.clone();
+        tardis::tokio::spawn(async move {
+            let funs = flow_constants::get_tardis_inst();
+            match FlowEventServ::do_front_change(&flow_inst_cp, loop_check_helper::InstancesTransition::default(), &ctx_cp, &funs).await {
+                Ok(_) => {}
+                Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
+            }
+            match task_handler_helper::execute_async_task(&ctx_cp).await {
+                Ok(_) => {
+                    ctx_cp.execute_task().await.unwrap_or_default();
+                }
+                Err(e) => error!("Flow Instance {} transfer execute_async_task error:{:?}", flow_inst_cp.id, e),
+            }
+        });
+
         Self::do_request_webhook(
             None,
             flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),

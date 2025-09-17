@@ -3,6 +3,7 @@ use strum::Display;
 use tardis::{
     basic::{error::TardisError, field::TrimString},
     db::sea_orm::{self, prelude::*, EnumIter},
+    log::warn,
     serde_json::Value,
     web::poem_openapi,
     TardisFuns,
@@ -645,6 +646,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
         if (left_value.is_empty() || left_value == "null") && *self != FlowTransitionFrontActionInfoRelevanceRelation::IsNullOrEmpty {
             return false;
         }
+        warn!("left_value: {}, right_value: {}", left_value, right_value);
         // 单项判断（例如等于，不等于，大于，小于），如果参数是单元素数组，则取出数据，否则说明格式错误直接返回false
         if *self == FlowTransitionFrontActionInfoRelevanceRelation::Eq
             || *self == FlowTransitionFrontActionInfoRelevanceRelation::Ne
@@ -663,26 +665,76 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
         match self {
             FlowTransitionFrontActionInfoRelevanceRelation::Eq => left_value == right_value,
             FlowTransitionFrontActionInfoRelevanceRelation::Ne => left_value != right_value,
-            FlowTransitionFrontActionInfoRelevanceRelation::Gt => left_value > right_value,
-            FlowTransitionFrontActionInfoRelevanceRelation::Ge => left_value >= right_value,
-            FlowTransitionFrontActionInfoRelevanceRelation::Lt => left_value < right_value,
-            FlowTransitionFrontActionInfoRelevanceRelation::Le => left_value <= right_value,
+            FlowTransitionFrontActionInfoRelevanceRelation::Gt => {
+                if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
+                    left > right
+                } else if let (Ok(left), Ok(right)) = (left_value.parse::<i64>(), right_value.parse::<i64>()) {
+                    left > right
+                } else {
+                    left_value > right_value
+                }
+            },
+            FlowTransitionFrontActionInfoRelevanceRelation::Ge => {
+                if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
+                    left >= right
+                } else if let (Ok(left), Ok(right)) = (left_value.parse::<i64>(), right_value.parse::<i64>()) {
+                    left >= right
+                } else {
+                    left_value >= right_value
+                }
+            },
+            FlowTransitionFrontActionInfoRelevanceRelation::Lt => {
+                if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
+                    left < right
+                } else if let (Ok(left), Ok(right)) = (left_value.parse::<i64>(), right_value.parse::<i64>()) {
+                    left < right
+                } else {
+                    left_value < right_value
+                }
+            },
+            FlowTransitionFrontActionInfoRelevanceRelation::Le => {
+                if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
+                    left <= right
+                } else if let (Ok(left), Ok(right)) = (left_value.parse::<i64>(), right_value.parse::<i64>()) {
+                    left <= right
+                } else {
+                    left_value <= right_value
+                }
+            },
             FlowTransitionFrontActionInfoRelevanceRelation::Like => left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
-            FlowTransitionFrontActionInfoRelevanceRelation::In => TardisFuns::json
-                .str_to_obj::<Vec<Value>>(&right_value)
-                .unwrap_or_default()
-                .into_iter()
-                .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
-                .collect_vec()
-                .contains(&left_value),
-            FlowTransitionFrontActionInfoRelevanceRelation::NotIn => !TardisFuns::json
-                .str_to_obj::<Vec<Value>>(&right_value)
-                .unwrap_or_default()
-                .into_iter()
-                .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
-                .collect_vec()
-                .contains(&left_value),
+            FlowTransitionFrontActionInfoRelevanceRelation::In => {
+                let right_values = TardisFuns::json
+                    .str_to_obj::<Vec<Value>>(&right_value)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
+                    .collect::<Vec<_>>();
+                let left_values = TardisFuns::json
+                    .str_to_obj::<Vec<Value>>(&left_value)
+                    .map(|r| r.into_iter()
+                    .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
+                    .collect::<Vec<_>>())
+                    .unwrap_or(vec![left_value.clone()])
+                    ;
+                left_values.iter().any(|item| right_values.contains(item))
+            },
+            FlowTransitionFrontActionInfoRelevanceRelation::NotIn => {
+                let right_values = TardisFuns::json
+                    .str_to_obj::<Vec<Value>>(&right_value)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
+                    .collect::<Vec<_>>();
+                let left_values = TardisFuns::json
+                    .str_to_obj::<Vec<Value>>(&left_value)
+                    .map(|r| r.into_iter()
+                    .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
+                    .collect::<Vec<_>>())
+                    .unwrap_or(vec![left_value.clone()])
+                    ;
+                !left_values.iter().any(|item| right_values.contains(item))
+            },
             FlowTransitionFrontActionInfoRelevanceRelation::Between => {
                 let interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
                 if interval.len() != 2 {

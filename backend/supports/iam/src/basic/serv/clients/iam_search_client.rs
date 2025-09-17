@@ -30,10 +30,6 @@ pub struct IamSearchClient;
 impl IamSearchClient {
     pub async fn async_add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        let mock_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.clone()
-        };
         let account_resp = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
@@ -49,7 +45,7 @@ impl IamSearchClient {
             true,
             true,
             funs,
-            &mock_ctx,
+            ctx,
         )
         .await?;
         let logout_msg = logout_msg.to_string();
@@ -185,6 +181,26 @@ impl IamSearchClient {
             }
         }
         let account_roles = roles_set.into_iter().collect_vec();
+        let mut ext = json!({
+            "status": account_resp.status,
+            "temporary":account_resp.temporary,
+            "lock_status": account_resp.lock_status,
+            "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
+            "dept_id": account_resp_dept_id,
+            "sub_deploy_ids": sub_deploy_ids,
+            "auth_sub_deploy_ids": auth_sub_deploy_ids,
+            "project_id": account_app_ids,
+            "create_time": account_resp.create_time.to_rfc3339(),
+            "certs":account_resp.certs,
+            "icon":account_resp.icon,
+            "logout_msg":logout_msg,
+            "disabled":account_resp.disabled,
+            "logout_time":account_resp.logout_time,
+            "logout_type":account_resp.logout_type,
+            "labor_type":account_resp.labor_type,
+            "scope_level":account_resp.scope_level
+        });
+        account_resp.exts.iter().map(|attr| ext[&attr.name] = json!(attr.value)).collect_vec();
         //add or modify search
         if *is_modify {
             let modify_req = SearchItemModifyReq {
@@ -200,25 +216,7 @@ impl IamSearchClient {
                 },
                 create_time: Some(account_resp.create_time),
                 update_time: Some(account_resp.update_time),
-                ext: Some(json!({
-                    "status": account_resp.status,
-                    "temporary":account_resp.temporary,
-                    "lock_status": account_resp.lock_status,
-                    "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
-                    "dept_id": account_resp_dept_id,
-                    "sub_deploy_ids": sub_deploy_ids,
-                    "auth_sub_deploy_ids": auth_sub_deploy_ids,
-                    "project_id": account_app_ids,
-                    "create_time": account_resp.create_time.to_rfc3339(),
-                    "certs":account_resp.certs,
-                    "icon":account_resp.icon,
-                    "logout_msg":logout_msg,
-                    "disabled":account_resp.disabled,
-                    "logout_time":account_resp.logout_time,
-                    "logout_type":account_resp.logout_type,
-                    "labor_type":account_resp.labor_type,
-                    "scope_level":account_resp.scope_level
-                })),
+                ext: Some(ext),
                 ext_override: Some(true),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
@@ -246,25 +244,7 @@ impl IamSearchClient {
                 },
                 create_time: Some(account_resp.create_time),
                 update_time: Some(account_resp.update_time),
-                ext: Some(json!({
-                    "status": account_resp.status,
-                    "temporary":account_resp.temporary,
-                    "lock_status": account_resp.lock_status,
-                    "role_id": account_roles,
-                    "dept_id": account_resp_dept_id,
-                    "sub_deploy_ids": sub_deploy_ids,
-                    "auth_sub_deploy_ids": auth_sub_deploy_ids,
-                    "project_id": account_app_ids,
-                    "create_time": account_resp.create_time.to_rfc3339(),
-                    "certs":account_resp.certs,
-                    "icon":account_resp.icon,
-                    "logout_msg":logout_msg,
-                    "disabled":account_resp.disabled,
-                    "logout_time":account_resp.logout_time,
-                    "logout_type":account_resp.logout_type,
-                    "labor_type":account_resp.labor_type,
-                    "scope_level":account_resp.scope_level
-                })),
+                ext: Some(ext),
                 visit_keys: Some(SearchItemVisitKeysReq {
                     accounts: None,
                     apps: Some(account_app_ids),

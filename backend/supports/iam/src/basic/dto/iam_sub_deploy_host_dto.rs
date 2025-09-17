@@ -34,6 +34,7 @@ pub struct IamSubDeployHostDetailResp {
     pub name: String,
     pub sub_deploy_id: String,
     pub host: String,
+    pub host_type: String,
     pub note: String,
 
     pub own_paths: String,

@@ -276,6 +276,16 @@ impl FlowModelModifyReq {
                                     action_by_post_change.is_edit = Some(is_edit);
                                 }
                             }
+                            if let Some(ref mut action_by_post_state_changes) = &mut modify_transition.action_by_post_state_changes {
+                                for action_by_post_state_change in action_by_post_state_changes.iter_mut() {
+                                    action_by_post_state_change.is_edit = Some(is_edit);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_var_changes) = &mut modify_transition.action_by_post_var_changes {
+                                for action_by_post_var_change in action_by_post_var_changes.iter_mut() {
+                                    action_by_post_var_change.is_edit = Some(is_edit);
+                                }
+                            }
                         }
                     }
                 }
@@ -321,6 +331,16 @@ impl FlowModelModifyReq {
                             if let Some(ref mut action_by_post_changes) = &mut modify_transition.action_by_post_changes {
                                 for action_by_post_change in action_by_post_changes.iter_mut() {
                                     action_by_post_change.is_edit = Some(is_edit);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_state_changes) = &mut modify_transition.action_by_post_state_changes {
+                                for action_by_post_state_change in action_by_post_state_changes.iter_mut() {
+                                    action_by_post_state_change.is_edit = Some(is_edit);
+                                }
+                            }
+                            if let Some(ref mut action_by_post_var_changes) = &mut modify_transition.action_by_post_var_changes {
+                                for action_by_post_var_change in action_by_post_var_changes.iter_mut() {
+                                    action_by_post_var_change.is_edit = Some(is_edit);
                                 }
                             }
                         }
