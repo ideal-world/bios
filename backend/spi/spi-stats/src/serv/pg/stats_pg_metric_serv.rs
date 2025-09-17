@@ -1006,7 +1006,9 @@ fn package_rel_external_id_agg(
     let mut rel_external_ids = HashSet::new();
     rel_external_ids.insert("".to_string());
     if let Some(rel_external_id) = &rel_external_id {
-        rel_external_ids.insert(rel_external_id.clone());
+        rel_external_id.split(",").for_each(|id| {
+            rel_external_ids.insert(id.to_string());
+        });
     }
     select.iter().for_each(|i| {
         if let Some(rel_external_id) = &i.rel_external_id {

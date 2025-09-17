@@ -1,5 +1,6 @@
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleRelAccountCertResp, IamRoleSummaryResp};
+use crate::iam_enumeration::IamRoleKind;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
@@ -267,6 +268,7 @@ impl IamCiRoleApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        kind: Query<Option<IamRoleKind>>,
         app_id: Query<Option<String>>,
         in_base: Query<Option<bool>>,
         in_embed: Query<Option<bool>>,
@@ -288,9 +290,11 @@ impl IamCiRoleApi {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
+                    enabled: Some(true),
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
+                kind: kind.0,
                 in_base: in_base.0,
                 in_embed: in_embed.0,
                 extend_role_id: extend_role_id.0,
