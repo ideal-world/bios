@@ -29,8 +29,8 @@ impl SendChannel for crate::SmsClient {
             template_param: (*content).clone(),
             sign_name: template.sms_signature.unwrap_or_default(),
         };
-        let from = template.sms_from.ok_or_else(|| TardisError::conflict("template missing field sms_from", "409-reach-bad-template"))?;
-        let request = SendSmsRequest::new(from, sms_content);
+        let to = to.iter().map(|s| s.to_string()).collect::<Vec<_>>() as Vec<String>;
+        let request = SendSmsRequest::new(&to[0], sms_content);
         let resp = self.send_sms(request).await?;
         if resp.is_error() {
             use std::fmt::Write;

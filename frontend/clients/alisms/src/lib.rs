@@ -90,7 +90,7 @@ impl SmsClient {
         ];
         let sign_headers = sign_header_arr.join(";");
         // 1.构造规范化请求头
-        headers.insert("Host", HeaderValue::from_str(self.base_url.as_str()).unwrap());
+        headers.insert("Host", HeaderValue::from_str("dysmsapi.aliyuncs.com").unwrap());
         headers.insert("x-acs-action", HeaderValue::from_str(action).unwrap());
         headers.insert("x-acs-version", HeaderValue::from_str(version).unwrap());
         headers.insert("x-acs-date", HeaderValue::from_str(&datetime_str).unwrap());
@@ -120,6 +120,8 @@ impl SmsClient {
         );
         // 6.构建 Authorization
         headers.insert("Authorization", HeaderValue::from_str(&auth_data).unwrap());
+
+        headers.remove("Host");
         Ok(())
     }
 
@@ -206,9 +208,9 @@ impl SmsClient {
         // 构造 url 拼接请求参数
         let url: String;
         if !query_params.is_empty() {
-            url = format!("https://{}{}?{}", self.base_url.as_str(), canonical_uri, canonical_query_string);
+            url = format!("http://{}{}?{}", self.base_url.as_str(), canonical_uri, canonical_query_string);
         } else {
-            url = format!("https://{}{}", self.base_url.as_str(), canonical_uri);
+            url = format!("http://{}{}", self.base_url.as_str(), canonical_uri);
         }
         let response = self.send_request(
             method,
