@@ -130,7 +130,7 @@ pub struct SpiBsSummaryResp {
     /// Connection password/credential password
     ///
     /// 连接密码/凭证密码
-    pub sk: String,
+    pub sk: Option<String>,
     /// Extended information. Such as connection pool information
     ///
     /// 扩展信息。比如连接池信息
@@ -189,7 +189,7 @@ pub struct SpiBsDetailResp {
     /// Connection password/credential password
     ///
     /// 连接密码/凭证密码
-    pub sk: String,
+    pub sk: Option<String>,
     /// Extended information. Such as connection pool information
     ///
     /// 扩展信息。比如连接池信息
@@ -291,6 +291,10 @@ pub struct SpiBsFilterReq {
     ///
     /// SPI服务Domain Id
     pub domain_code: Option<String>,
+    /// Hide secret info like sk
+    ///
+    /// 隐藏敏感信息比如 sk
+    pub hide_sk: Option<bool>,
 }
 
 impl RbumItemFilterFetcher for SpiBsFilterReq {

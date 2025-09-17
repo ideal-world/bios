@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ops::Add;
 
 use async_trait::async_trait;
@@ -378,7 +379,7 @@ impl IamRoleServ {
 
     pub async fn extend_copy_role_agg(
         tenant_or_app_id: &str,
-        spec_role_ids: Option<Vec<String>>,
+        spec_role_aggs: Option<HashMap<String, Option<Vec<String>>>>,
         kind: &IamRoleKind,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -386,7 +387,8 @@ impl IamRoleServ {
         let base_roles = Self::find_detail_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: spec_role_ids,
+                    ids: spec_role_aggs.clone()
+                        .map(|spec_role_aggs| spec_role_aggs.keys().cloned().collect_vec()),
                     ignore_scope: true,
                     with_sub_own_paths: false,
                     own_paths: Some("".to_string()),
@@ -404,6 +406,7 @@ impl IamRoleServ {
         )
         .await?;
         for base_role in base_roles {
+            let rel_res_id = spec_role_aggs.clone().map(|spec_role_agg| spec_role_agg.get(&base_role.id).cloned().unwrap_or_default()).unwrap_or_default();
             // 过滤掉内置的只读角色
             if base_role.id == funs.iam_basic_role_app_read_id() {
                 continue;
@@ -424,7 +427,7 @@ impl IamRoleServ {
                         in_base: Some(false),
                         deletable: Some(base_role.deletable),
                     },
-                    res_ids: None,
+                    res_ids: rel_res_id,
                 },
                 funs,
                 ctx,
@@ -1176,11 +1179,16 @@ impl IamRoleServ {
         .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
 
-    pub async fn add_base_embed_role(add_req: &IamRoleAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_base_embed_role(add_req: &IamRoleAddReq, copy_role_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let res_ids = if let Some(copy_role_id) = &copy_role_id {
+            Some(Self::find_id_rel_res(copy_role_id, None, None, funs, ctx).await?)
+        } else {
+            None
+        };
         let base_embed_role_id = Self::add_role_agg(
             &mut IamRoleAggAddReq {
                 role: add_req.clone(),
-                res_ids: None,
+                res_ids: res_ids.clone(),
             },
             funs,
             ctx,
@@ -1232,11 +1240,11 @@ impl IamRoleServ {
             if let Some(tenant_or_app_ids) = tenant_or_app_ids {
                 for (tenant_or_app_id, own_paths) in tenant_or_app_ids {
                     let tenant_or_app_ctx = TardisContext { own_paths, ..ctx.clone() };
-                    Self::extend_copy_role_agg(&tenant_or_app_id, Some(vec![base_embed_role_id.clone()]), kind, funs, &tenant_or_app_ctx).await?;
+                    Self::extend_copy_role_agg(&tenant_or_app_id, Some(HashMap::from([(base_embed_role_id.clone(), res_ids.clone())])), kind, funs, &tenant_or_app_ctx).await?;
                 }
             }
         }
-        Ok(())
+        Ok(base_embed_role_id)
     }
 
     pub async fn delete_role(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -1249,6 +1257,8 @@ impl IamRoleServ {
             for sub_role_id in sub_role_ids {
                 Self::delete_item_with_all_rels(&sub_role_id, funs, ctx).await?;
             }
+            Self::delete_item_with_all_rels(id, funs, ctx).await?;
+        } else {
             Self::delete_item_with_all_rels(id, funs, ctx).await?;
         }
         Ok(())

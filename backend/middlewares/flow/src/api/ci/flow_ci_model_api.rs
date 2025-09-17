@@ -114,7 +114,6 @@ impl FlowCiModelApi {
                     rel_item_id: Some(req.0.rel_template_id.clone().unwrap_or_default()),
                     ..Default::default()
                 }),
-                main: Some(true),
                 ..Default::default()
             },
             None,
@@ -146,8 +145,8 @@ impl FlowCiModelApi {
         if req.0.op == FlowModelAssociativeOperationKind::Reference || req.0.op == FlowModelAssociativeOperationKind::ReferenceOrCopy {
             if let (Some(app_id), Some(rel_template_id)) = (FlowModelServ::get_app_id_by_ctx(&ctx.0), &req.0.rel_template_id) {
                 // 若存在引用操作，且当前处于应用层，则需要更新应用的关联模型
-                if let Some(rel_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &app_id, &rel_template_id, &funs, &ctx.0).await?;
+                if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
                 }
                 FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
             }
@@ -277,8 +276,9 @@ impl FlowCiModelApi {
 
     /// 批量关闭模型
     #[oai(path = "/batch/disable_model", method = "put")]
-    async fn batch_disable_model(&self, req: Json<FlowModelBatchDisableReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
+    async fn batch_disable_model(&self, req: Json<FlowModelBatchDisableReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::batch_disable_model(req.0.rel_template_id, req.0.main, &funs, &ctx.0).await?;
         funs.commit().await?;

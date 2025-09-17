@@ -455,7 +455,7 @@ impl FlowModelVersionServ {
         };
         
         let global_ctx = TardisContext { own_paths: "".to_string(), ..ctx.clone() };
-        FlowInstServ::async_unsafe_modify_state(
+        FlowInstServ::unsafe_modify_state(
             &FlowInstFilterReq {
                 main: Some(true),
                 tags: Some(vec![flow_model.tag.clone()]),
@@ -465,7 +465,6 @@ impl FlowModelVersionServ {
                 ..Default::default()
             },
             &new_state_id,
-            &flow_model,
             funs,
             &global_ctx,
         )
