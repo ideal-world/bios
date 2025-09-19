@@ -185,7 +185,7 @@ impl IamSearchClient {
             "status": account_resp.status,
             "temporary":account_resp.temporary,
             "lock_status": account_resp.lock_status,
-            "role_id": account_resp.roles.iter().map(|r| r.0.clone()).collect_vec(),
+            "role_id": account_roles,
             "dept_id": account_resp_dept_id,
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
