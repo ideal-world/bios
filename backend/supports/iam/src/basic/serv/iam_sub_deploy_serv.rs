@@ -1844,6 +1844,24 @@ impl
         {
             return Err(funs.err().not_found(&Self::get_obj_name(), "add", "sub_deploy_id not found", "404-iam-sub-deploy-license-sub-deploy-id"));
         }
+        if Self::find_one_rbum(
+            &IamSubDeployHostFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                host: Some(add_req.host.clone()),
+                sub_deploy_id: Some(add_req.sub_deploy_id.clone()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?.is_some()
+        {
+            return Err(funs.err().not_found(&Self::get_obj_name(), "add", "host is used", "409-sub-deploy-host-duplicate"));
+        }
         Ok(())
     }
 
@@ -1931,6 +1949,7 @@ impl
                     ids: Some(vec![add_req.sub_deploy_id.to_string()]),
                     ..Default::default()
                 },
+                extend_sub_deploy_id: Some("".to_string()),
                 ..Default::default()
             },
             funs,

@@ -66,3 +66,5 @@
 409-role-is-not-app	该角色不属于app角色，不能删除
 409-role-is-extend	该角色是扩展角色，不能删除
 409-role-prohibit-delete	当前角色不可删除
+
+409-sub-deploy-host-duplicate	当前二级部署存在重复的host

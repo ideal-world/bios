@@ -1,55 +1,56 @@
 [package]
-name = "bios-serv-all"
-version.workspace = true
 authors.workspace = true
-homepage.workspace = true
 documentation.workspace = true
-repository.workspace = true
-license.workspace = true
 edition.workspace = true
-readme.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "bios-serv-all"
 publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
+bios-auth = {version = "0.2.0", path = "../../supports/auth", features = ["web-server"]}
+bios-iam = {version = "0.2.0", path = "../../supports/iam", features = ["spi_search", "spi_kv", "event"]}
+bios-reach = {version = "0.2.0", path = "../../supports/reach"}
 serde.workspace = true
-tardis = { workspace = true, features = [
+tardis = {workspace = true, features = [
   "web-server",
   "conf-remote",
   "tracing",
-] }
-bios-iam = { version = "0.2.0", path = "../../supports/iam", features = ["spi_search", "spi_kv", "event"] }
-bios-auth = { version = "0.2.0", path = "../../supports/auth", features = ["web-server"] }
-bios-reach = { version = "0.2.0", path = "../../supports/reach" }
+]}
 
-bios-spi-cache = { version = "0.2.0", path = "../../spi/spi-cache" }
-bios-spi-graph = { version = "0.2.0", path = "../../spi/spi-graph" }
-bios-spi-kv = { version = "0.2.0", path = "../../spi/spi-kv" }
-bios-spi-log = { version = "0.2.0", path = "../../spi/spi-log" }
-bios-spi-object = { version = "0.2.0", path = "../../spi/spi-object" }
-bios-spi-plugin = { version = "0.2.0", path = "../../spi/spi-plugin" }
-bios-spi-reldb = { version = "0.2.0", path = "../../spi/spi-reldb" }
-bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search", features = ["default", "with-cn-tokenizer"] }
-bios-spi-stats = { version = "0.2.0", path = "../../spi/spi-stats" }
+bios-spi-cache = {version = "0.2.0", path = "../../spi/spi-cache"}
+bios-spi-graph = {version = "0.2.0", path = "../../spi/spi-graph"}
+bios-spi-kv = {version = "0.2.0", path = "../../spi/spi-kv"}
+bios-spi-log = {version = "0.2.0", path = "../../spi/spi-log"}
+bios-spi-object = {version = "0.2.0", path = "../../spi/spi-object"}
+bios-spi-plugin = {version = "0.2.0", path = "../../spi/spi-plugin", features = ["default", "with-mq"]}
+bios-spi-reldb = {version = "0.2.0", path = "../../spi/spi-reldb"}
+bios-spi-search = {version = "0.2.0", path = "../../spi/spi-search", features = ["default", "with-cn-tokenizer"]}
+# bios-spi-search = { version = "0.2.0", path = "../../spi/spi-search", features = ["default"] }
+bios-spi-stats = {version = "0.2.0", path = "../../spi/spi-stats"}
 #bios-spi-conf = { version = "0.2.0", path = "../../spi/spi-conf" }
 
-bios-mw-schedule = { version = "0.2.0", path = "../../middlewares/schedule" }
-bios-mw-flow = { version = "0.2.0", path = "../../middlewares/flow" }
+bios-mw-flow = {version = "0.2.0", path = "../../middlewares/flow"}
+bios-mw-schedule = {version = "0.2.0", path = "../../middlewares/schedule"}
 # bios-mw-event = { version = "0.2.0", path = "../../middlewares/event" }
-bios-mw-event-client = { version = "0.2.0", path = "../../middlewares/event-client"}
+bios-mw-event-client = {version = "0.2.0", path = "../../middlewares/event-client"}
 
 # clients
 
-bios-client-hwsms = { version = "0.2.0", path = "../../../frontend/clients/hwsms", features = [
+bios-client-hwsms = {version = "0.2.0", path = "../../../frontend/clients/hwsms", features = [
   "reach",
-] }
+]}
 
-bios-client-custom-sms = { version = "0.2.0", path = "../../../frontend/clients/custom-sms", features = [
+bios-client-custom-sms = {version = "0.2.0", path = "../../../frontend/clients/custom-sms", features = [
   "reach",
-] }
+]}
 
 bios-client-alisms = { version = "0.2.0", path = "../../../frontend/clients/alisms", features = [
   "reach",
 ] }
 
 # see [issue](https://github.com/kube-rs/kube/issues/1486)
-json-patch = { version = "=1.2.0" }
+json-patch = {version = "=1.2.0"}
