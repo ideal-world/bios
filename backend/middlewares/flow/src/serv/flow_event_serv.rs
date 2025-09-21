@@ -23,8 +23,7 @@ use crate::{
         flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{
-            FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind,
-            FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
+            FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind
         },
     },
     helper::loop_check_helper,
@@ -258,82 +257,8 @@ impl FlowEventServ {
             let post_change = FlowTransitionActionChangeAgg::from(post_change);
             match post_change.kind {
                 FlowTransitionActionChangeKind::Var => {
-                    if let Some(mut change_info) = post_change.var_change_info {
-                        if let Some(changed_kind) = &change_info.changed_kind {
-                            match changed_kind {
-                                FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime => {
-                                    change_info.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
-                                    change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
-                                }
-                                FlowTransitionActionByVarChangeInfoChangedKind::AddOrSub => {
-                                    if change_info.changed_val.is_some()
-                                        && change_info.changed_val.clone().unwrap_or(json!({})).is_object()
-                                        && change_info.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("value").is_some()).is_some()
-                                        && change_info.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("op").is_some()).is_some()
-                                    {
-                                        let original_value = if let Some(custom_value) =
-                                            FlowInstServ::find_var_by_inst_id(flow_inst_detail, &format!("custom_{}", change_info.var_name), funs, ctx).await?
-                                        {
-                                            Some(custom_value)
-                                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_detail, &change_info.var_name, funs, ctx).await? {
-                                            Some(original_value)
-                                        } else {
-                                            Some(json!(""))
-                                        };
-
-                                        let target_value = change_info
-                                            .changed_val
-                                            .clone()
-                                            .unwrap_or(json!({}))
-                                            .as_object()
-                                            .map(|map| map.get("value").cloned().unwrap_or(json!({})))
-                                            .unwrap_or(json!({}))
-                                            .as_str()
-                                            .unwrap_or_default()
-                                            .parse::<f64>()
-                                            .unwrap_or_default();
-                                        let changed_op = change_info
-                                            .changed_val
-                                            .clone()
-                                            .unwrap_or(json!({}))
-                                            .as_object()
-                                            .map(|map| map.get("op").cloned().unwrap_or(json!({})))
-                                            .unwrap_or(json!({}))
-                                            .as_str()
-                                            .unwrap_or_default()
-                                            .to_string();
-                                        if let Some(original_value) = original_value {
-                                            change_info.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
-                                            let original_value = if let Some(v) = original_value.as_str() {
-                                                Decimal::from_str(v).unwrap_or_default()
-                                            } else if let Some(v) = original_value.as_i64() {
-                                                Decimal::from_i64(v).unwrap_or_default()
-                                            } else if let Some(v) = original_value.as_f64() {
-                                                Decimal::from_f64(v).unwrap_or_default()
-                                            } else {
-                                                Decimal::new(0, 0)
-                                            };
-                                            match changed_op.as_str() {
-                                                "add" => {
-                                                    change_info.changed_val = Some(json!(
-                                                        (original_value + Decimal::from_str(&target_value.to_string()).unwrap_or_default())
-                                                    ))
-                                                }
-                                                "sub" => {
-                                                    change_info.changed_val = Some(json!(
-                                                        (original_value - Decimal::from_str(&target_value.to_string()).unwrap_or_default())
-                                                    ))
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            };
-                        }
-
-                        let rel_tag = change_info.obj_tag.unwrap_or_default();
+                    if let Some(change_info) = post_change.var_change_info {
+                        let rel_tag = change_info.obj_tag.clone().unwrap_or_default();
                         if !rel_tag.is_empty() {
                             let mut resp = FlowExternalServ::do_fetch_rel_obj(
                                 &flow_model.tag,
@@ -348,6 +273,8 @@ impl FlowEventServ {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap_or_default().rel_bus_obj_ids {
                                     let inst_id =
                                         FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
+                                    let child_inst_detail = FlowInstServ::get(&inst_id, funs, ctx).await?;
+                                    let var_change_info = Self::prepare_var_change_info(&child_inst_detail, &change_info, funs, ctx).await?;
                                     FlowExternalServ::do_modify_field(
                                         &rel_tag,
                                         Some(next_flow_transition.clone()),
@@ -364,9 +291,9 @@ impl FlowEventServ {
                                             rel_kind: None,
                                             rel_tag: None,
                                             var_id: None,
-                                            var_name: Some(change_info.var_name.clone()),
-                                            value: change_info.changed_val.clone(),
-                                            changed_kind: change_info.changed_kind.clone(),
+                                            var_name: Some(var_change_info.var_name.clone()),
+                                            value: var_change_info.changed_val.clone(),
+                                            changed_kind: var_change_info.changed_kind.clone(),
                                             guard_conf: None,
                                         }],
                                         ctx,
@@ -378,13 +305,14 @@ impl FlowEventServ {
                                 }
                             }
                         } else {
+                            let var_change_info = Self::prepare_var_change_info(flow_inst_detail, &change_info, funs, ctx).await?;
                             modify_self_field_params.push(FlowExternalParams {
                                 rel_kind: None,
                                 rel_tag: None,
                                 var_id: None,
-                                var_name: Some(change_info.var_name.clone()),
-                                value: change_info.changed_val.clone(),
-                                changed_kind: change_info.changed_kind,
+                                var_name: Some(var_change_info.var_name.clone()),
+                                value: var_change_info.changed_val.clone(),
+                                changed_kind: var_change_info.changed_kind,
                                 guard_conf: None,
                             });
                         }
@@ -433,6 +361,85 @@ impl FlowEventServ {
         }
 
         Ok(())
+    }
+
+    // 对字段修改的配置信息进行预处理
+    async fn prepare_var_change_info(flow_inst_detail: &FlowInstDetailResp, change_info: &FlowTransitionActionByVarChangeInfo, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowTransitionActionByVarChangeInfo> {
+        let mut result = change_info.clone();
+        if let Some(changed_kind) = &result.changed_kind {
+            match changed_kind {
+                FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime => {
+                    result.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                    result.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                }
+                FlowTransitionActionByVarChangeInfoChangedKind::AddOrSub => {
+                    if result.changed_val.is_some()
+                        && result.changed_val.clone().unwrap_or(json!({})).is_object()
+                        && result.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("value").is_some()).is_some()
+                        && result.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("op").is_some()).is_some()
+                    {
+                        let original_value = if let Some(custom_value) =
+                            FlowInstServ::find_var_by_inst_id(flow_inst_detail, &format!("custom_{}", result.var_name), funs, ctx).await?
+                        {
+                            Some(custom_value)
+                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_detail, &result.var_name, funs, ctx).await? {
+                            Some(original_value)
+                        } else {
+                            Some(json!(""))
+                        };
+
+                        let target_value = result
+                            .changed_val
+                            .clone()
+                            .unwrap_or(json!({}))
+                            .as_object()
+                            .map(|map| map.get("value").cloned().unwrap_or(json!({})))
+                            .unwrap_or(json!({}))
+                            .as_str()
+                            .unwrap_or_default()
+                            .parse::<f64>()
+                            .unwrap_or_default();
+                        let changed_op = result
+                            .changed_val
+                            .clone()
+                            .unwrap_or(json!({}))
+                            .as_object()
+                            .map(|map| map.get("op").cloned().unwrap_or(json!({})))
+                            .unwrap_or(json!({}))
+                            .as_str()
+                            .unwrap_or_default()
+                            .to_string();
+                        if let Some(original_value) = original_value {
+                            result.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                            let original_value = if let Some(v) = original_value.as_str() {
+                                Decimal::from_str(v).unwrap_or_default()
+                            } else if let Some(v) = original_value.as_i64() {
+                                Decimal::from_i64(v).unwrap_or_default()
+                            } else if let Some(v) = original_value.as_f64() {
+                                Decimal::from_f64(v).unwrap_or_default()
+                            } else {
+                                Decimal::new(0, 0)
+                            };
+                            match changed_op.as_str() {
+                                "add" => {
+                                    result.changed_val = Some(json!(
+                                        (original_value + Decimal::from_str(&target_value.to_string()).unwrap_or_default())
+                                    ))
+                                }
+                                "sub" => {
+                                    result.changed_val = Some(json!(
+                                        (original_value - Decimal::from_str(&target_value.to_string()).unwrap_or_default())
+                                    ))
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            };
+        }
+        Ok(result)
     }
 
     async fn find_inst_ids_by_rel_obj_ids(

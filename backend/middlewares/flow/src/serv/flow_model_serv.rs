@@ -532,6 +532,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await?;
             for child_model in child_models {
                 if modify_req.current_version_id.is_some() {
+                    // 当父模板修改启用版本时，为子模板创建对应的版本同时启用，以保证和父模板的配置同步
                     Self::sync_add_version_child_model(&child_model, &model_detail, funs, ctx).await?;
                 } else {
                     Self::sync_modify_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
