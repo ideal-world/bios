@@ -479,7 +479,7 @@ impl FlowCcModelApi {
         let rel_main_tags = rel_main_models.iter().map(|m| m.tag.clone()).collect_vec();
         for rel_main_model in rel_main_models {
             let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&rel_main_model.tag).cloned().unwrap_or_default());
-            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, req.0.data_source.clone(), &funs, &ctx.0).await?;
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
         // 需要删除的主模型
@@ -489,7 +489,7 @@ impl FlowCcModelApi {
         }
         let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
         for rel_non_main_model in rel_non_main_models {
-            let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), None, &funs, &ctx.0).await?;
+            let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), req.0.data_source.clone(), &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;

@@ -45,12 +45,8 @@ impl FlowConfigServ {
         let key = if let Some(mut template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await?
         {
             // 引用的模板，则向上获取根模板ID的配置
-            loop {
-                if let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id) {
-                    template_id = p_template_id;
-                } else {
-                    break;
-                }
+            while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id) {
+                template_id = p_template_id;
             }
             format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
         } else {

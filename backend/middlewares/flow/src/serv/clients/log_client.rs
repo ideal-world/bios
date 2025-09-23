@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use tardis::{chrono::Duration, web::poem_openapi};
 
 use bios_sdk_invoke::clients::{
-    iam_client::IamClient,
     spi_log_client::{LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, SpiLogClient},
 };
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,9 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{flow_config::FlowConfig, flow_constants};
+use crate::flow_constants;
+
+use super::kv_client::FlowKvClient;
 pub struct FlowLogClient;
 
 pub const TASK_LOG_EXT_KEY: &str = "log_add_task";
@@ -299,10 +300,7 @@ impl FlowLogClient {
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        let owner_name = IamClient::new("", funs, ctx,None, funs.conf::<FlowConfig>().invoke.module_urls.get("iam").expect("missing iam base url"))
-            .get_account(&ctx.owner, &ctx.own_paths)
-            .await?
-            .owner_name;
+        let owner_name = FlowKvClient::get_account_name(&ctx.owner, funs, ctx).await?;
 
         let req = LogItemAddV2Req {
             tag: tag.to_string(),
@@ -317,7 +315,7 @@ impl FlowLogClient {
             owner,
             own_paths,
             msg: None,
-            owner_name,
+            owner_name: Some(owner_name),
             push: Some(push),
             disable: None,
             data_source: None,
