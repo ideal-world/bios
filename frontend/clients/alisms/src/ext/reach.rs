@@ -50,8 +50,9 @@ impl crate::SmsClient {
                 // this would block thread but it's ok
                 let config = TardisFuns::cs_config::<ReachConfig>(MODULE_CODE);
                 let sms_config = &config.sms;
-                let base_url = sms_config.base_url.parse().expect("invalid sms base url");
-                SmsClient::new(base_url, &sms_config.app_key, &sms_config.app_secret).into()
+                let base_url = sms_config.base_url.clone();
+                let real_url = sms_config.real_url.clone().unwrap_or_default();
+                SmsClient::new(base_url, real_url, &sms_config.app_key, &sms_config.app_secret).into()
             })
             .clone()
     }

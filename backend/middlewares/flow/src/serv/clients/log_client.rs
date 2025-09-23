@@ -259,7 +259,7 @@ impl FlowLogClient {
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
 
         let req = LogItemAddReq {
-            id: None,
+            id: Some(TardisFuns::field.nanoid()),
             tag,
             content: TardisFuns::json.obj_to_string(&content).expect("content not a valid json value"),
             kind,
@@ -312,7 +312,7 @@ impl FlowLogClient {
             key,
             op,
             rel_key,
-            idempotent_id: None,
+            idempotent_id: Some(TardisFuns::field.nanoid()),
             ts: Some(ts),
             owner,
             own_paths,

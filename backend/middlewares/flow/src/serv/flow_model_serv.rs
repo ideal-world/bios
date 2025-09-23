@@ -149,6 +149,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowModelTransition,
                     flow_model_id,
+                    RbumRelFromKind::Item,
                     &rel_transition_id,
                     None,
                     None,
@@ -248,7 +249,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         // 若存在关联的模板，则需要将关联该模板的应用层同步新增一个子模板
         if let Some(rel_template_ids) = &add_req.rel_template_ids {
             for rel_template_id in rel_template_ids {
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, rel_template_id, None, None, false, true, None, funs, ctx).await?;
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, RbumRelFromKind::Item, rel_template_id, None, None, false, true, None, funs, ctx).await?;
                 // 同步添加应用层模板
                 for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx).await? {
                     let mock_ctx = TardisContext {
@@ -476,7 +477,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 rel_template_ids
                     .iter()
                     .map(|rel_template_id| async {
-                        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, rel_template_id, None, None, false, true, None, funs, ctx).await
+                        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, RbumRelFromKind::Item, rel_template_id, None, None, false, true, None, funs, ctx).await
                     })
                     .collect_vec(),
             )

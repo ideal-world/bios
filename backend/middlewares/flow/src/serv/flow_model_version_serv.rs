@@ -4,8 +4,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-    },
-    serv::rbum_item_serv::RbumItemCrudOperation,
+    }, rbum_enumeration::RbumRelFromKind, serv::rbum_item_serv::RbumItemCrudOperation
 };
 use itertools::Itertools;
 use tardis::{
@@ -331,6 +330,7 @@ impl FlowModelVersionServ {
         FlowRelServ::add_simple_rel(
             &FlowRelKind::FlowModelState,
             flow_version_id,
+            RbumRelFromKind::Item,
             &req.state_id,
             None,
             None,

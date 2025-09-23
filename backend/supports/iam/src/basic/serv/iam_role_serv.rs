@@ -111,15 +111,25 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 TardisFuns::json.obj_to_string(&role)?.as_str(),
             )
             .await?;
+        if role.in_embed && role.in_base {
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamRole,
+                Some(id.to_string()),
+                "添加内置角色".to_string(),
+                Some("AddEmbedRole".to_string()),
+                ctx,
+            ).await;
+        }
+        if !role.in_embed {
+            let _ = IamLogClient::add_ctx_task(
+                LogParamTag::IamRole,
+                Some(id.to_string()),
+                "添加自定义角色".to_string(),
+                Some("AddCustomizeRole".to_string()),
+                ctx,
+            ).await;
+        }
 
-        let _ = IamLogClient::add_ctx_task(
-            LogParamTag::IamRole,
-            Some(id.to_string()),
-            "添加自定义角色".to_string(),
-            Some("AddCustomizeRole".to_string()),
-            ctx,
-        )
-        .await;
         IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
 
         Ok(())
@@ -243,12 +253,11 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await?;
-        if item.scope_level != RbumScopeLevelKind::Private
-            || id == funs.iam_basic_role_app_admin_id()
+        if id == funs.iam_basic_role_app_admin_id()
             || id == funs.iam_basic_role_sys_admin_id()
             || id == funs.iam_basic_role_tenant_admin_id()
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role can not be deleted", "409-iam-delete-role-conflict"));
         }
         if !item.deletable {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role can not be deleted", "409-iam-delete-role-conflict"));

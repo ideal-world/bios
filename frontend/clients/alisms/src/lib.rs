@@ -26,16 +26,18 @@ pub struct SmsClient {
     pub app_key: String,
     pub app_secret: String,
     pub base_url: String,
+    pub real_url: String,
 }
 
 impl SmsClient {
-    pub fn new(base_url: String, app_key: impl Into<String>, app_secret: impl Into<String>) -> Self {
+    pub fn new(base_url: String, real_url: String, app_key: impl Into<String>, app_secret: impl Into<String>) -> Self {
         let app_key: String = app_key.into();
         let app_secret: String = app_secret.into();
 
         SmsClient {
             inner: Default::default(),
             base_url,
+            real_url,
             app_key,
             app_secret,
         }
@@ -90,7 +92,7 @@ impl SmsClient {
         ];
         let sign_headers = sign_header_arr.join(";");
         // 1.构造规范化请求头
-        headers.insert("Host", HeaderValue::from_str("dysmsapi.aliyuncs.com").unwrap());
+        headers.insert("Host", HeaderValue::from_str(&self.real_url).unwrap());
         headers.insert("x-acs-action", HeaderValue::from_str(action).unwrap());
         headers.insert("x-acs-version", HeaderValue::from_str(version).unwrap());
         headers.insert("x-acs-date", HeaderValue::from_str(&datetime_str).unwrap());

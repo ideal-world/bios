@@ -366,11 +366,12 @@ impl IamCsRoleApi {
     #[oai(path = "/add_base_embed_role", method = "post")]
     async fn add_base_embed_role(&self, mut add_req: Json<IamRoleAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_sys_ctx_unsafe(ctx.0)?;
         tokio::spawn(async move {
             funs.begin().await.unwrap();
             add_req.0.in_embed = Some(true);
             add_req.0.scope_level = Some(RbumScopeLevelKind::Root);
-            match IamRoleServ::add_base_embed_role(&add_req.0, None, &funs, &ctx.0).await {
+            match IamRoleServ::add_base_embed_role(&add_req.0, None, &funs, &ctx).await {
                 Ok(_) => {
                     log::trace!("[Iam.Cs] add log success")
                 }
@@ -379,6 +380,7 @@ impl IamCsRoleApi {
                 }
             }
             funs.commit().await.unwrap();
+            ctx.execute_task().await.unwrap();
         });
 
         TardisResp::ok(Void {})
