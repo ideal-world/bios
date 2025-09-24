@@ -147,7 +147,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
             icon: Some(value.icon.clone()),
             info: Some(value.info.clone()),
             kind: value.kind,
-            status: value.status,
+            status: value.status.clone(),
             rel_transition_ids,
             rel_template_ids: Some(value.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
@@ -155,7 +155,7 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
                 name: value.name.as_str().into(),
                 rel_model_id: None,
                 bind_states: Some(states),
-                status: FlowModelVesionState::Enabled,
+                status: if value.status == FlowModelStatus::Enabled { FlowModelVesionState::Enabled } else { FlowModelVesionState::Disabled },
                 scope_level: Some(value.scope_level.clone()),
                 disabled: Some(value.disabled),
             }),
@@ -811,6 +811,7 @@ pub struct FlowModelCopyOrReferenceCiReq {
     pub op: FlowModelAssociativeOperationKind,
     /// 切换模板时，状态更新映射
     pub update_states: Option<HashMap<String, HashMap<String, String>>>,
+    pub data_source: Option<String>,
 }
 
 /// 检查关联模板请求

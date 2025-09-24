@@ -4,8 +4,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-    },
-    serv::rbum_item_serv::RbumItemCrudOperation,
+    }, rbum_enumeration::RbumRelFromKind, serv::rbum_item_serv::RbumItemCrudOperation
 };
 use itertools::Itertools;
 use tardis::{
@@ -331,6 +330,7 @@ impl FlowModelVersionServ {
         FlowRelServ::add_simple_rel(
             &FlowRelKind::FlowModelState,
             flow_version_id,
+            RbumRelFromKind::Item,
             &req.state_id,
             None,
             None,
@@ -455,7 +455,7 @@ impl FlowModelVersionServ {
         };
         
         let global_ctx = TardisContext { own_paths: "".to_string(), ..ctx.clone() };
-        FlowInstServ::async_unsafe_modify_state(
+        FlowInstServ::unsafe_modify_state(
             &FlowInstFilterReq {
                 main: Some(true),
                 tags: Some(vec![flow_model.tag.clone()]),
@@ -465,7 +465,6 @@ impl FlowModelVersionServ {
                 ..Default::default()
             },
             &new_state_id,
-            &flow_model,
             funs,
             &global_ctx,
         )

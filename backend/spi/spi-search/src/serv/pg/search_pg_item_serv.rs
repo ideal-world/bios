@@ -1465,6 +1465,23 @@ pub async fn export_data(export_req: &SearchExportDataReq, _funs: &TardisFunsIns
         } else {
             "".to_string()
         };
+        let keys_sql = if let Some(tag_key) = &export_req.tag_key {
+            if tag_key.contains_key(tag) && !tag_key.get(tag).unwrap_or(&vec![]).is_empty() {
+                let keys = tag_key.get(tag).unwrap_or(&vec![]).clone();
+                let keys_sql = format!(
+                    "AND key IN ({})",
+                    (0..keys.len()).map(|idx| format!("${}", params.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                );
+                for key in &keys {
+                    params.push(Value::from(key));
+                }
+                keys_sql
+            } else {
+                "".to_string()
+            }
+        } else {
+            "".to_string()
+        };
         let result = conn
             .query_all(
                 &format!(
@@ -1478,6 +1495,7 @@ pub async fn export_data(export_req: &SearchExportDataReq, _funs: &TardisFunsIns
                      or (update_time > $2 and update_time <= $3)
                     )
                     {kind_sql}
+                    {keys_sql}
                 order by create_time desc",
                 ),
                 params,

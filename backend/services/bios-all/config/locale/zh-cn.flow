@@ -7,6 +7,7 @@
 404-flow-transition-rel-model-not-legal	转换关联的模型不合法
 404-flow-inst-not-found	找不到实例
 404-flow-model-not-found	找不到模型
+404-flow-rel-template-not-found	找不到管理模板
 404-flow-state-not-found	找不到状态节点
 404-flow-config-not-found	找不到配置
 404-flow-transition-not-found	找不到模型

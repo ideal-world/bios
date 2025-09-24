@@ -1,6 +1,7 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 
@@ -51,6 +52,25 @@ impl IamCsRoleApi {
         funs.begin().await?;
         copy_req.0.role.kind = Some(IamRoleKind::System);
         let result = IamRoleServ::copy_role_agg(&mut copy_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(task_id)
+        } else {
+            TardisResp::ok(result)
+        }
+    }
+
+    /// copy embed role
+    /// 复制内置角色
+    #[oai(path = "/copy_embed", method = "post")]
+    async fn copy_base_embed_role(&self, mut copy_req: Json<IamRoleAggCopyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        copy_req.0.role.in_embed = Some(true);
+        copy_req.0.role.scope_level = Some(RbumScopeLevelKind::Root);
+        let result = IamRoleServ::add_base_embed_role(&copy_req.0.role, Some(copy_req.0.copy_role_id.clone()), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
@@ -346,10 +366,12 @@ impl IamCsRoleApi {
     #[oai(path = "/add_base_embed_role", method = "post")]
     async fn add_base_embed_role(&self, mut add_req: Json<IamRoleAddReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_sys_ctx_unsafe(ctx.0)?;
         tokio::spawn(async move {
             funs.begin().await.unwrap();
             add_req.0.in_embed = Some(true);
-            match IamRoleServ::add_base_embed_role(&add_req.0, &funs, &ctx.0).await {
+            add_req.0.scope_level = Some(RbumScopeLevelKind::Root);
+            match IamRoleServ::add_base_embed_role(&add_req.0, None, &funs, &ctx).await {
                 Ok(_) => {
                     log::trace!("[Iam.Cs] add log success")
                 }
@@ -358,6 +380,7 @@ impl IamCsRoleApi {
                 }
             }
             funs.commit().await.unwrap();
+            ctx.execute_task().await.unwrap();
         });
 
         TardisResp::ok(Void {})

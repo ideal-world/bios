@@ -28,12 +28,14 @@ pub enum FlowRelKind {
     FlowModelTemplate,
     FlowAppTemplate,
     FlowModelTransition,
+    FlowTemplateTemplate,
 }
 
 impl FlowRelServ {
     pub async fn add_simple_rel(
         flow_rel_kind: &FlowRelKind,
         from_rbum_id: &str,
+        from_rbum_kind: RbumRelFromKind,
         to_rbum_item_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
@@ -56,7 +58,7 @@ impl FlowRelServ {
             rel: RbumRelAddReq {
                 tag: flow_rel_kind.to_string(),
                 note: None,
-                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_kind,
                 from_rbum_id: from_rbum_id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
@@ -87,7 +89,7 @@ impl FlowRelServ {
                     ..Default::default()
                 },
                 tag: Some(flow_rel_kind.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_kind: None,
                 from_rbum_id: Some(from_rbum_id.to_string()),
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 ..Default::default()
