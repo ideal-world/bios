@@ -771,6 +771,16 @@ impl FlowInstServ {
         Self::abort_child_inst(flow_inst_id, funs, ctx).await?;
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
+            Self::modify_inst_artifacts(
+                &flow_inst_detail.id,
+                &FlowInstArtifactsModifyReq {
+                    state: Some(FlowInstStateKind::Overrule),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             FlowLogServ::add_finish_business_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {

@@ -127,9 +127,10 @@ impl IamCiSubDeployApi {
     /// Add Sub Deploy Rel App
     /// 添加二级部署关联项目组
     #[oai(path = "/:id/app/:app_id", method = "put")]
-    async fn add_rel_app(&self, id: Path<String>, app_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+    async fn add_rel_app(&self, id: Path<String>, app_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         IamSubDeployServ::add_rel_app(&id.0, &app_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -140,9 +141,10 @@ impl IamCiSubDeployApi {
     /// Batch add Sub Deploy Rel App
     /// 批量添加二级部署关联项目组
     #[oai(path = "/:id/app/batch/:app_ids", method = "put")]
-    async fn batch_add_rel_app(&self, id: Path<String>, app_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+    async fn batch_add_rel_app(&self, id: Path<String>, app_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         join_all(app_ids.0.split(',').map(|app_id| async { IamSubDeployServ::add_rel_app(&id.0, app_id, &funs, &ctx.0).await }).collect_vec())
             .await
@@ -156,9 +158,10 @@ impl IamCiSubDeployApi {
     /// Delete Sub Deploy Rel App
     /// 删除二级部署关联项目组
     #[oai(path = "/:id/app/:app_id", method = "delete")]
-    async fn delete_rel_app(&self, id: Path<String>, app_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+    async fn delete_rel_app(&self, id: Path<String>, app_id: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         IamSubDeployServ::delete_rel_app(&id.0, &app_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -169,9 +172,10 @@ impl IamCiSubDeployApi {
     /// Batch delete Sub Deploy Rel App
     /// 批量删除二级部署关联项目组
     #[oai(path = "/:id/app/batch/:app_ids", method = "delete")]
-    async fn batch_delete_rel_app(&self, id: Path<String>, app_ids: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+    async fn batch_delete_rel_app(&self, id: Path<String>, app_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         let split = app_ids.0.split(',').collect::<Vec<_>>();
         for s in split {
