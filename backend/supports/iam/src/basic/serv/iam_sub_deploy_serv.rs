@@ -33,7 +33,7 @@ use crate::basic::dto::iam_filer_dto::{
     IamAccountFilterReq, IamAppFilterReq, IamConfigFilterReq, IamResFilterReq, IamRoleFilterReq, IamSubDeployFilterReq, IamSubDeployHostFilterReq, IamSubDeployLicenseFilterReq,
 };
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
-use crate::basic::dto::iam_role_dto::IamRoleAddReq;
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp};
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::dto::iam_sub_deploy_dto::{
     IamSubDeployAddReq, IamSubDeployDetailResp, IamSubDeployModifyReq, IamSubDeployOneExportAggResp, IamSubDeployOneImportReq, IamSubDeploySummaryResp,
@@ -319,7 +319,7 @@ impl IamSubDeployServ {
         let (orgs_set, orgs_set_cate) = Self::export_orgs(id, funs, ctx).await?;
         let (apps_set, apps_set_cate) = Self::export_apps(id, funs, ctx).await?;
         let (res_set, res_set_cate, res_items, res_set_item, res_api_map, res_role_map) = Self::export_res(funs, ctx).await?;
-        let (projects, account_projects) = Self::export_project(id, funs, ctx).await?;
+        let (projects, account_projects, role_projects, role_account_projects) = Self::export_project(id, funs, ctx).await?;
         Ok(IamSubDeployOneExportAggResp {
             accounts: Some(accounts),
             account_cert: Some(Self::export_account_cert(account_ids.clone(), funs, ctx).await?),
@@ -339,6 +339,8 @@ impl IamSubDeployServ {
             apps_set_cate: Some(apps_set_cate),
             projects: Some(projects),
             account_projects: Some(account_projects),
+            role_projects: Some(role_projects),
+            role_account_projects: Some(role_account_projects),
         })
     }
 
@@ -689,7 +691,7 @@ impl IamSubDeployServ {
         Ok(account_role)
     }
 
-    async fn export_project(sub_deploy_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(Vec<IamAppDetailResp>, HashMap<String, Vec<String>>)> {
+    async fn export_project(sub_deploy_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(Vec<IamAppDetailResp>, HashMap<String, Vec<String>>, HashMap<String, Vec<IamRoleDetailResp>>, HashMap<String, Vec<String>>)> {
         let sub_deploy_app_ids = Self::find_rel_id_by_sub_deploy_id(&IamRelKind::IamSubDeployApp, sub_deploy_id, funs, ctx).await?;
         let projects = IamAppServ::find_detail_items(&IamAppFilterReq {
             basic: RbumBasicFilterReq {
@@ -700,10 +702,31 @@ impl IamSubDeployServ {
         }, None, None, funs, ctx).await?;
         // 项目账号关系
         let mut account_projects: HashMap<String, Vec<String>> = HashMap::new();
+        let mut role_projects: HashMap<String, Vec<IamRoleDetailResp>> = HashMap::new();
+        let mut role_account_projects: HashMap<String, Vec<String>> = HashMap::new();
         for project in &projects {
+            let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &project.id)?;
             account_projects.insert(project.id.clone(), IamAppServ::find_rel_account(&project.id, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec());
+            let role_projects_vec = IamRoleServ::find_detail_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq { ..Default::default() },
+                    kind: Some(IamRoleKind::App),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                &app_ctx,
+            )
+            .await?;
+            role_projects.insert(project.id.clone(), role_projects_vec.clone());
+
+            for role in role_projects_vec {
+                let role_account_ids = IamRoleServ::find_id_rel_accounts(&role.id, None, None, funs, &app_ctx).await?;
+                role_account_projects.insert(role.id.clone(), role_account_ids);
+            }
         }
-        Ok((projects, account_projects))
+        Ok((projects, account_projects, role_projects, role_account_projects))
     }
 
     pub(crate) async fn one_deploy_import(import_req: IamSubDeployOneImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -871,12 +894,13 @@ impl IamSubDeployServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
+                kind: Some(IamAppKind::Product),
                 ..Default::default()
             },
             None,
             None,
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         for app in app_vec.clone() {
@@ -934,7 +958,7 @@ impl IamSubDeployServ {
     pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let _ = Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await;
         let _ = Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await;
-        let _ = Self::import_project(import_req.projects.clone(), import_req.account_projects.clone(), funs, ctx).await;
+        let _ = Self::import_project(import_req.projects.clone(), import_req.account_projects.clone(), import_req.role_projects.clone(), import_req.role_account_projects.clone(), funs, ctx).await;
         let _ = Self::import_iam_config(import_req.iam_config, funs, ctx).await;
         let _ = Self::import_account(
             import_req.accounts,
@@ -1314,7 +1338,7 @@ impl IamSubDeployServ {
         Ok(())
     }
 
-    async fn import_project(projects: Option<Vec<IamAppDetailResp>>, project_account: Option<HashMap<String, Vec<String>>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn import_project(projects: Option<Vec<IamAppDetailResp>>, project_account: Option<HashMap<String, Vec<String>>>, role_projects: Option<HashMap<String, Vec<IamRoleDetailResp>>>, role_account_projects: Option<HashMap<String, Vec<String>>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(projects) = projects {
             for project in projects {
                 let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &project.id)?;
@@ -1375,6 +1399,62 @@ impl IamSubDeployServ {
                         }
                         for account_id in account_ids {
                             let _ = IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, &project.id, None, None, true, false, funs, &app_ctx).await;
+                        }
+                    }
+                }
+
+                // 同步项目的角色
+                if let Some(app_role) = role_projects.clone() {
+                    // todo 删除不存在的角色
+                    if let Some(app_role_vec) = app_role.get(&project.id) {
+                        for role in app_role_vec {
+                            if IamRoleServ::count_items(
+                                &IamRoleFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        with_sub_own_paths: true,
+                                        ids: Some(vec![role.id.clone()]),
+                                        ..Default::default()
+                                    },
+                                    kind: Some(IamRoleKind::App),
+                                    ..Default::default()
+                                },
+                                funs,
+                                &app_ctx,
+                            )
+                            .await?
+                                == 0
+                            {
+                                let _ = IamRoleServ::add_item(
+                                    &mut IamRoleAddReq {
+                                        id: Some(TrimString::from(role.id.clone())),
+                                        code: Some(TrimString::from(role.code.clone())),
+                                        name: TrimString::from(role.name.clone()),
+                                        kind: Some(role.kind.clone()),
+                                        scope_level: Some(role.scope_level.clone()),
+                                        disabled: Some(role.disabled.clone()),
+                                        icon: Some(role.icon.clone()),
+                                        sort: Some(role.sort.clone()),
+                                        extend_role_id: Some(role.extend_role_id.clone()),
+                                        in_embed: Some(role.in_embed.clone()),
+                                        in_base: Some(role.in_base.clone()),
+                                        deletable: Some(role.deletable.clone()),
+                                    },
+                                    funs,
+                                    &app_ctx,
+                                )
+                                .await;
+                            }
+                            // 同步角色的用户
+                            if let Some(role_account_projects) = role_account_projects.clone() {
+                                for account in IamAppServ::find_rel_account(&project.id, funs, ctx).await? {
+                                    IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, &account.rel_id, &role.id, funs, &app_ctx).await?;
+                                }
+                                if let Some(role_account_ids) = role_account_projects.get(&role.id) {
+                                    for account_id in role_account_ids {
+                                        let _ = IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, &role.id, None, None, true, false, funs, &app_ctx).await;
+                                    }
+                                }
+                            }
                         }
                     }
                 }

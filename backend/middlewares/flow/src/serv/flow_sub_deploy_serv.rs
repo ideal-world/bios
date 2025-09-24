@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
+use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind}, serv::{rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ}};
 use bios_sdk_invoke::clients::{spi_kv_client::SpiKvClient, spi_log_client::LogItemFindResp};
 use itertools::Itertools;
 use serde_json::json;
@@ -14,7 +14,7 @@ use tardis::{
 use crate::{
     domain::flow_inst,
     dto::{
-        flow_inst_dto::FlowInstFilterReq,
+        flow_inst_dto::{FlowInstDetailResp, FlowInstFilterReq},
         flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelUnbindStateReq},
         flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState},
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelModifyReq},
@@ -143,11 +143,19 @@ impl FlowSubDeployServ {
             }
         }
 
+        let insts = FlowInstServ::find_detail_items(&FlowInstFilterReq {
+            rel_business_obj_ids: Some(RbumRelServ::find_from_simple_rels("IamSubDeployApp", &RbumRelFromKind::Item, true, id, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec()),
+            with_sub: Some(true),
+            main: Some(true),
+            ..Default::default()
+        }, funs, ctx).await?;
+
         Ok(FlowSubDeployOneExportAggResp {
             states: states.values().cloned().collect_vec(),
             models,
             delete_logs,
             rel_kv_config: if kv_config.is_empty() { None } else { Some(kv_config) },
+            insts,
         })
     }
 
@@ -363,7 +371,9 @@ impl FlowSubDeployServ {
                 FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;
             }
         }
-
+        for inst in import_req.insts {
+            Self::import_instance(&inst, funs, ctx).await?;
+        }
         if let Some(rel_kv_config) = import_req.rel_kv_config {
             for (key, val) in rel_kv_config {
                 if SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value).is_none() {
@@ -459,42 +469,7 @@ impl FlowSubDeployServ {
                     current_insts
                         .iter()
                         .map(|inst| async {
-                            let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
-                                id: Set(inst.id.clone()),
-                                code: Set(Some(inst.code.clone())),
-                                tag: Set(Some(inst.tag.clone())),
-                                rel_flow_version_id: Set(inst.rel_flow_version_id.clone()),
-                                rel_business_obj_id: Set(inst.rel_business_obj_id.clone()),
-                                rel_transition_id: Set(inst.rel_transition_id.clone()),
-
-                                current_state_id: Set(inst.current_state_id.clone()),
-
-                                create_vars: Set(inst.create_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
-                                current_vars: Set(inst.current_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
-
-                                create_ctx: Set(inst.create_ctx.clone()),
-
-                                finish_ctx: Set(inst.finish_ctx.clone()),
-                                finish_time: Set(inst.finish_time),
-                                finish_abort: Set(inst.finish_abort),
-                                output_message: Set(inst.output_message.clone()),
-
-                                transitions: Set(inst.transitions.clone()),
-                                artifacts: Set(inst.artifacts.clone()),
-                                comments: Set(inst.comments.clone()),
-
-                                own_paths: Set(inst.own_paths.clone()),
-                                main: Set(inst.main),
-                                rel_inst_id: Set(inst.rel_inst_id.clone()),
-                                data_source: Set(inst.data_source.clone()),
-
-                                create_time: Set(inst.create_time),
-                                update_time: Set(inst.update_time),
-                            };
-                            match FlowInstServ::get(&inst.id, funs, ctx).await {
-                                Ok(_) => funs.db().update_one(flow_inst, ctx).await,
-                                Err(_e) => funs.db().insert_one(flow_inst, ctx).await.map(|_| ()),
-                            }
+                            Self::import_instance(inst, funs, ctx).await
                         })
                         .collect_vec(),
                 )
@@ -505,5 +480,44 @@ impl FlowSubDeployServ {
             }
         }
         Ok(())
+    }
+
+    async fn import_instance(inst: &FlowInstDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
+            id: Set(inst.id.clone()),
+            code: Set(Some(inst.code.clone())),
+            tag: Set(Some(inst.tag.clone())),
+            rel_flow_version_id: Set(inst.rel_flow_version_id.clone()),
+            rel_business_obj_id: Set(inst.rel_business_obj_id.clone()),
+            rel_transition_id: Set(inst.rel_transition_id.clone()),
+
+            current_state_id: Set(inst.current_state_id.clone()),
+
+            create_vars: Set(inst.create_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
+            current_vars: Set(inst.current_vars.clone().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap_or(json!({})))),
+
+            create_ctx: Set(inst.create_ctx.clone()),
+
+            finish_ctx: Set(inst.finish_ctx.clone()),
+            finish_time: Set(inst.finish_time),
+            finish_abort: Set(inst.finish_abort),
+            output_message: Set(inst.output_message.clone()),
+
+            transitions: Set(inst.transitions.clone()),
+            artifacts: Set(inst.artifacts.clone()),
+            comments: Set(inst.comments.clone()),
+
+            own_paths: Set(inst.own_paths.clone()),
+            main: Set(inst.main),
+            rel_inst_id: Set(inst.rel_inst_id.clone()),
+            data_source: Set(inst.data_source.clone()),
+
+            create_time: Set(inst.create_time),
+            update_time: Set(inst.update_time),
+        };
+        match FlowInstServ::get(&inst.id, funs, ctx).await {
+            Ok(_) => funs.db().update_one(flow_inst, ctx).await,
+            Err(_e) => funs.db().insert_one(flow_inst, ctx).await.map(|_| ()),
+        }
     }
 }
