@@ -2543,43 +2543,57 @@ impl FlowModelServ {
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 ..Default::default()
             },
-            None,
+            Some(true),
             None,
             funs,
             ctx,
         )
         .await?;
-        let mut template_models: HashMap<String,Vec<String>> = HashMap::new();
-        for rel in rels {
-            let mock_ctx = TardisContext {
-                own_paths: if rel.to_own_paths.contains("/") { rel.to_own_paths.clone() } else { format!("{}/{}", rel.to_own_paths, rel.from_rbum_id) },
-                ..Default::default()
-            };
-            let model_ids = if let Some(models) = template_models.get(&rel.to_rbum_item_id) {
-                models.clone()
-            } else {
-                // 获取模板关联的模型
-                let model_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel.to_rbum_item_id, None, None, funs, ctx).await?.iter().map(|r| r.rel_id.clone()).collect_vec();
-                template_models.insert(rel.to_rbum_item_id.clone(), model_ids.clone());
-                model_ids
-            };
-            for model_id in model_ids {
-                if let Some(rel_model) = Self::find_one_detail_item(&FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ids: Some(vec![model_id]),
-                        with_sub_own_paths: true,
-                        own_paths: Some("".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }, funs, ctx).await? {
-                    if rel_model.main {
-                        Self::copy_or_reference_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, funs, &mock_ctx).await?;
-                    } else {
-                        Self::copy_or_reference_non_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, None, funs, &mock_ctx).await?;
-                    }
-                }
+        let max_len = rels.len();
+        let mut page = 1;
+        let page_size = 100;
+        loop {
+            let start = page_size * (page - 1);
+            if start >= max_len {
+                break;
             }
+            let end = std::cmp::min(start + page_size, max_len);
+            let page_rel = rels[start..end].to_vec();
+            join_all(
+                page_rel
+                    .into_iter()
+                    .map(|rel| async move {
+                        let mock_ctx = TardisContext {
+                            own_paths: if rel.to_own_paths.contains("/") { rel.to_own_paths.clone() } else { format!("{}/{}", rel.to_own_paths, rel.from_rbum_id) },
+                            ..Default::default()
+                        };
+                        // 获取模板关联的模型
+                        if let Ok(model_rels) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel.to_rbum_item_id, None, None, funs, ctx).await {
+                            let model_ids = model_rels.iter().map(|r| r.rel_id.clone()).collect_vec();
+                            for model_id in model_ids {
+                                if let Ok(Some(rel_model)) = Self::find_one_detail_item(&FlowModelFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        ids: Some(vec![model_id]),
+                                        with_sub_own_paths: true,
+                                        own_paths: Some("".to_string()),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }, funs, ctx).await {
+                                    if rel_model.main {
+                                        Self::copy_or_reference_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, funs, &mock_ctx).await;
+                                    } else {
+                                        Self::copy_or_reference_non_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, None, funs, &mock_ctx).await;
+                                    }
+                                }
+                            }
+                        }                        
+                    })
+                    .collect_vec(),
+            )
+            .await;
+            page += 1;
+            
         }
         Ok(())
     }
