@@ -15,6 +15,7 @@ use crate::dto::search_item_dto::{
     SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 use crate::serv::search_item_serv;
+use tardis::log::warn;
 
 #[derive(Clone)]
 pub struct SearchCiItemApi;
@@ -104,6 +105,7 @@ impl SearchCiItemApi {
     #[oai(path = "/export", method = "put")]
     async fn export_data(&self, export_req: Json<SearchExportDataReq>, ctx: TardisContextExtractor) -> TardisApiResult<SearchExportDataResp> {
         let funs = crate::get_tardis_inst();
+        warn!("spi-search exprot req: {:?}", export_req);
         let result = search_item_serv::export_data(&export_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }

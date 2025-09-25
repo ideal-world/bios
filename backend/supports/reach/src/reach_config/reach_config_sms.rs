@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct SmsConfig {
     pub base_url: String,
+    pub real_url: Option<String>,
     pub app_key: String,
     pub app_secret: String,
     pub status_call_back: Option<String>,

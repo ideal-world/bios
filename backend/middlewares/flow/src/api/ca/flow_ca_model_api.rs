@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::{rbum_enumeration::RbumRelFromKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use tardis::web::{
     context_extractor::TardisContextExtractor,
     poem::{web::Json, Request},
@@ -52,7 +52,7 @@ impl FlowCaModelApi {
                 if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
                 }
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, RbumRelFromKind::Item, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
             }
         }
         funs.commit().await?;

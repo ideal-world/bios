@@ -1017,6 +1017,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             in_embed: None,
             extend_role_id: None,
             in_base: None,
+            deletable: None,
         },
         &funs,
         &app_admin_context,

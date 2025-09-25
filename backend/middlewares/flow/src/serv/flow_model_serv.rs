@@ -149,6 +149,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 FlowRelServ::add_simple_rel(
                     &FlowRelKind::FlowModelTransition,
                     flow_model_id,
+                    RbumRelFromKind::Item,
                     &rel_transition_id,
                     None,
                     None,
@@ -248,7 +249,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         // 若存在关联的模板，则需要将关联该模板的应用层同步新增一个子模板
         if let Some(rel_template_ids) = &add_req.rel_template_ids {
             for rel_template_id in rel_template_ids {
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, rel_template_id, None, None, false, true, None, funs, ctx).await?;
+                FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, RbumRelFromKind::Item, rel_template_id, None, None, false, true, None, funs, ctx).await?;
+                // 同步添加应用层模板
                 for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx).await? {
                     let mock_ctx = TardisContext {
                         own_paths: if rel.rel_own_paths.contains("/") {rel.rel_own_paths.clone()} else {format!("{}/{}", ctx.own_paths, rel.rel_id)},
@@ -258,6 +260,30 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                         Self::copy_or_reference_main_model(flow_model_id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, funs, &mock_ctx).await?;
                     } else {
                         Self::copy_or_reference_non_main_model(flow_model_id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, None, funs, &mock_ctx).await?;
+                    }
+                }
+                // 同步添加租户层模板
+                if let Some(rel_model_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, rel_template_id, Some(true), None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec().pop() {
+                    for child_model_id in Self::find_id_items(&FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true, 
+                            ..Default::default()
+                        },
+                        rel_model_ids: Some(vec![rel_model_id]),
+                        ..Default::default()
+                    }, None, None, funs, ctx).await? {
+                        if let Some(rel) = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &child_model_id, None, None, funs, ctx).await?.pop() {
+                            let mock_ctx = TardisContext {
+                                own_paths: rel.rel_own_paths,
+                                ..ctx.clone()
+                            };
+                            if add_req.main {
+                                Self::copy_or_reference_main_model(flow_model_id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsTemplateAndAsModel, Some(rel.rel_id), &None, None, funs, &mock_ctx).await?;
+                            } else {
+                                Self::copy_or_reference_non_main_model(flow_model_id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsTemplateAndAsModel, Some(rel.rel_id), None, funs, &mock_ctx).await?;
+                            }
+                        }
                     }
                 }
             }
@@ -451,7 +477,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 rel_template_ids
                     .iter()
                     .map(|rel_template_id| async {
-                        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, rel_template_id, None, None, false, true, None, funs, ctx).await
+                        FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelTemplate, flow_model_id, RbumRelFromKind::Item, rel_template_id, None, None, false, true, None, funs, ctx).await
                     })
                     .collect_vec(),
             )
@@ -507,6 +533,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .await?;
             for child_model in child_models {
                 if modify_req.current_version_id.is_some() {
+                    // 当父模板修改启用版本时，为子模板创建对应的版本同时启用，以保证和父模板的配置同步
                     Self::sync_add_version_child_model(&child_model, &model_detail, funs, ctx).await?;
                 } else {
                     Self::sync_modify_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
@@ -533,7 +560,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn before_delete_item(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowModelDetailResp>> {
-        if !Self::find_id_items(
+        let model_detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
+        for child_model in Self::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -548,10 +576,15 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             funs,
             ctx,
         )
-        .await?
-        .is_empty()
-        {
-            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
+        .await? {
+            if model_detail.kind == FlowModelKind::AsTemplate {
+                return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
+            }
+            let mock_ctx = TardisContext {
+                own_paths: child_model.own_paths.clone(),
+                ..ctx.clone()
+            };
+            Self::delete_item(&child_model.id, funs, &mock_ctx).await?;
         }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
         if !detail.main {

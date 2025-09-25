@@ -94,7 +94,7 @@ impl FlowInstServ {
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 if start_req.rel_child_objs.is_some() {
-                    let rel_child_model = Self::find_rel_model(start_req.rel_transition_id.clone(), &start_req.tag, &create_vars, funs, ctx)
+                    let rel_child_model = Self::find_rel_model(start_req.rel_transition_id.clone(), &start_req.tag, &start_req.create_vars.clone().unwrap_or_default(), funs, ctx)
                         .await?
                         .ok_or_else(|| funs.err().not_found("flow_inst_serv", "start", "approve model not found", "404-flow-model-not-found"))?;
                     Self::modify_inst_artifacts(
@@ -281,22 +281,6 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
-
-        let flow_inst_cp = Self::get(&inst_id, funs, ctx).await?;
-        let ctx_cp = ctx.clone();
-        tardis::tokio::spawn(async move {
-            let funs = flow_constants::get_tardis_inst();
-            match FlowEventServ::do_front_change(&flow_inst_cp, loop_check_helper::InstancesTransition::default(), &ctx_cp, &funs).await {
-                Ok(_) => {}
-                Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
-            }
-            match task_handler_helper::execute_async_task(&ctx_cp).await {
-                Ok(_) => {
-                    ctx_cp.execute_task().await.unwrap_or_default();
-                }
-                Err(e) => error!("Flow Instance {} transfer execute_async_task error:{:?}", flow_inst_cp.id, e),
-            }
-        });
 
         Self::do_request_webhook(
             None,
@@ -787,6 +771,16 @@ impl FlowInstServ {
         Self::abort_child_inst(flow_inst_id, funs, ctx).await?;
         let flow_inst_detail = Self::get(flow_inst_id, funs, ctx).await?;
         if !flow_inst_detail.main {
+            Self::modify_inst_artifacts(
+                &flow_inst_detail.id,
+                &FlowInstArtifactsModifyReq {
+                    state: Some(FlowInstStateKind::Overrule),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             FlowLogServ::add_finish_business_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {

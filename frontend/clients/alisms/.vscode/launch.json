@@ -1,0 +1,2321 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_basic'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "bios_basic",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_cert'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_cert",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_cert",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_domain'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_domain",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_domain",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_event'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_event",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_event",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_item'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_item",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_item",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_kind'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_kind",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_kind",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_rel'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_rel",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_rel",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_scope_helper'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_scope_helper",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_scope_helper",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_rbum_set'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_rbum_set",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_rbum_set",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_scope'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_scope",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_scope",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_task_processor'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_task_processor",
+                    "--package=bios-basic"
+                ],
+                "filter": {
+                    "name": "test_task_processor",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_sdk_invoke'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-sdk-invoke"
+                ],
+                "filter": {
+                    "name": "bios_sdk_invoke",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_macros'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_macros",
+                    "--package=bios-sdk-invoke"
+                ],
+                "filter": {
+                    "name": "test_macros",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_cache'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-cache"
+                ],
+                "filter": {
+                    "name": "bios_spi_cache",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cache'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cache",
+                    "--package=bios-spi-cache"
+                ],
+                "filter": {
+                    "name": "test_cache",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cache_proc'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cache_proc",
+                    "--package=bios-spi-cache"
+                ],
+                "filter": {
+                    "name": "test_cache_proc",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_search'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-search"
+                ],
+                "filter": {
+                    "name": "bios_spi_search",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'init_search_container'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=init_search_container",
+                    "--package=bios-spi-search"
+                ],
+                "filter": {
+                    "name": "init_search_container",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_search'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_search",
+                    "--package=bios-spi-search"
+                ],
+                "filter": {
+                    "name": "test_search",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_search_item'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_search_item",
+                    "--package=bios-spi-search"
+                ],
+                "filter": {
+                    "name": "test_search_item",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_graph'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-graph"
+                ],
+                "filter": {
+                    "name": "bios_spi_graph",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_graph'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_graph",
+                    "--package=bios-spi-graph"
+                ],
+                "filter": {
+                    "name": "test_graph",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_graph_rel'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_graph_rel",
+                    "--package=bios-spi-graph"
+                ],
+                "filter": {
+                    "name": "test_graph_rel",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_kv'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-kv"
+                ],
+                "filter": {
+                    "name": "bios_spi_kv",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_kv'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_kv",
+                    "--package=bios-spi-kv"
+                ],
+                "filter": {
+                    "name": "test_kv",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_kv_item'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_kv_item",
+                    "--package=bios-spi-kv"
+                ],
+                "filter": {
+                    "name": "test_kv_item",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_log'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-log"
+                ],
+                "filter": {
+                    "name": "bios_spi_log",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_log'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_log",
+                    "--package=bios-spi-log"
+                ],
+                "filter": {
+                    "name": "test_log",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_log_item'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_log_item",
+                    "--package=bios-spi-log"
+                ],
+                "filter": {
+                    "name": "test_log_item",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_object'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-object"
+                ],
+                "filter": {
+                    "name": "bios_spi_object",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_object'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_object",
+                    "--package=bios-spi-object"
+                ],
+                "filter": {
+                    "name": "test_object",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_object_obj'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_object_obj",
+                    "--package=bios-spi-object"
+                ],
+                "filter": {
+                    "name": "test_object_obj",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_plugin'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-plugin"
+                ],
+                "filter": {
+                    "name": "bios_spi_plugin",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_plugin'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_plugin",
+                    "--package=bios-spi-plugin"
+                ],
+                "filter": {
+                    "name": "test_plugin",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_plugin_exec'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_plugin_exec",
+                    "--package=bios-spi-plugin"
+                ],
+                "filter": {
+                    "name": "test_plugin_exec",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_stats'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-stats"
+                ],
+                "filter": {
+                    "name": "bios_spi_stats",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_stats'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_stats",
+                    "--package=bios-spi-stats"
+                ],
+                "filter": {
+                    "name": "test_stats",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_stats_conf'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_stats_conf",
+                    "--package=bios-spi-stats"
+                ],
+                "filter": {
+                    "name": "test_stats_conf",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_stats_metric'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_stats_metric",
+                    "--package=bios-spi-stats"
+                ],
+                "filter": {
+                    "name": "test_stats_metric",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_stats_record'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_stats_record",
+                    "--package=bios-spi-stats"
+                ],
+                "filter": {
+                    "name": "test_stats_record",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_reldb'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-reldb"
+                ],
+                "filter": {
+                    "name": "bios_spi_reldb",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_reldb'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_reldb",
+                    "--package=bios-spi-reldb"
+                ],
+                "filter": {
+                    "name": "test_reldb",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_reldb_exec'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_reldb_exec",
+                    "--package=bios-spi-reldb"
+                ],
+                "filter": {
+                    "name": "test_reldb_exec",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'spacegate_plugins'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=spacegate-plugins"
+                ],
+                "filter": {
+                    "name": "spacegate_plugins",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'export_schemas'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=export_schemas",
+                    "--package=spacegate-plugins"
+                ],
+                "filter": {
+                    "name": "export_schemas",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_auth'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "bios_auth",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'init_cache_container'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=init_cache_container",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "init_cache_container",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_auth'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_auth",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "test_auth",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_auth_encrypt'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_auth_encrypt",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "test_auth_encrypt",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_auth_init'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_auth_init",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "test_auth_init",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_auth_match'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_auth_match",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "test_auth_match",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_auth_req'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_auth_req",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "test_auth_req",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_auth_res'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_auth_res",
+                    "--package=bios-auth"
+                ],
+                "filter": {
+                    "name": "test_auth_res",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_mw_event'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-mw-event"
+                ],
+                "filter": {
+                    "name": "bios_mw_event",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_event'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_event",
+                    "--package=bios-mw-event"
+                ],
+                "filter": {
+                    "name": "test_event",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_mw_event_client'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-mw-event-client"
+                ],
+                "filter": {
+                    "name": "bios_mw_event_client",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_mw_flow'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-mw-flow"
+                ],
+                "filter": {
+                    "name": "bios_mw_flow",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'mock_api'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=mock_api",
+                    "--package=bios-mw-flow"
+                ],
+                "filter": {
+                    "name": "mock_api",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_flow_api'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_flow_api",
+                    "--package=bios-mw-flow"
+                ],
+                "filter": {
+                    "name": "test_flow_api",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_flow_review_scenes_fsm'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_flow_review_scenes_fsm",
+                    "--package=bios-mw-flow"
+                ],
+                "filter": {
+                    "name": "test_flow_review_scenes_fsm",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_flow_scenes_fsm'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_flow_scenes_fsm",
+                    "--package=bios-mw-flow"
+                ],
+                "filter": {
+                    "name": "test_flow_scenes_fsm",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_iam'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "bios_iam",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_basic'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_basic",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_basic",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_ca_app'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_ca_app",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_ca_app",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_ca_basic'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_ca_basic",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_ca_basic",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_account'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_account",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_account",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_attr'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_attr",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_attr",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_cert'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_cert",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_cert",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_cert_conf'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_cert_conf",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_cert_conf",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_res'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_res",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_res",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_role'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_role",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_role",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cc_set'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cc_set",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cc_set",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_ci_open'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_ci_open",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_ci_open",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cp_all'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cp_all",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cp_all",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cs_tenant'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cs_tenant",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_cs_tenant",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_ct_app'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_ct_app",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_ct_app",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_ct_basic'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_ct_basic",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_ct_basic",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_ct_tenant'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_ct_tenant",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_ct_tenant",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_api'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_api",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_api",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_cert_sync'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_cert_sync",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_cert_sync",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_oauth2'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_oauth2",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_oauth2",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_scenes_app'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_scenes_app",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_scenes_app",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_scenes_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_scenes_common",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_scenes_common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_scenes_passport'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_scenes_passport",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_scenes_passport",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_scenes_system'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_scenes_system",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_scenes_system",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_scenes_tenant'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_scenes_tenant",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_scenes_tenant",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_iam_serv'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_iam_serv",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_iam_serv",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_key_cache'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_key_cache",
+                    "--package=bios-iam"
+                ],
+                "filter": {
+                    "name": "test_key_cache",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_mw_schedule'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-mw-schedule"
+                ],
+                "filter": {
+                    "name": "bios_mw_schedule",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_basic_schedual_service'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_basic_schedual_service",
+                    "--package=bios-mw-schedule"
+                ],
+                "filter": {
+                    "name": "test_basic_schedual_service",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_common",
+                    "--package=bios-mw-schedule"
+                ],
+                "filter": {
+                    "name": "test_common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_multi'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_multi",
+                    "--package=bios-mw-schedule"
+                ],
+                "filter": {
+                    "name": "test_multi",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_schedule'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_schedule",
+                    "--package=bios-mw-schedule"
+                ],
+                "filter": {
+                    "name": "test_schedule",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_schedule_item'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_schedule_item",
+                    "--package=bios-mw-schedule"
+                ],
+                "filter": {
+                    "name": "test_schedule_item",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_enhance_wasm'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-enhance-wasm"
+                ],
+                "filter": {
+                    "name": "bios_enhance_wasm",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_reach'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-reach"
+                ],
+                "filter": {
+                    "name": "bios_reach",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_message_send'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_message_send",
+                    "--package=bios-reach"
+                ],
+                "filter": {
+                    "name": "test_message_send",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_reach_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_reach_common",
+                    "--package=bios-reach"
+                ],
+                "filter": {
+                    "name": "test_reach_common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_send_client'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_send_client",
+                    "--package=bios-reach"
+                ],
+                "filter": {
+                    "name": "test_send_client",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_client_hwsms'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-client-hwsms"
+                ],
+                "filter": {
+                    "name": "bios_client_hwsms",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bios-serv-all'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bios-serv-all",
+                    "--package=bios-serv-all"
+                ],
+                "filter": {
+                    "name": "bios-serv-all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bios-serv-all'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bios-serv-all",
+                    "--package=bios-serv-all"
+                ],
+                "filter": {
+                    "name": "bios-serv-all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_client_alisms'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-client-alisms"
+                ],
+                "filter": {
+                    "name": "bios_client_alisms",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_send_common_msg'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_send_common_msg",
+                    "--package=bios-client-alisms"
+                ],
+                "filter": {
+                    "name": "test_send_common_msg",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_client_custom_sms'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-client-custom-sms"
+                ],
+                "filter": {
+                    "name": "bios_client_custom_sms",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_send_common_msg'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_send_common_msg",
+                    "--package=bios-client-custom-sms"
+                ],
+                "filter": {
+                    "name": "test_send_common_msg",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bios-event'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bios-event",
+                    "--package=bios-event"
+                ],
+                "filter": {
+                    "name": "bios-event",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bios-event'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bios-event",
+                    "--package=bios-event"
+                ],
+                "filter": {
+                    "name": "bios-event",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bios-sub-serv-all'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bios-sub-serv-all",
+                    "--package=bios-sub-serv-all"
+                ],
+                "filter": {
+                    "name": "bios-sub-serv-all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bios-sub-serv-all'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bios-sub-serv-all",
+                    "--package=bios-sub-serv-all"
+                ],
+                "filter": {
+                    "name": "bios-sub-serv-all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bios_spi_conf'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bios-spi-conf"
+                ],
+                "filter": {
+                    "name": "bios_spi_conf",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'spi_conf_api_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=spi_conf_api_test",
+                    "--package=bios-spi-conf"
+                ],
+                "filter": {
+                    "name": "spi_conf_api_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'spi_conf_listener_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=spi_conf_listener_test",
+                    "--package=bios-spi-conf"
+                ],
+                "filter": {
+                    "name": "spi_conf_listener_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'spi_conf_nacos_compatible_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=spi_conf_nacos_compatible_test",
+                    "--package=bios-spi-conf"
+                ],
+                "filter": {
+                    "name": "spi_conf_nacos_compatible_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'spi_conf_test_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=spi_conf_test_common",
+                    "--package=bios-spi-conf"
+                ],
+                "filter": {
+                    "name": "spi_conf_test_common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bios-spacegate'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bios-spacegate",
+                    "--package=bios-spacegate"
+                ],
+                "filter": {
+                    "name": "bios-spacegate",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bios-spacegate'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bios-spacegate",
+                    "--package=bios-spacegate"
+                ],
+                "filter": {
+                    "name": "bios-spacegate",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bios-spi-serv-all'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bios-spi-serv-all",
+                    "--package=bios-spi-serv-all"
+                ],
+                "filter": {
+                    "name": "bios-spi-serv-all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bios-spi-serv-all'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bios-spi-serv-all",
+                    "--package=bios-spi-serv-all"
+                ],
+                "filter": {
+                    "name": "bios-spi-serv-all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'spi-conf-serv'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=spi-conf-serv",
+                    "--package=spi-conf-serv"
+                ],
+                "filter": {
+                    "name": "spi-conf-serv",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'spi-conf-serv'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=spi-conf-serv",
+                    "--package=spi-conf-serv"
+                ],
+                "filter": {
+                    "name": "spi-conf-serv",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

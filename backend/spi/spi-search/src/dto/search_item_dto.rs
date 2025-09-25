@@ -537,6 +537,7 @@ pub struct SearchQueryMetricsResp {
 pub struct SearchExportDataReq {
     pub tags: Vec<String>,
     pub tag_kind: Option<HashMap<String, Vec<String>>>,
+    pub tag_key: Option<HashMap<String, Vec<String>>>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
 }

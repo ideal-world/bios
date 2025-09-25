@@ -24,8 +24,7 @@ use crate::{
 };
 
 use super::{
-    clients::log_client::LogParamContent, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ,
-    flow_transition_serv::FlowTransitionServ,
+    clients::log_client::LogParamContent, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
 };
 
 pub struct FlowSubDeployServ;
@@ -133,7 +132,12 @@ impl FlowSubDeployServ {
         }
 
         for rel_template_id in rel_template_ids {
-            let key = format!("__tag__:_:_:{}:review_config", rel_template_id);
+            let mut key_template_id = rel_template_id.clone();
+            // 引用的模板，则向上获取根模板ID的配置
+            while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &key_template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id) {
+                key_template_id = p_template_id;
+            }
+            let key = format!("__tag__:_:_:{}:review_config", key_template_id);
             if let Some(config) = SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value) {
                 kv_config.insert(key, config);
             }
