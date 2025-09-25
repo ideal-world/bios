@@ -879,7 +879,7 @@ impl IamSubDeployServ {
 
     pub(crate) async fn sub_deploy_export(
         _start_time: Option<DateTime<Utc>>,
-        _end_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<IamSubDeployTowExportAggResp> {
@@ -892,6 +892,7 @@ impl IamSubDeployServ {
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    update_time_end: end_time,
                     ..Default::default()
                 },
                 kind: Some(IamAppKind::Product),

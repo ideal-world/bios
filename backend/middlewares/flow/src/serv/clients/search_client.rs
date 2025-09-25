@@ -188,10 +188,20 @@ impl FlowSearchClient {
         Ok(())
     }
 
-    pub async fn async_modify_business_obj_search_ext(rel_business_obj_id: &str, req: &ModifyObjSearchExtReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn async_modify_business_obj_search_ext(rel_business_obj_id: &str, req: &ModifyObjSearchExtReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let rel_business_obj_id_cp = rel_business_obj_id.to_string();
-        let req_cp = req.clone();
+        let mut req_cp = req.clone();
+        // 获取当前对象的状态信息
+        if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
+            let inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
+            if req_cp.status.is_none() {
+                req_cp.status = inst.current_state_name.clone();
+            }
+            if req_cp.current_state_color.is_none() {
+                req_cp.current_state_color = inst.current_state_color.clone();
+            }
+        }
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let rel_business_obj_id_cp2 = rel_business_obj_id_cp.clone();
