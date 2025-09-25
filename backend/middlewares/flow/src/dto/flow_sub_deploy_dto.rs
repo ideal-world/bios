@@ -13,6 +13,7 @@ pub struct FlowSubDeployOneExportAggResp {
     pub models: Vec<FlowModelDetailResp>,
     pub delete_logs: HashMap<String, Option<Vec<LogItemFindResp>>>,
     pub rel_kv_config: Option<HashMap<String, Value>>,
+    pub insts: Vec<FlowInstDetailResp>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
@@ -21,6 +22,7 @@ pub struct FlowSubDeployTowImportReq {
     pub models: Vec<FlowModelDetailResp>,
     pub delete_logs: HashMap<String, Option<Vec<LogItemFindResp>>>,
     pub rel_kv_config: Option<HashMap<String, Value>>,
+    pub insts: Vec<FlowInstDetailResp>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]

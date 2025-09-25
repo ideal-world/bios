@@ -89,7 +89,6 @@ impl FlowInstServ {
                 let main_inst = Self::get(&inst_id, funs, ctx).await?;
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: main_inst.tag.clone(),
-                    current_state_color: main_inst.current_state_color.clone(),
                     ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
@@ -826,7 +825,6 @@ impl FlowInstServ {
             {
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: main_inst.tag.to_string(),
-                    status: main_inst.current_state_name.clone(),
                     rel_state: Some("".to_string()),
                     rel_transition_state_name: Some("".to_string()),
                     ..Default::default()
@@ -1470,7 +1468,6 @@ impl FlowInstServ {
                                 .await?;
                                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                                     tag: rel_child_obj.tag.clone(),
-                                    status: Some(main_inst.current_state_name.clone()),
                                     rel_state: Some("".to_string()),
                                     rel_transition_state_name: Some("".to_string()),
                                     ..Default::default()
@@ -1535,19 +1532,6 @@ impl FlowInstServ {
         .await?;
         for child_inst in child_insts {
             Self::abort(&child_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
-            let current_state_name = FlowInstServ::find_detail_items(
-                &FlowInstFilterReq {
-                    rel_business_obj_ids: Some(vec![child_inst.rel_business_obj_id.clone()]),
-                    tags: Some(vec![child_inst.tag.clone()]),
-                    main: Some(true),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?
-            .pop()
-            .map(|inst| inst.current_state_name.unwrap_or_default());
             let (rel_state, rel_transition_state_name) = FlowInstServ::find_detail_items(
                 &FlowInstFilterReq {
                     rel_business_obj_ids: Some(vec![child_inst.rel_business_obj_id.clone()]),
@@ -1564,7 +1548,6 @@ impl FlowInstServ {
             .unwrap_or_default();
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: child_inst.tag.clone(),
-                status: current_state_name,
                 rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
                 rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
                 ..Default::default()
@@ -2789,39 +2772,11 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
-            let child_main_insts = Self::find_detail_items(
-                &FlowInstFilterReq {
-                    rel_business_obj_ids: Some(
-                        flow_inst_detail
-                            .artifacts
-                            .clone()
-                            .unwrap_or_default()
-                            .rel_child_objs
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|rel_child_obj| rel_child_obj.obj_id)
-                            .collect_vec(),
-                    ),
-                    main: Some(true),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
             for child_inst in child_insts {
-                let child_main_inst = child_main_insts.iter().find(|inst| child_inst.rel_business_obj_id == inst.rel_business_obj_id).ok_or_else(|| {
-                    funs.err().not_found(
-                        "flow_inst_serv",
-                        "when_enter_state",
-                        &format!("inst is not found by business_obj_id {}", child_inst.rel_business_obj_id),
-                        "404-flow-inst-not-found",
-                    )
-                })?;
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: child_inst.tag.clone(),
                     status: if flow_inst_detail.finish_time.is_some() {
-                        child_main_inst.current_state_name.clone()
+                        None
                     } else {
                         Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string())
                     },
@@ -2879,7 +2834,6 @@ impl FlowInstServ {
         {
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: main_inst.tag.to_string(),
-                status: main_inst.current_state_name.clone(),
                 rel_state: Some("".to_string()),
                 rel_transition_state_name: Some("".to_string()),
                 ..Default::default()
@@ -3025,22 +2979,8 @@ impl FlowInstServ {
                     } else {
                         // 未传入root_inst_id，代表流程直接中止，刷新业务的search中的信息
                         for rel_child_obj in rel_child_objs {
-                            let current_state_name = FlowInstServ::find_detail_items(
-                                &FlowInstFilterReq {
-                                    rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
-                                    tags: Some(vec![rel_child_obj.tag.clone()]),
-                                    main: Some(true),
-                                    ..Default::default()
-                                },
-                                funs,
-                                ctx,
-                            )
-                            .await?
-                            .pop()
-                            .map(|inst| inst.current_state_name.unwrap_or_default());
                             let modify_ext_req = ModifyObjSearchExtReq {
                                 tag: rel_child_obj.tag.clone(),
-                                status: current_state_name,
                                 rel_state: None,
                                 rel_transition_state_name: Some("".to_string()),
                                 ..Default::default()
@@ -3116,9 +3056,9 @@ impl FlowInstServ {
                     None,
                     None,
                     Some("审批通过".to_string()),
-                    inst_detail.current_state_name.clone(),
+                    tran.to_flow_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
-                    inst_detail.current_state_name.clone(),
+                    Some(tran.from_flow_state_name.clone()),
                     inst_detail.current_state_sys_kind.clone(),
                     params,
                     ctx,
@@ -4412,7 +4352,6 @@ impl FlowInstServ {
                     .map(|flow_inst| async {
                         match FlowSearchClient::modify_business_obj_search_ext(&flow_inst.rel_business_obj_id, &ModifyObjSearchExtReq {
                             tag: flow_inst.tag.clone(),
-                            current_state_color: flow_inst.current_state_color.clone(),
                             ..Default::default()
                         }, funs, ctx).await
                         {
