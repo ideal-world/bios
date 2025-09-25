@@ -5,7 +5,7 @@ use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
-        rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
+        rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq}, rbum_rel_dto::RbumRelDetailResp,
     },
     helper::rbum_scope_helper,
     rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
@@ -2551,7 +2551,7 @@ impl FlowModelServ {
         .await?;
         let max_len = rels.len();
         let mut page = 1;
-        let page_size = 100;
+        let page_size = 10;
         loop {
             let start = page_size * (page - 1);
             if start >= max_len {
@@ -2559,35 +2559,11 @@ impl FlowModelServ {
             }
             let end = std::cmp::min(start + page_size, max_len);
             let page_rel = rels[start..end].to_vec();
-            join_all(
+            let r = join_all(
                 page_rel
                     .into_iter()
                     .map(|rel| async move {
-                        let mock_ctx = TardisContext {
-                            own_paths: if rel.to_own_paths.contains("/") { rel.to_own_paths.clone() } else { format!("{}/{}", rel.to_own_paths, rel.from_rbum_id) },
-                            ..Default::default()
-                        };
-                        // 获取模板关联的模型
-                        if let Ok(model_rels) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel.to_rbum_item_id, None, None, funs, ctx).await {
-                            let model_ids = model_rels.iter().map(|r| r.rel_id.clone()).collect_vec();
-                            for model_id in model_ids {
-                                if let Ok(Some(rel_model)) = Self::find_one_detail_item(&FlowModelFilterReq {
-                                    basic: RbumBasicFilterReq {
-                                        ids: Some(vec![model_id]),
-                                        with_sub_own_paths: true,
-                                        own_paths: Some("".to_string()),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                }, funs, ctx).await {
-                                    if rel_model.main {
-                                        Self::copy_or_reference_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, funs, &mock_ctx).await;
-                                    } else {
-                                        Self::copy_or_reference_non_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, None, funs, &mock_ctx).await;
-                                    }
-                                }
-                            }
-                        }                        
+                        let _ = Self::init_single_reference_model(&rel).await;
                     })
                     .collect_vec(),
             )
@@ -2595,6 +2571,57 @@ impl FlowModelServ {
             page += 1;
             
         }
+        Ok(())
+    }
+
+    async fn init_single_reference_model(rel: &RbumRelDetailResp) -> TardisResult<()> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let mock_ctx = TardisContext {
+            own_paths: if rel.to_own_paths.contains("/") { rel.to_own_paths.clone() } else { format!("{}/{}", rel.to_own_paths, rel.from_rbum_id) },
+            ..Default::default()
+        };
+        // 获取模板关联的模型
+        if let Ok(model_rels) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel.to_rbum_item_id, None, None, &funs, &mock_ctx).await {
+            let model_ids = model_rels.iter().map(|r| r.rel_id.clone()).collect_vec();
+            for model_id in model_ids {
+                if let Ok(Some(rel_model)) = Self::find_one_detail_item(&FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![model_id]),
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }, &funs, &mock_ctx).await {
+                    if rel_model.main {
+                        if let Ok(orginal_models) = Self::find_rel_models(None, true, Some(vec![rel_model.tag.clone()]), &funs, &mock_ctx).await {
+                            if Self::copy_or_reference_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, &funs, &mock_ctx).await.is_err() {
+                                return Err(funs.err().not_found(&Self::get_obj_name(), "init_single_reference_model", "copy main model error", "500-flow-model-prohibit-delete"));
+                            }
+                            for orginal_model in &orginal_models {
+                                let mock_ctx = TardisContext {
+                                    own_paths: orginal_model.own_paths.clone(),
+                                    ..Default::default()
+                                };
+                                if Self::delete_item(&orginal_model.id, &funs, &mock_ctx).await.is_err() {
+                                    return Err(funs.err().not_found(&Self::get_obj_name(), "init_single_reference_model", "delete original model error", "500-flow-model-prohibit-delete"));
+                                }
+                            }
+                        } else {
+                            if Self::copy_or_reference_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, &None, None, &funs, &mock_ctx).await.is_err() {
+                                return Err(funs.err().not_found(&Self::get_obj_name(), "init_single_reference_model", "copy main model error", "500-flow-model-prohibit-delete"));
+                            }
+                        }
+                    } else {
+                        if Self::copy_or_reference_non_main_model(&rel_model.id, &FlowModelAssociativeOperationKind::Reference, FlowModelKind::AsModel, None, None, &funs, &mock_ctx).await.is_err() {
+                            return Err(funs.err().not_found(&Self::get_obj_name(), "init_single_reference_model", "copy non-main model error", "500-flow-model-prohibit-delete"));
+                        }
+                    }
+                }
+            }
+        }
+        funs.commit().await?;
         Ok(())
     }
 }
