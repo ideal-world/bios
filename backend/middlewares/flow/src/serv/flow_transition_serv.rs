@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumBasicFilterReq,
-    serv::{
+    dto::rbum_filer_dto::RbumBasicFilterReq, rbum_enumeration::RbumRelFromKind, serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    },
+    }
 };
 use itertools::Itertools;
 use tardis::{
@@ -45,7 +44,7 @@ impl FlowTransitionServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let flow_state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_version_id, None, None, funs, ctx)
+        let flow_state_ids = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, flow_version_id, None, None, funs, ctx)
             .await?
             .iter()
             .map(|rel| rel.rel_id.clone())
@@ -488,7 +487,7 @@ impl FlowTransitionServ {
         )
         .await?;
         for rel_model_id in rel_model_ids {
-            let transition_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
+            let transition_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTransition, &RbumRelFromKind::Item, &rel_model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id);
             if let Some(transition_id) = transition_id {
                 rel_transitions.insert(transition_id, rel_model_id.clone());
             }

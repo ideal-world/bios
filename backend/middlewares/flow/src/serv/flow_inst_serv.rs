@@ -2,11 +2,10 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumBasicFilterReq,
-    serv::{
+    dto::rbum_filer_dto::RbumBasicFilterReq, rbum_enumeration::RbumRelFromKind, serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
-    },
+    }
 };
 use bios_sdk_invoke::dto::search_item_dto::{
     SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchSortKind, SearchItemSearchSortReq,
@@ -825,6 +824,7 @@ impl FlowInstServ {
             {
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: main_inst.tag.to_string(),
+                    status: Some("".to_string()),
                     rel_state: Some("".to_string()),
                     rel_transition_state_name: Some("".to_string()),
                     ..Default::default()
@@ -1468,6 +1468,7 @@ impl FlowInstServ {
                                 .await?;
                                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                                     tag: rel_child_obj.tag.clone(),
+                                    status: Some("".to_string()),
                                     rel_state: Some("".to_string()),
                                     rel_transition_state_name: Some("".to_string()),
                                     ..Default::default()
@@ -1548,6 +1549,7 @@ impl FlowInstServ {
             .unwrap_or_default();
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: child_inst.tag.clone(),
+                status: Some("".to_string()),
                 rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
                 rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
                 ..Default::default()
@@ -1810,7 +1812,7 @@ impl FlowInstServ {
             prev_flow_state_name: prev_flow_state.name,
             prev_flow_state_color: prev_flow_state.color,
             new_flow_state_ext: TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(
-                &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_inst_detail.rel_flow_version_id, None, None, funs, ctx)
+                &FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, &flow_inst_detail.rel_flow_version_id, None, None, funs, ctx)
                     .await?
                     .into_iter()
                     .find(|rel| next_flow_state.id == rel.rel_id)
@@ -2776,7 +2778,7 @@ impl FlowInstServ {
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: child_inst.tag.clone(),
                     status: if flow_inst_detail.finish_time.is_some() {
-                        None
+                        Some("".to_string())
                     } else {
                         Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string())
                     },
@@ -2834,6 +2836,7 @@ impl FlowInstServ {
         {
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: main_inst.tag.to_string(),
+                status: Some("".to_string()),
                 rel_state: Some("".to_string()),
                 rel_transition_state_name: Some("".to_string()),
                 ..Default::default()
@@ -2981,6 +2984,7 @@ impl FlowInstServ {
                         for rel_child_obj in rel_child_objs {
                             let modify_ext_req = ModifyObjSearchExtReq {
                                 tag: rel_child_obj.tag.clone(),
+                                status: Some("".to_string()),
                                 rel_state: None,
                                 rel_transition_state_name: Some("".to_string()),
                                 ..Default::default()

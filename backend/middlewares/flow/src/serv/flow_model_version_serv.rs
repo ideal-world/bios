@@ -228,7 +228,7 @@ impl
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowModelVersionDetailResp>> {
         let detail = Self::get_item(id, &FlowModelVersionFilterReq::default(), funs, ctx).await?;
         join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, id, None, None, funs, ctx)
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, id, None, None, funs, ctx)
                 .await?
                 .into_iter()
                 .map(|rel| async move { FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, id, &rel.rel_id, funs, ctx).await })
@@ -351,7 +351,7 @@ impl FlowModelVersionServ {
         ctx: &TardisContext,
     ) -> Vec<FlowStateAggResp> {
         join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_version_id, None, None, funs, ctx)
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, flow_version_id, None, None, funs, ctx)
                 .await
                 .expect("not found state")
                 .into_iter()
@@ -359,15 +359,11 @@ impl FlowModelVersionServ {
                 .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
                 .map(|rel| async {
                     let state_id = rel.rel_id;
-                    if let Ok(state) = FlowStateServ::aggregate(&state_id, flow_version_id, init_state_id, funs, ctx).await {
-                        Some(state)
-                    } else {
-                        None
-                    }
+                    FlowStateServ::aggregate(&state_id, flow_version_id, init_state_id, funs, ctx).await.expect("not found state")
                 })
                 .collect_vec(),
         )
-        .await.into_iter().filter_map(|s| s).collect_vec()
+        .await
     }
 
     pub async fn bind_states_and_transitions(flow_version_id: &str, states: &[FlowModelVersionBindState], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -557,7 +553,7 @@ impl FlowModelVersionServ {
 
     pub async fn find_sorted_rel_states_by_version_id(flow_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateDetailResp>> {
         Ok(join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_version_id, None, None, funs, ctx)
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, flow_version_id, None, None, funs, ctx)
                 .await?
                 .into_iter()
                 .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
