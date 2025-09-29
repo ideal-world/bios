@@ -50,7 +50,7 @@ impl FlowCaModelApi {
             if let (Some(app_id), Some(rel_template_id)) = (FlowModelServ::get_app_id_by_ctx(&ctx.0), &req.0.rel_template_id) {
                 // 若存在引用操作，且当前处于应用层，则需要更新应用的关联模型
                 if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
                 }
                 FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, RbumRelFromKind::Item, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
             }

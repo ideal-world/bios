@@ -1023,6 +1023,19 @@ impl RbumCrudQueryPackage for SelectStatement {
         } else {
             self.and_where(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(filter_own_paths));
         }
+
+        if let Some(create_time_start) = &filter.create_time_start {
+            self.and_where(Expr::col((Alias::new(table_name), CREATE_TIME_FIELD.clone())).gte(create_time_start.to_string()));
+        }
+        if let Some(create_time_end) = &filter.create_time_end {
+            self.and_where(Expr::col((Alias::new(table_name), CREATE_TIME_FIELD.clone())).lte(create_time_end.to_string()));
+        }
+        if let Some(update_time_start) = &filter.update_time_start {
+            self.and_where(Expr::col((Alias::new(table_name), UPDATE_TIME_FIELD.clone())).gte(update_time_start.to_string()));
+        }
+        if let Some(update_time_end) = &filter.update_time_end {
+            self.and_where(Expr::col((Alias::new(table_name), UPDATE_TIME_FIELD.clone())).lte(update_time_end.to_string()));
+        }
         self
     }
 

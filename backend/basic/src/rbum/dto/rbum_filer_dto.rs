@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::default::Default;
 
 use serde::{Deserialize, Serialize};
-use tardis::basic::field::TrimString;
+use tardis::chrono::Utc;
+use tardis::{basic::field::TrimString, chrono::DateTime};
 
 use tardis::web::poem_openapi;
 
@@ -74,6 +75,11 @@ pub struct RbumBasicFilterReq {
     ///
     /// 资源域id
     pub rbum_domain_id: Option<String>,
+
+    pub create_time_start: Option<DateTime<Utc>>,
+    pub create_time_end: Option<DateTime<Utc>>,
+    pub update_time_start: Option<DateTime<Utc>>,
+    pub update_time_end: Option<DateTime<Utc>>,
 }
 
 /// Resource certificate configuration filter

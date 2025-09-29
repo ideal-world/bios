@@ -688,6 +688,10 @@ where
                 } else {
                     Self::get_rbum_domain_id()
                 },
+                create_time_start: filter.basic().create_time_start,
+                create_time_end: filter.basic().create_time_end,
+                update_time_start: filter.basic().update_time_start,
+                update_time_end: filter.basic().update_time_end,
             },
             funs,
             ctx,
