@@ -359,11 +359,15 @@ impl FlowModelVersionServ {
                 .sorted_by_key(|rel| TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default().sort)
                 .map(|rel| async {
                     let state_id = rel.rel_id;
-                    FlowStateServ::aggregate(&state_id, flow_version_id, init_state_id, funs, ctx).await.expect("not found state")
+                    if let Ok(state) = FlowStateServ::aggregate(&state_id, flow_version_id, init_state_id, funs, ctx).await {
+                        Some(state)
+                    } else {
+                        None
+                    }
                 })
                 .collect_vec(),
         )
-        .await
+        .await.into_iter().filter_map(|s| s).collect_vec()
     }
 
     pub async fn bind_states_and_transitions(flow_version_id: &str, states: &[FlowModelVersionBindState], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

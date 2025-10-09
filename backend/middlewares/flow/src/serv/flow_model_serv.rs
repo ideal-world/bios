@@ -5,7 +5,7 @@ use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
-        rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
+        rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq}, rbum_rel_dto::RbumRelDetailResp,
     },
     helper::rbum_scope_helper,
     rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
@@ -2595,6 +2595,7 @@ impl FlowModelServ {
             page += 1;
             
         }
+        funs.commit().await?;
         Ok(())
     }
 }
