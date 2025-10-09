@@ -195,11 +195,11 @@ impl FlowSearchClient {
         // 获取当前对象的状态信息
         if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
             let inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
-            if req_cp.status.is_none() {
-                req_cp.status = inst.current_state_name.clone();
-            }
-            if req_cp.current_state_color.is_none() {
-                req_cp.current_state_color = inst.current_state_color.clone();
+            if let Some(status) = &req_cp.status {
+                if status.is_empty() {
+                    req_cp.status = inst.current_state_name.clone();
+                    req_cp.current_state_color = inst.current_state_color.clone();
+                }
             }
         }
         ctx.add_async_task(Box::new(|| {

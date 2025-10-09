@@ -45,3 +45,6 @@ package-lock.json
 
 # local
 config
+
+/vendor
+/.cargo
