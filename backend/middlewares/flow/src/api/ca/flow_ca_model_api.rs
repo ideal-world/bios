@@ -12,7 +12,10 @@ use crate::{
     dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceReq},
     flow_constants,
     helper::task_handler_helper,
-    serv::{flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}},
+    serv::{
+        flow_model_serv::FlowModelServ,
+        flow_rel_serv::{FlowRelKind, FlowRelServ},
+    },
 };
 
 #[derive(Clone)]
@@ -39,7 +42,17 @@ impl FlowCaModelApi {
             // 若不存在对应tag的模型，则直接删除
             if let Some(rel_model_id) = req.0.rel_model_ids.get(&tag) {
                 let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&tag).cloned().unwrap_or_default());
-                let new_model = FlowModelServ::copy_or_reference_main_model(rel_model_id, &req.0.op, FlowModelKind::AsModel, req.0.rel_template_id.clone(), &update_states, None, &funs, &ctx.0).await?;
+                let new_model = FlowModelServ::copy_or_reference_main_model(
+                    rel_model_id,
+                    &req.0.op,
+                    FlowModelKind::AsModel,
+                    req.0.rel_template_id.clone(),
+                    &update_states,
+                    None,
+                    &funs,
+                    &ctx.0,
+                )
+                .await?;
                 result.insert(rel_model_id.clone(), new_model);
             } else {
                 FlowModelServ::delete_item(&orginal_model.id, &funs, &ctx.0).await?;
@@ -52,7 +65,20 @@ impl FlowCaModelApi {
                 if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
                 }
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, RbumRelFromKind::Item, rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
+                FlowRelServ::add_simple_rel(
+                    &FlowRelKind::FlowAppTemplate,
+                    &app_id,
+                    RbumRelFromKind::Item,
+                    rel_template_id,
+                    None,
+                    None,
+                    true,
+                    true,
+                    None,
+                    &funs,
+                    &ctx.0,
+                )
+                .await?;
             }
         }
         funs.commit().await?;

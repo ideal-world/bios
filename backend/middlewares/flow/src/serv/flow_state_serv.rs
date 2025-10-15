@@ -7,7 +7,7 @@ use bios_basic::rbum::{
         rbum_rel_dto::RbumRelModifyReq,
     },
     helper::rbum_scope_helper,
-    rbum_enumeration::RbumScopeLevelKind,
+    rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
@@ -290,7 +290,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             // find rel state
             let mut state_id = HashSet::new();
             for flow_version_id in flow_version_ids {
-                let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &flow_version_id, None, None, funs, ctx)
+                let rel_state_id = FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, &flow_version_id, None, None, funs, ctx)
                     .await?
                     .iter()
                     .map(|rel| rel.rel_id.clone())
@@ -401,12 +401,14 @@ impl FlowStateServ {
 
     // For the old data migration, this function match id by old state name
     pub(crate) async fn match_state_id_by_name(flow_model_id: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-            .await?
-            .into_iter()
-            .find(|state| state.rel_name == name)
-            .ok_or_else(|| funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))?
-            .rel_id)
+        Ok(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, flow_model_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .find(|state| state.rel_name == name)
+                .ok_or_else(|| funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))?
+                .rel_id,
+        )
     }
 
     pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {

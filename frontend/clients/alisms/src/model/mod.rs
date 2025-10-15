@@ -56,45 +56,33 @@ pub enum FormValue {
     HashMap(HashMap<String, String>),
 }
 
-// 定义一个body请求体枚举，用于统一处理请求体类型,包含Json/Binary/FormData类型 
+// 定义一个body请求体枚举，用于统一处理请求体类型,包含Json/Binary/FormData类型
 #[derive(Debug)]
 pub enum RequestBody {
-    Json(HashMap<String, Value>), // Json
-    Binary(Vec<u8>), // Binary
-    FormData(HashMap<String, FormValue>), //  FormData 
+    Json(HashMap<String, Value>),         // Json
+    Binary(Vec<u8>),                      // Binary
+    FormData(HashMap<String, FormValue>), //  FormData
     None,
 }
 
 impl ToString for RequestBody {
     fn to_string(&self) -> String {
-        match self { 
-            RequestBody::Json(body_map) => json!(body_map).to_string(),  
-            RequestBody::Binary(binary_data) => {
-                STANDARD.encode(binary_data)
-            },
+        match self {
+            RequestBody::Json(body_map) => json!(body_map).to_string(),
+            RequestBody::Binary(binary_data) => STANDARD.encode(binary_data),
             RequestBody::FormData(form_data) => {
                 let params: Vec<String> = form_data
-                .iter()
-                .flat_map(|(k, v)| {
-                    match v {
+                    .iter()
+                    .flat_map(|(k, v)| match v {
                         FormValue::String(s) => {
                             vec![format!("{}={}", percent_code(k), percent_code(&s))]
-                        },
-                        FormValue::Vec(vec) => {
-                            vec.iter()
-                                .map(|s| format!("{}={}", percent_code(k), percent_code(s)))
-                                .collect::<Vec<_>>()
-                        },
-                        FormValue::HashMap(map) => {
-                            map.iter()
-                                .map(|(sk, sv)| format!("{}={}", percent_code(sk), percent_code(sv)))
-                                .collect::<Vec<_>>()
-                        },
-                    }
-                })
-                .collect();
-                params.join("&") 
-            },
+                        }
+                        FormValue::Vec(vec) => vec.iter().map(|s| format!("{}={}", percent_code(k), percent_code(s))).collect::<Vec<_>>(),
+                        FormValue::HashMap(map) => map.iter().map(|(sk, sv)| format!("{}={}", percent_code(sk), percent_code(sv))).collect::<Vec<_>>(),
+                    })
+                    .collect();
+                params.join("&")
+            }
             RequestBody::None => String::new(),
         }
     }

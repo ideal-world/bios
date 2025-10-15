@@ -23,7 +23,8 @@ use crate::{
         flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{
-            FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg, FlowTransitionActionChangeKind, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind
+            FlowTransitionActionByStateChangeInfo, FlowTransitionActionByVarChangeInfo, FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionActionChangeAgg,
+            FlowTransitionActionChangeKind, FlowTransitionFrontActionInfo, FlowTransitionFrontActionRightValue, StateChangeConditionOp, TagRelKind,
         },
     },
     helper::loop_check_helper,
@@ -283,10 +284,10 @@ impl FlowEventServ {
                                         Some(FlowExternalCallbackOp::PostAction),
                                         Some(false),
                                         None,
-                                        Some(next_flow_state.name.clone()),
-                                        Some(next_flow_state.sys_state.clone()),
-                                        Some(prev_flow_state.name.clone()),
-                                        Some(prev_flow_state.sys_state.clone()),
+                                        child_inst_detail.current_state_name.clone(),
+                                        child_inst_detail.current_state_sys_kind.clone(),
+                                        child_inst_detail.current_state_name.clone(),
+                                        child_inst_detail.current_state_sys_kind.clone(),
                                         vec![FlowExternalParams {
                                             rel_kind: None,
                                             rel_tag: None,
@@ -364,7 +365,12 @@ impl FlowEventServ {
     }
 
     // 对字段修改的配置信息进行预处理
-    async fn prepare_var_change_info(flow_inst_detail: &FlowInstDetailResp, change_info: &FlowTransitionActionByVarChangeInfo, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowTransitionActionByVarChangeInfo> {
+    async fn prepare_var_change_info(
+        flow_inst_detail: &FlowInstDetailResp,
+        change_info: &FlowTransitionActionByVarChangeInfo,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<FlowTransitionActionByVarChangeInfo> {
         let mut result = change_info.clone();
         if let Some(changed_kind) = &result.changed_kind {
             match changed_kind {
@@ -378,15 +384,14 @@ impl FlowEventServ {
                         && result.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("value").is_some()).is_some()
                         && result.changed_val.clone().unwrap_or(json!({})).as_object().filter(|map| map.get("op").is_some()).is_some()
                     {
-                        let original_value = if let Some(custom_value) =
-                            FlowInstServ::find_var_by_inst_id(flow_inst_detail, &format!("custom_{}", result.var_name), funs, ctx).await?
-                        {
-                            Some(custom_value)
-                        } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_detail, &result.var_name, funs, ctx).await? {
-                            Some(original_value)
-                        } else {
-                            Some(json!(""))
-                        };
+                        let original_value =
+                            if let Some(custom_value) = FlowInstServ::find_var_by_inst_id(flow_inst_detail, &format!("custom_{}", result.var_name), funs, ctx).await? {
+                                Some(custom_value)
+                            } else if let Some(original_value) = FlowInstServ::find_var_by_inst_id(flow_inst_detail, &result.var_name, funs, ctx).await? {
+                                Some(original_value)
+                            } else {
+                                Some(json!(""))
+                            };
 
                         let target_value = result
                             .changed_val
@@ -421,16 +426,8 @@ impl FlowEventServ {
                                 Decimal::new(0, 0)
                             };
                             match changed_op.as_str() {
-                                "add" => {
-                                    result.changed_val = Some(json!(
-                                        (original_value + Decimal::from_str(&target_value.to_string()).unwrap_or_default())
-                                    ))
-                                }
-                                "sub" => {
-                                    result.changed_val = Some(json!(
-                                        (original_value - Decimal::from_str(&target_value.to_string()).unwrap_or_default())
-                                    ))
-                                }
+                                "add" => result.changed_val = Some(json!((original_value + Decimal::from_str(&target_value.to_string()).unwrap_or_default()))),
+                                "sub" => result.changed_val = Some(json!((original_value - Decimal::from_str(&target_value.to_string()).unwrap_or_default()))),
                                 _ => {}
                             }
                         }

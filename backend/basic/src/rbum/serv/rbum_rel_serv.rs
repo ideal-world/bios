@@ -1065,7 +1065,12 @@ impl RbumRelServ {
     /// Package hidden secret relationship aggregation information
     ///
     /// 组装隐私关联聚合信息
-    async fn package_agg_hide_secret_rels(rels: Vec<RbumRelDetailResp>, filter: &RbumRelFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
+    async fn package_agg_hide_secret_rels(
+        rels: Vec<RbumRelDetailResp>,
+        filter: &RbumRelFilterReq,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
         let mut result = Vec::with_capacity(rels.len());
         for rel in rels {
             let rbum_rel_id = rel.id.to_string();

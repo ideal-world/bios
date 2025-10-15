@@ -313,9 +313,12 @@ pub trait SimpleInvokeClient {
         let ctx = self.get_ctx();
         let bios_ctx = self.get_bios_ctx();
         if let Some(bios_ctx) = bios_ctx {
-            Ok(vec![(BIOS_CTX.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&bios_ctx)?)), (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)),])
+            Ok(vec![
+                (BIOS_CTX.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&bios_ctx)?)),
+                (TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)),
+            ])
         } else {
-            Ok(vec![(TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?)),])
+            Ok(vec![(TARDIS_CONTEXT.to_string(), TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(ctx)?))])
         }
     }
     fn get_url(&self, path: &[&str], query: &str) -> String {

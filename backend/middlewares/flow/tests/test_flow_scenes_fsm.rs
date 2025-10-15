@@ -142,7 +142,11 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: init_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
+                                ext: FlowStateRelModelExt {
+                                    sort: 1,
+                                    show_btns: None,
+                                    ..Default::default()
+                                },
                             }),
                             add_transitions: Some(vec![
                                 FlowTransitionAddReq {
@@ -164,7 +168,11 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: processing_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 2, show_btns: None, ..Default::default() },
+                                ext: FlowStateRelModelExt {
+                                    sort: 2,
+                                    show_btns: None,
+                                    ..Default::default()
+                                },
                             }),
                             add_transitions: Some(vec![
                                 FlowTransitionAddReq {
@@ -185,7 +193,11 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: finish_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 3, show_btns: None, ..Default::default() },
+                                ext: FlowStateRelModelExt {
+                                    sort: 3,
+                                    show_btns: None,
+                                    ..Default::default()
+                                },
                             }),
                             add_transitions: Some(vec![
                                 FlowTransitionAddReq {
@@ -206,7 +218,11 @@ pub async fn test(
                         FlowModelVersionBindState {
                             exist_state: Some(FlowModelBindStateReq {
                                 state_id: closed_state_id.clone(),
-                                ext: FlowStateRelModelExt { sort: 4, show_btns: None, ..Default::default() },
+                                ext: FlowStateRelModelExt {
+                                    sort: 4,
+                                    show_btns: None,
+                                    ..Default::default()
+                                },
                             }),
                             add_transitions: Some(vec![FlowTransitionAddReq {
                                 from_flow_state_id: closed_state_id.clone(),
@@ -260,7 +276,11 @@ pub async fn test(
                     bind_states: Some(vec![FlowModelVersionBindState {
                         exist_state: Some(FlowModelBindStateReq {
                             state_id: init_state_id.clone(),
-                            ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
+                            ext: FlowStateRelModelExt {
+                                sort: 1,
+                                show_btns: None,
+                                ..Default::default()
+                            },
                         }),
                         is_init: true,
                         ..Default::default()
@@ -499,7 +519,11 @@ pub async fn test(
                     bind_states: Some(vec![FlowModelVersionBindState {
                         exist_state: Some(FlowModelBindStateReq {
                             state_id: finish_state_id.clone(),
-                            ext: FlowStateRelModelExt { sort: 3, show_btns: None, ..Default::default() },
+                            ext: FlowStateRelModelExt {
+                                sort: 3,
+                                show_btns: None,
+                                ..Default::default()
+                            },
                         }),
                         add_transitions: Some(vec![
                             FlowTransitionAddReq {
@@ -615,6 +639,7 @@ pub async fn test(
                 target_template_id: None,
                 op: FlowModelAssociativeOperationKind::Reference,
                 update_states: None,
+                data_source: None,
             },
         )
         .await;
@@ -667,6 +692,7 @@ pub async fn test(
                 target_template_id: None,
                 op: FlowModelAssociativeOperationKind::Copy,
                 update_states: Some(update_states),
+                data_source: None,
             },
         )
         .await;
@@ -781,7 +807,11 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 3, show_btns: None, ..Default::default() },
+                        ext: FlowStateRelModelExt {
+                            sort: 3,
+                            show_btns: None,
+                            ..Default::default()
+                        },
                     }),
                     add_transitions: Some(vec![FlowTransitionAddReq {
                         name: Some("提交".into()),
@@ -844,7 +874,11 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
+                        ext: FlowStateRelModelExt {
+                            sort: 1,
+                            show_btns: None,
+                            ..Default::default()
+                        },
                     }),
                     add_transitions: Some(vec![FlowTransitionAddReq {
                         name: Some("提交".into()),
@@ -904,7 +938,11 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
+                        ext: FlowStateRelModelExt {
+                            sort: 1,
+                            show_btns: None,
+                            ..Default::default()
+                        },
                     }),
                     is_init: false,
                     add_transitions: Some(vec![FlowTransitionAddReq {
@@ -1008,7 +1046,11 @@ pub async fn test(
                             }),
                             ..Default::default()
                         },
-                        ext: FlowStateRelModelExt { sort: 1, show_btns: None, ..Default::default() },
+                        ext: FlowStateRelModelExt {
+                            sort: 1,
+                            show_btns: None,
+                            ..Default::default()
+                        },
                     }),
                     is_init: false,
                     add_transitions: Some(vec![FlowTransitionAddReq {

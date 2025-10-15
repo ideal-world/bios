@@ -155,7 +155,11 @@ impl From<FlowModelDetailResp> for FlowModelAddReq {
                 name: value.name.as_str().into(),
                 rel_model_id: None,
                 bind_states: Some(states),
-                status: if value.status == FlowModelStatus::Enabled { FlowModelVesionState::Enabled } else { FlowModelVesionState::Disabled },
+                status: if value.status == FlowModelStatus::Enabled {
+                    FlowModelVesionState::Enabled
+                } else {
+                    FlowModelVesionState::Disabled
+                },
                 scope_level: Some(value.scope_level.clone()),
                 disabled: Some(value.disabled),
             }),
@@ -527,11 +531,15 @@ impl FlowModelDetailResp {
     }
 
     pub fn create_add_req(self) -> FlowModelAddReq {
-        let add_transitions = self.transitions().into_iter().map(|transition| {
-            let mut add_transitions_req = FlowTransitionAddReq::from(transition.clone());
-            add_transitions_req.id = Some(transition.id.clone());
-            add_transitions_req
-        }).collect::<Vec<_>>();
+        let add_transitions = self
+            .transitions()
+            .into_iter()
+            .map(|transition| {
+                let mut add_transitions_req = FlowTransitionAddReq::from(transition.clone());
+                add_transitions_req.id = Some(transition.id.clone());
+                add_transitions_req
+            })
+            .collect::<Vec<_>>();
         let states = self
             .states()
             .into_iter()

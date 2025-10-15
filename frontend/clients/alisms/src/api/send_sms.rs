@@ -1,5 +1,10 @@
 use serde::Serialize;
-use tardis::{basic::{error::TardisError, result::TardisResult}, serde_json, url::Url, web::reqwest::{header::HeaderMap, Method}};
+use tardis::{
+    basic::{error::TardisError, result::TardisResult},
+    serde_json,
+    url::Url,
+    web::reqwest::{header::HeaderMap, Method},
+};
 
 use crate::{model::*, SmsClient};
 
@@ -43,16 +48,9 @@ impl SmsClient {
         // query 参数
         let query_params: &[(&str, &str)] = &query;
         // 请求体 body 为空时
-        let body = RequestBody:: None;
+        let body = RequestBody::None;
         // 发起请求
-        let resp = self.call_api(
-            Method::POST,
-            "/",
-            query_params,
-            action,
-            version,
-            body,
-        ).await?;
+        let resp = self.call_api(Method::POST, "/", query_params, action, version, body).await?;
         tardis::log::trace!("send sms response: {:?}", resp);
         Ok(resp.json::<SmsResponse>().await.map_err(|e| TardisError::internal_error(&format!("parse sms response failed: {}", e), "500-reach-send-failed"))?)
     }

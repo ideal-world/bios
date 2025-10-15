@@ -13,9 +13,7 @@ use tardis::{
 };
 
 use crate::{
-    dto::flow_model_dto::{
-        FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelKind,
-    },
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelKind},
     flow_constants,
     helper::task_handler_helper,
     serv::{
@@ -45,7 +43,14 @@ impl FlowCtModelApi {
             return TardisResp::err(TardisError::bad_request("rel_template_id can't be empty", ""));
         }
         funs.begin().await?;
-        let orginal_models = FlowModelServ::find_rel_model_map(req.0.rel_template_id.clone(), Some(req.0.rel_model_ids.clone().keys().cloned().collect_vec()), true, &funs, &ctx.0,).await?;
+        let orginal_models = FlowModelServ::find_rel_model_map(
+            req.0.rel_template_id.clone(),
+            Some(req.0.rel_model_ids.clone().keys().cloned().collect_vec()),
+            true,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         let mut result = HashMap::new();
         for (tag, rel_model_id) in &req.0.rel_model_ids {
             let orginal_model_id = orginal_models.get(tag).map(|orginal_model| orginal_model.id.clone());
