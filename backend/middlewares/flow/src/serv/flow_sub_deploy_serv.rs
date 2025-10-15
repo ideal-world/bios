@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind}, serv::{rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ}};
+use bios_basic::rbum::{
+    dto::rbum_filer_dto::RbumBasicFilterReq,
+    rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
+    serv::{rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
+};
 use bios_sdk_invoke::clients::{spi_kv_client::SpiKvClient, spi_log_client::LogItemFindResp};
 use itertools::Itertools;
 use serde_json::json;
@@ -24,7 +28,13 @@ use crate::{
 };
 
 use super::{
-    clients::log_client::LogParamContent, flow_inst_serv::FlowInstServ, flow_log_serv::FlowLogServ, flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}, flow_state_serv::FlowStateServ, flow_transition_serv::FlowTransitionServ
+    clients::log_client::LogParamContent,
+    flow_inst_serv::FlowInstServ,
+    flow_log_serv::FlowLogServ,
+    flow_model_serv::FlowModelServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+    flow_state_serv::FlowStateServ,
+    flow_transition_serv::FlowTransitionServ,
 };
 
 pub struct FlowSubDeployServ;
@@ -134,7 +144,9 @@ impl FlowSubDeployServ {
         for rel_template_id in rel_template_ids {
             let mut key_template_id = rel_template_id.clone();
             // 引用的模板，则向上获取根模板ID的配置
-            while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &key_template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id) {
+            while let Some(p_template_id) =
+                FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &key_template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id)
+            {
                 key_template_id = p_template_id;
             }
             let key = format!("__tag__:_:_:{}:review_config", key_template_id);
@@ -143,12 +155,23 @@ impl FlowSubDeployServ {
             }
         }
 
-        let insts = FlowInstServ::find_detail_items(&FlowInstFilterReq {
-            rel_business_obj_ids: Some(RbumRelServ::find_from_simple_rels("IamSubDeployApp", &RbumRelFromKind::Item, true, id, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec()),
-            with_sub: Some(true),
-            main: Some(true),
-            ..Default::default()
-        }, funs, ctx).await?;
+        let insts = FlowInstServ::find_detail_items(
+            &FlowInstFilterReq {
+                rel_business_obj_ids: Some(
+                    RbumRelServ::find_from_simple_rels("IamSubDeployApp", &RbumRelFromKind::Item, true, id, None, None, funs, ctx)
+                        .await?
+                        .into_iter()
+                        .map(|r| r.rel_id)
+                        .collect_vec(),
+                ),
+                with_sub: Some(true),
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
 
         Ok(FlowSubDeployOneExportAggResp {
             states: states.values().cloned().collect_vec(),
@@ -465,17 +488,10 @@ impl FlowSubDeployServ {
                     break;
                 }
                 tardis::tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                join_all(
-                    current_insts
-                        .iter()
-                        .map(|inst| async {
-                            Self::import_instance(inst, funs, ctx).await
-                        })
-                        .collect_vec(),
-                )
-                .await
-                .into_iter()
-                .collect::<TardisResult<Vec<_>>>()?;
+                join_all(current_insts.iter().map(|inst| async { Self::import_instance(inst, funs, ctx).await }).collect_vec())
+                    .await
+                    .into_iter()
+                    .collect::<TardisResult<Vec<_>>>()?;
                 page += 1;
             }
         }

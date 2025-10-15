@@ -87,7 +87,7 @@ impl FlowRelServ {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     ..Default::default()
-                }, 
+                },
                 tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: None,
                 from_rbum_id: Some(from_rbum_id.to_string()),
@@ -246,8 +246,6 @@ impl FlowRelServ {
     }
 
     pub async fn find_template_id_by_model_id(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
-        Ok(
-            Self::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &RbumRelFromKind::Item, model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-        )
+        Ok(Self::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &RbumRelFromKind::Item, model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id))
     }
 }

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq
+    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq,
+    FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq,
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
@@ -128,29 +129,79 @@ impl FlowCiModelApi {
         let rel_main_tags = rel_main_models.iter().map(|m| m.tag.clone()).collect_vec();
         for rel_main_model in rel_main_models {
             let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&rel_main_model.tag).cloned().unwrap_or_default());
-            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, req.0.data_source.clone(), &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_main_model(
+                &rel_main_model.id,
+                &req.0.op,
+                if req.0.target_template_id.is_none() {
+                    FlowModelKind::AsModel
+                } else {
+                    FlowModelKind::AsTemplateAndAsModel
+                },
+                req.0.target_template_id.clone(),
+                &update_states,
+                req.0.data_source.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
         // 需要删除的主模型
-        let delete_main_models = orginal_models.iter().filter(|(orginal_tag, _)| !rel_main_tags.contains(*orginal_tag)).map(|(_, orginal_model)| orginal_model).cloned().collect_vec();
+        let delete_main_models =
+            orginal_models.iter().filter(|(orginal_tag, _)| !rel_main_tags.contains(*orginal_tag)).map(|(_, orginal_model)| orginal_model).cloned().collect_vec();
         for delete_main_model in delete_main_models {
             FlowModelServ::delete_item(&delete_main_model.id, &funs, &ctx.0).await?;
         }
 
         let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
         for rel_non_main_model in rel_non_main_models {
-            let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), req.0.data_source.clone(), &funs, &ctx.0).await?;
+            let _ = FlowModelServ::copy_or_reference_non_main_model(
+                &rel_non_main_model.id,
+                &req.0.op,
+                if req.0.target_template_id.is_none() {
+                    FlowModelKind::AsModel
+                } else {
+                    FlowModelKind::AsTemplateAndAsModel
+                },
+                req.0.target_template_id.clone(),
+                req.0.data_source.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
         }
 
         // 若是引用操作
         if req.0.op == FlowModelAssociativeOperationKind::Reference || req.0.op == FlowModelAssociativeOperationKind::ReferenceOrCopy {
-            let rel_template_id = req.0.rel_template_id.clone().ok_or_else(|| funs.err().not_found("flow_ci_model_api", "copy_or_reference_model", "rel_template_id not found", "404-flow-rel-template-not-found"))?;
+            let rel_template_id = req.0.rel_template_id.clone().ok_or_else(|| {
+                funs.err().not_found(
+                    "flow_ci_model_api",
+                    "copy_or_reference_model",
+                    "rel_template_id not found",
+                    "404-flow-rel-template-not-found",
+                )
+            })?;
             // 若存在目标模板
             if let Some(target_template_id) = &req.0.target_template_id {
-                if let Some(old_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, target_template_id, None, None, &funs, &ctx.0).await?.pop().map(|r| r.rel_id) {
+                if let Some(old_template_id) =
+                    FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, target_template_id, None, None, &funs, &ctx.0).await?.pop().map(|r| r.rel_id)
+                {
                     FlowRelServ::delete_simple_rel(&FlowRelKind::FlowTemplateTemplate, &old_template_id, target_template_id, &funs, &ctx.0).await?;
                 }
-                FlowRelServ::add_simple_rel(&FlowRelKind::FlowTemplateTemplate, &rel_template_id, RbumRelFromKind::Other, target_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
+                FlowRelServ::add_simple_rel(
+                    &FlowRelKind::FlowTemplateTemplate,
+                    &rel_template_id,
+                    RbumRelFromKind::Other,
+                    target_template_id,
+                    None,
+                    None,
+                    true,
+                    true,
+                    None,
+                    &funs,
+                    &ctx.0,
+                )
+                .await?;
             } else {
                 // 若不存在目标模板
                 if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(&ctx.0) {
@@ -158,7 +209,20 @@ impl FlowCiModelApi {
                     if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
                         FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
                     }
-                    FlowRelServ::add_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, RbumRelFromKind::Item, &rel_template_id, None, None, true, true, None, &funs, &ctx.0).await?;
+                    FlowRelServ::add_simple_rel(
+                        &FlowRelKind::FlowAppTemplate,
+                        &app_id,
+                        RbumRelFromKind::Item,
+                        &rel_template_id,
+                        None,
+                        None,
+                        true,
+                        true,
+                        None,
+                        &funs,
+                        &ctx.0,
+                    )
+                    .await?;
                 }
             }
         }

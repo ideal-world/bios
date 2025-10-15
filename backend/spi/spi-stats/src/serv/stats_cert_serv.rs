@@ -7,7 +7,7 @@ use bios_basic::{
         rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind},
         serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation},
     },
-    spi::{spi_constants::SPI_PG_KIND_CODE},
+    spi::spi_constants::SPI_PG_KIND_CODE,
 };
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},

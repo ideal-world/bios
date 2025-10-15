@@ -17,7 +17,10 @@ use tardis::{
 };
 
 use crate::{
-    dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq}, serv::stats_valid_serv, stats_config::StatsConfig, stats_constants::SYNC_FACT_TASK_CODE
+    dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq},
+    serv::stats_valid_serv,
+    stats_config::StatsConfig,
+    stats_constants::SYNC_FACT_TASK_CODE,
 };
 
 use super::{stats_pg_conf_fact_col_serv, stats_pg_initializer, stats_pg_sync_serv};

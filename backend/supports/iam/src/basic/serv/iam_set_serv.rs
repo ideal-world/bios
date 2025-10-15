@@ -722,7 +722,8 @@ impl IamSetServ {
             funs,
             ctx,
         )
-        .await? {
+        .await?
+        {
             Self::get_tree_with_sys_codes(set_id, Some(vec![api_set_cate.sys_code]), None, funs, ctx).await
         } else {
             Self::get_tree_with_sys_codes(set_id, None, None, funs, ctx).await
@@ -740,12 +741,12 @@ impl IamSetServ {
             funs,
             ctx,
         )
-        .await? {
+        .await?
+        {
             Self::get_tree_with_sys_codes(set_id, Some(vec![data_guard_set_cate.sys_code]), cate_exts, funs, ctx).await
         } else {
             Self::get_tree_with_sys_codes(set_id, None, None, funs, ctx).await
         }
-        
     }
 
     pub async fn get_cate_id_with_sys_code(set_id: &str, filter_sys_code: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {

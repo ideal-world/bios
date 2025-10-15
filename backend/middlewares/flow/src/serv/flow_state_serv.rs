@@ -401,12 +401,14 @@ impl FlowStateServ {
 
     // For the old data migration, this function match id by old state name
     pub(crate) async fn match_state_id_by_name(flow_model_id: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, flow_model_id, None, None, funs, ctx)
-            .await?
-            .into_iter()
-            .find(|state| state.rel_name == name)
-            .ok_or_else(|| funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))?
-            .rel_id)
+        Ok(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelState, &RbumRelFromKind::Item, flow_model_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .find(|state| state.rel_name == name)
+                .ok_or_else(|| funs.err().not_found("flow_state_serv", "find_state_id_by_name", &format!("state_name: {} not match", name), ""))?
+                .rel_id,
+        )
     }
 
     pub async fn count_group_by_state(req: &FlowStateCountGroupByStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowStateCountGroupByStateResp>> {

@@ -61,11 +61,11 @@ pub struct Model {
     pub ext: String,
 
     /// Whether it is disabled
-    /// 
+    ///
     /// 是否禁用
-    /// 
+    ///
     /// A disabled relationship is not considered in business logic, but the data is still retained.
-    /// 
+    ///
     /// 禁用的关联在业务逻辑中不予考虑，但数据仍然保留。
     pub disabled: bool,
 

@@ -591,13 +591,12 @@ pub struct StatsConfFactDetailAddReq {
 /// 修改事实列配置请求对象
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactDetailModifyReq {
-
     /// The name of the fact column
     ///
     /// 事实列的名称
     #[oai(validator(min_length = "2"))]
     pub show_name: Option<String>,
-    
+
     /// kind = External and method = sql is valid
     ///
     /// 当 kind = External 且 method = sql 时有效

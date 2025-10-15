@@ -189,7 +189,7 @@ pub struct RbumKindFilterReq {
     /// 模块
     pub module: Option<String>,
     /// parent kind id
-    /// 
+    ///
     /// 父类型id
     pub parent_id: Option<String>,
 }

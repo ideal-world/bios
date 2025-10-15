@@ -4,7 +4,9 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-    }, rbum_enumeration::RbumRelFromKind, serv::rbum_item_serv::RbumItemCrudOperation
+    },
+    rbum_enumeration::RbumRelFromKind,
+    serv::rbum_item_serv::RbumItemCrudOperation,
 };
 use itertools::Itertools;
 use tardis::{
@@ -367,7 +369,10 @@ impl FlowModelVersionServ {
                 })
                 .collect_vec(),
         )
-        .await.into_iter().filter_map(|s| s).collect_vec()
+        .await
+        .into_iter()
+        .filter_map(|s| s)
+        .collect_vec()
     }
 
     pub async fn bind_states_and_transitions(flow_version_id: &str, states: &[FlowModelVersionBindState], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -457,8 +462,11 @@ impl FlowModelVersionServ {
         } else {
             flow_model.init_state_id.clone()
         };
-        
-        let global_ctx = TardisContext { own_paths: "".to_string(), ..ctx.clone() };
+
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
         FlowInstServ::unsafe_modify_state(
             &FlowInstFilterReq {
                 main: Some(true),

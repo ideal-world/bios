@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use tardis::{chrono::Duration, web::poem_openapi};
 
-use bios_sdk_invoke::clients::{
-    spi_log_client::{LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, SpiLogClient},
-};
+use bios_sdk_invoke::clients::spi_log_client::{LogItemAddReq, LogItemAddV2Req, LogItemFindReq, LogItemFindResp, SpiLogClient};
 use serde::{Deserialize, Serialize};
 
 use serde_json::Value;

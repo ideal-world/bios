@@ -12,7 +12,10 @@ use crate::{
     flow_constants,
 };
 
-use super::{flow_model_serv::FlowModelServ, flow_rel_serv::{FlowRelKind, FlowRelServ}};
+use super::{
+    flow_model_serv::FlowModelServ,
+    flow_rel_serv::{FlowRelKind, FlowRelServ},
+};
 
 pub struct FlowConfigServ;
 
@@ -42,10 +45,10 @@ impl FlowConfigServ {
 
     // 获取父级配置 租户id:项目id:项目模板id:review_config
     pub async fn get_root_config(root_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowRootConfigResp>> {
-        let key = if let Some(mut template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await?
-        {
+        let key = if let Some(mut template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await? {
             // 引用的模板，则向上获取根模板ID的配置
-            while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id) {
+            while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id)
+            {
                 template_id = p_template_id;
             }
             format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
@@ -73,8 +76,7 @@ impl FlowConfigServ {
     ) -> TardisResult<()> {
         let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
         let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
-        let key = if let Some(template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await?
-        {
+        let key = if let Some(template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await? {
             format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
         } else {
             format!("__tag__:{}:{}:_:{}_config", tenant_paths, app_paths, root_tag.to_ascii_lowercase())

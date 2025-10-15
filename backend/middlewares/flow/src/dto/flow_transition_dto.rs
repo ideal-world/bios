@@ -673,7 +673,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 } else {
                     left_value > right_value
                 }
-            },
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::Ge => {
                 if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
                     left >= right
@@ -682,7 +682,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 } else {
                     left_value >= right_value
                 }
-            },
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::Lt => {
                 if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
                     left < right
@@ -691,7 +691,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 } else {
                     left_value < right_value
                 }
-            },
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::Le => {
                 if let (Ok(left), Ok(right)) = (left_value.parse::<f64>(), right_value.parse::<f64>()) {
                     left <= right
@@ -700,7 +700,7 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                 } else {
                     left_value <= right_value
                 }
-            },
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::Like => left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::NotLike => !left_value.contains(&right_value),
             FlowTransitionFrontActionInfoRelevanceRelation::In => {
@@ -712,13 +712,10 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                     .collect::<Vec<_>>();
                 let left_values = TardisFuns::json
                     .str_to_obj::<Vec<Value>>(&left_value)
-                    .map(|r| r.into_iter()
-                    .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
-                    .collect::<Vec<_>>())
-                    .unwrap_or(vec![left_value.clone()])
-                    ;
+                    .map(|r| r.into_iter().map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string()).collect::<Vec<_>>())
+                    .unwrap_or(vec![left_value.clone()]);
                 left_values.iter().any(|item| right_values.contains(item))
-            },
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::NotIn => {
                 let right_values = TardisFuns::json
                     .str_to_obj::<Vec<Value>>(&right_value)
@@ -728,13 +725,10 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
                     .collect::<Vec<_>>();
                 let left_values = TardisFuns::json
                     .str_to_obj::<Vec<Value>>(&left_value)
-                    .map(|r| r.into_iter()
-                    .map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string())
-                    .collect::<Vec<_>>())
-                    .unwrap_or(vec![left_value.clone()])
-                    ;
+                    .map(|r| r.into_iter().map(|item| item.as_str().unwrap_or(item.to_string().as_str()).to_string()).collect::<Vec<_>>())
+                    .unwrap_or(vec![left_value.clone()]);
                 !left_values.iter().any(|item| right_values.contains(item))
-            },
+            }
             FlowTransitionFrontActionInfoRelevanceRelation::Between => {
                 let interval = TardisFuns::json.str_to_obj::<Vec<String>>(&right_value).unwrap_or_default();
                 if interval.len() != 2 {
