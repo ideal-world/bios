@@ -59,6 +59,7 @@ pub const OPENAPI_GATEWAY_PLUGIN_TIME_RANGE: &str = "redis-time-range:opres-time
 pub const OPENAPI_GATEWAY_PLUGIN_LIMIT: &str = "redis-limit:opres-limit";
 pub const OPENAPI_GATEWAY_PLUGIN_COUNT: &str = "redis-count:opres-count";
 pub const OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE: &str = "redis-dynamic-route:opres-dynamic-route";
+pub const OPENAPI_GATEWAY_PLUGIN_BIND_API_RES: &str = "redis-bind-api:opres-bind-res";
 
 pub const DEFAULT_V_CODE_CD_IN_SEC: u32 = 60;
 

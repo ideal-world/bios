@@ -477,6 +477,29 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn add_or_modify_bind_api_res(spec_id: &str, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!(
+            "add bind_api_res: spec_id={},bind_api_res={:?}",
+            spec_id,
+            bind_api_res,
+        );
+        let cache_key = format!(
+            "{}{}:{}",
+            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+            iam_constants::OPENAPI_GATEWAY_PLUGIN_BIND_API_RES,
+            spec_id,
+        );
+        funs.cache().del(cache_key.as_str()).await?;
+
+        funs.cache()
+            .lpushmulti(
+                cache_key.as_str(),
+                bind_api_res.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
+            )
+            .await?;
+        Ok(())
+    }
+
     pub async fn get_gateway_cumulative_count(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         let result = funs

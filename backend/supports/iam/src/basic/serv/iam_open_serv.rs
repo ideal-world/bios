@@ -80,6 +80,9 @@ impl IamOpenServ {
                 )
                 .await?;
                 Self::set_rel_ak_cache(&spec.id, funs, ctx).await?;
+                if let Some(bind_api_res) = spec_req.bind_api_res.clone() {
+                    IamIdentCacheServ::add_or_modify_bind_api_res(&spec.id, bind_api_res, funs).await?;
+                }
             } else {
                 let spec_id = IamResServ::add_item(
                     &mut IamResAddReq {
@@ -96,6 +99,9 @@ impl IamOpenServ {
                 )
                 .await?;
                 IamRelServ::add_simple_rel(&IamRelKind::IamProductSpec, &product.id, &spec_id, None, None, false, false, funs, ctx).await?;
+                if let Some(bind_api_res) = spec_req.bind_api_res.clone() {
+                    IamIdentCacheServ::add_or_modify_bind_api_res(&spec_id, bind_api_res, funs).await?;
+                }
             }
         }
         Ok(())

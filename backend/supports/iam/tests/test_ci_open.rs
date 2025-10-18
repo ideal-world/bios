@@ -30,6 +30,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
                     url: None,
                     scope_level: None,
                     disabled: None,
+                    bind_api_res: None,
                 },
                 IamOpenAddSpecReq {
                     code: TrimString(spec2_code.clone()),
@@ -38,6 +39,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
                     url: None,
                     scope_level: None,
                     disabled: None,
+                    bind_api_res: None,
                 },
             ],
         },
@@ -60,6 +62,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
                     url: None,
                     scope_level: None,
                     disabled: None,
+                    bind_api_res: None,
                 },
                 IamOpenAddSpecReq {
                     code: TrimString(spec2_code.clone()),
@@ -68,6 +71,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
                     url: None,
                     scope_level: None,
                     disabled: None,
+                    bind_api_res: None,
                 },
             ],
         },

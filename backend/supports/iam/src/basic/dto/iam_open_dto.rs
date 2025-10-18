@@ -26,6 +26,8 @@ pub struct IamOpenAddSpecReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+
+    pub bind_api_res: Option<Vec<String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
