@@ -19,6 +19,8 @@ pub mod base_spi_client;
 pub mod spi_kv_client;
 #[cfg(feature = "spi_log")]
 pub mod spi_log_client;
+#[cfg(feature = "spi_object")]
+pub mod spi_object_client;
 #[cfg(feature = "spi_search")]
 pub mod spi_search_client;
 #[cfg(feature = "spi_stats")]
