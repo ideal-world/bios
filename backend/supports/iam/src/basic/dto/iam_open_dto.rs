@@ -38,6 +38,7 @@ pub struct IamOpenBindAkProductReq {
     pub end_time: Option<chrono::DateTime<Utc>>,
     pub api_call_frequency: Option<u32>,
     pub api_call_count: Option<u32>,
+    pub create_proj_code: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]

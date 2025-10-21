@@ -220,7 +220,28 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
         .id;
 
-        Self::bind_cert_product(cert_id, &product_id, None, funs, ctx).await?;
+        let create_proj_id = if let Some(create_proj_code) = &bind_req.create_proj_code {
+            Some(
+                IamResServ::find_one_detail_item(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            code: Some(format!("{}/*/{}", IamResKind::Product.to_int(), create_proj_code)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
+                .id
+            )
+        } else {
+            None
+        };
+
+        Self::bind_cert_product(cert_id, &product_id, None, create_proj_id, funs, ctx).await?;
         Self::bind_cert_spec(
             cert_id,
             &spec_id,
@@ -263,7 +284,7 @@ impl IamOpenServ {
         Ok(())
     }
 
-    async fn bind_cert_product(cert_id: &str, product_id: &str, own_paths: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn bind_cert_product(cert_id: &str, product_id: &str, own_paths: Option<String>, ext: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: IamRelKind::IamCertProduct.to_string(),
@@ -273,7 +294,7 @@ impl IamOpenServ {
                 to_rbum_item_id: product_id.to_string(),
                 to_own_paths: own_paths.unwrap_or_else(|| ctx.own_paths.clone()),
                 to_is_outside: true,
-                ext: None,
+                ext,
                 disabled: None,
             },
             attrs: vec![],
