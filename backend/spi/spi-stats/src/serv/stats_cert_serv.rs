@@ -130,6 +130,8 @@ pub(crate) async fn get_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &Ta
     if let Some(rbum_cert) = RbumCertServ::find_one_detail_rbum(
         &RbumCertFilterReq {
             basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                own_paths: Some("".to_string()),
                 ids: Some(vec![cert_id.to_string()]),
                 ..Default::default()
             },
