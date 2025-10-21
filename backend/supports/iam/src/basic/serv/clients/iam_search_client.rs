@@ -1,6 +1,9 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
+use bios_basic::rbum::{
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
+    serv::rbum_item_serv::RbumItemCrudOperation,
+};
 use bios_sdk_invoke::{
     clients::spi_search_client::SpiSearchClient,
     dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
@@ -17,7 +20,7 @@ use crate::{
     basic::{
         dto::{
             iam_account_dto::IamAccountDetailAggResp,
-            iam_filer_dto::{IamAccountFilterReq, IamTenantFilterReq},
+            iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         },
         serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ},
     },
@@ -173,12 +176,40 @@ impl IamSearchClient {
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
         let key = account_id.to_string();
-        let raw_roles = IamAccountServ::find_simple_rel_roles(&account_resp.id, true, Some(true), None, funs, ctx).await?;
+        let raw_roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    rel_item_id: Some(account_id.to_string()),
+                    tag: Some(IamRelKind::IamAccountRole.to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &mock_ctx,
+        )
+        .await?;
         let mut roles_set = HashSet::new();
+        let mut raw_roles_map = HashMap::new();
         for role in raw_roles {
-            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                roles_set.insert(role.rel_id);
-            }
+            roles_set.insert(role.id.clone());
+            raw_roles_map.insert(
+                role.id.clone(),
+                json!({
+                    "name": role.name,
+                    "own_paths": role.own_paths,
+                    "scope_level": role.scope_level,
+                }),
+            );
         }
         let account_roles = roles_set.into_iter().collect_vec();
         let mut ext = json!({
@@ -186,6 +217,7 @@ impl IamSearchClient {
             "temporary":account_resp.temporary,
             "lock_status": account_resp.lock_status,
             "role_id": account_roles,
+            "role": raw_roles_map,
             "dept_id": account_resp_dept_id,
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
