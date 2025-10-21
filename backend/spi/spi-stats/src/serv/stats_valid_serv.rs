@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    db::sea_orm::{sea_query::extension::postgres::PgExpr, Value},
+    db::sea_orm::{sea_query::extension::postgres::PgExpr, Iden, Value},
     regex::{self, Regex},
 };
 
@@ -56,6 +57,10 @@ pub(crate) fn process_sql_json(sql: &str, fact_record: serde_json::Value) -> Tar
                 serde_json::Value::String(s) => values.push(Value::from(s.clone())),
                 serde_json::Value::Number(n) => values.push(Value::from(n.as_i64().unwrap())),
                 serde_json::Value::Bool(b) => values.push(Value::from(*b)),
+                serde_json::Value::Array(a) => {
+                    values.push(Value::Json(Some(Box::new(serde_json::Value::Array(a.clone())))));
+                }
+                serde_json::Value::Null => values.push(Value::from("")),
                 _ => {
                     is_err = true;
                     err_msg = Err(TardisError::bad_request(

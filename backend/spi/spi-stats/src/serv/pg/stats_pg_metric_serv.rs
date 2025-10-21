@@ -1322,6 +1322,13 @@ pub async fn query_metrics_record_detail_paginated(
             show_names: detail.show_name.clone(),
         });
     }
+    for detail in &external_details {
+        keys.insert(detail.key.as_str());
+        columns.push(StatsQueryRecordDetailColumnResp {
+            key: detail.key.clone(),
+            show_names: detail.show_name.clone(),
+        });
+    }
     if !keys.contains("name") {
         columns.insert(
             0,
@@ -1352,7 +1359,8 @@ pub async fn query_metrics_record_detail_paginated(
             map.insert("own_paths".to_string(), record.get("own_paths").cloned().unwrap_or(serde_json::Value::Null));
             map.insert("ct".to_string(), record.get("ct").cloned().unwrap_or(serde_json::Value::Null));
             for detail in dimension_details_clone {
-                map.insert(detail.key.clone(), record.get(&detail.key).cloned().unwrap_or(serde_json::Value::Null));
+                let value = stats_pg_conf_fact_detail_serv::sql_or_url_execute(detail.clone(), record.clone(), funs, &ctx).await?;
+                map.insert(detail.key.clone(), value.unwrap_or(record.get(&detail.key).cloned().unwrap_or(serde_json::Value::Null)));
             }
             for detail in external_details_clone {
                 let value = stats_pg_conf_fact_detail_serv::sql_or_url_execute(detail.clone(), record.clone(), funs, &ctx).await?;

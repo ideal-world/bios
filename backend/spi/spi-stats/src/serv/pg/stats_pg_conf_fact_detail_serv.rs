@@ -9,7 +9,7 @@ use tardis::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::Value,
     },
-    web::{tokio_tungstenite::tungstenite::handshake::headers, web_resp::TardisPage},
+    web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
@@ -84,30 +84,30 @@ pub(crate) async fn add(
                     "409-spi-stats-fact-detail-conf-method-required",
                 ));
             }
-            match add_req.method.clone().unwrap_or(StatsFactDetailMethodKind::Sql) {
-                StatsFactDetailMethodKind::Sql => {
-                    if let Some(rel_sql) = &add_req.rel_sql {
-                        if !stats_valid_serv::validate_select_sql(rel_sql) {
-                            return Err(funs.err().conflict(
-                                "fact_detail_conf",
-                                "add",
-                                "The rel_sql is not a valid sql.",
-                                "409-spi-stats-fact-detail-conf-rel-sql-not-valid",
-                            ));
-                        }
-                    }
+        }
+    }
+    match add_req.method.clone().unwrap_or(StatsFactDetailMethodKind::Sql) {
+        StatsFactDetailMethodKind::Sql => {
+            if let Some(rel_sql) = &add_req.rel_sql {
+                if !stats_valid_serv::validate_select_sql(rel_sql) {
+                    return Err(funs.err().conflict(
+                        "fact_detail_conf",
+                        "add",
+                        "The rel_sql is not a valid sql.",
+                        "409-spi-stats-fact-detail-conf-rel-sql-not-valid",
+                    ));
                 }
-                StatsFactDetailMethodKind::Url => {
-                    if let Some(rel_url) = &add_req.rel_url {
-                        if !stats_valid_serv::validate_url(rel_url) {
-                            return Err(funs.err().conflict(
-                                "fact_detail_conf",
-                                "add",
-                                "The rel_url is not a valid url.",
-                                "409-spi-stats-fact-detail-conf-rel-url-not-valid",
-                            ));
-                        }
-                    }
+            }
+        }
+        StatsFactDetailMethodKind::Url => {
+            if let Some(rel_url) = &add_req.rel_url {
+                if !stats_valid_serv::validate_url(rel_url) {
+                    return Err(funs.err().conflict(
+                        "fact_detail_conf",
+                        "add",
+                        "The rel_url is not a valid url.",
+                        "409-spi-stats-fact-detail-conf-rel-url-not-valid",
+                    ));
                 }
             }
         }
@@ -189,49 +189,29 @@ pub(crate) async fn modify(
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_detail_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
     if let Some(fact_detail_info) = get_fact_detail(fact_conf_key, fact_conf_col_key.unwrap_or(""), fact_conf_detail_key, funs, ctx, inst).await? {
-        if fact_detail_info.kind == StatsFactDetailKind::Dimension {
-            // The rel_sql, and rel_url cannot be modified when the kind is Dimension.
-            if modify_req.rel_sql.is_some() {
-                return Err(funs.err().conflict(
-                    "fact_col_conf",
-                    "add",
-                    "The rel_sql can not be modified when the kind is Dimension.",
-                    "409-spi-stats-fact-col-conf-rel-sql-not-allowed",
-                ));
-            }
-            if modify_req.rel_url.is_some() {
-                return Err(funs.err().conflict(
-                    "fact_col_conf",
-                    "add",
-                    "The rel_url can not be modified when the kind is Dimension.",
-                    "409-spi-stats-fact-col-conf-rel-url-not-allowed",
-                ));
-            }
-        } else if fact_detail_info.kind == StatsFactDetailKind::External {
-            let method = fact_detail_info.method.unwrap_or(StatsFactDetailMethodKind::Sql);
-            match method {
-                StatsFactDetailMethodKind::Sql => {
-                    if let Some(rel_sql) = &modify_req.rel_sql {
-                        if !stats_valid_serv::validate_select_sql(rel_sql) {
-                            return Err(funs.err().conflict(
-                                "fact_detail_conf",
-                                "add",
-                                "The rel_sql is not a valid sql.",
-                                "409-spi-stats-fact-detail-conf-rel-sql-not-valid",
-                            ));
-                        }
+        let method = fact_detail_info.method.unwrap_or(StatsFactDetailMethodKind::Sql);
+        match method {
+            StatsFactDetailMethodKind::Sql => {
+                if let Some(rel_sql) = &modify_req.rel_sql {
+                    if !stats_valid_serv::validate_select_sql(rel_sql) {
+                        return Err(funs.err().conflict(
+                            "fact_detail_conf",
+                            "modify",
+                            "The rel_sql is not a valid sql.",
+                            "409-spi-stats-fact-detail-conf-rel-sql-not-valid",
+                        ));
                     }
                 }
-                StatsFactDetailMethodKind::Url => {
-                    if let Some(rel_url) = &modify_req.rel_url {
-                        if !stats_valid_serv::validate_url(rel_url) {
-                            return Err(funs.err().conflict(
-                                "fact_detail_conf",
-                                "add",
-                                "The rel_url is not a valid url.",
-                                "409-spi-stats-fact-detail-conf-rel-url-not-valid",
-                            ));
-                        }
+            }
+            StatsFactDetailMethodKind::Url => {
+                if let Some(rel_url) = &modify_req.rel_url {
+                    if !stats_valid_serv::validate_url(rel_url) {
+                        return Err(funs.err().conflict(
+                            "fact_detail_conf",
+                            "modify",
+                            "The rel_url is not a valid url.",
+                            "409-spi-stats-fact-detail-conf-rel-url-not-valid",
+                        ));
                     }
                 }
             }
@@ -597,18 +577,22 @@ async fn do_sql_execute(
         return Ok(None);
     }
     let data_source_conn = stats_cert_serv::get_db_conn_by_cert_id(&cert_id, funs, ctx).await?;
-    let (sql, params) = stats_valid_serv::process_sql_json(&sql, fact_record)?;
-    if let Some(rel_record) = data_source_conn.query_one(&sql, params).await? {
-        if let Some(first_column) = rel_record.column_names().get(0) {
-            if let Ok(int_val) = rel_record.try_get::<i64>("", first_column) {
-                return Ok(Some(serde_json::Value::from(int_val)));
-            } else if let Ok(float_val) = rel_record.try_get::<f64>("", first_column) {
-                return Ok(Some(serde_json::Value::from(float_val)));
-            } else if let Ok(bool_val) = rel_record.try_get::<bool>("", first_column) {
-                return Ok(Some(serde_json::Value::from(bool_val)));
-            } else {
-                let str_val: String = rel_record.try_get("", first_column)?;
-                return Ok(Some(serde_json::Value::from(str_val)));
+    match stats_valid_serv::process_sql_json(&sql, fact_record) {
+        Err(_) => return Ok(None),
+        Ok((processed_sql, params)) => {
+            if let Some(rel_record) = data_source_conn.query_one(&processed_sql, params).await? {
+                if let Some(first_column) = rel_record.column_names().get(0) {
+                    if let Ok(int_val) = rel_record.try_get::<i64>("", first_column) {
+                        return Ok(Some(serde_json::Value::from(int_val)));
+                    } else if let Ok(float_val) = rel_record.try_get::<f64>("", first_column) {
+                        return Ok(Some(serde_json::Value::from(float_val)));
+                    } else if let Ok(bool_val) = rel_record.try_get::<bool>("", first_column) {
+                        return Ok(Some(serde_json::Value::from(bool_val)));
+                    } else {
+                        let str_val: String = rel_record.try_get("", first_column)?;
+                        return Ok(Some(serde_json::Value::from(str_val)));
+                    }
+                }
             }
         }
     }

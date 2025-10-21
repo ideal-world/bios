@@ -15,7 +15,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         ("r002", "t1/a1", "zhejiang", "open", 1, vec!["t1", "t2"], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
         ("r003", "t1/a1", "hangzhou", "open", 1, vec!["t1", "t2"], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
         ("r004", "t1/a1", "taizhou", "open", 1, vec!["t1", "t2"], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
-        ("r005", "t1/a1", "hangzhou", "open", 1, vec![], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
+        ("t1", "t1/a1", "hangzhou", "open", 1, vec![], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
         ("r006", "t1/a1", "hangzhou", "open", 1, vec!["t1"], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
         ("r007", "t1/a1", "hangzhou", "open", 1, vec!["t2"], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
         ("r008", "t1/a1", "hangzhou", "open", 2, vec!["t2"], "acc001", 10, 20, "2023-01-01T12:00:00.000Z"),
@@ -536,7 +536,7 @@ pub async fn test_metric_record_detail_query(client: &mut TestHttpClient) -> Tar
         .await;
     assert_eq!(resp.columns[0].key, "name");
     assert_eq!(resp.columns[resp.columns.len() - 1].key, "ct");
-    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.columns.len(), 9);
     assert_eq!(resp.data.total_size, 10);
     assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
     assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");
@@ -555,7 +555,7 @@ pub async fn test_metric_record_detail_query(client: &mut TestHttpClient) -> Tar
             }),
         )
         .await;
-    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.columns.len(), 9);
     assert_eq!(resp.columns[0].key, "name");
     assert_eq!(resp.columns[resp.columns.len() - 1].key, "ct");
     assert_eq!(resp.data.total_size, 10);
@@ -581,7 +581,7 @@ pub async fn test_metric_record_detail_query(client: &mut TestHttpClient) -> Tar
             }),
         )
         .await;
-    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.columns.len(), 9);
     assert_eq!(resp.data.total_size, 1);
     assert_eq!(resp.data.records[0].get("key").unwrap(), "r011");
     assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r011");
@@ -601,7 +601,7 @@ pub async fn test_metric_record_detail_query(client: &mut TestHttpClient) -> Tar
             }),
         )
         .await;
-    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.columns.len(), 9);
     assert_eq!(resp.data.total_size, 9);
     assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
     assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");
@@ -621,7 +621,7 @@ pub async fn test_metric_record_detail_query(client: &mut TestHttpClient) -> Tar
             }),
         )
         .await;
-    assert_eq!(resp.columns.len(), 6);
+    assert_eq!(resp.columns.len(), 9);
     assert_eq!(resp.data.total_size, 8);
     assert_eq!(resp.data.records[0].get("key").unwrap(), "r002");
     assert_eq!(resp.data.records[0].get("external_sql").unwrap(), "r002");

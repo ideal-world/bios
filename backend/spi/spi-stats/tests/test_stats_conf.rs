@@ -519,6 +519,21 @@ pub async fn test_fact_detail_conf(client: &mut TestHttpClient) -> TardisResult<
         )
         .await;
 
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/detail",
+            &json!({
+                "key":"external_sql_attr",
+                "show_name":"需求外部sql_attr",
+                "remark": "需求外部sql_attr说明",
+                "kind": "external",
+                "method":"sql",
+                "rel_cert_id": sync_db_config_vec.get(0).unwrap().id,
+                "rel_sql":"select key from spi617070303031.starsys_stats_inst_fact_req where key in (select jsonb_array_elements_text(${tag})) limit 1",
+            }),
+        )
+        .await;
+
     //  kind = external and method = url check rel_url.
     assert_eq!(
         client
@@ -551,7 +566,7 @@ pub async fn test_fact_detail_conf(client: &mut TestHttpClient) -> TardisResult<
         )
         .await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10").await;
-    assert_eq!(list.total_size, 7);
+    assert_eq!(list.total_size, 8);
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10&show_name=来源").await;
     assert_eq!(list.total_size, 1);
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10&fact_detail_key=source").await;
@@ -577,7 +592,7 @@ pub async fn test_fact_detail_conf(client: &mut TestHttpClient) -> TardisResult<
 
     client.delete("/ci/conf/fact/req/detail/priority").await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/detail?page_number=1&page_size=10").await;
-    assert_eq!(list.total_size, 6);
+    assert_eq!(list.total_size, 7);
 
     Ok(())
 }
@@ -979,7 +994,20 @@ pub async fn test_fact_col_detail_conf(client: &mut TestHttpClient) -> TardisRes
             }),
         )
         .await;
-
+    let _: Void = client
+        .put(
+            "/ci/conf/fact/req/col/act_hours/detail",
+            &json!({
+                "key":"external_sql_attr",
+                "show_name":"需求外部sql_attr",
+                "remark": "需求外部sql_attr说明",
+                "kind": "external",
+                "method":"sql",
+                "rel_cert_id": sync_db_config_vec.get(0).unwrap().id,
+                "rel_sql":"select key from spi617070303031.starsys_stats_inst_fact_req where key in (select jsonb_array_elements_text(${tag})) limit 1",
+            }),
+        )
+        .await;
     //  kind = external and method = url check rel_url.
     assert_eq!(
         client
@@ -1012,7 +1040,7 @@ pub async fn test_fact_col_detail_conf(client: &mut TestHttpClient) -> TardisRes
         )
         .await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10").await;
-    assert_eq!(list.total_size, 7);
+    assert_eq!(list.total_size, 8);
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10&show_name=来源").await;
     assert_eq!(list.total_size, 1);
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10&fact_detail_key=source").await;
@@ -1038,7 +1066,7 @@ pub async fn test_fact_col_detail_conf(client: &mut TestHttpClient) -> TardisRes
 
     client.delete("/ci/conf/fact/req/col/act_hours/detail/priority").await;
     let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col/act_hours/detail?page_number=1&page_size=10").await;
-    assert_eq!(list.total_size, 6);
+    assert_eq!(list.total_size, 7);
 
     Ok(())
 }
