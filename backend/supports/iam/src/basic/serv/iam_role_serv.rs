@@ -118,7 +118,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 "添加内置角色".to_string(),
                 Some("AddEmbedRole".to_string()),
                 ctx,
-            ).await;
+            )
+            .await;
         }
         if !role.in_embed {
             let _ = IamLogClient::add_ctx_task(
@@ -127,7 +128,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 "添加自定义角色".to_string(),
                 Some("AddCustomizeRole".to_string()),
                 ctx,
-            ).await;
+            )
+            .await;
         }
 
         IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
@@ -253,10 +255,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await?;
-        if id == funs.iam_basic_role_app_admin_id()
-            || id == funs.iam_basic_role_sys_admin_id()
-            || id == funs.iam_basic_role_tenant_admin_id()
-        {
+        if id == funs.iam_basic_role_app_admin_id() || id == funs.iam_basic_role_sys_admin_id() || id == funs.iam_basic_role_tenant_admin_id() {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role can not be deleted", "409-iam-delete-role-conflict"));
         }
         if !item.deletable {
@@ -367,9 +366,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         let role = if let Some(role) = funs.cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await? {
             match TardisFuns::json.str_to_obj::<IamRoleDetailResp>(&role) {
                 Ok(role) => role,
-                Err(_) => {
-                    Self::do_get_item(id, filter, funs, ctx).await?
-                },
+                Err(_) => Self::do_get_item(id, filter, funs, ctx).await?,
             }
         } else {
             Self::do_get_item(id, filter, funs, ctx).await?
@@ -403,8 +400,7 @@ impl IamRoleServ {
         let base_roles = Self::find_detail_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: spec_role_aggs.clone()
-                        .map(|spec_role_aggs| spec_role_aggs.keys().cloned().collect_vec()),
+                    ids: spec_role_aggs.clone().map(|spec_role_aggs| spec_role_aggs.keys().cloned().collect_vec()),
                     ignore_scope: true,
                     with_sub_own_paths: false,
                     own_paths: Some("".to_string()),
@@ -1256,7 +1252,14 @@ impl IamRoleServ {
             if let Some(tenant_or_app_ids) = tenant_or_app_ids {
                 for (tenant_or_app_id, own_paths) in tenant_or_app_ids {
                     let tenant_or_app_ctx = TardisContext { own_paths, ..ctx.clone() };
-                    Self::extend_copy_role_agg(&tenant_or_app_id, Some(HashMap::from([(base_embed_role_id.clone(), res_ids.clone())])), kind, funs, &tenant_or_app_ctx).await?;
+                    Self::extend_copy_role_agg(
+                        &tenant_or_app_id,
+                        Some(HashMap::from([(base_embed_role_id.clone(), res_ids.clone())])),
+                        kind,
+                        funs,
+                        &tenant_or_app_ctx,
+                    )
+                    .await?;
                 }
             }
         }
@@ -1266,10 +1269,17 @@ impl IamRoleServ {
     pub async fn delete_role(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let role = Self::get_item(id, &IamRoleFilterReq::default(), funs, ctx).await?;
         if role.in_embed {
-            let sub_role_ids = Self::find_id_items(&IamRoleFilterReq {
-                extend_role_id: Some(role.id),
-                ..Default::default()
-            }, None, None, funs, ctx).await?;
+            let sub_role_ids = Self::find_id_items(
+                &IamRoleFilterReq {
+                    extend_role_id: Some(role.id),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             for sub_role_id in sub_role_ids {
                 Self::delete_item_with_all_rels(&sub_role_id, funs, ctx).await?;
             }
@@ -1280,20 +1290,27 @@ impl IamRoleServ {
         Ok(())
     }
     pub async fn refresh_role_cache(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let roles = Self::find_detail_items(&IamRoleFilterReq {
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
+        let roles = Self::find_detail_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for role in roles {
             funs.cache()
-            .set(
-                &format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, role.id),
-                TardisFuns::json.obj_to_string(&role)?.as_str(),
-            )
-            .await?;
+                .set(
+                    &format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, role.id),
+                    TardisFuns::json.obj_to_string(&role)?.as_str(),
+                )
+                .await?;
         }
         Ok(())
     }

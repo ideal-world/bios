@@ -17,7 +17,7 @@ use crate::serv::plugin_api_serv::PluginApiServ;
 pub struct PluginApiApi;
 
 /// Plugin Api API
-/// 
+///
 /// 插件 API 的请求
 #[poem_openapi::OpenApi(prefix_path = "/ci/spi/plugin/api", tag = "bios_basic::ApiTag::Interface")]
 impl PluginApiApi {

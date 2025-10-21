@@ -323,20 +323,10 @@ impl FlowCiInstApi {
     ///
     /// 获取实例列表
     #[oai(path = "/details", method = "post")]
-    async fn find_detail_items(
-        &self,
-        req: Json<FlowInstFilterReq>,
-        mut ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Vec<FlowInstDetailResp>> {
+    async fn find_detail_items(&self, req: Json<FlowInstFilterReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<FlowInstDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let result = FlowInstServ::find_detail_items(
-            &req.0,
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        let result = FlowInstServ::find_detail_items(&req.0, &funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

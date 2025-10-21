@@ -691,22 +691,41 @@ impl IamSubDeployServ {
         Ok(account_role)
     }
 
-    async fn export_project(sub_deploy_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(Vec<IamAppDetailResp>, HashMap<String, Vec<String>>, HashMap<String, Vec<IamRoleDetailResp>>, HashMap<String, Vec<String>>)> {
+    async fn export_project(
+        sub_deploy_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<(
+        Vec<IamAppDetailResp>,
+        HashMap<String, Vec<String>>,
+        HashMap<String, Vec<IamRoleDetailResp>>,
+        HashMap<String, Vec<String>>,
+    )> {
         let sub_deploy_app_ids = Self::find_rel_id_by_sub_deploy_id(&IamRelKind::IamSubDeployApp, sub_deploy_id, funs, ctx).await?;
-        let projects = IamAppServ::find_detail_items(&IamAppFilterReq {
-            basic: RbumBasicFilterReq {
-                ids: Some(sub_deploy_app_ids),
+        let projects = IamAppServ::find_detail_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(sub_deploy_app_ids),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         // 项目账号关系
         let mut account_projects: HashMap<String, Vec<String>> = HashMap::new();
         let mut role_projects: HashMap<String, Vec<IamRoleDetailResp>> = HashMap::new();
         let mut role_account_projects: HashMap<String, Vec<String>> = HashMap::new();
         for project in &projects {
             let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &project.id)?;
-            account_projects.insert(project.id.clone(), IamAppServ::find_rel_account(&project.id, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec());
+            account_projects.insert(
+                project.id.clone(),
+                IamAppServ::find_rel_account(&project.id, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec(),
+            );
             let role_projects_vec = IamRoleServ::find_detail_items(
                 &IamRoleFilterReq {
                     basic: RbumBasicFilterReq { ..Default::default() },
@@ -959,7 +978,15 @@ impl IamSubDeployServ {
     pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let _ = Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await;
         let _ = Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await;
-        let _ = Self::import_project(import_req.projects.clone(), import_req.account_projects.clone(), import_req.role_projects.clone(), import_req.role_account_projects.clone(), funs, ctx).await;
+        let _ = Self::import_project(
+            import_req.projects.clone(),
+            import_req.account_projects.clone(),
+            import_req.role_projects.clone(),
+            import_req.role_account_projects.clone(),
+            funs,
+            ctx,
+        )
+        .await;
         let _ = Self::import_iam_config(import_req.iam_config, funs, ctx).await;
         let _ = Self::import_account(
             import_req.accounts,
@@ -1339,7 +1366,14 @@ impl IamSubDeployServ {
         Ok(())
     }
 
-    async fn import_project(projects: Option<Vec<IamAppDetailResp>>, project_account: Option<HashMap<String, Vec<String>>>, role_projects: Option<HashMap<String, Vec<IamRoleDetailResp>>>, role_account_projects: Option<HashMap<String, Vec<String>>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn import_project(
+        projects: Option<Vec<IamAppDetailResp>>,
+        project_account: Option<HashMap<String, Vec<String>>>,
+        role_projects: Option<HashMap<String, Vec<IamRoleDetailResp>>>,
+        role_account_projects: Option<HashMap<String, Vec<String>>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         if let Some(projects) = projects {
             for project in projects {
                 let app_ctx = IamCertServ::use_app_ctx(ctx.clone(), &project.id)?;
@@ -1939,7 +1973,8 @@ impl
             funs,
             ctx,
         )
-        .await?.is_some()
+        .await?
+        .is_some()
         {
             return Err(funs.err().not_found(&Self::get_obj_name(), "add", "host is used", "409-sub-deploy-host-duplicate"));
         }

@@ -143,6 +143,7 @@ impl FlowRelServ {
 
     pub async fn find_from_simple_rels(
         flow_rel_kind: &FlowRelKind,
+        from_rbum_kind: &RbumRelFromKind,
         from_rbum_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -155,7 +156,7 @@ impl FlowRelServ {
         };
         RbumRelServ::find_from_simple_rels(
             &flow_rel_kind.to_string(),
-            &RbumRelFromKind::Item,
+            from_rbum_kind,
             true,
             from_rbum_id,
             desc_sort_by_create,
@@ -245,8 +246,6 @@ impl FlowRelServ {
     }
 
     pub async fn find_template_id_by_model_id(model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
-        Ok(
-            Self::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id)
-        )
+        Ok(Self::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &RbumRelFromKind::Item, model_id, None, None, funs, ctx).await?.pop().map(|rel| rel.rel_id))
     }
 }

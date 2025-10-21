@@ -223,7 +223,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: Some("alloc".to_string()),
             note: None,
             ext: None,
-            disabled: None
+            disabled: None,
         },
         &funs,
         context,
@@ -418,7 +418,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
             to_own_paths: context.own_paths.to_string(),
             to_is_outside: true,
             ext: None,
-            disabled: None
+            disabled: None,
         },
         &funs,
         context,
@@ -1012,7 +1012,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 to_own_paths: context.own_paths.to_string(),
                 to_is_outside: false,
                 ext: None,
-                disabled: None
+                disabled: None,
             },
             attrs: vec![
                 RbumRelAttrAggAddReq {

@@ -12,7 +12,9 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq,
+    FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp,
+    FlowModelUnbindStateReq,
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -200,7 +202,13 @@ impl FlowCcModelApi {
     /// - `temp_id` - associated template_id
     /// - `is_shared` - whether the associated template is shared
     #[oai(path = "/find_rel_models", method = "put")]
-    async fn find_rel_models(&self, temp_id: Query<Option<String>>, tag_ids: Query<Option<String>>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
+    async fn find_rel_models(
+        &self,
+        temp_id: Query<Option<String>>,
+        tag_ids: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<HashMap<String, FlowModelSummaryResp>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowModelServ::find_rel_model_map(temp_id.0, tag_ids.0.map(|s| s.split(",").map(|tag| tag.to_string()).collect_vec()), true, &funs, &ctx.0).await?;
@@ -439,12 +447,7 @@ impl FlowCcModelApi {
     ///
     ///
     #[oai(path = "/copy_or_reference_model", method = "post")]
-    async fn copy_or_reference_model(
-        &self,
-        req: Json<FlowModelCopyOrReferenceCiReq>,
-        ctx: TardisContextExtractor,
-        _request: &Request,
-    ) -> TardisApiResult<HashMap<String, String>> {
+    async fn copy_or_reference_model(&self, req: Json<FlowModelCopyOrReferenceCiReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<HashMap<String, String>> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let orginal_models = FlowModelServ::find_rel_model_map(req.0.target_template_id.clone(), None, true, &funs, &ctx.0).await?;
@@ -479,17 +482,45 @@ impl FlowCcModelApi {
         let rel_main_tags = rel_main_models.iter().map(|m| m.tag.clone()).collect_vec();
         for rel_main_model in rel_main_models {
             let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&rel_main_model.tag).cloned().unwrap_or_default());
-            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), &update_states, req.0.data_source.clone(), &funs, &ctx.0).await?;
+            let new_model = FlowModelServ::copy_or_reference_main_model(
+                &rel_main_model.id,
+                &req.0.op,
+                if req.0.target_template_id.is_none() {
+                    FlowModelKind::AsModel
+                } else {
+                    FlowModelKind::AsTemplateAndAsModel
+                },
+                req.0.target_template_id.clone(),
+                &update_states,
+                req.0.data_source.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
         // 需要删除的主模型
-        let delete_main_models = orginal_models.iter().filter(|(orginal_tag, _)| !rel_main_tags.contains(*orginal_tag)).map(|(_, orginal_model)| orginal_model).cloned().collect_vec();
+        let delete_main_models =
+            orginal_models.iter().filter(|(orginal_tag, _)| !rel_main_tags.contains(*orginal_tag)).map(|(_, orginal_model)| orginal_model).cloned().collect_vec();
         for delete_main_model in delete_main_models {
             FlowModelServ::delete_item(&delete_main_model.id, &funs, &ctx.0).await?;
         }
         let rel_non_main_models = rel_models.iter().filter(|model| !model.main).cloned().collect::<Vec<_>>();
         for rel_non_main_model in rel_non_main_models {
-            let _ = FlowModelServ::copy_or_reference_non_main_model(&rel_non_main_model.id, &req.0.op, if req.0.target_template_id.is_none() { FlowModelKind::AsModel } else { FlowModelKind::AsTemplateAndAsModel }, req.0.target_template_id.clone(), req.0.data_source.clone(), &funs, &ctx.0).await?;
+            let _ = FlowModelServ::copy_or_reference_non_main_model(
+                &rel_non_main_model.id,
+                &req.0.op,
+                if req.0.target_template_id.is_none() {
+                    FlowModelKind::AsModel
+                } else {
+                    FlowModelKind::AsTemplateAndAsModel
+                },
+                req.0.target_template_id.clone(),
+                req.0.data_source.clone(),
+                &funs,
+                &ctx.0,
+            )
+            .await?;
         }
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;

@@ -741,7 +741,7 @@ pub struct ModifyObjSearchExtReq {
     pub status: Option<String>,                    // 当前状态
     pub rel_state: Option<String>,                 // 审批状态
     pub rel_transition_state_name: Option<String>, // 审批节点名
-    pub current_state_color: Option<String>,        // 当前状态颜色信息
+    pub current_state_color: Option<String>,       // 当前状态颜色信息
 }
 
 /// 实例统计数量请求
