@@ -127,24 +127,19 @@ pub(crate) async fn get_db_conn_by_cert_id(cert_id: &str, funs: &TardisFunsInst,
 }
 
 pub(crate) async fn get_db_config(cert_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<StatsSyncDbConfigInfoWithSkResp> {
-    if let Some(rbum_cert) = RbumCertServ::find_one_detail_rbum(
-        &RbumCertFilterReq {
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
-                own_paths: Some("".to_string()),
-                ids: Some(vec![cert_id.to_string()]),
-                ..Default::default()
-            },
-            kind: Some(SPI_PG_KIND_CODE.to_string()),
-            suppliers: Some(vec![DOMAIN_CODE.to_string()]),
+    let filter = RbumCertFilterReq {
+        basic: RbumBasicFilterReq {
+            with_sub_own_paths: true,
+            own_paths: Some("".to_string()),
+            ids: Some(vec![cert_id.to_string()]),
             ..Default::default()
         },
-        funs,
-        ctx,
-    )
-    .await?
-    {
-        let db_password = RbumCertServ::show_sk(cert_id, &RbumCertFilterReq::default(), funs, ctx).await?;
+        kind: Some(SPI_PG_KIND_CODE.to_string()),
+        suppliers: Some(vec![DOMAIN_CODE.to_string()]),
+        ..Default::default()
+    };
+    if let Some(rbum_cert) = RbumCertServ::find_one_detail_rbum(&filter, funs, ctx).await? {
+        let db_password = RbumCertServ::show_sk(cert_id, &filter, funs, ctx).await?;
         let ext = serde_json::from_str::<StatsSyncDbConfigExt>(&rbum_cert.ext).ok();
         let max_connections = ext.clone().and_then(|ext| ext.max_connections);
         let min_connections = ext.clone().and_then(|ext| ext.min_connections);
