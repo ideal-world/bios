@@ -1,18 +1,17 @@
 use tardis::basic::dto::TardisContext;
-use tardis::chrono::{DateTime, Utc};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Query;
 
 use tardis::log::error;
-use tardis::tokio;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
+use tardis::{serde_json, tokio};
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq,
-    SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq,
+    SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 use crate::serv::search_item_serv;
 use tardis::log::warn;
@@ -66,11 +65,19 @@ impl SearchCiItemApi {
         TardisResp::ok(resp)
     }
 
-    ///group Search Items
+    ///Group Search Items
     #[oai(path = "/group/search", method = "put")]
     async fn group_search(&self, mut search_req: Json<GroupSearchItemSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<GroupSearchItemSearchResp>> {
         let funs = crate::get_tardis_inst();
         let resp = search_item_serv::group_search(&mut search_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Multiple Search Items
+    #[oai(path = "/multiple/search", method = "put")]
+    async fn multiple_search(&self, mut search_req: Json<MultipleSearchItemSearchReq>, ctx: TardisContextExtractor) -> TardisApiResult<TardisPage<serde_json::Value>> {
+        let funs = crate::get_tardis_inst();
+        let resp = search_item_serv::multiple_search(&mut search_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 

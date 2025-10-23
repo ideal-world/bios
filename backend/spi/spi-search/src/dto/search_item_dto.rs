@@ -166,7 +166,52 @@ pub struct GroupSearchItemSearchReq {
     // Search conditions
     pub query: SearchItemQueryReq,
     // Advanced search
+    pub adv_by_or: Option<bool>,
     pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MultipleSearchItemSearchReq {
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
+    pub tag: String,
+    // Search context for record permission filtering
+    pub ctx: SearchItemSearchCtxReq,
+    // Search conditions
+    pub query: SearchItemQueryReq,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
+    /// Join conditions
+    pub joins: Vec<MultipleJoinSearchItemSearchReq>,
+    // Sort
+    // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
+    pub sort: Option<Vec<SearchItemSearchSortReq>>,
+    pub page: SearchItemSearchPageReq,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MultipleJoinSearchItemSearchReq {
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
+    pub tag: String,
+    // Whether it is a inner join
+    pub inner: Option<bool>,
+    // Join columns
+    pub join_columns: Vec<MultipleJoinColumnSearchItemSearchReq>,
+    // Return columns
+    pub return_columns: Option<Vec<MultipleJoinReturnColumnSearchItemSearchReq>>,
+    // Advanced search
+    pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MultipleJoinColumnSearchItemSearchReq {
+    pub on_local_field: String,
+    pub on_foreign_field: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MultipleJoinReturnColumnSearchItemSearchReq {
+    pub column: String,
+    pub column_alias_name: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default, Clone)]
