@@ -38,7 +38,7 @@ pub trait S3 {
             ObjectObjPresignKind::Upload => {
                 let headers = obj_exp.map(|o| -> TardisResult<HeaderMap> {
                     let mut headers = HeaderMap::new();
-                    headers.insert("Expires", HeaderValue::from_str(&o.to_string())
+                    headers.insert("x-obs-expires", HeaderValue::from_str(&o.to_string())
                         .map_err(|_| TardisError::internal_error("Cannot convert expires to header value", "500-spi-object-invalid-header-value"))?);
                     Ok(headers)
                 }).transpose()?;
