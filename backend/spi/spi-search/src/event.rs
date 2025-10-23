@@ -3,7 +3,10 @@ use bios_sdk_invoke::{
     dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq},
 };
 
-use tardis::basic::{dto::TardisContext, result::TardisResult};
+use tardis::{
+    basic::{dto::TardisContext, result::TardisResult},
+    log::instrument,
+};
 
 use crate::{search_initializer::get_tardis_inst, serv};
 
@@ -26,16 +29,16 @@ async fn handle_delete_event(req: SearchEventItemDeleteReq, ctx: TardisContext) 
 }
 
 pub async fn handle_events() -> TardisResult<()> {
-    if let Some(node) = mq_client_node_opt() {
-        node.create_endpoint(SPI_RPC_TOPIC, [Interest::new("search/*")])
-            .await
-            .map_err(mq_error)?
-            .into_event_loop()
-            .with_handler(ContextHandler(handle_modify_event))
-            .with_handler(ContextHandler(handle_add_event))
-            .with_handler(ContextHandler(handle_delete_event))
-            .spawn();
-    }
+    // if let Some(node) = mq_client_node_opt() {
+    //     node.create_endpoint(SPI_RPC_TOPIC, [Interest::new("search/*")])
+    //         .await
+    //         .map_err(mq_error)?
+    //         .into_event_loop()
+    //         .with_handler(ContextHandler(handle_modify_event))
+    //         .with_handler(ContextHandler(handle_add_event))
+    //         .with_handler(ContextHandler(handle_delete_event))
+    //         .spawn();
+    // }
 
     Ok(())
 }

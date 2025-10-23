@@ -1,14 +1,13 @@
+use crate::dto::search_item_dto::{
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq,
+    SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+};
+use crate::search_initializer;
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use bios_basic::spi_dispatch_service;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
-
-use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq,
-    SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
-};
-use crate::search_initializer;
 
 #[cfg(feature = "spi-es")]
 use super::es;
@@ -30,6 +29,7 @@ spi_dispatch_service! {
         delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;
         search(search_req: &mut SearchItemSearchReq) -> TardisResult<TardisPage<SearchItemSearchResp>>;
         group_search(search_req: &mut GroupSearchItemSearchReq) -> TardisResult<Vec<GroupSearchItemSearchResp>>;
+        multiple_search(search_req: &mut MultipleSearchItemSearchReq) -> TardisResult<TardisPage<tardis::serde_json::Value>>;
         query_metrics(query_req: &SearchQueryMetricsReq) -> TardisResult<SearchQueryMetricsResp>;
         refresh_tsv(tag: &str) -> TardisResult<()>;
         export_data(export_req: &SearchExportDataReq) -> TardisResult<SearchExportDataResp>;

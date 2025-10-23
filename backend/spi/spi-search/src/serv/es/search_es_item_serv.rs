@@ -14,8 +14,9 @@ use bios_basic::{
 };
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq,
-    SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq,
+    SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp,
+    SearchQueryMetricsReq, SearchQueryMetricsResp,
 };
 
 use super::search_es_initializer;
@@ -346,6 +347,20 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
 
 pub async fn group_search(search_req: &mut GroupSearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<Vec<GroupSearchItemSearchResp>> {
     Ok(vec![])
+}
+
+pub async fn multiple_search(
+    search_req: &mut MultipleSearchItemSearchReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<serde_json::Value>> {
+    Ok(TardisPage {
+        page_size: search_req.page.size as u64,
+        page_number: search_req.page.number as u64,
+        total_size: 0,
+        records: vec![],
+    })
 }
 
 fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {

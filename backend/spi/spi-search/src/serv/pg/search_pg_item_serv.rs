@@ -20,9 +20,9 @@ use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper:
 
 use crate::{
     dto::search_item_dto::{
-        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq,
-        SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq,
-        SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchWordCombinationsRuleWay,
+        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp,
+        SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind,
+        SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchWordCombinationsRuleWay,
     },
     search_config::SearchConfig,
 };
@@ -388,7 +388,11 @@ WHERE
                 if sql_adv_query.is_empty() {
                     "".to_string()
                 } else {
-                    format!(" AND ( 1=1 {})", sql_adv_query.join(" "))
+                    format!(
+                        " {} ( 1=1 {})",
+                        if search_req.adv_by_or.unwrap_or(false) { " OR " } else { " AND " },
+                        sql_adv_query.join(" ")
+                    )
                 },
             )
             .as_str(),
@@ -406,6 +410,136 @@ WHERE
         })
         .collect::<TardisResult<Vec<GroupSearchItemSearchResp>>>()?;
     Ok(result)
+}
+
+pub async fn multiple_search(
+    search_req: &mut MultipleSearchItemSearchReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<serde_json::Value>> {
+    let mut where_fragments: Vec<String> = vec!["1=1".to_string()];
+    let mut sql_vals: Vec<Value> = vec![];
+    let table_alias_name = "search_item";
+    let mut join_from_fragments = "".to_string();
+    let mut join_select_fragments = "".to_string();
+    // query
+    let (select_fragments, from_fragments) = package_query(table_alias_name, search_req.query.clone(), &mut sql_vals, &mut where_fragments, funs)?;
+    // Add visit_keys filter
+    package_visit_filter(table_alias_name, search_req.ctx.clone(), &mut sql_vals, &mut where_fragments)?;
+    let order_fragments = package_order(table_alias_name, search_req.sort.clone())?;
+    // advanced query
+    let mut sql_adv_query = package_adv_query(table_alias_name, search_req.adv_query.clone(), &mut sql_vals, funs)?;
+    // page
+    let page_fragments = package_page(search_req.page.clone(), &mut sql_vals)?;
+    // joins
+    let mut join_index = 0;
+    for join in &search_req.joins {
+        let join_table_alias_name = format!("join_{}", join_index);
+        let mut join_on_fragment = "".to_string();
+        // join on condition
+        for join_column in &join.join_columns {
+            if !join_on_fragment.is_empty() {
+                join_on_fragment.push_str(" AND ");
+            }
+            join_on_fragment.push_str(&format!(
+                "{}.{} = {}.{}",
+                table_alias_name,
+                if INNER_FIELD.contains(&join_column.on_local_field.clone().as_str()) {
+                    join_column.on_local_field.to_string()
+                } else {
+                    format!("ext->>'{}'", join_column.on_local_field)
+                },
+                join_table_alias_name,
+                if INNER_FIELD.contains(&join_column.on_foreign_field.clone().as_str()) {
+                    join_column.on_foreign_field.to_string()
+                } else {
+                    format!("ext->>'{}'", join_column.on_foreign_field)
+                }
+            ));
+        }
+        // join return columns
+        if let Some(return_columns) = &join.return_columns {
+            for return_column in return_columns {
+                join_select_fragments.push_str(&format!(
+                    ", {}.{} AS {}",
+                    join_table_alias_name,
+                    if INNER_FIELD.contains(&return_column.column.as_str()) {
+                        return_column.column.to_string()
+                    } else {
+                        format!("ext->>'{}'", return_column.column)
+                    },
+                    return_column.column_alias_name.clone().unwrap_or(format!("{}_{}", join_table_alias_name, return_column.column.clone()))
+                ));
+            }
+        }
+        // join advanced query
+        let join_sql_adv_query = package_adv_query(&join_table_alias_name, join.adv_query.clone(), &mut sql_vals, funs)?;
+        sql_adv_query.extend(join_sql_adv_query);
+        let (_, join_table_name) = search_pg_initializer::init_table_and_conn(inst.inst::<TardisRelDBClient>(), &join.tag, ctx, false).await?;
+        join_from_fragments.push_str(&format!(
+            " {} JOIN {} {} ON {} ",
+            if join.inner.unwrap_or(false) { "INNER" } else { "LEFT" },
+            join_table_name,
+            join_table_alias_name,
+            join_on_fragment
+        ));
+        join_index += 1;
+    }
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &search_req.tag, ctx, false).await?;
+    let result = conn
+        .query_all(
+            format!(
+                r#"SELECT search_item.kind, search_item.key, search_item.title, search_item.data_source, search_item.owner, search_item.own_paths, search_item.create_time, search_item.update_time, search_item.ext{}{}{}{}
+FROM {table_name} {table_alias_name}
+{}{}
+WHERE 
+    {}
+    {}
+    {}
+{}"#,
+                join_select_fragments,
+                if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
+                if search_req.query.in_q_content.unwrap_or(false) { ", content" } else { "" },
+                select_fragments,
+                join_from_fragments,
+                from_fragments,
+                where_fragments.join(" AND "),
+                if sql_adv_query.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(
+                        " AND ( 1=1 {})", sql_adv_query.join(" ")
+                    )
+                },
+                if order_fragments.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("ORDER BY {}", order_fragments.join(", "))
+                },
+                page_fragments
+            )
+            .as_str(),
+            sql_vals,
+        )
+        .await?;
+    let mut total_size: i64 = 0;
+    let result = result
+        .into_iter()
+        .map(|item| {
+            if search_req.page.fetch_total && total_size == 0 {
+                total_size = item.try_get("", "total")?;
+            }
+            Ok(serde_json::Value::from_query_result(&item, "")?)
+        })
+        .collect::<TardisResult<Vec<_>>>()?;
+    Ok(TardisPage {
+        page_size: search_req.page.size as u64,
+        page_number: search_req.page.number as u64,
+        total_size: total_size as u64,
+        records: result,
+    })
 }
 
 fn package_query(

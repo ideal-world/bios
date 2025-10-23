@@ -23,7 +23,7 @@ async fn test_search() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_search=trace,sqlx::query=off");
 
     let _x = init_search_container::init().await?;
-    init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
+    // init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
     init_data(spi_constants::SPI_PG_KIND_CODE, &env::var("TARDIS_FW.DB.URL").unwrap()).await?;
 
     Ok(())
@@ -54,7 +54,7 @@ async fn init_data(code: &str, conn_uri: &str) -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://127.0.0.1:8080/{}", DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("http://127.0.0.1:8080/{}", DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 
@@ -78,10 +78,10 @@ async fn init_data(code: &str, conn_uri: &str) -> TardisResult<()> {
 
     test_search_item::test(&mut client).await?;
 
-    client.set_auth(&ctx)?;
-    client.delete(&format!("/ci/manage/bs/{}", bs_id)).await;
-    ctx.ak = "app001".to_string();
-    funs.remove_bs_inst_cache(&ctx).await?;
+    // client.set_auth(&ctx)?;
+    // client.delete(&format!("/ci/manage/bs/{}", bs_id)).await;
+    // ctx.ak = "app001".to_string();
+    // funs.remove_bs_inst_cache(&ctx).await?;
 
     Ok(())
 }
