@@ -241,6 +241,9 @@ impl IamOpenServ {
             None
         };
 
+        if let Some(create_proj_id) = create_proj_id {
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_BIND_EXTERNAL_ID, None, &create_proj_id, funs).await?;
+        }
         Self::bind_cert_product(cert_id, &product_id, None, create_proj_id, funs, ctx).await?;
         Self::bind_cert_spec(
             cert_id,
