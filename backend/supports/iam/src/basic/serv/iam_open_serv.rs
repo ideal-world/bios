@@ -28,7 +28,7 @@ use crate::{
         iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq},
     },
     iam_config::IamConfig,
-    iam_constants::{OPENAPI_GATEWAY_PLUGIN_COUNT, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, OPENAPI_GATEWAY_PLUGIN_LIMIT, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE},
+    iam_constants::{OPENAPI_GATEWAY_PLUGIN_BIND_EXTERNAL_ID, OPENAPI_GATEWAY_PLUGIN_COUNT, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, OPENAPI_GATEWAY_PLUGIN_LIMIT, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE},
     iam_enumeration::{IamCertKernelKind, IamRelKind, IamResKind},
 };
 
@@ -241,8 +241,19 @@ impl IamOpenServ {
             None
         };
 
-        if let Some(create_proj_id) = create_proj_id {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_BIND_EXTERNAL_ID, None, &create_proj_id, funs).await?;
+        if let Some(create_proj_id) = &create_proj_id {
+            let ak = RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    id: Some(cert_id.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ak;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_BIND_EXTERNAL_ID, None, create_proj_id, funs).await?;
         }
         Self::bind_cert_product(cert_id, &product_id, None, create_proj_id, funs, ctx).await?;
         Self::bind_cert_spec(
