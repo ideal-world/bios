@@ -23,13 +23,13 @@ async fn test_search() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_search=trace,sqlx::query=off");
 
     let _x = init_search_container::init().await?;
-    // init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap()).await?;
-    init_data(spi_constants::SPI_PG_KIND_CODE, &env::var("TARDIS_FW.DB.URL").unwrap()).await?;
+    init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap(), false).await?;
+    init_data(spi_constants::SPI_PG_KIND_CODE, &env::var("TARDIS_FW.DB.URL").unwrap(), true).await?;
 
     Ok(())
 }
 
-async fn init_data(code: &str, conn_uri: &str) -> TardisResult<()> {
+async fn init_data(code: &str, conn_uri: &str, pg: bool) -> TardisResult<()> {
     // Initialize RBUM
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
 
@@ -77,11 +77,14 @@ async fn init_data(code: &str, conn_uri: &str) -> TardisResult<()> {
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
 
     test_search_item::test(&mut client).await?;
-
-    // client.set_auth(&ctx)?;
-    // client.delete(&format!("/ci/manage/bs/{}", bs_id)).await;
-    // ctx.ak = "app001".to_string();
-    // funs.remove_bs_inst_cache(&ctx).await?;
+    // pg support multiple search
+    if pg {
+        test_search_item::test_multiple_search(&mut client).await?;
+    }
+    client.set_auth(&ctx)?;
+    client.delete(&format!("/ci/manage/bs/{}", bs_id)).await;
+    ctx.ak = "app001".to_string();
+    funs.remove_bs_inst_cache(&ctx).await?;
 
     Ok(())
 }

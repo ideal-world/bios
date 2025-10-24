@@ -654,6 +654,12 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         message: "search_es_item_serv len op not supports".to_owned(),
                     });
                 }
+                BasicQueryOpKind::ArrayLen => {
+                    return Err(TardisError {
+                        code: "500-not-supports".to_owned(),
+                        message: "search_es_item_serv len op not supports".to_owned(),
+                    });
+                }
             }
         }
     }
@@ -789,6 +795,12 @@ fn gen_query_dsl(search_req: &SearchItemSearchReq) -> TardisResult<String> {
                         }));
                     }
                     BasicQueryOpKind::Len => {
+                        return Err(TardisError {
+                            code: "500-not-supports".to_owned(),
+                            message: "search_es_item_serv len op not supports".to_owned(),
+                        })
+                    }
+                    BasicQueryOpKind::ArrayLen => {
                         return Err(TardisError {
                             code: "500-not-supports".to_owned(),
                             message: "search_es_item_serv len op not supports".to_owned(),

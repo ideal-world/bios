@@ -7,7 +7,7 @@ use tardis::{
     basic::{error::TardisError, result::TardisResult},
     chrono::{DateTime, NaiveDate, Utc},
     db::sea_orm::{self, prelude::DateTimeWithTimeZone, DbErr, QueryResult, TryGetError, TryGetable},
-    serde_json,
+    serde_json::{self, Value},
     web::poem_openapi,
 };
 
@@ -301,6 +301,30 @@ impl TryGetable for SearchFactColKind {
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
         panic!("not implemented")
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum SearchQueryExpandFunKind {
+    #[oai(rename = "split_part")]
+    SplitPart,
+    #[oai(rename = "jsonb_array_elements_text")]
+    JsonbArrayElementsText,
+}
+
+impl SearchQueryExpandFunKind {
+    pub(crate) fn to_sql(&self, column_name: &str, params: Option<Vec<Value>>, start_idx: usize) -> (String, Vec<sea_orm::Value>, usize) {
+        match self {
+            SearchQueryExpandFunKind::SplitPart => {
+                let params = params.unwrap_or_default();
+                let delimiter = params.first().and_then(|v| v.as_str()).unwrap_or(",").to_string();
+                let position = params.get(1).and_then(|v| v.as_i64()).unwrap_or(1) as i32; // ← 转换为 i32
+                let sql = format!("split_part({column_name}, ${}, ${})", start_idx + 1, start_idx + 2);
+                let values = vec![sea_orm::Value::from(delimiter), sea_orm::Value::from(position)];
+                (sql, values, start_idx + 2)
+            }
+            SearchQueryExpandFunKind::JsonbArrayElementsText => (format!("jsonb_array_elements_text({column_name})"), vec![], start_idx),
+        }
     }
 }
 
