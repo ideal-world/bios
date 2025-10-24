@@ -103,6 +103,7 @@ impl BasicQueryCondInfo {
                     BasicQueryOpKind::IsNotNull => false,
                     BasicQueryOpKind::IsNullOrEmpty => false,
                     BasicQueryOpKind::Len => false,
+                    BasicQueryOpKind::ArrayLen => false,
                 },
                 None => false,
             })

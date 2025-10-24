@@ -82,6 +82,8 @@ pub enum BasicQueryOpKind {
     IsNullOrEmpty,
     #[oai(rename = "length")]
     Len,
+    #[oai(rename = "array_length")]
+    ArrayLen,
 }
 
 impl BasicQueryOpKind {
@@ -105,6 +107,7 @@ impl BasicQueryOpKind {
             BasicQueryOpKind::IsNotNull => "IS NOT NULL".to_string(),
             BasicQueryOpKind::IsNullOrEmpty => "IS NULL".to_string(),
             BasicQueryOpKind::Len => "=".to_string(),
+            BasicQueryOpKind::ArrayLen => "=".to_string(),
         }
     }
 }
