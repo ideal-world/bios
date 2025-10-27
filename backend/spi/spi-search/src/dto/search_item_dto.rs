@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::search_enumeration::{SearchDataTypeKind, SearchQueryAggFunKind, SearchQueryTimeWindowKind};
+use crate::search_enumeration::{SearchDataTypeKind, SearchQueryAggFunKind, SearchQueryExpandFunKind, SearchQueryTimeWindowKind};
 use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind};
 use serde::{Deserialize, Serialize};
 use tardis::{
@@ -180,6 +180,8 @@ pub struct MultipleSearchItemSearchReq {
     pub query: SearchItemQueryReq,
     // Advanced search
     pub adv_query: Option<Vec<AdvSearchItemQueryReq>>,
+    // Local cross join conditions
+    pub local_cross_joins: Option<Vec<MultipleLocalCrossJoinColumnSearchItemSearchReq>>,
     /// Join conditions
     pub joins: Vec<MultipleJoinSearchItemSearchReq>,
     // Sort
@@ -204,8 +206,18 @@ pub struct MultipleJoinSearchItemSearchReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct MultipleJoinColumnSearchItemSearchReq {
+    pub is_cross_join: Option<bool>,
     pub on_local_field: String,
     pub on_foreign_field: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MultipleLocalCrossJoinColumnSearchItemSearchReq {
+    /// Expansion function
+    pub fun: SearchQueryExpandFunKind,
+    pub column: String,
+    pub column_alias_name: Option<String>,
+    pub params: Option<Vec<Value>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

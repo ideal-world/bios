@@ -10,6 +10,7 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     futures::future::join_all,
+    log,
     regex::Regex,
     serde_json::{self, json, Map},
     web::web_resp::TardisPage,
@@ -423,6 +424,7 @@ pub async fn multiple_search(
     let table_alias_name = "search_item";
     let mut join_from_fragments = "".to_string();
     let mut join_select_fragments = "".to_string();
+    let mut local_cross_join = "".to_string();
     // query
     let (select_fragments, from_fragments) = package_query(table_alias_name, search_req.query.clone(), &mut sql_vals, &mut where_fragments, funs)?;
     // Add visit_keys filter
@@ -432,6 +434,29 @@ pub async fn multiple_search(
     let mut sql_adv_query = package_adv_query(table_alias_name, search_req.adv_query.clone(), &mut sql_vals, funs)?;
     // page
     let page_fragments = package_page(search_req.page.clone(), &mut sql_vals)?;
+    // cross joins
+    if let Some(local_cross_joins) = &search_req.local_cross_joins {
+        let mut cross_join_index = 0;
+        for cross_join in local_cross_joins {
+            let cross_join_table_alias_name = format!("local_cross_join_{}", cross_join_index);
+            let (sql, values, next_index) = cross_join.fun.to_sql(
+                &if INNER_FIELD.contains(&cross_join.column.clone().as_str()) {
+                    format!("{}.{}", table_alias_name, cross_join.column)
+                } else {
+                    format!("{}.ext->'{}'", table_alias_name, cross_join.column)
+                },
+                cross_join.params.clone(),
+                sql_vals.len(),
+            );
+            sql_vals.extend(values);
+            local_cross_join.push_str(&format!(
+                " CROSS JOIN LATERAL {} AS {} ",
+                sql,
+                cross_join.column_alias_name.clone().unwrap_or(format!("{}_{}", cross_join_table_alias_name, cross_join.column)),
+            ));
+            cross_join_index += 1;
+        }
+    }
     // joins
     let mut join_index = 0;
     for join in &search_req.joins {
@@ -443,12 +468,19 @@ pub async fn multiple_search(
                 join_on_fragment.push_str(" AND ");
             }
             join_on_fragment.push_str(&format!(
-                "{}.{} = {}.{}",
-                table_alias_name,
-                if INNER_FIELD.contains(&join_column.on_local_field.clone().as_str()) {
+                "{} = {}.{}",
+                if join_column.is_cross_join.unwrap_or(false) {
                     join_column.on_local_field.to_string()
                 } else {
-                    format!("ext->>'{}'", join_column.on_local_field)
+                    format!(
+                        "{}.{}",
+                        table_alias_name,
+                        if INNER_FIELD.contains(&join_column.on_local_field.clone().as_str()) {
+                            join_column.on_local_field.to_string()
+                        } else {
+                            format!("ext->>'{}'", join_column.on_local_field)
+                        }
+                    )
                 },
                 join_table_alias_name,
                 if INNER_FIELD.contains(&join_column.on_foreign_field.clone().as_str()) {
@@ -493,7 +525,8 @@ pub async fn multiple_search(
             format!(
                 r#"SELECT search_item.kind, search_item.key, search_item.title, search_item.data_source, search_item.owner, search_item.own_paths, search_item.create_time, search_item.update_time, search_item.ext{}{}{}{}
 FROM {table_name} {table_alias_name}
-{}{}
+            {}
+            {}{}
 WHERE 
     {}
     {}
@@ -503,6 +536,7 @@ WHERE
                 if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
                 if search_req.query.in_q_content.unwrap_or(false) { ", content" } else { "" },
                 select_fragments,
+                local_cross_join,
                 join_from_fragments,
                 from_fragments,
                 where_fragments.join(" AND "),
@@ -841,7 +875,14 @@ fn package_ext(
                     ));
                 } else if ext_item.op == BasicQueryOpKind::Len {
                     if let Some(first_value) = value.pop() {
-                        sql_and_where.push(format!("(length(ext->>'{}') = ${})", ext_item.field, sql_vals.len() + 1));
+                        sql_and_where.push(format!("(length({}.ext ->> '{}') = ${})", table_alias_name, ext_item.field, sql_vals.len() + 1));
+                        sql_vals.push(first_value);
+                    } else {
+                        return err_not_found(ext_item);
+                    };
+                } else if ext_item.op == BasicQueryOpKind::ArrayLen {
+                    if let Some(first_value) = value.pop() {
+                        sql_and_where.push(format!("jsonb_array_length({}.ext -> '{}') = ${}", table_alias_name, ext_item.field, sql_vals.len() + 1));
                         sql_vals.push(first_value);
                     } else {
                         return err_not_found(ext_item);
