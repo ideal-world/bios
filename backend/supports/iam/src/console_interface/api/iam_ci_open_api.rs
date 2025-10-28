@@ -113,7 +113,7 @@ impl IamCiOpenApi {
     }
 
     /// 更新缓存（临时脚本）
-    #[oai(path = "/refresh_cert_cumulative_count", method = "post")]
+    #[oai(path = "/refresh_open_cache", method = "post")]
     async fn refresh_open_cache(&self, _request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         let ctx = TardisContext::default();

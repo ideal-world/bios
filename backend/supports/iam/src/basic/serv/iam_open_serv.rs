@@ -700,7 +700,7 @@ impl IamOpenServ {
                 ).await? {
                     // 1、api调用频率缓存重写
                     if let Some(api_call_frequency) = IamIdentCacheServ::get_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()) {
-                        IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.as_str(), funs).await?;
+                        IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.to_string().as_str(), funs).await?;
                     };
                     // 2、新增ak关联规格ID
                     IamIdentCacheServ::set_open_api_extand_data(&cert.ak, None, IamOpenExtendData { id: spec.id.clone() }, funs).await?;
