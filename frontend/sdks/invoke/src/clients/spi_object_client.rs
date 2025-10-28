@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
+use tardis::web::web_resp::TardisResp;
 
 use crate::invoke_enumeration::InvokeModuleKind;
 
@@ -102,7 +103,7 @@ impl SpiObjectClient {
         bs_id: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<Option<String>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
@@ -124,8 +125,8 @@ impl SpiObjectClient {
             url = format!("{url}&bs_id={bs_id}");
         }
 
-        let resp = funs.web_client().get_to_str(&url, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "presign_put_url", "Response body is empty", "404-object-presign-empty"))
+        let resp = funs.web_client().get::<TardisResp<String>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Get presigned URL for viewing an object
@@ -153,7 +154,7 @@ impl SpiObjectClient {
         bs_id: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<Option<String>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
@@ -175,8 +176,8 @@ impl SpiObjectClient {
             url = format!("{url}&bs_id={bs_id}");
         }
 
-        let resp = funs.web_client().get_to_str(&url, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "presign_view_url", "Response body is empty", "404-object-presign-empty"))
+        let resp = funs.web_client().get::<TardisResp<String>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Get presigned URL for deleting an object
@@ -204,7 +205,7 @@ impl SpiObjectClient {
         bs_id: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<Option<String>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
@@ -226,8 +227,8 @@ impl SpiObjectClient {
             url = format!("{url}&bs_id={bs_id}");
         }
 
-        let resp = funs.web_client().get_to_str(&url, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "presign_delete_url", "Response body is empty", "404-object-presign-empty"))
+        let resp = funs.web_client().get::<TardisResp<String>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Delete a single object
@@ -292,14 +293,14 @@ impl SpiObjectClient {
     /// # Returns
     ///
     /// Vector of object paths that failed to delete (empty if all succeeded)
-    pub async fn batch_delete_objects(req: &ObjectBatchDeleteReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn batch_delete_objects(req: &ObjectBatchDeleteReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
         let url = format!("{object_url}/ci/obj/object/batch_delete");
 
-        let resp = funs.web_client().delete_with_body::<Vec<String>, ObjectBatchDeleteReq>(&url, headers.clone(), req).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "batch_delete", "Response body is empty", "404-object-batch-delete-empty"))
+        let resp = funs.web_client().delete_with_body::<TardisResp<Vec<String>>, ObjectBatchDeleteReq>(&url, headers.clone(), req).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Batch get presigned URLs for viewing multiple objects
@@ -315,14 +316,14 @@ impl SpiObjectClient {
     /// # Returns
     ///
     /// HashMap mapping object paths to their presigned URLs
-    pub async fn batch_presign_view_obj_url(req: &ObjectPresignBatchViewReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+    pub async fn batch_presign_view_obj_url(req: &ObjectPresignBatchViewReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<HashMap<String, String>>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
         let url = format!("{object_url}/ci/obj/presign/batch_view");
 
-        let resp = funs.web_client().post::<ObjectPresignBatchViewReq, HashMap<String, String>>(&url, req, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "batch_presign_view", "Response body is empty", "404-object-presign-empty"))
+        let resp = funs.web_client().post::<ObjectPresignBatchViewReq,TardisResp<HashMap<String, String>> >(&url, req, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Initiate a multipart upload task
@@ -338,14 +339,14 @@ impl SpiObjectClient {
     /// # Returns
     ///
     /// Upload ID for the multipart upload session
-    pub async fn initiate_multipart_upload(req: &ObjectInitiateMultipartUploadReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn initiate_multipart_upload(req: &ObjectInitiateMultipartUploadReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
         let url = format!("{object_url}/ci/obj/multi_upload/initiate_multipart_upload");
 
-        let resp = funs.web_client().post_obj_to_str(&url, req, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "initiate_multipart_upload", "Response body is empty", "404-object-multipart-empty"))
+        let resp = funs.web_client().post::<ObjectInitiateMultipartUploadReq,TardisResp<String> >(&url, req, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Batch build presigned URLs for uploading parts in multipart upload
@@ -361,14 +362,14 @@ impl SpiObjectClient {
     /// # Returns
     ///
     /// Vector of presigned URLs for uploading parts
-    pub async fn batch_build_create_presign_url(req: &ObjectBatchBuildCreatePresignUrlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn batch_build_create_presign_url(req: &ObjectBatchBuildCreatePresignUrlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
         let url = format!("{object_url}/ci/obj/multi_upload/batch_build_create_presign_url");
 
-        let resp = funs.web_client().post::<ObjectBatchBuildCreatePresignUrlReq, Vec<String>>(&url, req, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "batch_build_presign_url", "Response body is empty", "404-object-multipart-empty"))
+        let resp = funs.web_client().post::<ObjectBatchBuildCreatePresignUrlReq,TardisResp<Vec<String>>>(&url, req, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     /// Complete a multipart upload task
@@ -386,7 +387,8 @@ impl SpiObjectClient {
 
         let url = format!("{object_url}/ci/obj/multi_upload/complete_multipart_upload");
 
-        funs.web_client().post_obj_to_str(&url, req, headers.clone()).await?;
+        funs.web_client().post_obj_to_str::<ObjectCompleteMultipartUploadReq>(&url, req, headers.clone()).await?;
+
         Ok(())
     }
 
@@ -405,7 +407,8 @@ impl SpiObjectClient {
 
         let url = format!("{object_url}/ci/obj/object/copy");
 
-        funs.web_client().post_obj_to_str(&url, req, headers.clone()).await?;
+        funs.web_client().post_obj_to_str::<ObjectCopyReq>(&url, req, headers.clone()).await?;
+
         Ok(())
     }
 
@@ -436,7 +439,7 @@ impl SpiObjectClient {
         bs_id: Option<String>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<bool> {
+    ) -> TardisResult<Option<bool>> {
         let object_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
 
@@ -458,7 +461,7 @@ impl SpiObjectClient {
             url = format!("{url}&bs_id={bs_id}");
         }
 
-        let resp = funs.web_client().get::<bool>(&url, headers.clone()).await?;
-        resp.body.ok_or_else(|| funs.err().not_found("object", "object_exist", "Response body is empty", "404-object-exist-empty"))
+        let resp = funs.web_client().get::<TardisResp<bool>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 }
