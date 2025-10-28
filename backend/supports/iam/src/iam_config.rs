@@ -94,7 +94,6 @@ pub struct IamConfig {
     pub openapi_plugin_dynamic_route: String,
     pub openapi_plugin_allow_api_res: String,
     pub openapi_plugin_extand_header: String,
-    pub openapi_plugin_extand_data: String,
     pub openapi_plugin_state: String,
 }
 
@@ -220,7 +219,6 @@ impl Default for IamConfig {
             openapi_plugin_dynamic_route: "redis-dynamic-route:opres-dynamic-route".to_string(),
             openapi_plugin_allow_api_res: "redis-allow-api:opres-allow-api".to_string(),
             openapi_plugin_extand_header: "redis-header-expand:opres-header-expand".to_string(),
-            openapi_plugin_extand_data: "redis-expand-data:opres-expand-data".to_string(),
             openapi_plugin_state: "redis-status:opres-status".to_string(),
         }
     }

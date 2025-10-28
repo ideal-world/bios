@@ -505,41 +505,18 @@ impl IamIdentCacheServ {
     pub async fn set_open_api_extand_header(ak: &str, match_method: Option<&str>, value: HashMap<String, String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("set_open_api_extand_header: ak={},match_method={},value={:?}", ak, match_method.unwrap_or("*"), value);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
-        funs.cache()
-            .set(
-                format!(
-                    "{}{}:{}:{}:{}",
-                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
-                    funs.conf::<IamConfig>().openapi_plugin_extand_header,
-                    match_method.unwrap_or("*"),
-                    match_path,
-                    ak
-                )
-                .as_str(),
-                &tardis::TardisFuns::json.obj_to_string(&value)?,
-            )
-            .await?;
-        Ok(())
-    }
-
-    // 设置开放API扩展数据
-    pub async fn set_open_api_extand_data(ak: &str, match_method: Option<&str>, value: IamOpenExtendData, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("add gateway_rule_info: ak={},match_method={},value={:?}", ak, match_method.unwrap_or("*"), value);
-        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
-        funs.cache()
-            .set(
-                format!(
-                    "{}{}:{}:{}:{}",
-                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
-                    funs.conf::<IamConfig>().openapi_plugin_extand_data,
-                    match_method.unwrap_or("*"),
-                    match_path,
-                    ak
-                )
-                .as_str(),
-                &tardis::TardisFuns::json.obj_to_string(&value)?,
-            )
-            .await?;
+        let key = format!(
+            "{}{}:{}:{}:{}",
+            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+            funs.conf::<IamConfig>().openapi_plugin_extand_header,
+            match_method.unwrap_or("*"),
+            match_path,
+            ak
+        );
+        let mut new_header: HashMap<String, String> = HashMap::new();
+        new_header.extend(tardis::TardisFuns::json.str_to_obj::<HashMap<String, String>>(&funs.cache().get(key.as_str()).await?.unwrap_or_default())?);
+        new_header.extend(value);
+        funs.cache().set(key.as_str(), &tardis::TardisFuns::json.obj_to_string(&new_header)?).await?;
         Ok(())
     }
 

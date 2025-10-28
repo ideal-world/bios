@@ -406,7 +406,7 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_spec", "illegal response", "401-iam-cert-code-not-exist"))?
         .ak;
 
-        IamIdentCacheServ::set_open_api_extand_data(&ak, None, IamOpenExtendData { id: spec_id.to_string() }, funs).await?;
+        IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Spec-Id".to_string(), spec_id.to_string())]), funs).await?;
         Ok(())
     }
 
@@ -734,7 +734,7 @@ impl IamOpenServ {
                         IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.to_string().as_str(), funs).await?;
                     };
                     // 2、新增ak关联规格ID
-                    IamIdentCacheServ::set_open_api_extand_data(&cert.ak, None, IamOpenExtendData { id: spec.id.clone() }, funs).await?;
+                    IamIdentCacheServ::set_open_api_extand_header(&cert.ak, None, HashMap::from([("Spec-Id".to_string(), spec.id.clone())]), funs).await?;
                     // 3、新增ak可用状态
                     IamIdentCacheServ::add_or_modify_gateway_rule_info(
                         &cert.ak,
