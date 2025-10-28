@@ -84,6 +84,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
         IamOpenAkSkAddReq {
             tenant_id: context1.own_paths.clone(),
             app_id: None,
+            state: None,
         },
         &funs,
         context1,
@@ -94,6 +95,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
         IamOpenAkSkAddReq {
             tenant_id: context1.own_paths.clone(),
             app_id: None,
+            state: None,
         },
         &funs,
         context1,
@@ -108,6 +110,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
             end_time: Some(Utc::now()),
             api_call_frequency: Some(500),
             api_call_count: Some(10000),
+            create_proj_code: None,
         },
         &funs,
         context1,

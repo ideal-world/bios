@@ -514,7 +514,9 @@ impl IamIdentCacheServ {
             ak
         );
         let mut new_header: HashMap<String, String> = HashMap::new();
-        new_header.extend(tardis::TardisFuns::json.str_to_obj::<HashMap<String, String>>(&funs.cache().get(key.as_str()).await?.unwrap_or_default())?);
+        if let Some(original_header) = funs.cache().get(key.as_str()).await? {
+            new_header.extend(tardis::TardisFuns::json.str_to_obj::<HashMap<String, String>>(&original_header)?);
+        }
         new_header.extend(value);
         funs.cache().set(key.as_str(), &tardis::TardisFuns::json.obj_to_string(&new_header)?).await?;
         Ok(())
