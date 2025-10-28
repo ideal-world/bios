@@ -680,6 +680,10 @@ impl IamOpenServ {
         for spec in specs {
             let rel_cert_ids = RbumRelServ::find_detail_rbums(
                 &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     to_rbum_item_id: Some(spec.id.to_string()),
                     tag: Some(IamRelKind::IamCertSpec.to_string()),
                     ..Default::default()
