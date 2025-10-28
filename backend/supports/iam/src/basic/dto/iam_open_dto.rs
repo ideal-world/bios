@@ -2,6 +2,7 @@ use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{self, Utc};
 use tardis::{basic::field::TrimString, web::poem_openapi};
+use strum::Display;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamOpenAddOrModifyProductReq {
@@ -56,6 +57,15 @@ pub struct IamOpenRuleResp {
 pub struct IamOpenAkSkAddReq {
     pub tenant_id: String,
     pub app_id: Option<String>,
+    pub state: Option<IamOpenCertStateKind>,
+}
+
+/// 开放平台用户状态类型
+#[derive(Display, Serialize, Deserialize, Clone, Debug, Default, PartialEq, poem_openapi::Enum)]
+pub enum IamOpenCertStateKind {
+    #[default]
+    Enabled,
+    Disabled,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -63,4 +73,15 @@ pub struct IamOpenAkSkResp {
     pub id: String,
     pub ak: String,
     pub sk: String,
+}
+
+// modify_cert_state
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamOpenCertModifyReq {
+    pub state: Option<IamOpenCertStateKind>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct IamOpenExtendData {
+    pub id: String,
 }

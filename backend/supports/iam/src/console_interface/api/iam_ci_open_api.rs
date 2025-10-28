@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_open_dto::{IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp};
+use crate::basic::dto::iam_open_dto::{IamOpenCertModifyReq, IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_open_serv::IamOpenServ;
 use crate::iam_constants;
@@ -85,6 +85,20 @@ impl IamCiOpenApi {
         TardisResp::ok(result)
     }
 
+    /// modify cert
+    /// 修改凭证
+    #[oai(path = "/cert/:cert_id", method = "put")]
+    async fn modify_cert(&self, cert_id: Path<String>, req: Json<IamOpenCertModifyReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        IamOpenServ::modify_cert(&cert_id.0, &req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Refresh cumulative number of api calls
     /// 刷新API累计调用数 (定时任务)
     #[oai(path = "/refresh_cert_cumulative_count", method = "post")]
@@ -93,6 +107,18 @@ impl IamCiOpenApi {
         let ctx = TardisContext::default();
         funs.begin().await?;
         IamOpenServ::refresh_cert_cumulative_count(&funs, &ctx).await?;
+        funs.commit().await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// 更新缓存（临时脚本）
+    #[oai(path = "/refresh_cert_cumulative_count", method = "post")]
+    async fn refresh_open_cache(&self, _request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        let ctx = TardisContext::default();
+        funs.begin().await?;
+        IamOpenServ::refresh_open_cache(&funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})

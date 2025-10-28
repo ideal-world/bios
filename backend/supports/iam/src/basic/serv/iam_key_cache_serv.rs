@@ -12,12 +12,15 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
 
+use std::collections::HashMap;
+
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
+use crate::basic::dto::iam_open_dto::IamOpenExtendData;
 use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
@@ -477,6 +480,84 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    // 设置开放平台api调用频率
+    pub async fn set_open_api_call_frequency(spec_id: &str, match_method: Option<&str>, value: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!(
+            "add gateway_rule_info: spec_id={},match_method={},value={}",
+            spec_id,
+            match_method.unwrap_or("*"),
+            value
+        );
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .set(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_limit,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    spec_id
+                )
+                .as_str(),
+                value,
+            )
+            .await?;
+        Ok(())
+    }
+
+    // 设置开放API扩展头信息
+    pub async fn set_open_api_extand_header(ak: &str, match_method: Option<&str>, value: HashMap<String, String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!(
+            "set_open_api_extand_header: ak={},match_method={},value={:?}",
+            ak,
+            match_method.unwrap_or("*"),
+            value
+        );
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .set(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_extand_header,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+                &tardis::TardisFuns::json.obj_to_string(&value)?,
+            )
+            .await?;
+        Ok(())
+    }
+
+    // 设置开放API扩展数据
+    pub async fn set_open_api_extand_data(ak: &str, match_method: Option<&str>, value: IamOpenExtendData, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!(
+            "add gateway_rule_info: ak={},match_method={},value={:?}",
+            ak,
+            match_method.unwrap_or("*"),
+            value
+        );
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .set(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_extand_data,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+                &tardis::TardisFuns::json.obj_to_string(&value)?,
+            )
+            .await?;
+        Ok(())
+    }
+
     pub async fn add_or_modify_bind_api_res(spec_id: &str, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!(
             "add bind_api_res: spec_id={},bind_api_res={:?}",
@@ -486,7 +567,7 @@ impl IamIdentCacheServ {
         let cache_key = format!(
             "{}{}:{}",
             funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
-            iam_constants::OPENAPI_GATEWAY_PLUGIN_BIND_API_RES,
+            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
             spec_id,
         );
         funs.cache().del(cache_key.as_str()).await?;
@@ -507,7 +588,7 @@ impl IamIdentCacheServ {
             .get(&format!(
                 "{}{}:{}:{}:{}:cumulative-count",
                 funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
-                iam_constants::OPENAPI_GATEWAY_PLUGIN_COUNT,
+                funs.conf::<IamConfig>().openapi_plugin_count,
                 match_method.unwrap_or("*"),
                 match_path,
                 ak
