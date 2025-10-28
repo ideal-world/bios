@@ -482,12 +482,7 @@ impl IamIdentCacheServ {
 
     // 设置开放平台api调用频率
     pub async fn set_open_api_call_frequency(spec_id: &str, match_method: Option<&str>, value: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!(
-            "add gateway_rule_info: spec_id={},match_method={},value={}",
-            spec_id,
-            match_method.unwrap_or("*"),
-            value
-        );
+        log::trace!("add gateway_rule_info: spec_id={},match_method={},value={}", spec_id, match_method.unwrap_or("*"), value);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         funs.cache()
             .set(
@@ -508,12 +503,7 @@ impl IamIdentCacheServ {
 
     // 设置开放API扩展头信息
     pub async fn set_open_api_extand_header(ak: &str, match_method: Option<&str>, value: HashMap<String, String>, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!(
-            "set_open_api_extand_header: ak={},match_method={},value={:?}",
-            ak,
-            match_method.unwrap_or("*"),
-            value
-        );
+        log::trace!("set_open_api_extand_header: ak={},match_method={},value={:?}", ak, match_method.unwrap_or("*"), value);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         funs.cache()
             .set(
@@ -534,12 +524,7 @@ impl IamIdentCacheServ {
 
     // 设置开放API扩展数据
     pub async fn set_open_api_extand_data(ak: &str, match_method: Option<&str>, value: IamOpenExtendData, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!(
-            "add gateway_rule_info: ak={},match_method={},value={:?}",
-            ak,
-            match_method.unwrap_or("*"),
-            value
-        );
+        log::trace!("add gateway_rule_info: ak={},match_method={},value={:?}", ak, match_method.unwrap_or("*"), value);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         funs.cache()
             .set(
@@ -559,11 +544,7 @@ impl IamIdentCacheServ {
     }
 
     pub async fn add_or_modify_bind_api_res(spec_id: &str, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!(
-            "add bind_api_res: spec_id={},bind_api_res={:?}",
-            spec_id,
-            bind_api_res,
-        );
+        log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", spec_id, bind_api_res,);
         let cache_key = format!(
             "{}{}:{}",
             funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
@@ -572,12 +553,7 @@ impl IamIdentCacheServ {
         );
         funs.cache().del(cache_key.as_str()).await?;
 
-        funs.cache()
-            .lpushmulti(
-                cache_key.as_str(),
-                bind_api_res.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
-            )
-            .await?;
+        funs.cache().lpushmulti(cache_key.as_str(), bind_api_res.iter().map(|s| s.as_str()).collect::<Vec<&str>>()).await?;
         Ok(())
     }
 

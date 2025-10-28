@@ -1,8 +1,8 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tardis::chrono::{self, Utc};
 use tardis::{basic::field::TrimString, web::poem_openapi};
-use strum::Display;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamOpenAddOrModifyProductReq {

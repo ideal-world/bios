@@ -6,7 +6,11 @@ use std::collections::HashMap;
 use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, serv::spi_bs_serv::SpiBsServ, spi_funs::SpiBsInst, spi_initializer::common};
 use itertools::Itertools;
 use tardis::{
-    TardisFunsInst, basic::{dto::TardisContext, error::TardisError, result::TardisResult}, futures::future::join_all, os::os_client::TardisOSClient, web::poem::http::{HeaderMap, HeaderValue}
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    futures::future::join_all,
+    os::os_client::TardisOSClient,
+    web::poem::http::{HeaderMap, HeaderValue},
+    TardisFunsInst,
 };
 
 use crate::dto::object_dto::ObjectObjPresignKind;
@@ -36,14 +40,19 @@ pub trait S3 {
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         match presign_kind {
             ObjectObjPresignKind::Upload => {
-                let headers = obj_exp.map(|o| -> TardisResult<HeaderMap> {
-                    let mut headers = HeaderMap::new();
-                    headers.insert("x-obs-expires", HeaderValue::from_str(&o.to_string())
-                        .map_err(|_| TardisError::internal_error("Cannot convert expires to header value", "500-spi-object-invalid-header-value"))?);
-                    Ok(headers)
-                }).transpose()?;
+                let headers = obj_exp
+                    .map(|o| -> TardisResult<HeaderMap> {
+                        let mut headers = HeaderMap::new();
+                        headers.insert(
+                            "x-obs-expires",
+                            HeaderValue::from_str(&o.to_string())
+                                .map_err(|_| TardisError::internal_error("Cannot convert expires to header value", "500-spi-object-invalid-header-value"))?,
+                        );
+                        Ok(headers)
+                    })
+                    .transpose()?;
                 client.object_create_url(&path, exp_secs, bucket_name.as_deref(), headers, None).await
-            },
+            }
             ObjectObjPresignKind::Delete => client.object_delete_url(&path, exp_secs, bucket_name.as_deref()).await,
             ObjectObjPresignKind::View => {
                 if private.unwrap_or(true) || special.unwrap_or(false) {

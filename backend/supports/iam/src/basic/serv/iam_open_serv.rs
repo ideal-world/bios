@@ -8,8 +8,8 @@ use bios_basic::rbum::{
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
     serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
 };
-use std::collections::HashMap;
 use itertools::Itertools;
+use std::collections::HashMap;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::DateTime,
@@ -25,7 +25,10 @@ use crate::{
         iam_cert_conf_dto::IamCertConfAkSkAddOrModifyReq,
         iam_cert_dto::IamCertAkSkAddReq,
         iam_filer_dto::IamResFilterReq,
-        iam_open_dto::{IamOpenExtendData, IamOpenCertModifyReq, IamOpenCertStateKind, IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp},
+        iam_open_dto::{
+            IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenCertModifyReq, IamOpenCertStateKind, IamOpenExtendData,
+            IamOpenRuleResp,
+        },
         iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq},
     },
     iam_config::IamConfig,
@@ -258,7 +261,7 @@ impl IamOpenServ {
                 )
                 .await?
                 .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
-                .id
+                .id,
             )
         } else {
             None
@@ -571,8 +574,12 @@ impl IamOpenServ {
             } else {
                 None
             },
-            api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
-            api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
+            api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
+                .await?
+                .map(|s| s.parse::<u32>().unwrap_or_default()),
+            api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, funs)
+                .await?
+                .map(|s| s.parse::<u32>().unwrap_or_default()),
             api_call_cumulative_count: IamIdentCacheServ::get_gateway_cumulative_count(&ak, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
         })
     }
@@ -610,7 +617,14 @@ impl IamOpenServ {
         )
         .await?;
 
-        IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_state, None, &add_req.state.unwrap_or(IamOpenCertStateKind::Enabled).to_string(), funs).await?;
+        IamIdentCacheServ::add_or_modify_gateway_rule_info(
+            &ak,
+            &funs.conf::<IamConfig>().openapi_plugin_state,
+            None,
+            &add_req.state.unwrap_or(IamOpenCertStateKind::Enabled).to_string(),
+            funs,
+        )
+        .await?;
         Ok(IamOpenAkSkResp { id: cert_id, ak, sk })
     }
 
@@ -692,7 +706,11 @@ impl IamOpenServ {
                 None,
                 funs,
                 ctx,
-            ).await?.into_iter().map(|rel| rel.from_rbum_id).collect_vec();
+            )
+            .await?
+            .into_iter()
+            .map(|rel| rel.from_rbum_id)
+            .collect_vec();
             for cert_id in rel_cert_ids {
                 if let Some(cert) = RbumCertServ::find_one_detail_rbum(
                     &RbumCertFilterReq {
@@ -705,15 +723,27 @@ impl IamOpenServ {
                     },
                     funs,
                     ctx,
-                ).await? {
+                )
+                .await?
+                {
                     // 1、api调用频率缓存重写
-                    if let Some(api_call_frequency) = IamIdentCacheServ::get_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()) {
+                    if let Some(api_call_frequency) = IamIdentCacheServ::get_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
+                        .await?
+                        .map(|s| s.parse::<u32>().unwrap_or_default())
+                    {
                         IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.to_string().as_str(), funs).await?;
                     };
                     // 2、新增ak关联规格ID
                     IamIdentCacheServ::set_open_api_extand_data(&cert.ak, None, IamOpenExtendData { id: spec.id.clone() }, funs).await?;
                     // 3、新增ak可用状态
-                    IamIdentCacheServ::add_or_modify_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_state, None, IamOpenCertStateKind::Enabled.to_string().as_str(), funs).await?;
+                    IamIdentCacheServ::add_or_modify_gateway_rule_info(
+                        &cert.ak,
+                        &funs.conf::<IamConfig>().openapi_plugin_state,
+                        None,
+                        IamOpenCertStateKind::Enabled.to_string().as_str(),
+                        funs,
+                    )
+                    .await?;
                 }
             }
         }
