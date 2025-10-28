@@ -693,6 +693,10 @@ impl IamOpenServ {
                 if let Some(cert) = RbumCertServ::find_one_detail_rbum(
                     &RbumCertFilterReq {
                         id: Some(cert_id.to_string()),
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
                     funs,
