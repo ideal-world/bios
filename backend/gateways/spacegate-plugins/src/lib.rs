@@ -1,5 +1,6 @@
 #![warn(clippy::unwrap_used)]
 
+use crate::plugin::op_redis::{op_redis_allow_api, op_redis_header_expand, op_redis_status};
 pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, bios_error_limit, content_filter, ip_time, license, rewrite_ns_b_ip};
 
 mod consts;
@@ -23,6 +24,9 @@ pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<content_filter::ContentFilterPlugin>();
     repo.register::<bios_error_limit::BiosErrorLimitPlugin>();
     repo.register::<license::LicensePlugin>();
+    repo.register::<op_redis_allow_api::OpRedisAllowApiPlugin>();
+    repo.register::<op_redis_header_expand::OpRedisHeaderExpandPlugin>();
+    repo.register::<op_redis_status::OpRedisStatusPlugin>();
 }
 
 // fix `instrument` find tracing error [issue](https://github.com/tokio-rs/tracing/issues/3309)
