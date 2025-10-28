@@ -477,6 +477,7 @@ impl IamOpenServ {
         Ok(())
     }
 
+    // 获取凭证规则信息(支持传入cert_id或ak)
     pub async fn get_rule_info(cert_id_req: Option<String>, ak_req: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOpenRuleResp> {
         if cert_id_req.is_none() && ak_req.is_none() {
             return Err(funs.err().internal_error("iam_open", "get_rule_info", "illegal response", "404-iam-res-not-exist"));
@@ -661,10 +662,54 @@ impl IamOpenServ {
     }
 
     pub async fn refresh_open_cache(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        // 1、api调用频率缓存重写
-        
-        // 2、新增ak关联规格ID
-        // 3、新增ak可用状态
+        let specs = IamResServ::find_detail_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Spec),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for spec in specs {
+            let rel_cert_ids = RbumRelServ::find_detail_rbums(
+                &RbumRelFilterReq {
+                    to_rbum_item_id: Some(spec.id.to_string()),
+                    tag: Some(IamRelKind::IamCertSpec.to_string()),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            ).await?.into_iter().map(|rel| rel.from_rbum_id).collect_vec();
+            for cert_id in rel_cert_ids {
+                if let Some(cert) = RbumCertServ::find_one_detail_rbum(
+                    &RbumCertFilterReq {
+                        id: Some(cert_id.to_string()),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                ).await? {
+                    // 1、api调用频率缓存重写
+                    if let Some(api_call_frequency) = IamIdentCacheServ::get_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()) {
+                        IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.as_str(), funs).await?;
+                    };
+                    // 2、新增ak关联规格ID
+                    IamIdentCacheServ::set_open_api_extand_data(&cert.ak, None, IamOpenExtendData { id: spec.id.clone() }, funs).await?;
+                    // 3、新增ak可用状态
+                    IamIdentCacheServ::add_or_modify_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_state, None, IamOpenCertStateKind::Enabled.to_string().as_str(), funs).await?;
+                }
+            }
+        }
+
         Ok(())
     }
 }
