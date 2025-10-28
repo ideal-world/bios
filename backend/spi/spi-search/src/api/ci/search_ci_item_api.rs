@@ -10,8 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::{serde_json, tokio};
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq,
-    SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchBatchOperateReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp
 };
 use crate::serv::search_item_serv;
 use tardis::log::warn;
@@ -43,6 +42,24 @@ impl SearchCiItemApi {
     async fn delete(&self, tag: Path<String>, key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = crate::get_tardis_inst();
         search_item_serv::delete(&tag.0, &key.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch Operate
+    #[oai(path = "/batch/operate", method = "put")]
+    async fn batch_operate(&self, mut batch_req: Json<SearchBatchOperateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = crate::get_tardis_inst();
+        funs.begin().await?;
+        for add_req in batch_req.0.add_reqs.iter_mut() {
+            search_item_serv::add(add_req, &funs, &ctx.0).await?;
+        }
+        for modify_req in batch_req.0.modify_reqs.iter_mut() {
+            search_item_serv::modify(&modify_req.tag, &modify_req.key, &mut modify_req.req, &funs, &ctx.0).await?;
+        }
+        for delete_req in batch_req.0.delete_reqs.iter_mut() {
+            search_item_serv::delete(&delete_req.tag, &delete_req.key, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 

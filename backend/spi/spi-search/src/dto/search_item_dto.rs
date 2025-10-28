@@ -649,3 +649,23 @@ pub enum SearchWordCombinationsRuleWay {
     SpecLength(usize),
     SpecSymbols(Vec<String>),
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchBatchOperateReq {
+    pub add_reqs: Vec<SearchItemAddReq>,
+    pub modify_reqs: Vec<SearchBatchModifyItemReq>,
+    pub delete_reqs: Vec<SearchBatchDeleteItemReq>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchBatchModifyItemReq {
+    pub tag: String,
+    pub key: String,
+    pub req: SearchItemModifyReq,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchBatchDeleteItemReq {
+    pub tag: String,
+    pub key: String,
+}
