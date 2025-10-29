@@ -532,7 +532,7 @@ impl IamIdentCacheServ {
         );
         funs.cache().del(cache_key.as_str()).await?;
 
-        funs.cache().lpushmulti(cache_key.as_str(), bind_api_res.iter().map(|s| s.as_str()).collect::<Vec<&str>>()).await?;
+        funs.cache().set(cache_key.as_str(), &tardis::TardisFuns::json.obj_to_string(&bind_api_res)?).await?;
         Ok(())
     }
 
