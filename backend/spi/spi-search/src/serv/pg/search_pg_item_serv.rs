@@ -32,7 +32,7 @@ use super::search_pg_initializer;
 
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 const FUNCTION_EXT_SUFFIX_FLAG: &str = "_ext_";
-const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
+const INNER_FIELD: [&str; 8] = ["key", "title", "kind", "content", "owner", "own_paths", "create_time", "update_time"];
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let mut params = Vec::new();
