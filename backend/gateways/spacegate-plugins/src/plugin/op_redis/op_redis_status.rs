@@ -67,7 +67,7 @@ impl Plugin for OpRedisStatusPlugin {
         let Some(matched) = req.extensions().get::<MatchedSgRouter>() else {
             return Err("missing matched router".into());
         };
-        let Some(key) = redis_format_key(&req, matched, &self.header) else {
+        let Some(key) = redis_format_key(&req, matched, &self.header, false) else {
             return Ok(PluginError::status::<Self, { code::UNAUTHORIZED }>(format!("missing header {}", self.header.as_str())).into());
         };
         let pass: bool = redis_call(client.get_conn().await, format!("{}:{}", self.cache_prefix_key, key)).await?;
@@ -120,7 +120,7 @@ mod test {
         let client = global_repo().get(GW_NAME).expect("missing client");
         let mut conn = client.get_conn().await;
         let inner = Inner::new(get_echo_service());
-        
+
         // Test case 1: enabled status - should allow request
         let _: () = conn.set(format!("sg:plugin:redis-status:test:*:op-res:{AK}"), "enabled").await.expect("fail to set");
         {
@@ -143,7 +143,7 @@ mod test {
             println!("[Test 1] Enabled status - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success when status is 'enabled'");
         }
-        
+
         // Test case 2: disabled status - should deny request
         let _: () = conn.set(format!("sg:plugin:redis-status:test:*:op-res:{AK}"), "disabled").await.expect("fail to set");
         {
@@ -166,7 +166,7 @@ mod test {
             println!("[Test 2] Disabled status - Status: {}", parts.status);
             assert!(parts.status.is_client_error(), "Expected 403 when status is 'disabled'");
         }
-        
+
         // Test case 3: missing key in Redis - should allow request (default behavior)
         let _: () = conn.del(format!("sg:plugin:redis-status:test:*:op-res:{AK}")).await.expect("fail to delete");
         {
@@ -189,7 +189,7 @@ mod test {
             println!("[Test 3] Missing key - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success when key is missing (default allow)");
         }
-        
+
         // Test case 4: unknown status value - should allow request (default behavior)
         let _: () = conn.set(format!("sg:plugin:redis-status:test:*:op-res:{AK}"), "unknown").await.expect("fail to set");
         {
@@ -212,7 +212,7 @@ mod test {
             println!("[Test 4] Unknown status - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success when status is unknown (default allow)");
         }
-        
+
         // Test case 5: missing authorization header - should return 401
         {
             let req = Request::builder()

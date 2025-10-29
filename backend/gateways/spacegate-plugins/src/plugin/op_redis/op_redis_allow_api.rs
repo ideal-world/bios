@@ -101,7 +101,7 @@ impl Plugin for OpRedisAllowApiPlugin {
         let Some(matched) = req.extensions().get::<MatchedSgRouter>() else {
             return Err("missing matched router".into());
         };
-        let Some(key) = redis_format_key(&req, matched, &self.header) else {
+        let Some(key) = redis_format_key(&req, matched, &self.header, true) else {
             return Ok(PluginError::status::<Self, { code::UNAUTHORIZED }>(format!("missing header {}", self.header.as_str())).into());
         };
         let pass: bool = redis_call(client.get_conn().await, req.uri().path().to_string(), format!("{}:{}", self.cache_prefix_key, key)).await?;
@@ -154,7 +154,7 @@ mod test {
         let client = global_repo().get(GW_NAME).expect("missing client");
         let mut conn = client.get_conn().await;
         let inner = Inner::new(get_echo_service());
-        
+
         // Setup: 配置允许的 API 列表
         let _: () = conn
             .set(
@@ -163,7 +163,7 @@ mod test {
             )
             .await
             .expect("fail to set");
-        
+
         // Test case 1: Exact match - 精确匹配
         {
             let req = Request::builder()
@@ -185,7 +185,7 @@ mod test {
             println!("[Test 1] Exact match '/op-res/eq' - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success for exact match");
         }
-        
+
         // Test case 2: Exact match failure - 精确匹配失败
         {
             let req = Request::builder()
@@ -207,7 +207,7 @@ mod test {
             println!("[Test 2] Exact match fail '/op-res/eq/extra' - Status: {}", parts.status);
             assert!(parts.status.is_client_error(), "Expected 403 for non-matching path");
         }
-        
+
         // Test case 3: Single wildcard match - 单层通配符匹配
         {
             let req = Request::builder()
@@ -229,7 +229,7 @@ mod test {
             println!("[Test 3] Single wildcard match '/op-res/one/*' -> '/op-res/one/abc' - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success for single wildcard match");
         }
-        
+
         // Test case 4: Single wildcard mismatch - 单层通配符不匹配多层
         {
             let req = Request::builder()
@@ -251,7 +251,7 @@ mod test {
             println!("[Test 4] Single wildcard mismatch '/op-res/one/*' !-> '/op-res/one/abc/def' - Status: {}", parts.status);
             assert!(parts.status.is_client_error(), "Expected 403 when single wildcard doesn't match multiple segments");
         }
-        
+
         // Test case 5: Double wildcard match - 多层通配符匹配
         {
             let req = Request::builder()
@@ -270,10 +270,13 @@ mod test {
                 .expect("fail to build");
             let resp = plugin.call(req, inner.clone()).await.expect("infallible");
             let (parts, _body) = resp.into_parts();
-            println!("[Test 5] Double wildcard match '/op-res/multiple/**' -> '/op-res/multiple/a/b/c' - Status: {}", parts.status);
+            println!(
+                "[Test 5] Double wildcard match '/op-res/multiple/**' -> '/op-res/multiple/a/b/c' - Status: {}",
+                parts.status
+            );
             assert!(parts.status.is_success(), "Expected success for double wildcard match with multiple segments");
         }
-        
+
         // Test case 6: Double wildcard with single segment - 多层通配符匹配单层
         {
             let req = Request::builder()
@@ -292,10 +295,13 @@ mod test {
                 .expect("fail to build");
             let resp = plugin.call(req, inner.clone()).await.expect("infallible");
             let (parts, _body) = resp.into_parts();
-            println!("[Test 6] Double wildcard single segment '/op-res/multiple/**' -> '/op-res/multiple/only-one' - Status: {}", parts.status);
+            println!(
+                "[Test 6] Double wildcard single segment '/op-res/multiple/**' -> '/op-res/multiple/only-one' - Status: {}",
+                parts.status
+            );
             assert!(parts.status.is_success(), "Expected success for double wildcard with single segment");
         }
-        
+
         // Test case 7: Wildcard in middle - 中间通配符
         {
             let req = Request::builder()
@@ -314,10 +320,13 @@ mod test {
                 .expect("fail to build");
             let resp = plugin.call(req, inner.clone()).await.expect("infallible");
             let (parts, _body) = resp.into_parts();
-            println!("[Test 7] Wildcard in middle '/op-res/users/*/profile' -> '/op-res/users/123/profile' - Status: {}", parts.status);
+            println!(
+                "[Test 7] Wildcard in middle '/op-res/users/*/profile' -> '/op-res/users/123/profile' - Status: {}",
+                parts.status
+            );
             assert!(parts.status.is_success(), "Expected success for wildcard in middle of path");
         }
-        
+
         // Test case 8: Wildcard in middle mismatch - 中间通配符不匹配
         {
             let req = Request::builder()
@@ -336,10 +345,13 @@ mod test {
                 .expect("fail to build");
             let resp = plugin.call(req, inner.clone()).await.expect("infallible");
             let (parts, _body) = resp.into_parts();
-            println!("[Test 8] Wildcard in middle mismatch '/op-res/users/*/profile' !-> '/op-res/users/123/settings' - Status: {}", parts.status);
+            println!(
+                "[Test 8] Wildcard in middle mismatch '/op-res/users/*/profile' !-> '/op-res/users/123/settings' - Status: {}",
+                parts.status
+            );
             assert!(parts.status.is_client_error(), "Expected 403 when path after wildcard doesn't match");
         }
-        
+
         // Test case 9: Missing key in Redis - 默认允许
         let _: () = conn.del(format!("sg:plugin:redis-allow-api:test:*:op-res:{AK}")).await.expect("fail to delete");
         {
@@ -362,7 +374,7 @@ mod test {
             println!("[Test 9] Missing key in Redis - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success when key is missing (default allow)");
         }
-        
+
         // Test case 10: Invalid JSON in Redis - 默认允许
         let _: () = conn.set(format!("sg:plugin:redis-allow-api:test:*:op-res:{AK}"), "invalid-json-data").await.expect("fail to set");
         {
@@ -385,7 +397,7 @@ mod test {
             println!("[Test 10] Invalid JSON in Redis - Status: {}", parts.status);
             assert!(parts.status.is_success(), "Expected success when JSON is invalid (graceful degradation)");
         }
-        
+
         // Test case 11: Empty API list - 拒绝所有
         let _: () = conn.set(format!("sg:plugin:redis-allow-api:test:*:op-res:{AK}"), "[]").await.expect("fail to set");
         {
@@ -408,7 +420,7 @@ mod test {
             println!("[Test 11] Empty API list - Status: {}", parts.status);
             assert!(parts.status.is_client_error(), "Expected 403 when API list is empty");
         }
-        
+
         // Test case 12: Missing authorization header - 401 错误
         {
             let req = Request::builder()

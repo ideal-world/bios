@@ -73,7 +73,7 @@ impl Plugin for OpRedisHeaderExpandPlugin {
         let Some(matched) = req.extensions().get::<MatchedSgRouter>() else {
             return Err("missing matched router".into());
         };
-        let Some(key) = redis_format_key(&req, matched, &self.header) else {
+        let Some(key) = redis_format_key(&req, matched, &self.header, false) else {
             return Ok(PluginError::status::<Self, { code::UNAUTHORIZED }>(format!("missing header {}", self.header.as_str())).into());
         };
         let header_map: HashMap<String, String> = redis_call(client.get_conn().await, format!("{}:{}", self.cache_prefix_key, key)).await?;
