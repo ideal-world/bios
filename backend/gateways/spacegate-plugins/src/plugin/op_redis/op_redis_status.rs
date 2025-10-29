@@ -36,8 +36,8 @@ async fn redis_call(mut conn: Connection, redis_key: String) -> Result<bool, Red
         return Ok(true);
     };
     match status.as_str() {
-        "disabled" => Ok(false),
-        "enabled" => Ok(true),
+        "Disabled" => Ok(false),
+        "Enabled" => Ok(true),
         _ => Ok(true),
     }
 }
