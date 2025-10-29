@@ -9,6 +9,7 @@ use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     futures::future::join_all,
     os::os_client::TardisOSClient,
+    web::poem::http::{HeaderMap, HeaderValue},
     TardisFunsInst,
 };
 
@@ -38,11 +39,24 @@ pub trait S3 {
         let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         match presign_kind {
-            ObjectObjPresignKind::Upload => client.object_create_url(&path, exp_secs, bucket_name.as_deref()).await,
+            ObjectObjPresignKind::Upload => {
+                let headers = obj_exp
+                    .map(|o| -> TardisResult<HeaderMap> {
+                        let mut headers = HeaderMap::new();
+                        headers.insert(
+                            "x-obs-expires",
+                            HeaderValue::from_str(&o.to_string())
+                                .map_err(|_| TardisError::internal_error("Cannot convert expires to header value", "500-spi-object-invalid-header-value"))?,
+                        );
+                        Ok(headers)
+                    })
+                    .transpose()?;
+                client.object_create_url(&path, exp_secs, bucket_name.as_deref(), headers, None).await
+            }
             ObjectObjPresignKind::Delete => client.object_delete_url(&path, exp_secs, bucket_name.as_deref()).await,
             ObjectObjPresignKind::View => {
                 if private.unwrap_or(true) || special.unwrap_or(false) {
-                    client.object_get_url(&path, exp_secs, bucket_name.as_deref()).await
+                    client.object_get_url(&path, exp_secs, bucket_name.as_deref(), None).await
                 } else {
                     let spi_bs = if let Some(bs_id) = bs_id {
                         SpiBsServ::get_bs(bs_id, funs, ctx).await.map(|spi| SpiBsCertResp {
