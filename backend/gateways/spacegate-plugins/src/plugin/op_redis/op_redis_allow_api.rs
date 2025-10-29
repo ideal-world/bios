@@ -77,7 +77,7 @@ async fn redis_call(mut conn: Connection, paths: String, redis_key: String) -> R
 }
 
 impl Plugin for OpRedisAllowApiPlugin {
-    const CODE: &'static str = "redis-status";
+    const CODE: &'static str = "op-redis-allow-api";
 
     fn meta() -> spacegate_shell::model::PluginMetaData {
         spacegate_shell::model::plugin_meta!(

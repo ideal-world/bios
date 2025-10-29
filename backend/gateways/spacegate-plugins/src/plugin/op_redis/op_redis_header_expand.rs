@@ -49,7 +49,7 @@ async fn redis_call(mut conn: Connection, redis_key: String) -> Result<HashMap<S
 }
 
 impl Plugin for OpRedisHeaderExpandPlugin {
-    const CODE: &'static str = "redis-header-expand";
+    const CODE: &'static str = "op-redis-header-expand";
 
     fn meta() -> spacegate_shell::model::PluginMetaData {
         spacegate_shell::model::plugin_meta!(

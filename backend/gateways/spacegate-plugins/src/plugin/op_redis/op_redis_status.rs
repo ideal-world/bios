@@ -43,7 +43,7 @@ async fn redis_call(mut conn: Connection, redis_key: String) -> Result<bool, Red
 }
 
 impl Plugin for OpRedisStatusPlugin {
-    const CODE: &'static str = "redis-status";
+    const CODE: &'static str = "op-redis-status";
 
     fn meta() -> spacegate_shell::model::PluginMetaData {
         spacegate_shell::model::plugin_meta!(
