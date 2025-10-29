@@ -86,6 +86,15 @@ pub struct IamConfig {
     pub oauth2_refresh_token_expire_sec: u32,
     pub oauth2_require_pkce: bool,
     pub oauth2_allow_implicit_flow: bool,
+
+    // open-api 插件配置
+    pub openapi_plugin_time_range: String,
+    pub openapi_plugin_limit: String,
+    pub openapi_plugin_count: String,
+    pub openapi_plugin_dynamic_route: String,
+    pub openapi_plugin_allow_api_res: String,
+    pub openapi_plugin_extand_header: String,
+    pub openapi_plugin_state: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -202,6 +211,15 @@ impl Default for IamConfig {
             oauth2_refresh_token_expire_sec: 30 * 24 * 3600,       // 30天
             oauth2_require_pkce: false,
             oauth2_allow_implicit_flow: false,
+
+            // open-api 插件配置
+            openapi_plugin_time_range: "redis-time-range:opres-time-range".to_string(),
+            openapi_plugin_limit: "redis-limit:opres-limit".to_string(),
+            openapi_plugin_count: "redis-count:opres-count".to_string(),
+            openapi_plugin_dynamic_route: "redis-dynamic-route:opres-dynamic-route".to_string(),
+            openapi_plugin_allow_api_res: "redis-allow-api:opres-allow-api".to_string(),
+            openapi_plugin_extand_header: "redis-header-expand:opres-header-expand".to_string(),
+            openapi_plugin_state: "redis-status:opres-status".to_string(),
         }
     }
 }
