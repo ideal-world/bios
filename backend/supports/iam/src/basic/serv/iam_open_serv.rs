@@ -9,6 +9,7 @@ use bios_basic::rbum::{
     serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
 };
 use itertools::Itertools;
+use std::collections::HashMap;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::DateTime,
@@ -24,11 +25,13 @@ use crate::{
         iam_cert_conf_dto::IamCertConfAkSkAddOrModifyReq,
         iam_cert_dto::IamCertAkSkAddReq,
         iam_filer_dto::IamResFilterReq,
-        iam_open_dto::{IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenRuleResp},
+        iam_open_dto::{
+            IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenCertModifyReq, IamOpenCertStateKind, IamOpenExtendData,
+            IamOpenRuleResp,
+        },
         iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq},
     },
     iam_config::IamConfig,
-    iam_constants::{OPENAPI_GATEWAY_PLUGIN_COUNT, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, OPENAPI_GATEWAY_PLUGIN_LIMIT, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE},
     iam_enumeration::{IamCertKernelKind, IamRelKind, IamResKind},
 };
 
@@ -80,6 +83,9 @@ impl IamOpenServ {
                 )
                 .await?;
                 Self::set_rel_ak_cache(&spec.id, funs, ctx).await?;
+                if let Some(bind_api_res) = spec_req.bind_api_res.clone() {
+                    IamIdentCacheServ::add_or_modify_bind_api_res(&spec.id, bind_api_res, funs).await?;
+                }
             } else {
                 let spec_id = IamResServ::add_item(
                     &mut IamResAddReq {
@@ -96,6 +102,10 @@ impl IamOpenServ {
                 )
                 .await?;
                 IamRelServ::add_simple_rel(&IamRelKind::IamProductSpec, &product.id, &spec_id, None, None, false, false, funs, ctx).await?;
+                Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
+                if let Some(bind_api_res) = spec_req.bind_api_res.clone() {
+                    IamIdentCacheServ::add_or_modify_bind_api_res(&spec_id, bind_api_res, funs).await?;
+                }
             }
         }
         Ok(())
@@ -147,6 +157,28 @@ impl IamOpenServ {
             )
             .await?;
             IamRelServ::add_simple_rel(&IamRelKind::IamProductSpec, &product_id, &spec_id, None, None, false, false, funs, ctx).await?;
+            Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
+            if let Some(bind_api_res) = spec.bind_api_res.clone() {
+                IamIdentCacheServ::add_or_modify_bind_api_res(&spec_id, bind_api_res, funs).await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn modify_cert(cert_id: &str, req: &IamOpenCertModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(state) = &req.state {
+            let ak = RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    id: Some(cert_id.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ak;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_state, None, &state.to_string(), funs).await?;
         }
         Ok(())
     }
@@ -214,7 +246,42 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
         .id;
 
-        Self::bind_cert_product(cert_id, &product_id, None, funs, ctx).await?;
+        let create_proj_id = if let Some(create_proj_code) = &bind_req.create_proj_code {
+            Some(
+                IamResServ::find_one_detail_item(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            code: Some(format!("{}/*/{}", IamResKind::Product.to_int(), create_proj_code)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
+                .id,
+            )
+        } else {
+            None
+        };
+
+        if let Some(create_proj_id) = &create_proj_id {
+            let ak = RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    id: Some(cert_id.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ak;
+            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_id.clone())]), funs).await?;
+        }
+        Self::bind_cert_product(cert_id, &product_id, None, create_proj_id, funs, ctx).await?;
         Self::bind_cert_spec(
             cert_id,
             &spec_id,
@@ -257,7 +324,7 @@ impl IamOpenServ {
         Ok(())
     }
 
-    async fn bind_cert_product(cert_id: &str, product_id: &str, own_paths: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn bind_cert_product(cert_id: &str, product_id: &str, own_paths: Option<String>, ext: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: IamRelKind::IamCertProduct.to_string(),
@@ -267,7 +334,7 @@ impl IamOpenServ {
                 to_rbum_item_id: product_id.to_string(),
                 to_own_paths: own_paths.unwrap_or_else(|| ctx.own_paths.clone()),
                 to_is_outside: true,
-                ext: None,
+                ext,
                 disabled: None,
             },
             attrs: vec![],
@@ -326,6 +393,20 @@ impl IamOpenServ {
             envs,
         };
         RbumRelServ::add_rel(req, funs, ctx).await?;
+
+        let ak = RbumCertServ::find_one_detail_rbum(
+            &RbumCertFilterReq {
+                id: Some(cert_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_spec", "illegal response", "401-iam-cert-code-not-exist"))?
+        .ak;
+
+        IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Spec-Id".to_string(), spec_id.to_string())]), funs).await?;
         Ok(())
     }
 
@@ -372,18 +453,15 @@ impl IamOpenServ {
         if start_time.is_some() && end_time.is_some() {
             IamIdentCacheServ::add_or_modify_gateway_rule_info(
                 &ak,
-                OPENAPI_GATEWAY_PLUGIN_TIME_RANGE,
+                &funs.conf::<IamConfig>().openapi_plugin_time_range,
                 None,
                 &format!("{},{}", start_time.unwrap().to_rfc3339(), end_time.unwrap().to_rfc3339()),
                 funs,
             )
             .await?;
         }
-        if let Some(frequency) = api_call_frequency {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, &frequency.to_string(), funs).await?;
-        }
         if let Some(count) = api_call_count {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, &count.to_string(), funs).await?;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, &count.to_string(), funs).await?;
         }
         let spec = IamResServ::find_one_detail_item(
             &IamResFilterReq {
@@ -398,10 +476,11 @@ impl IamOpenServ {
         )
         .await?
         .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
-        IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_DYNAMIC_ROUTE, None, &spec.ext, funs).await?;
+        IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_dynamic_route, None, &spec.ext, funs).await?;
         Ok(())
     }
 
+    // 获取凭证规则信息(支持传入cert_id或ak)
     pub async fn get_rule_info(cert_id_req: Option<String>, ak_req: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOpenRuleResp> {
         if cert_id_req.is_none() && ak_req.is_none() {
             return Err(funs.err().internal_error("iam_open", "get_rule_info", "illegal response", "404-iam-res-not-exist"));
@@ -481,7 +560,7 @@ impl IamOpenServ {
         .await?
         .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?
         .code;
-        let time_range = IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_TIME_RANGE, None, funs).await?.unwrap_or_default();
+        let time_range = IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_time_range, None, funs).await?.unwrap_or_default();
         Ok(IamOpenRuleResp {
             cert_id,
             spec_code,
@@ -495,8 +574,12 @@ impl IamOpenServ {
             } else {
                 None
             },
-            api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_LIMIT, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
-            api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, OPENAPI_GATEWAY_PLUGIN_COUNT, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
+            api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
+                .await?
+                .map(|s| s.parse::<u32>().unwrap_or_default()),
+            api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, funs)
+                .await?
+                .map(|s| s.parse::<u32>().unwrap_or_default()),
             api_call_cumulative_count: IamIdentCacheServ::get_gateway_cumulative_count(&ak, None, funs).await?.map(|s| s.parse::<u32>().unwrap_or_default()),
         })
     }
@@ -531,6 +614,15 @@ impl IamOpenServ {
             &cert_conf_id,
             funs,
             ctx,
+        )
+        .await?;
+
+        IamIdentCacheServ::add_or_modify_gateway_rule_info(
+            &ak,
+            &funs.conf::<IamConfig>().openapi_plugin_state,
+            None,
+            &add_req.state.unwrap_or(IamOpenCertStateKind::Enabled).to_string(),
+            funs,
         )
         .await?;
         Ok(IamOpenAkSkResp { id: cert_id, ak, sk })
@@ -580,6 +672,82 @@ impl IamOpenServ {
                 .collect_vec(),
         )
         .await;
+        Ok(())
+    }
+
+    pub async fn refresh_open_cache(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let specs = IamResServ::find_detail_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Spec),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for spec in specs {
+            let rel_cert_ids = RbumRelServ::find_detail_rbums(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    to_rbum_item_id: Some(spec.id.to_string()),
+                    tag: Some(IamRelKind::IamCertSpec.to_string()),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .into_iter()
+            .map(|rel| rel.from_rbum_id)
+            .collect_vec();
+            for cert_id in rel_cert_ids {
+                if let Some(cert) = RbumCertServ::find_one_detail_rbum(
+                    &RbumCertFilterReq {
+                        id: Some(cert_id.to_string()),
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                {
+                    // 1、api调用频率缓存重写
+                    if let Some(api_call_frequency) = IamIdentCacheServ::get_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
+                        .await?
+                        .map(|s| s.parse::<u32>().unwrap_or_default())
+                    {
+                        IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.to_string().as_str(), funs).await?;
+                    };
+                    // 2、新增ak关联规格ID
+                    IamIdentCacheServ::set_open_api_extand_header(&cert.ak, None, HashMap::from([("Spec-Id".to_string(), spec.id.clone())]), funs).await?;
+                    // 3、新增ak可用状态
+                    IamIdentCacheServ::add_or_modify_gateway_rule_info(
+                        &cert.ak,
+                        &funs.conf::<IamConfig>().openapi_plugin_state,
+                        None,
+                        IamOpenCertStateKind::Enabled.to_string().as_str(),
+                        funs,
+                    )
+                    .await?;
+                }
+            }
+        }
+
         Ok(())
     }
 }
