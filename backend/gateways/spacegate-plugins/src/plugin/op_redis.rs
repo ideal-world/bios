@@ -5,9 +5,9 @@ use spacegate_shell::{
     SgBody,
 };
 
+pub mod op_redis_allow_api;
 pub mod op_redis_header_expand;
 pub mod op_redis_status;
-pub mod op_redis_allow_api;
 
 fn redis_format_key(req: &Request<SgBody>, matched: &MatchedSgRouter, header: &str) -> Option<String> {
     let is_method_any_match = matched.method.as_ref().is_none();
@@ -21,6 +21,6 @@ fn redis_format_key(req: &Request<SgBody>, matched: &MatchedSgRouter, header: &s
             HttpPathMatchRewrite::RegExp(regex, _) => regex.as_str(),
         })
         .unwrap_or("*");
-    let header = req.headers().get(header).and_then(|v| v.to_str().ok())?;
+    let header = req.headers().get(header).and_then(|v| v.to_str().ok()).unwrap_or("");
     Some(format!("{}:{}:{}", method, path, header))
 }
