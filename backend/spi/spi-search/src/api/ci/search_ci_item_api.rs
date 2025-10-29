@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::{serde_json, tokio};
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchBatchOperateReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchBatchOperateReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp
 };
 use crate::serv::search_item_serv;
 use tardis::log::warn;
@@ -50,11 +50,29 @@ impl SearchCiItemApi {
     async fn batch_operate(&self, mut batch_req: Json<SearchBatchOperateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        for add_req in batch_req.0.add_reqs.iter_mut() {
-            search_item_serv::add(add_req, &funs, &ctx.0).await?;
-        }
-        for modify_req in batch_req.0.modify_reqs.iter_mut() {
-            search_item_serv::modify(&modify_req.tag, &modify_req.key, &mut modify_req.req, &funs, &ctx.0).await?;
+        for add_or_modify_req in batch_req.0.add_or_modify_reqs.iter_mut() {
+            if  search_item_serv::search(&mut SearchItemSearchReq {
+                tag: add_or_modify_req.tag.clone(),
+                ctx: SearchItemSearchCtxReq::default(),
+                query: SearchItemQueryReq {
+                    keys: Some(vec![add_or_modify_req.key.clone()]),
+                    ..Default::default()
+                },
+                adv_by_or: None,
+                adv_query: None,
+                sort: None,
+                page: SearchItemSearchPageReq {
+                    number: 1,
+                    size: 1,
+                    fetch_total: false,
+                },
+            }, &funs, &ctx.0).await?.records.is_empty() {
+                let mut add_req = SearchItemAddReq::from(add_or_modify_req.clone());
+                search_item_serv::add(&mut add_req, &funs, &ctx.0).await?;
+            } else {
+                let mut modify_req = SearchItemModifyReq::from(add_or_modify_req.clone());
+                search_item_serv::modify(&add_or_modify_req.tag, &add_or_modify_req.key, &mut modify_req, &funs, &ctx.0).await?;
+            }
         }
         for delete_req in batch_req.0.delete_reqs.iter_mut() {
             search_item_serv::delete(&delete_req.tag, &delete_req.key, &funs, &ctx.0).await?;

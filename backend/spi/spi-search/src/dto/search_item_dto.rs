@@ -652,16 +652,67 @@ pub enum SearchWordCombinationsRuleWay {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchBatchOperateReq {
-    pub add_reqs: Vec<SearchItemAddReq>,
-    pub modify_reqs: Vec<SearchBatchModifyItemReq>,
+    pub add_or_modify_reqs: Vec<SearchBatchAddOrModifyItemReq>,
     pub delete_reqs: Vec<SearchBatchDeleteItemReq>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchBatchModifyItemReq {
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct SearchBatchAddOrModifyItemReq {
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
-    pub key: String,
-    pub req: SearchItemModifyReq,
+    #[oai(validator(min_length = "2"))]
+    pub kind: String,
+    #[oai(validator(min_length = "2"))]
+    pub key: TrimString,
+    #[oai(validator(min_length = "1"))]
+    pub title: String,
+    // #[oai(validator(min_length = "2"))]
+    pub content: String,
+    pub data_source: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    // #[oai(validator(min_length = "2"))]
+    pub own_paths: Option<String>,
+    pub create_time: Option<DateTime<Utc>>,
+    pub update_time: Option<DateTime<Utc>>,
+    pub ext: Option<Value>,
+    pub visit_keys: Option<SearchItemVisitKeysReq>,
+}
+
+impl From<SearchBatchAddOrModifyItemReq> for SearchItemAddReq {
+    fn from(value: SearchBatchAddOrModifyItemReq) -> Self {
+        Self {
+            tag: value.tag,
+            kind: value.kind,
+            key: value.key,
+            title: value.title,
+            content: value.content,
+            data_source: value.data_source,
+            owner: value.owner,
+            own_paths: value.own_paths,
+            create_time: value.create_time,
+            update_time: value.update_time,
+            ext: value.ext,
+            visit_keys: value.visit_keys,
+        }
+    }
+}
+
+impl From<SearchBatchAddOrModifyItemReq> for SearchItemModifyReq {
+    fn from(value: SearchBatchAddOrModifyItemReq) -> Self {
+        Self {
+            kind: Some(value.kind),
+            title: Some(value.title),
+            content: Some(value.content),
+            owner: value.owner,
+            own_paths: value.own_paths,
+            create_time: value.create_time,
+            update_time: value.update_time,
+            ext: value.ext,
+            ext_override: None,
+            visit_keys: value.visit_keys,
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
