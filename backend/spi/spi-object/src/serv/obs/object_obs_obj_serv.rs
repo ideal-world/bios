@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiBsInst;
+use bios_basic::spi::{spi_funs::SpiBsInst, spi_initializer::common};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     os::os_client::TardisOSClient,
@@ -16,6 +16,23 @@ pub(crate) struct OBSService;
 impl S3 for OBSService {
     async fn rebuild_path(_bucket_name: Option<&str>, origin_path: &str, _obj_exp: Option<u32>, _client: &TardisOSClient) -> TardisResult<String> {
         Ok(origin_path.to_string())
+    }
+
+    fn get_bucket_name(private: Option<bool>, special: Option<bool>, obj_exp: Option<u32>, bucket_name: Option<&str>, bs_id: Option<&str>, inst: &SpiBsInst) -> Option<String> {
+        let bs_inst = inst.inst::<TardisOSClient>();
+        common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| {
+            format!(
+                "{}-{}",
+                bucket_name_prefix,
+                if special.unwrap_or(false) {
+                    "spe"
+                } else if private.unwrap_or(true) {
+                    "pri"
+                } else {
+                    "pub"
+                }
+            )
+        })
     }
 
     //
