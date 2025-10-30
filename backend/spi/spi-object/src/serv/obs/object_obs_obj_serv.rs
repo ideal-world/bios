@@ -18,23 +18,6 @@ impl S3 for OBSService {
         Ok(origin_path.to_string())
     }
 
-    fn get_bucket_name(private: Option<bool>, special: Option<bool>, obj_exp: Option<u32>, bucket_name: Option<&str>, bs_id: Option<&str>, inst: &SpiBsInst) -> Option<String> {
-        let bs_inst = inst.inst::<TardisOSClient>();
-        common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| {
-            format!(
-                "{}-{}",
-                bucket_name_prefix,
-                if special.unwrap_or(false) {
-                    "spe"
-                } else if private.unwrap_or(true) {
-                    "pri"
-                } else {
-                    "pub"
-                }
-            )
-        })
-    }
-
     //
     async fn object_copy(
         from: &str,

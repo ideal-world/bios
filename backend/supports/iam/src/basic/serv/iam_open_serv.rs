@@ -246,28 +246,7 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
         .id;
 
-        let create_proj_id = if let Some(create_proj_code) = &bind_req.create_proj_code {
-            Some(
-                IamResServ::find_one_detail_item(
-                    &IamResFilterReq {
-                        basic: RbumBasicFilterReq {
-                            code: Some(format!("{}/*/{}", IamResKind::Product.to_int(), create_proj_code)),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?
-                .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "404-iam-res-not-exist"))?
-                .id,
-            )
-        } else {
-            None
-        };
-
-        if let Some(create_proj_id) = &create_proj_id {
+        if let Some(create_proj_code) = &bind_req.create_proj_code {
             let ak = RbumCertServ::find_one_detail_rbum(
                 &RbumCertFilterReq {
                     id: Some(cert_id.to_string()),
@@ -279,9 +258,9 @@ impl IamOpenServ {
             .await?
             .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
             .ak;
-            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_id.clone())]), funs).await?;
+            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
-        Self::bind_cert_product(cert_id, &product_id, None, create_proj_id, funs, ctx).await?;
+        Self::bind_cert_product(cert_id, &product_id, None, bind_req.create_proj_code.clone(), funs, ctx).await?;
         Self::bind_cert_spec(
             cert_id,
             &spec_id,
