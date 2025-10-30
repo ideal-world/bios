@@ -228,7 +228,9 @@ pub async fn batch_operate(tag: &str, batch_req: &mut SearchBatchOperateReq, fun
             self::do_modify(&save_req.key, &mut modify_req, funs, &conn, &table_name).await?;
         }
     }
-    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key in ($1)"), vec![Value::from(batch_req.delete_ids.join(","))]).await?;
+    if !batch_req.delete_ids.is_empty() {
+        conn.execute_one(&format!("DELETE FROM {table_name} WHERE key in ({})", (0..batch_req.delete_ids.len()).map(|idx| format!("${}", idx + 1)).collect::<Vec<String>>().join(",")), batch_req.delete_ids.iter().map(|id| Value::from(id)).collect::<Vec<_>>()).await?;
+    }
     conn.commit().await?;
     Ok(())
 }
