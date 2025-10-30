@@ -13,7 +13,7 @@ use spacegate_shell::{
 };
 use tardis::{
     cache::{AsyncCommands, RedisError},
-    log::debug,
+    log::{self, debug},
     serde_json,
 };
 spacegate_shell::plugin::schema!(OpRedisHeaderExpandPlugin, OpRedisHeaderExpandPlugin);
@@ -86,6 +86,7 @@ impl Plugin for OpRedisHeaderExpandPlugin {
                 })
                 .collect::<Vec<(HeaderName, hyper::header::HeaderValue)>>(),
         );
+        log::info!(request_headers = ?req.headers(), "expanded request headers from redis");
         Ok(inner.call(req).await)
     }
 }
@@ -122,7 +123,7 @@ mod test {
         let plugin = OpRedisHeaderExpandPlugin::create_by_spec(
             json! {
                 {
-                    "cache_prefix_key": "sg:plugin:redis-status:test",
+                    "cache_prefix_key": "sg:plugin:redis-header-expand:test",
                     "header": AUTHORIZATION.as_str(),
                 }
             },
