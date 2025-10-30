@@ -652,14 +652,12 @@ pub enum SearchWordCombinationsRuleWay {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchBatchOperateReq {
-    pub add_or_modify_reqs: Vec<SearchBatchAddOrModifyItemReq>,
-    pub delete_reqs: Vec<SearchBatchDeleteItemReq>,
+    pub save_reqs: Vec<SearchBatchSaveItemReq>,
+    pub delete_ids: Vec<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
-pub struct SearchBatchAddOrModifyItemReq {
-    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
-    pub tag: String,
+pub struct SearchBatchSaveItemReq {
     #[oai(validator(min_length = "2"))]
     pub kind: String,
     #[oai(validator(min_length = "2"))]
@@ -677,42 +675,6 @@ pub struct SearchBatchAddOrModifyItemReq {
     pub update_time: Option<DateTime<Utc>>,
     pub ext: Option<Value>,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
-}
-
-impl From<SearchBatchAddOrModifyItemReq> for SearchItemAddReq {
-    fn from(value: SearchBatchAddOrModifyItemReq) -> Self {
-        Self {
-            tag: value.tag,
-            kind: value.kind,
-            key: value.key,
-            title: value.title,
-            content: value.content,
-            data_source: value.data_source,
-            owner: value.owner,
-            own_paths: value.own_paths,
-            create_time: value.create_time,
-            update_time: value.update_time,
-            ext: value.ext,
-            visit_keys: value.visit_keys,
-        }
-    }
-}
-
-impl From<SearchBatchAddOrModifyItemReq> for SearchItemModifyReq {
-    fn from(value: SearchBatchAddOrModifyItemReq) -> Self {
-        Self {
-            kind: Some(value.kind),
-            title: Some(value.title),
-            content: Some(value.content),
-            owner: value.owner,
-            own_paths: value.own_paths,
-            create_time: value.create_time,
-            update_time: value.update_time,
-            ext: value.ext,
-            ext_override: None,
-            visit_keys: value.visit_keys,
-        }
-    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
