@@ -676,9 +676,3 @@ pub struct SearchBatchSaveItemReq {
     pub ext: Option<Value>,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchBatchDeleteItemReq {
-    pub tag: String,
-    pub key: String,
-}
