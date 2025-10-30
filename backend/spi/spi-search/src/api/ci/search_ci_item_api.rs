@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::{serde_json, tokio};
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchBatchOperateReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq
 };
 use crate::serv::search_item_serv;
 use tardis::log::warn;
@@ -45,12 +45,30 @@ impl SearchCiItemApi {
         TardisResp::ok(Void {})
     }
 
-    /// Batch Operate
-    #[oai(path = "/:tag/batch/operate", method = "put")]
-    async fn batch_operate(&self, tag: Path<String>, mut batch_req: Json<SearchBatchOperateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    /// Save Item
+    #[oai(path = "/:tag/save", method = "put")]
+    async fn save(&self, tag: Path<String>, mut save_req: Json<SearchSaveItemReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        search_item_serv::save(&tag.0, &mut save_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch save
+    #[oai(path = "/:tag/batch/save", method = "put")]
+    async fn batch_operate(&self, tag: Path<String>, mut batch_req: Json<Vec<SearchSaveItemReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        search_item_serv::batch_operate(&tag.0, &mut batch_req.0, &funs, &ctx.0).await?;
+        search_item_serv::batch_save(&tag.0, &mut batch_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch Delete
+    #[oai(path = "/:tag/batch/delete", method = "put")]
+    async fn batch_delete(&self, tag: Path<String>, batch_req: Json<Vec<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = crate::get_tardis_inst();
+        funs.begin().await?;
+        search_item_serv::batch_delete(&tag.0, batch_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

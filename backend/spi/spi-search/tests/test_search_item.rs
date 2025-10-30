@@ -19,37 +19,30 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 
     let _: Void = client
         .put(
-            "/ci/item/app/batch/operate",
-            &json!({
-                "save_reqs": [
-                    {
-                        "tag":"app",
-                        "kind": "app",
-                        "key": "a001",
-                        "title": "应用001",
-                        "content": "应用001",
-                    },
-                    {
-                        "tag":"app",
-                        "kind": "app",
-                        "key": "a002",
-                        "title": "应用002",
-                        "content": "应用002",
-                    },
-                ],
-                "delete_ids": []
-            }),
+            "/ci/item/app/batch/save",
+            &json!([
+                {
+                    "tag":"app",
+                    "kind": "app",
+                    "key": "a001",
+                    "title": "应用001",
+                    "content": "应用001",
+                },
+                {
+                    "tag":"app",
+                    "kind": "app",
+                    "key": "a002",
+                    "title": "应用002",
+                    "content": "应用002",
+                },
+            ]),
         )
         .await;
 
         let _: Void = client
         .put(
-            "/ci/item/app/batch/operate",
-            &json!({
-                "save_reqs": [
-                ],
-                "delete_ids": ["a001","a002"]
-            }),
+            "/ci/item/app/batch/delete",
+            &json!(["a001","a002"]),
         )
         .await;
 

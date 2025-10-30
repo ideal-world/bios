@@ -650,14 +650,8 @@ pub enum SearchWordCombinationsRuleWay {
     SpecSymbols(Vec<String>),
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchBatchOperateReq {
-    pub save_reqs: Vec<SearchBatchSaveItemReq>,
-    pub delete_ids: Vec<String>,
-}
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
-pub struct SearchBatchSaveItemReq {
+pub struct SearchSaveItemReq {
     #[oai(validator(min_length = "2"))]
     pub kind: String,
     #[oai(validator(min_length = "2"))]
