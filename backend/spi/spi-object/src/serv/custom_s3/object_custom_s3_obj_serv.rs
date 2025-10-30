@@ -22,7 +22,14 @@ impl S3 for CustomS3Service {
         Ok(origin_path.to_string())
     }
 
-    fn get_bucket_name(_private: Option<bool>, _special: Option<bool>, _obj_exp: Option<u32>, bucket_name: Option<&str>, _bs_id: Option<&str>, _inst: &SpiBsInst) -> Option<String> {
+    fn get_bucket_name(
+        _private: Option<bool>,
+        _special: Option<bool>,
+        _obj_exp: Option<u32>,
+        bucket_name: Option<&str>,
+        _bs_id: Option<&str>,
+        _inst: &SpiBsInst,
+    ) -> Option<String> {
         // 使用自定义客户端时，不需要遵循内置桶的规则，直接返回传入的桶名
         bucket_name.map(|s| s.to_string())
     }
