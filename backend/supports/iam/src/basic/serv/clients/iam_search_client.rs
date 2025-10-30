@@ -12,7 +12,7 @@ use itertools::Itertools;
 
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    serde_json::json,
+    serde_json::{self, json},
     tokio, TardisFunsInst,
 };
 
@@ -20,9 +20,12 @@ use crate::{
     basic::{
         dto::{
             iam_account_dto::IamAccountDetailAggResp,
-            iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq, IamTenantFilterReq},
+            iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         },
-        serv::{iam_account_serv::IamAccountServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ},
+        serv::{
+            iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ,
+            iam_tenant_serv::IamTenantServ,
+        },
     },
     iam_config::IamConfig,
     iam_constants,
@@ -128,7 +131,7 @@ impl IamSearchClient {
     ) -> TardisResult<()> {
         let account_id = account_resp.id.as_str();
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
-        let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
+        // let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
         let global_ctx = TardisContext {
             own_paths: "".to_owned(),
@@ -176,6 +179,42 @@ impl IamSearchClient {
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
         let key = account_id.to_string();
+        let raw_account_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    rel_item_id: Some(account_id.to_string()),
+                    tag: Some(IamRelKind::IamAccountApp.to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        let account_app_ids = raw_account_apps.iter().map(|app| app.id.clone()).collect_vec();
+        let raw_account_apps_map = raw_account_apps
+            .into_iter()
+            .map(|app| {
+                (
+                    app.id.clone(),
+                    json!({
+                        "name": app.name,
+                        "own_paths": app.own_paths,
+                        "scope_level": app.scope_level,
+                    }),
+                )
+            })
+            .collect::<HashMap<String, serde_json::Value>>();
         let raw_roles = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
@@ -222,6 +261,7 @@ impl IamSearchClient {
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
             "project_id": account_app_ids,
+            "app": raw_account_apps_map,
             "create_time": account_resp.create_time.to_rfc3339(),
             "certs":account_resp.certs,
             "icon":account_resp.icon,
