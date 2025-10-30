@@ -142,7 +142,7 @@ impl IamCertAkSkServ {
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let resp = RbumCertServ::peek_rbum(id, &RbumCertFilterReq { ..Default::default() }, funs, ctx).await?;
         RbumCertServ::delete_rbum(id, funs, ctx).await?;
-        IamIdentCacheServ::delete_aksk(&resp.ak, funs).await?;
+        IamIdentCacheServ::delete_aksk(&resp.ak, None, funs).await?;
         Ok(())
     }
 }

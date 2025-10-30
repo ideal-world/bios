@@ -526,7 +526,7 @@ impl IamIdentCacheServ {
         log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", spec_id, bind_api_res,);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         let cache_key = format!(
-            "{}{}:{}",
+            "{}{}:{}:{}:{}",
             funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
             funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
             match_method.unwrap_or("*"),
@@ -574,7 +574,7 @@ impl IamIdentCacheServ {
         Ok(result)
     }
 
-    pub async fn delete_aksk(ak: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn delete_aksk(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete aksk: ak={}", ak);
 
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_aksk_info_, ak).as_str()).await?;
