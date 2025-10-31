@@ -14,9 +14,7 @@ use bios_basic::{
 };
 
 use crate::dto::search_item_dto::{
-    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq,
-    SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp,
-    SearchQueryMetricsReq, SearchQueryMetricsResp,
+    GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq
 };
 
 use super::search_es_initializer;
@@ -214,6 +212,18 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
     client.update(&index, &id, query).await?;
 
     Ok(())
+}
+
+pub async fn save(_tag: &str, _save_req: &mut SearchSaveItemReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().format_error("search_es_item_serv", "save", "not supports", "500-not-supports"))
+}
+
+pub async fn batch_save(_tag: &str, _batch_req: &mut Vec<SearchSaveItemReq>, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().format_error("search_es_item_serv", "batch_save", "not supports", "500-not-supports"))
+}
+
+pub async fn batch_delete(_tag: &str, _delete_ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().format_error("search_es_item_serv", "batch_delete", "not supports", "500-not-supports"))
 }
 
 pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, _ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {

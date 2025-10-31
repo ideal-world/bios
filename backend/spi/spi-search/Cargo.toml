@@ -33,6 +33,7 @@ bios-basic = { version = "0.2.0", path = "../../basic", features = ["default"] }
 strum = { workspace = true, features = ["derive"] }
 pinyin = { version = "0.10" }
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [
+    "spi_base",
     "event",
 ], default-features = false }
 
