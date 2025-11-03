@@ -591,6 +591,9 @@ impl FlowLogServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if original_state_id == target_state_id {
+            return Ok(());
+        }
         let original_state = FlowStateServ::get_item(
             &original_state_id,
             &FlowStateFilterReq {

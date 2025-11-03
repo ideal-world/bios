@@ -176,7 +176,7 @@ impl IamOpenServ {
                 ctx,
             )
             .await?
-            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "modify_cert", "illegal response", "401-iam-cert-code-not-exist"))?
             .ak;
             IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_state, None, &state.to_string(), funs).await?;
         }
@@ -256,7 +256,7 @@ impl IamOpenServ {
                 ctx,
             )
             .await?
-            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "401-iam-cert-code-not-exist"))?
             .ak;
             IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
@@ -294,7 +294,6 @@ impl IamOpenServ {
             &spec_id,
             bind_req.start_time,
             bind_req.end_time,
-            bind_req.api_call_frequency,
             bind_req.api_call_count,
             funs,
             ctx,
@@ -386,6 +385,9 @@ impl IamOpenServ {
         .ak;
 
         IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Spec-Id".to_string(), spec_id.to_string())]), funs).await?;
+        if let Some(frequency) = api_call_frequency {
+            IamIdentCacheServ::set_open_api_call_frequency(spec_id, None, frequency.to_string().as_str(), funs).await?;
+        }
         Ok(())
     }
 
@@ -403,7 +405,7 @@ impl IamOpenServ {
         )
         .await?
         {
-            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None, None, None, funs, ctx).await?;
+            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None,  None, funs, ctx).await?;
         }
         Ok(())
     }
@@ -413,12 +415,11 @@ impl IamOpenServ {
         spec_id: &str,
         start_time: Option<chrono::DateTime<Utc>>,
         end_time: Option<chrono::DateTime<Utc>>,
-        api_call_frequency: Option<u32>,
         api_call_count: Option<u32>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ak = RbumCertServ::find_one_detail_rbum(
+        if let Some(ak) = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 id: Some(cert_id.to_string()),
                 ..Default::default()
@@ -426,36 +427,36 @@ impl IamOpenServ {
             funs,
             ctx,
         )
-        .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
-        .ak;
-        if start_time.is_some() && end_time.is_some() {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(
-                &ak,
-                &funs.conf::<IamConfig>().openapi_plugin_time_range,
-                None,
-                &format!("{},{}", start_time.unwrap().to_rfc3339(), end_time.unwrap().to_rfc3339()),
-                funs,
-            )
-            .await?;
-        }
-        if let Some(count) = api_call_count {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, &count.to_string(), funs).await?;
-        }
-        let spec = IamResServ::find_one_detail_item(
-            &IamResFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(vec![spec_id.to_string()]),
+        .await?.map(|c| c.ak) {
+            if start_time.is_some() && end_time.is_some() {
+                IamIdentCacheServ::add_or_modify_gateway_rule_info(
+                    &ak,
+                    &funs.conf::<IamConfig>().openapi_plugin_time_range,
+                    None,
+                    &format!("{},{}", start_time.unwrap().to_rfc3339(), end_time.unwrap().to_rfc3339()),
+                    funs,
+                )
+                .await?;
+            }
+            if let Some(count) = api_call_count {
+                IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, &count.to_string(), funs).await?;
+            }
+            let spec = IamResServ::find_one_detail_item(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![spec_id.to_string()]),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
-        IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_dynamic_route, None, &spec.ext, funs).await?;
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_dynamic_route, None, &spec.ext, funs).await?;
+        }
+        
         Ok(())
     }
 
@@ -537,7 +538,7 @@ impl IamOpenServ {
             ctx,
         )
         .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?
+        .ok_or_else(|| funs.err().internal_error("iam_open", "get_rule_info", "illegal response", "404-iam-res-not-exist"))?
         .code;
         let time_range = IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_time_range, None, funs).await?.unwrap_or_default();
         Ok(IamOpenRuleResp {
