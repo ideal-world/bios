@@ -36,7 +36,7 @@ pub trait S3 {
     ) -> TardisResult<String> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp, bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         match presign_kind {
             ObjectObjPresignKind::Upload => {
@@ -95,7 +95,7 @@ pub trait S3 {
     ) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp, bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         client.object_delete(&path, bucket_name.as_deref()).await
     }
@@ -158,7 +158,7 @@ pub trait S3 {
     ) -> TardisResult<bool> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, obj_exp.map(|_| true), bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp, bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         client.object_exist(&path, bucket_name.as_deref()).await
     }
@@ -261,11 +261,7 @@ pub trait S3 {
         client.complete_multipart_upload(object_path, upload_id, parts, bucket_name.as_deref()).await
     }
 
-    fn get_bucket_name(private: Option<bool>, special: Option<bool>, tamp: Option<bool>, bucket_name: Option<&str>, bs_id: Option<&str>, inst: &SpiBsInst) -> Option<String> {
-        // 使用自定义客户端时，不需要遵循内置桶的规则，直接返回传入的桶名
-        if bs_id.is_some() {
-            return bucket_name.map(|s| s.to_string());
-        }
+    fn get_bucket_name(private: Option<bool>, special: Option<bool>, obj_exp: Option<u32>, bucket_name: Option<&str>, bs_id: Option<&str>, inst: &SpiBsInst) -> Option<String> {
         let bs_inst = inst.inst::<TardisOSClient>();
         common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| {
             format!(
@@ -273,7 +269,7 @@ pub trait S3 {
                 bucket_name_prefix,
                 if special.unwrap_or(false) {
                     "spe"
-                } else if tamp.unwrap_or(false) {
+                } else if obj_exp.is_some() {
                     "tamp"
                 } else if private.unwrap_or(true) {
                     "pri"

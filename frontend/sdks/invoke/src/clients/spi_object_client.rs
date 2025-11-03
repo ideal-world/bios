@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFunsInst;
 use tardis::web::web_resp::TardisResp;
+use tardis::TardisFunsInst;
 
 use crate::invoke_enumeration::InvokeModuleKind;
 
@@ -322,7 +322,7 @@ impl SpiObjectClient {
 
         let url = format!("{object_url}/ci/obj/presign/batch_view");
 
-        let resp = funs.web_client().post::<ObjectPresignBatchViewReq,TardisResp<HashMap<String, String>> >(&url, req, headers.clone()).await?;
+        let resp = funs.web_client().post::<ObjectPresignBatchViewReq, TardisResp<HashMap<String, String>>>(&url, req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 
@@ -345,7 +345,7 @@ impl SpiObjectClient {
 
         let url = format!("{object_url}/ci/obj/multi_upload/initiate_multipart_upload");
 
-        let resp = funs.web_client().post::<ObjectInitiateMultipartUploadReq,TardisResp<String> >(&url, req, headers.clone()).await?;
+        let resp = funs.web_client().post::<ObjectInitiateMultipartUploadReq, TardisResp<String>>(&url, req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 
@@ -368,7 +368,7 @@ impl SpiObjectClient {
 
         let url = format!("{object_url}/ci/obj/multi_upload/batch_build_create_presign_url");
 
-        let resp = funs.web_client().post::<ObjectBatchBuildCreatePresignUrlReq,TardisResp<Vec<String>>>(&url, req, headers.clone()).await?;
+        let resp = funs.web_client().post::<ObjectBatchBuildCreatePresignUrlReq, TardisResp<Vec<String>>>(&url, req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
     }
 
