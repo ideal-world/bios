@@ -6,6 +6,7 @@ use crate::dto::flow_model_dto::{
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
+use crate::serv::flow_log_serv::FlowLogServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
@@ -144,6 +145,11 @@ impl FlowCiModelApi {
                 &ctx.0,
             )
             .await?;
+            if let (Some(data_source), Some(update_states)) = (&req.0.data_source, &update_states) {
+                for (old_state_id, new_state_id) in update_states.iter() {
+                    FlowLogServ::add_switch_state_log_async_task(data_source, old_state_id, new_state_id, &funs, &ctx.0).await?;
+                }
+            }
             result.insert(rel_main_model.id.clone(), new_model.id.clone());
         }
         // 需要删除的主模型
