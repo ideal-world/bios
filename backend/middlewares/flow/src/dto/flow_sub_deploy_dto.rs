@@ -11,7 +11,7 @@ use super::{flow_inst_dto::FlowInstDetailResp, flow_model_dto::FlowModelDetailRe
 pub struct FlowSubDeployOneExportAggResp {
     pub states: Vec<FlowStateDetailResp>,
     pub models: Vec<FlowModelDetailResp>,
-    pub delete_logs: HashMap<String, Option<Vec<LogItemFindResp>>>,
+    pub switch_state_logs: HashMap<String, Option<Vec<LogItemFindResp>>>,
     pub rel_kv_config: Option<HashMap<String, Value>>,
     pub insts: Vec<FlowInstDetailResp>,
 }
@@ -20,7 +20,7 @@ pub struct FlowSubDeployOneExportAggResp {
 pub struct FlowSubDeployTowImportReq {
     pub states: Vec<FlowStateDetailResp>,
     pub models: Vec<FlowModelDetailResp>,
-    pub delete_logs: HashMap<String, Option<Vec<LogItemFindResp>>>,
+    pub switch_state_logs: HashMap<String, Option<Vec<LogItemFindResp>>>,
     pub rel_kv_config: Option<HashMap<String, Value>>,
     pub insts: Vec<FlowInstDetailResp>,
 }

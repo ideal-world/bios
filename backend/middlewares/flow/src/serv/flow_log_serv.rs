@@ -8,11 +8,11 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::dto::{
+use crate::{dto::{
     flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
-    flow_model_dto::{FlowModelDetailResp, FlowModelRelTransitionKind},
+    flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionKind},
     flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
-};
+}, serv::flow_model_serv::FlowModelServ};
 
 use super::{
     clients::{
@@ -98,6 +98,7 @@ impl FlowLogServ {
             Some(LogParamOp::Start.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             ctx,
@@ -181,6 +182,7 @@ impl FlowLogServ {
             Some(LogParamOp::Start.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             ctx,
@@ -251,6 +253,7 @@ impl FlowLogServ {
             Some(LogParamOp::Start.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             ctx,
@@ -348,6 +351,7 @@ impl FlowLogServ {
             Some(op_kind.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             ctx,
@@ -455,6 +459,7 @@ impl FlowLogServ {
             Some(op_kind.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             ctx,
@@ -504,6 +509,7 @@ impl FlowLogServ {
             Some(LogParamOp::Finish.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             ctx,
@@ -564,6 +570,7 @@ impl FlowLogServ {
             Some(op.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            None,
             is_async,
             funs,
             &mock_ctx,
@@ -574,17 +581,17 @@ impl FlowLogServ {
     }
 
     pub async fn add_switch_state_log_async_task(
-        data_source: &str,
+        flow_model_id: &str,
         original_state_id: &str,
         target_state_id: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        Self::add_switch_state_log(data_source, original_state_id, target_state_id, true, funs, ctx).await
+        Self::add_switch_state_log(flow_model_id, original_state_id, target_state_id, true, funs, ctx).await
     }
 
     async fn add_switch_state_log(
-        data_source: &str,
+        flow_model_id: &str,
         original_state_id: &str,
         target_state_id: &str,
         is_async: bool,
@@ -594,8 +601,17 @@ impl FlowLogServ {
         if original_state_id == target_state_id {
             return Ok(());
         }
+        let flow_model = FlowModelServ::find_one_item(&FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                own_paths: Some("".to_string()),
+                ids: Some(vec![flow_model_id.to_string()]),
+                ..Default::default()
+            },
+            ..Default::default()
+        }, funs, ctx).await?.unwrap_or_default();
         let original_state = FlowStateServ::get_item(
-            &original_state_id,
+            original_state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -609,7 +625,7 @@ impl FlowLogServ {
         )
         .await?;
         let target_state = FlowStateServ::get_item(
-            &target_state_id,
+            target_state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -635,13 +651,14 @@ impl FlowLogServ {
         };
         FlowLogClient::addv2_item(
             LogParamTag::FlowModel,
-            Some(data_source.to_string()),
+            Some(flow_model.id.clone()),
             log_content,
             None,
             Some("dynamic_log_flow_model".to_string()),
             Some(LogParamOp::SwitchState.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+            Some(flow_model.data_source.clone().unwrap_or_default()),
             is_async,
             funs,
             ctx,

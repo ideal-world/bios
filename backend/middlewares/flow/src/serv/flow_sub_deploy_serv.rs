@@ -43,7 +43,7 @@ impl FlowSubDeployServ {
     pub(crate) async fn one_deploy_export(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowSubDeployOneExportAggResp> {
         let mut states = HashMap::new();
         let mut main_models = HashMap::new();
-        let mut delete_logs = HashMap::new();
+        let mut switch_state_logs = HashMap::new();
         let mut kv_config = HashMap::new();
         let mut rel_template_ids = vec![];
         for main_model in FlowModelServ::find_detail_items(
@@ -93,8 +93,8 @@ impl FlowSubDeployServ {
                     states.insert(model_state.id.clone(), model_state);
                 }
             }
-            if let Some(data_source) = &main_model.data_source {
-                delete_logs.insert(main_model.id.clone(), FlowLogServ::find_switch_state_log(data_source, funs, ctx).await?);
+            if main_model.data_source.is_some() {
+                switch_state_logs.insert(main_model.id.clone(), FlowLogServ::find_switch_state_log(&main_model.id, funs, ctx).await?);
             }
             main_models.insert(main_model.tag.clone(), main_model);
         }
@@ -177,7 +177,7 @@ impl FlowSubDeployServ {
         Ok(FlowSubDeployOneExportAggResp {
             states: states.values().cloned().collect_vec(),
             models,
-            delete_logs,
+            switch_state_logs,
             rel_kv_config: if kv_config.is_empty() { None } else { Some(kv_config) },
             insts,
         })
@@ -273,8 +273,8 @@ impl FlowSubDeployServ {
                     FlowTransitionServ::add_transitions(&original_model.current_version_id, &bind_state.id, &add_transitions, funs, ctx).await?;
                 }
                 // update instances state
-                if let Some(delete_logs) = import_req.delete_logs.get(&original_model.id).cloned() {
-                    Self::modify_inst_state(&original_model, delete_logs, funs, &mock_ctx).await?;
+                if let Some(switch_state_logs) = import_req.switch_state_logs.get(&original_model.id).cloned() {
+                    Self::modify_inst_state(&original_model, switch_state_logs, funs, &mock_ctx).await?;
                 }
                 // update unbind states
                 let unbind_states = original_model_states.iter().filter(|original_state| !new_model_states.iter().any(|new_state| new_state.id == original_state.id)).collect_vec();
@@ -408,7 +408,7 @@ impl FlowSubDeployServ {
         Ok(())
     }
 
-    async fn modify_inst_state(flow_model: &FlowModelDetailResp, delete_logs: Option<Vec<LogItemFindResp>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn modify_inst_state(flow_model: &FlowModelDetailResp, switch_state_logs: Option<Vec<LogItemFindResp>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -420,8 +420,8 @@ impl FlowSubDeployServ {
             modify_state_map.insert(state.id.clone(), vec![state.id.clone()]);
         }
         // complete map
-        if let Some(delete_logs) = delete_logs {
-            for delete_log in delete_logs.into_iter().filter(|log| log.ts >= model_update_time) {
+        if let Some(switch_state_logs) = switch_state_logs {
+            for delete_log in switch_state_logs.into_iter().filter(|log| log.ts >= model_update_time) {
                 let log_content = TardisFuns::json.json_to_obj::<LogParamContent>(delete_log.content.clone())?;
                 let orginal_state = log_content.sub_id.clone().unwrap_or_default();
                 let new_state = log_content.operand_id.clone().unwrap_or_default();
