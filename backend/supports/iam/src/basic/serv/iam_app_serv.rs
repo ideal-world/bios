@@ -8,7 +8,7 @@ use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
+use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::futures_util::future::join_all;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -23,7 +23,7 @@ use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{
     IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq,
 };
-use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -33,7 +33,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::{IamRelKind, IamRoleKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 
 use super::clients::iam_kv_client::IamKvClient;
 pub struct IamAppServ;
@@ -139,6 +139,9 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         }
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_app::Column::Kind).eq(kind.to_string()));
+        }
+        if let Some(set_rel) = &filter.set_rel {
+            Self::package_set_rel(query, Alias::new("rbum_set_rel"), set_rel);
         }
         Ok(())
     }
