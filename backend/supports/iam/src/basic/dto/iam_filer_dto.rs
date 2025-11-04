@@ -88,6 +88,7 @@ pub struct IamAppFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
+    pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
     pub kind: Option<IamAppKind>,

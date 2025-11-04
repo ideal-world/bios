@@ -12,7 +12,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq};
+use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppKind, IamAppModifyReq, IamAppSummaryResp, IamAppTransferOwnershipReq};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -83,6 +83,7 @@ impl IamCtAppApi {
         id: Query<Option<String>>,
         ids: Query<Option<String>>,
         name: Query<Option<String>>,
+        kind: Query<Option<IamAppKind>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -109,6 +110,7 @@ impl IamCtAppApi {
                     enabled: Some(true),
                     ..Default::default()
                 },
+                kind: kind.0,
                 ..Default::default()
             },
             page_number.0,
@@ -146,6 +148,7 @@ impl IamCtAppApi {
         sys_code_query_depth: Query<Option<i16>>,
         cate_ids: Query<Option<String>>,
         item_ids: Query<Option<String>>,
+        kind: Query<Option<IamAppKind>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
