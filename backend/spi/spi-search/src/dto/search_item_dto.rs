@@ -649,3 +649,24 @@ pub enum SearchWordCombinationsRuleWay {
     SpecLength(usize),
     SpecSymbols(Vec<String>),
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct SearchSaveItemReq {
+    #[oai(validator(min_length = "2"))]
+    pub kind: String,
+    #[oai(validator(min_length = "2"))]
+    pub key: TrimString,
+    #[oai(validator(min_length = "1"))]
+    pub title: String,
+    // #[oai(validator(min_length = "2"))]
+    pub content: String,
+    pub data_source: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    // #[oai(validator(min_length = "2"))]
+    pub own_paths: Option<String>,
+    pub create_time: Option<DateTime<Utc>>,
+    pub update_time: Option<DateTime<Utc>>,
+    pub ext: Option<Value>,
+    pub visit_keys: Option<SearchItemVisitKeysReq>,
+}

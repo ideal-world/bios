@@ -17,6 +17,35 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         ..Default::default()
     })?;
 
+    let _: Void = client
+        .put(
+            "/ci/item/app/batch/save",
+            &json!([
+                {
+                    "tag":"app",
+                    "kind": "app",
+                    "key": "a001",
+                    "title": "应用001",
+                    "content": "应用001",
+                },
+                {
+                    "tag":"app",
+                    "kind": "app",
+                    "key": "a002",
+                    "title": "应用002",
+                    "content": "应用002",
+                },
+            ]),
+        )
+        .await;
+
+        let _: Void = client
+        .put(
+            "/ci/item/app/batch/delete",
+            &json!(["a001","a002"]),
+        )
+        .await;
+
     // mock app items
     let _: Void = client
         .put(

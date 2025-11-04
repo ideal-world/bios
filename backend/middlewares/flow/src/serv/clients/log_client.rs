@@ -104,6 +104,8 @@ pub enum LogParamOp {
     Review,
     // 删除
     Delete,
+    // 切换状态
+    SwitchState,
 }
 
 impl From<LogParamOp> for String {
@@ -119,6 +121,7 @@ impl From<LogParamOp> for String {
             LogParamOp::FeedRel => "FEED_REL".to_string(),
             LogParamOp::Review => "REVIEW".to_string(),
             LogParamOp::Delete => "DELETE".to_string(),
+            LogParamOp::SwitchState => "SWITCH_STATE".to_string(),
         }
     }
 }

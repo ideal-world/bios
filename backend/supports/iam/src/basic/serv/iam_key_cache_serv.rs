@@ -522,17 +522,20 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn add_or_modify_bind_api_res(spec_id: &str, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_or_modify_bind_api_res(spec_id: &str, match_method: Option<&str>, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", spec_id, bind_api_res,);
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         let cache_key = format!(
-            "{}{}:{}",
+            "{}{}:{}:{}:{}",
             funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
             funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+            match_method.unwrap_or("*"),
+            match_path,
             spec_id,
         );
         funs.cache().del(cache_key.as_str()).await?;
 
-        funs.cache().lpushmulti(cache_key.as_str(), bind_api_res.iter().map(|s| s.as_str()).collect::<Vec<&str>>()).await?;
+        funs.cache().set(cache_key.as_str(), &tardis::TardisFuns::json.obj_to_string(&bind_api_res)?).await?;
         Ok(())
     }
 
@@ -571,10 +574,103 @@ impl IamIdentCacheServ {
         Ok(result)
     }
 
-    pub async fn delete_aksk(ak: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn delete_aksk(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete aksk: ak={}", ak);
 
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_aksk_info_, ak).as_str()).await?;
+
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_state,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_time_range,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_count,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_dynamic_route,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_state,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_extand_header,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}:cumulative-count",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_count,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    ak
+                )
+                .as_str(),
+            )
+            .await?;
 
         Ok(())
     }

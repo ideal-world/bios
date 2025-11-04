@@ -1,6 +1,6 @@
 use crate::dto::search_item_dto::{
     GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq,
-    SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp,
+    SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq,
 };
 use crate::search_initializer;
 use bios_basic::spi::spi_constants;
@@ -25,7 +25,10 @@ spi_dispatch_service! {
     @method: {
         add(add_req: &mut SearchItemAddReq) -> TardisResult<()>;
         modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq) -> TardisResult<()>;
+        save(tag: &str, save_req: &mut SearchSaveItemReq) -> TardisResult<()>;
+        batch_save(tag: &str, batch_req: &mut Vec<SearchSaveItemReq>) -> TardisResult<()>;
         delete(tag: &str, key: &str) -> TardisResult<()>;
+        batch_delete(tag: &str, key: Vec<String>) -> TardisResult<()>;
         delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;
         search(search_req: &mut SearchItemSearchReq) -> TardisResult<TardisPage<SearchItemSearchResp>>;
         group_search(search_req: &mut GroupSearchItemSearchReq) -> TardisResult<Vec<GroupSearchItemSearchResp>>;

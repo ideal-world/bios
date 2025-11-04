@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiBsInst;
+use bios_basic::spi::{spi_funs::SpiBsInst, spi_initializer::common};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     os::os_client::TardisOSClient,

@@ -93,8 +93,9 @@ impl FlowSubDeployServ {
                     states.insert(model_state.id.clone(), model_state);
                 }
             }
-
-            delete_logs.insert(main_model.id.clone(), FlowLogServ::find_model_delete_state_log(&main_model, funs, ctx).await?);
+            if let Some(data_source) = &main_model.data_source {
+                delete_logs.insert(main_model.id.clone(), FlowLogServ::find_switch_state_log(data_source, funs, ctx).await?);
+            }
             main_models.insert(main_model.tag.clone(), main_model);
         }
         let mut models = main_models.values().cloned().collect_vec();

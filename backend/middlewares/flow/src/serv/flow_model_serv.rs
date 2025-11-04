@@ -1272,41 +1272,6 @@ impl FlowModelServ {
         let new_model = Self::get_item_detail_aggs(&new_model_id, true, funs, ctx).await?;
         // 批量修改实例关联新模板同时更新实例状态
         FlowInstServ::batch_update_when_switch_model(&new_model, update_states, funs, ctx).await?;
-        // // 若旧模板存在子模版，则需要批量处理生成新的子模板替换旧的子模板
-        // for orginal_model in &orginal_models {
-        //     let orginal_child_models = Self::find_detail_items(
-        //         &FlowModelFilterReq {
-        //             basic: RbumBasicFilterReq {
-        //                 own_paths: Some("".to_string()),
-        //                 with_sub_own_paths: true,
-        //                 ..Default::default()
-        //             },
-        //             rel_model_ids: Some(vec![orginal_model.id.clone()]),
-        //             ..Default::default()
-        //         },
-        //         None,
-        //         None,
-        //         funs,
-        //         ctx,
-        //     )
-        //     .await?;
-        //     for orginal_child_model in orginal_child_models {
-        //         let mock_ctx = TardisContext {
-        //             own_paths: orginal_child_model.own_paths.clone(),
-        //             ..Default::default()
-        //         };
-        //         Self::copy_or_reference_main_model(
-        //             &new_model_id,
-        //             &FlowModelAssociativeOperationKind::Reference,
-        //             FlowModelKind::AsModel,
-        //             orginal_child_model.rel_template_ids.clone().pop(),
-        //             update_states,
-        //             data_source.clone(),
-        //             funs,
-        //             &mock_ctx,
-        //         ).await?;
-        //     }
-        // }
         // 处理完所有的替换操作后删除旧模板
         for orginal_model in &orginal_models {
             let mock_ctx = TardisContext {

@@ -573,24 +573,52 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn add_model_delete_state_log_async_task(
-        flow_model: &FlowModelDetailResp,
-        original_state: &FlowStateDetailResp,
-        target_state: &FlowStateDetailResp,
+    pub async fn add_switch_state_log_async_task(
+        data_source: &str,
+        original_state_id: &str,
+        target_state_id: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        Self::add_model_delete_state_log(flow_model, original_state, target_state, true, funs, ctx).await
+        Self::add_switch_state_log(data_source, original_state_id, target_state_id, true, funs, ctx).await
     }
 
-    async fn add_model_delete_state_log(
-        flow_model: &FlowModelDetailResp,
-        original_state: &FlowStateDetailResp,
-        target_state: &FlowStateDetailResp,
+    async fn add_switch_state_log(
+        data_source: &str,
+        original_state_id: &str,
+        target_state_id: &str,
         is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let original_state = FlowStateServ::get_item(
+            &original_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let target_state = FlowStateServ::get_item(
+            &target_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let log_content = LogParamContent {
             subject: Some("状态".to_string()),
             sub_id: Some(original_state.id.clone()),
@@ -604,11 +632,11 @@ impl FlowLogServ {
         };
         FlowLogClient::addv2_item(
             LogParamTag::FlowModel,
-            Some(flow_model.current_version_id.clone()),
+            Some(data_source.to_string()),
             log_content,
             None,
             Some("dynamic_log_flow_model".to_string()),
-            Some(LogParamOp::Delete.into()),
+            Some(LogParamOp::SwitchState.into()),
             None,
             rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
             is_async,
@@ -620,12 +648,12 @@ impl FlowLogServ {
         Ok(())
     }
 
-    pub async fn find_model_delete_state_log(flow_model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<LogItemFindResp>>> {
+    pub async fn find_switch_state_log(data_source: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<LogItemFindResp>>> {
         let find_req = LogItemFindReq {
             tag: LogParamTag::FlowModel.into(),
             kinds: Some(vec![TrimString("dynamic_log_flow_model")]),
             ops: Some(vec![LogParamOp::Delete.into()]),
-            keys: Some(vec![TrimString(flow_model.current_version_id.clone())]),
+            keys: Some(vec![TrimString(data_source.to_string())]),
             page_number: 1,
             page_size: 9999,
             ..Default::default()
