@@ -188,7 +188,7 @@ impl IamSearchClient {
                     ..Default::default()
                 },
                 rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: true,
+                    rel_by_from: false,
                     rel_item_id: Some(account_id.to_string()),
                     tag: Some(IamRelKind::IamAccountApp.to_string()),
                     ..Default::default()
@@ -224,7 +224,7 @@ impl IamSearchClient {
                     ..Default::default()
                 },
                 rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: true,
+                    rel_by_from: false,
                     rel_item_id: Some(account_id.to_string()),
                     tag: Some(IamRelKind::IamAccountRole.to_string()),
                     ..Default::default()
