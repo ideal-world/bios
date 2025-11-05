@@ -212,6 +212,23 @@ impl FlowSubDeployServ {
             add_req.id = Some(TrimString::from(import_state.id.clone()));
             FlowStateServ::add_item(&mut add_req, funs, &mock_ctx).await?;
         }
+        for import_model in import_req.models.clone() {
+            let mock_ctx = TardisContext {
+                own_paths: import_model.own_paths.clone(),
+                owner: import_model.owner.clone(),
+                ..Default::default()
+            };
+            let orginal_models = FlowModelServ::find_rel_models(import_model.rel_template_ids.clone().pop(), true, Some(vec![import_model.tag.clone()]), funs, ctx).await?;
+            let mut add_req = import_model.create_add_req();
+            FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;
+            for orginal_model in &orginal_models {
+                let mock_ctx = TardisContext {
+                    own_paths: orginal_model.own_paths.clone(),
+                    ..Default::default()
+                };
+                FlowModelServ::delete_item(&orginal_model.id, funs, &mock_ctx).await?;
+            }
+        }
         for new_model in import_req.models {
             let mock_ctx = TardisContext {
                 own_paths: new_model.own_paths.clone(),
