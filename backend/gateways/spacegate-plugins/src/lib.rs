@@ -1,6 +1,6 @@
 #![warn(clippy::unwrap_used)]
 
-use crate::plugin::op_redis::{op_redis_allow_api, op_redis_header_expand, op_redis_status};
+use crate::plugin::op_redis::{op_redis_allow_api, op_redis_header_expand, op_redis_publisher, op_redis_status};
 pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, bios_error_limit, content_filter, ip_time, license, rewrite_ns_b_ip};
 
 mod consts;
@@ -10,7 +10,7 @@ mod plugin;
 mod utils;
 
 pub const PACKAGE_NAME: &str = "spacegate_lib";
-use plugin::{notify, op_redis_publisher};
+use plugin::notify;
 use spacegate_shell::plugin::PluginRepository;
 pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<ip_time::IpTimePlugin>();

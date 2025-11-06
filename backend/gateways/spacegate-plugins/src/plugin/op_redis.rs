@@ -1,5 +1,3 @@
-use http::HeaderName;
-use serde::de;
 use spacegate_shell::{
     hyper::Request,
     kernel::{extension::MatchedSgRouter, service::http_route::match_request::HttpPathMatchRewrite},
@@ -9,6 +7,7 @@ use spacegate_shell::{
 pub mod op_redis_allow_api;
 pub mod op_redis_header_expand;
 pub mod op_redis_status;
+pub mod op_redis_publisher;
 
 fn redis_format_key(req: &Request<SgBody>, matched: &MatchedSgRouter, header: &str, default_header: bool) -> Option<String> {
     let is_method_any_match = matched.method.as_ref().is_none();
