@@ -317,18 +317,20 @@ impl IamOpenServ {
         product_id: &str,
         spec_id: &str,
         own_paths: Option<String>,
-        api_call_frequency: Option<u32>,
+        api_call_frequency: Option<i32>,
         bind_api_res: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let mut envs = vec![];
         if let Some(frequency) = api_call_frequency {
-            envs.push(RbumRelEnvAggAddReq {
-                kind: RbumRelEnvKind::CallFrequency,
-                value1: frequency.to_string(),
-                value2: None,
-            });
+            if frequency > 0 {
+                envs.push(RbumRelEnvAggAddReq {
+                    kind: RbumRelEnvKind::CallFrequency,
+                    value1: frequency.to_string(),
+                    value2: None,
+                });
+            }
         }
         if let Some(rel_id) = RbumRelServ::find_rel_ids(
             &RbumRelSimpleFindReq {
@@ -378,7 +380,11 @@ impl IamOpenServ {
         }
         
         if let Some(frequency) = api_call_frequency {
-            IamIdentCacheServ::set_open_api_call_frequency(spec_id, None, frequency.to_string().as_str(), funs).await?;
+            if frequency > 0 {
+                IamIdentCacheServ::set_open_api_call_frequency(spec_id, None, frequency.to_string().as_str(), funs).await?;
+            } else {
+                IamIdentCacheServ::delete_open_api_call_frequency(spec_id, None, funs).await?;
+            }
         }
         if let Some(bind_api_res) = bind_api_res {
             IamIdentCacheServ::add_or_modify_bind_api_res(spec_id, None, bind_api_res, funs).await?;
@@ -619,7 +625,7 @@ impl IamOpenServ {
             },
             api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
                 .await?
-                .map(|s| s.parse::<u32>().unwrap_or_default()),
+                .map(|s| s.parse::<i32>().unwrap_or_default()),
             api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, funs)
                 .await?
                 .map(|s| s.parse::<u32>().unwrap_or_default()),

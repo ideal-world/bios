@@ -500,6 +500,26 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    // 删除开放平台api调用频率
+    pub async fn delete_open_api_call_frequency(spec_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("add gateway_rule_info: spec_id={},match_method={},", spec_id, match_method.unwrap_or("*"));
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_limit,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    spec_id
+                )
+                .as_str()
+            )
+            .await?;
+        Ok(())
+    }
+
     // 设置开放API扩展头信息
     pub async fn set_open_api_extand_header(ak: &str, match_method: Option<&str>, value: HashMap<String, String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("set_open_api_extand_header: ak={},match_method={},value={:?}", ak, match_method.unwrap_or("*"), value);
