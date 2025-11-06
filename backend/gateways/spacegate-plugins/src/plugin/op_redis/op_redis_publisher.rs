@@ -1,11 +1,14 @@
 use std::{str::FromStr as _, time::Instant};
 
-use http::Response;
+use http::{uri::Scheme, Response};
 use jsonpath_rust::JsonPathInst;
 use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     ext_redis::redis::Script,
-    kernel::{extension::EnterTime, SgRequest, SgResponse},
+    kernel::{
+        extension::{EnterTime, OriginalIpAddr},
+        SgRequest, SgResponse,
+    },
     plugin::{Inner, Plugin, PluginConfig},
     BoxError, SgRequestExt as _,
 };
@@ -43,6 +46,8 @@ impl Plugin for RedisPublisherPlugin {
     const CODE: &'static str = "op-redis-publisher";
 
     fn meta() -> spacegate_shell::model::PluginMetaData {
+        // todo remove audit-log 依赖，因为 op-redis-publisher 只是一个通用的 redis 发布功能，不一定非要和 audit-log 结合使用
+        // 建议使用一个通用的插件内容传递参数机制来实现 插件间的参数传递，而非由绑定的 audit-log 插件提供的参数
         spacegate_shell::model::plugin_meta!(
             description: "Build for open platform, and it depend on plugin audit-log"
         )
@@ -75,9 +80,9 @@ impl Plugin for RedisPublisherPlugin {
             return Err("missing redis client".into());
         };
 
-        let resp = inner.call(req).await;
+        let resp = inner.call(req.clone()).await;
 
-        let (resp, content) = self.op_log(resp).await?;
+        let (resp, content) = self.op_log(req, resp).await?;
 
         if let Some(content) = content {
             let key = self.key.clone();
@@ -107,7 +112,7 @@ impl Plugin for RedisPublisherPlugin {
 }
 
 impl RedisPublisherPlugin {
-    async fn op_log(&self, mut resp: SgResponse) -> Result<(SgResponse, Option<OpLogContent>), BoxError> {
+    async fn op_log(&self, req: SgRequest, mut resp: SgResponse) -> Result<(SgResponse, Option<OpLogContent>), BoxError> {
         let body_string = if let Some(raw_body) = resp.extensions().get::<BeforeEncryptBody>().map(|b| b.clone().get()) {
             serde_json::from_str::<Value>(&String::from_utf8_lossy(&raw_body))
         } else {
@@ -122,9 +127,18 @@ impl RedisPublisherPlugin {
             serde_json::from_slice::<Value>(&body)
         };
 
-        let Some(param) = resp.extensions().get::<AuditLogParam>() else {
+        let param = if let Some(param) = resp.extensions().get::<AuditLogParam>().cloned() {
+            param
+        } else {
             warn!("[Plugin.OpRedisPublisher] missing audit log param");
-            return Ok((resp, None));
+            // return Ok((resp, None));
+            AuditLogParam {
+                request_path: req.uri().path().to_string(),
+                request_method: req.method().to_string(),
+                request_headers: req.headers().clone(),
+                request_scheme: req.uri().scheme().unwrap_or(&Scheme::HTTP).to_string(),
+                request_ip: req.extract::<OriginalIpAddr>().to_string(),
+            }
         };
 
         let start_time = resp.extensions().get::<EnterTime>().map(|time| time.0);

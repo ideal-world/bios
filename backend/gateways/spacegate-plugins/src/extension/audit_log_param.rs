@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use spacegate_shell::{
     hyper::HeaderMap,
     kernel::{
-        extension::{EnterTime, OriginalIpAddr, PeerAddr},
+        extension::{EnterTime, OriginalIpAddr},
         Extract,
     },
     SgRequestExt, SgResponse,
@@ -13,7 +13,7 @@ use std::time::Duration;
 use tardis::{basic::dto::TardisContext, TardisFuns, TardisFunsInst};
 use tardis::{log as tracing, tokio};
 
-use crate::{audit_log::AuditLogPlugin, plugin::PluginBiosExt};
+use crate::plugin::PluginBiosExt;
 
 use super::cert_info::{CertInfo, RoleInfo};
 
