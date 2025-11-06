@@ -447,6 +447,11 @@ impl IamOpenServ {
     async fn set_rel_ak_cache(spec_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         for rel in RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 to_rbum_item_id: Some(spec_id.to_string()),
                 tag: Some(IamRelKind::IamCertSpec.to_string()),
                 ..Default::default()
@@ -474,6 +479,11 @@ impl IamOpenServ {
     ) -> TardisResult<()> {
         if let Some(ak) = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 id: Some(cert_id.to_string()),
                 ..Default::default()
             },
