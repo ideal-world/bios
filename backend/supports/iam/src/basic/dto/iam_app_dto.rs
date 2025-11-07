@@ -119,6 +119,7 @@ pub struct IamAppSummaryResp {
     pub icon: String,
     pub sort: i64,
     pub contact_phone: String,
+    pub description: Option<String>,
 
     pub kind: IamAppKind,
 }

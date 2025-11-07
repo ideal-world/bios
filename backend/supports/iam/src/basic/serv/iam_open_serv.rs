@@ -2,8 +2,8 @@ use bios_basic::rbum::{
     dto::{
         rbum_cert_dto::RbumCertModifyReq,
         rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelFilterReq},
-        rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq},
-        rbum_rel_dto::RbumRelAddReq,
+        rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggModifyReq, RbumRelEnvAggAddReq},
+        rbum_rel_dto::{RbumRelAddReq, RbumRelModifyReq, RbumRelSimpleFindReq},
     },
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
     serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
@@ -26,7 +26,7 @@ use crate::{
         iam_cert_dto::IamCertAkSkAddReq,
         iam_filer_dto::IamResFilterReq,
         iam_open_dto::{
-            IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenCertModifyReq, IamOpenCertStateKind, IamOpenExtendData,
+            IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenCertModifyReq, IamOpenCertStateKind,
             IamOpenRuleResp,
         },
         iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq},
@@ -82,10 +82,8 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
+                Self::save_product_spec_rel(&product.id, &spec.id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), funs, ctx).await?;
                 Self::set_rel_ak_cache(&spec.id, funs, ctx).await?;
-                if let Some(bind_api_res) = spec_req.bind_api_res.clone() {
-                    IamIdentCacheServ::add_or_modify_bind_api_res(&spec.id, None, bind_api_res, funs).await?;
-                }
             } else {
                 let spec_id = IamResServ::add_item(
                     &mut IamResAddReq {
@@ -101,11 +99,8 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
-                IamRelServ::add_simple_rel(&IamRelKind::IamProductSpec, &product.id, &spec_id, None, None, false, false, funs, ctx).await?;
+                Self::save_product_spec_rel(&product.id, &spec_id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), funs, ctx).await?;
                 Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
-                if let Some(bind_api_res) = spec_req.bind_api_res.clone() {
-                    IamIdentCacheServ::add_or_modify_bind_api_res(&spec_id, None, bind_api_res, funs).await?;
-                }
             }
         }
         Ok(())
@@ -156,11 +151,8 @@ impl IamOpenServ {
                 ctx,
             )
             .await?;
-            IamRelServ::add_simple_rel(&IamRelKind::IamProductSpec, &product_id, &spec_id, None, None, false, false, funs, ctx).await?;
+            Self::save_product_spec_rel(&product_id, &spec_id, None, spec.api_call_frequency, spec.bind_api_res.clone(), funs, ctx).await?;
             Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
-            if let Some(bind_api_res) = spec.bind_api_res.clone() {
-                IamIdentCacheServ::add_or_modify_bind_api_res(&spec_id, None, bind_api_res, funs).await?;
-            }
         }
         Ok(())
     }
@@ -176,7 +168,7 @@ impl IamOpenServ {
                 ctx,
             )
             .await?
-            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "modify_cert", "illegal response", "401-iam-cert-code-not-exist"))?
             .ak;
             IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_state, None, &state.to_string(), funs).await?;
         }
@@ -256,7 +248,7 @@ impl IamOpenServ {
                 ctx,
             )
             .await?
-            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "401-iam-cert-code-not-exist"))?
             .ak;
             IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
@@ -267,7 +259,6 @@ impl IamOpenServ {
             None,
             bind_req.start_time,
             bind_req.end_time,
-            bind_req.api_call_frequency,
             bind_req.api_call_count,
             funs,
             ctx,
@@ -294,7 +285,6 @@ impl IamOpenServ {
             &spec_id,
             bind_req.start_time,
             bind_req.end_time,
-            bind_req.api_call_frequency,
             bind_req.api_call_count,
             funs,
             ctx,
@@ -323,13 +313,91 @@ impl IamOpenServ {
         Ok(())
     }
 
+    async fn save_product_spec_rel(
+        product_id: &str,
+        spec_id: &str,
+        own_paths: Option<String>,
+        api_call_frequency: Option<i32>,
+        bind_api_res: Option<Vec<String>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mut envs = vec![];
+        if let Some(frequency) = api_call_frequency {
+            if frequency > 0 {
+                envs.push(RbumRelEnvAggAddReq {
+                    kind: RbumRelEnvKind::CallFrequency,
+                    value1: frequency.to_string(),
+                    value2: None,
+                });
+            }
+        }
+        if let Some(rel_id) = RbumRelServ::find_rel_ids(
+            &RbumRelSimpleFindReq {
+                tag: Some(IamRelKind::IamProductSpec.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(product_id.to_string()),
+                to_rbum_item_id: Some(spec_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .pop(){
+            RbumRelServ::modify_rel(
+                &rel_id,
+                &mut RbumRelAggModifyReq {
+                    rel: RbumRelModifyReq {
+                        tag: None,
+                        note: None,
+                        ext: None,
+                        disabled: None,
+                    },
+                    attrs: vec![],
+                    envs,
+                },
+                funs,
+                ctx,
+            ).await?;
+        } else {
+            let req = &mut RbumRelAggAddReq {
+                rel: RbumRelAddReq {
+                    tag: IamRelKind::IamProductSpec.to_string(),
+                    note: None,
+                    from_rbum_kind: RbumRelFromKind::Item,
+                    from_rbum_id: product_id.to_string(),
+                    to_rbum_item_id: spec_id.to_string(),
+                    to_own_paths: own_paths.unwrap_or_else(|| ctx.own_paths.clone()),
+                    to_is_outside: true,
+                    ext: None,
+                    disabled: None,
+                },
+                attrs: vec![],
+                envs,
+            };
+            RbumRelServ::add_rel(req, funs, ctx).await?;
+        }
+        
+        if let Some(frequency) = api_call_frequency {
+            if frequency > 0 {
+                IamIdentCacheServ::set_open_api_call_frequency(spec_id, None, frequency.to_string().as_str(), funs).await?;
+            } else {
+                IamIdentCacheServ::delete_open_api_call_frequency(spec_id, None, funs).await?;
+            }
+        }
+        if let Some(bind_api_res) = bind_api_res {
+            IamIdentCacheServ::add_or_modify_bind_api_res(spec_id, None, bind_api_res, funs).await?;
+        }
+        Ok(())
+    }
+
     async fn bind_cert_spec(
         cert_id: &str,
         spec_id: &str,
         own_paths: Option<String>,
         start_time: Option<chrono::DateTime<Utc>>,
         end_time: Option<chrono::DateTime<Utc>>,
-        api_call_frequency: Option<u32>,
         api_call_count: Option<u32>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -340,13 +408,6 @@ impl IamOpenServ {
                 kind: RbumRelEnvKind::DatetimeRange,
                 value1: start_time.unwrap().to_rfc3339(),
                 value2: Some(end_time.unwrap().to_rfc3339()),
-            });
-        }
-        if let Some(frequency) = api_call_frequency {
-            envs.push(RbumRelEnvAggAddReq {
-                kind: RbumRelEnvKind::CallFrequency,
-                value1: frequency.to_string(),
-                value2: None,
             });
         }
         if let Some(count) = api_call_count {
@@ -392,6 +453,11 @@ impl IamOpenServ {
     async fn set_rel_ak_cache(spec_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         for rel in RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 to_rbum_item_id: Some(spec_id.to_string()),
                 tag: Some(IamRelKind::IamCertSpec.to_string()),
                 ..Default::default()
@@ -403,7 +469,7 @@ impl IamOpenServ {
         )
         .await?
         {
-            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None, None, None, funs, ctx).await?;
+            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None,  None, funs, ctx).await?;
         }
         Ok(())
     }
@@ -413,49 +479,53 @@ impl IamOpenServ {
         spec_id: &str,
         start_time: Option<chrono::DateTime<Utc>>,
         end_time: Option<chrono::DateTime<Utc>>,
-        api_call_frequency: Option<u32>,
         api_call_count: Option<u32>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let ak = RbumCertServ::find_one_detail_rbum(
+        if let Some(ak) = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 id: Some(cert_id.to_string()),
                 ..Default::default()
             },
             funs,
             ctx,
         )
-        .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "401-iam-cert-code-not-exist"))?
-        .ak;
-        if start_time.is_some() && end_time.is_some() {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(
-                &ak,
-                &funs.conf::<IamConfig>().openapi_plugin_time_range,
-                None,
-                &format!("{},{}", start_time.unwrap().to_rfc3339(), end_time.unwrap().to_rfc3339()),
-                funs,
-            )
-            .await?;
-        }
-        if let Some(count) = api_call_count {
-            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, &count.to_string(), funs).await?;
-        }
-        let spec = IamResServ::find_one_detail_item(
-            &IamResFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(vec![spec_id.to_string()]),
+        .await?.map(|c| c.ak) {
+            if start_time.is_some() && end_time.is_some() {
+                IamIdentCacheServ::add_or_modify_gateway_rule_info(
+                    &ak,
+                    &funs.conf::<IamConfig>().openapi_plugin_time_range,
+                    None,
+                    &format!("{},{}", start_time.unwrap().to_rfc3339(), end_time.unwrap().to_rfc3339()),
+                    funs,
+                )
+                .await?;
+            }
+            if let Some(count) = api_call_count {
+                IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, &count.to_string(), funs).await?;
+            }
+            let spec = IamResServ::find_one_detail_item(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(vec![spec_id.to_string()]),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
-        IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_dynamic_route, None, &spec.ext, funs).await?;
+                funs,
+                ctx,
+            )
+            .await?
+            .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
+            IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_dynamic_route, None, &spec.ext, funs).await?;
+        }
+        
         Ok(())
     }
 
@@ -537,7 +607,7 @@ impl IamOpenServ {
             ctx,
         )
         .await?
-        .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?
+        .ok_or_else(|| funs.err().internal_error("iam_open", "get_rule_info", "illegal response", "404-iam-res-not-exist"))?
         .code;
         let time_range = IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_time_range, None, funs).await?.unwrap_or_default();
         Ok(IamOpenRuleResp {
@@ -555,7 +625,7 @@ impl IamOpenServ {
             },
             api_call_frequency: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
                 .await?
-                .map(|s| s.parse::<u32>().unwrap_or_default()),
+                .map(|s| s.parse::<i32>().unwrap_or_default()),
             api_call_count: IamIdentCacheServ::get_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_count, None, funs)
                 .await?
                 .map(|s| s.parse::<u32>().unwrap_or_default()),

@@ -380,6 +380,8 @@ pub struct FlowModelSummaryResp {
     pub states: Value,
     /// 关联动作
     pub rel_transitions: Option<Value>,
+
+    pub data_source: Option<String>,
 }
 
 impl From<FlowModelAggResp> for FlowModelSummaryResp {
@@ -403,6 +405,7 @@ impl From<FlowModelAggResp> for FlowModelSummaryResp {
             status: value.status,
             states: json!(value.states),
             rel_transitions: value.rel_transitions.map(|rel_transitions| json!(rel_transitions)),
+            data_source: value.data_source,
         }
     }
 }
@@ -664,6 +667,8 @@ pub struct FlowModelAggResp {
     pub default: bool,
     /// 关联动作
     pub rel_transitions: Option<Vec<FlowModelRelTransitionExt>>,
+
+    pub data_source: Option<String>,
 }
 
 /// 绑定状态

@@ -189,6 +189,7 @@ impl FlowLogClient {
         kind: Option<String>,
         op_kind: Option<String>,
         rel_key: Option<String>,
+        data_source: Option<String>,
         is_v2: bool,
         ctx: &TardisContext,
         push: bool,
@@ -209,6 +210,7 @@ impl FlowLogClient {
                             op_kind,
                             None,
                             rel_key,
+                            data_source,
                             false,
                             &funs,
                             &ctx_clone,
@@ -225,6 +227,7 @@ impl FlowLogClient {
                             op_kind,
                             None,
                             rel_key,
+                            data_source,
                             false,
                             &funs,
                             &ctx_clone,
@@ -249,6 +252,7 @@ impl FlowLogClient {
         op: Option<String>,
         ts: Option<DateTime<Utc>>,
         rel_key: Option<String>,
+        data_source: Option<String>,
         is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -272,7 +276,7 @@ impl FlowLogClient {
             ts: Some(ts),
             owner,
             own_paths,
-            data_source: None,
+            data_source,
         };
         if is_async {
             Self::batch_add_task(req, funs, ctx).await?;
@@ -291,6 +295,7 @@ impl FlowLogClient {
         op: Option<String>,
         ts: Option<DateTime<Utc>>,
         rel_key: Option<String>,
+        data_source: Option<String>,
         is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -319,7 +324,7 @@ impl FlowLogClient {
             owner_name: Some(owner_name),
             push: Some(push),
             disable: None,
-            data_source: None,
+            data_source,
             ignore_push: None,
         };
         if is_async {

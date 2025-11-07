@@ -36,6 +36,7 @@ use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
 
 use super::clients::iam_kv_client::IamKvClient;
+use super::clients::iam_search_client::IamSearchClient;
 pub struct IamAppServ;
 
 #[async_trait]
@@ -87,7 +88,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_app::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() {
+        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() && modify_req.description.is_none() {
             return Ok(None);
         }
         let mut iam_app = iam_app::ActiveModel {
@@ -313,7 +314,9 @@ impl IamAppServ {
     }
 
     pub async fn add_rel_account(app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, ignore_exist_error, false, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, ignore_exist_error, false, funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(false), "", funs, &ctx).await?;
+        Ok(())
     }
 
     pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -326,6 +329,7 @@ impl IamAppServ {
         for rel in rel_account_roles {
             IamRoleServ::delete_rel_account(&rel.rel_id, account_id, Some(RBUM_SCOPE_LEVEL_APP), funs, ctx).await?;
         }
+        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(false), "", funs, ctx).await?;
         Ok(())
     }
 

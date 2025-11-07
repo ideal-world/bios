@@ -20,7 +20,6 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
-use crate::basic::dto::iam_open_dto::IamOpenExtendData;
 use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
@@ -496,6 +495,26 @@ impl IamIdentCacheServ {
                 )
                 .as_str(),
                 value,
+            )
+            .await?;
+        Ok(())
+    }
+
+    // 删除开放平台api调用频率
+    pub async fn delete_open_api_call_frequency(spec_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("add gateway_rule_info: spec_id={},match_method={},", spec_id, match_method.unwrap_or("*"));
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        funs.cache()
+            .del(
+                format!(
+                    "{}{}:{}:{}:{}",
+                    funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                    funs.conf::<IamConfig>().openapi_plugin_limit,
+                    match_method.unwrap_or("*"),
+                    match_path,
+                    spec_id
+                )
+                .as_str()
             )
             .await?;
         Ok(())

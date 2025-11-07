@@ -511,8 +511,8 @@ impl FlowModelVersionServ {
             ctx,
         )
         .await?;
-        if let Some(data_source) = &flow_model.data_source {
-            FlowLogServ::add_switch_state_log_async_task(data_source, &original_state.id, &target_state.id, funs, ctx).await?;
+        if flow_model.data_source.is_some() {
+            FlowLogServ::add_switch_state_log_async_task(&flow_model.id, &original_state.id, &target_state.id, funs, ctx).await?;
         }
         FlowConfigServ::modify_root_config_by_tag(
             "review",

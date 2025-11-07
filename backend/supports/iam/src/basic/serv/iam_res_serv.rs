@@ -163,6 +163,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             && modify_req.crypto_req.is_none()
             && modify_req.crypto_resp.is_none()
             && modify_req.double_auth.is_none()
+            && modify_req.ext.is_none()
         {
             return Ok(None);
         }

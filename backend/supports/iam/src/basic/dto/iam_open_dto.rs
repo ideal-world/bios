@@ -29,6 +29,7 @@ pub struct IamOpenAddSpecReq {
     pub disabled: Option<bool>,
 
     pub bind_api_res: Option<Vec<String>>,
+    pub api_call_frequency: Option<i32>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -37,7 +38,6 @@ pub struct IamOpenBindAkProductReq {
     pub spec_code: String,
     pub start_time: Option<chrono::DateTime<Utc>>,
     pub end_time: Option<chrono::DateTime<Utc>>,
-    pub api_call_frequency: Option<u32>,
     pub api_call_count: Option<u32>,
     pub create_proj_code: Option<String>,
 }
@@ -48,7 +48,7 @@ pub struct IamOpenRuleResp {
     pub spec_code: String,
     pub start_time: Option<chrono::DateTime<Utc>>,
     pub end_time: Option<chrono::DateTime<Utc>>,
-    pub api_call_frequency: Option<u32>,
+    pub api_call_frequency: Option<i32>,
     pub api_call_count: Option<u32>,
     pub api_call_cumulative_count: Option<u32>,
 }
@@ -79,9 +79,4 @@ pub struct IamOpenAkSkResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamOpenCertModifyReq {
     pub state: Option<IamOpenCertStateKind>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct IamOpenExtendData {
-    pub id: String,
 }
