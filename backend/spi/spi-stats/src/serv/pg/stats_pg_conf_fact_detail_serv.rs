@@ -138,6 +138,7 @@ pub(crate) async fn add(
         Value::from(fact_conf_key.to_string()),
         Value::from(fact_conf_col_key.unwrap_or("").to_string()),
         Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.sort.unwrap_or(0)),
     ];
     if let Some(method) = &add_req.method {
         params.push(Value::from(method.to_string()));
@@ -158,15 +159,15 @@ pub(crate) async fn add(
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
-(key, show_name, kind, rel_conf_fact_key, rel_conf_fact_col_key, remark {})
+(key, show_name, kind, rel_conf_fact_key, rel_conf_fact_col_key, remark, sort {})
 VALUES
-($1, $2, $3, $4, $5, $6 {})
+($1, $2, $3, $4, $5, $6, $7 {})
 "#,
             if sql_fields.is_empty() { "".to_string() } else { format!(",{}", sql_fields.join(",")) },
             if sql_fields.is_empty() {
                 "".to_string()
             } else {
-                format!(",{}", sql_fields.iter().enumerate().map(|(i, _)| format!("${}", i + 7)).collect::<Vec<String>>().join(","))
+                format!(",{}", sql_fields.iter().enumerate().map(|(i, _)| format!("${}", i + 8)).collect::<Vec<String>>().join(","))
             }
         ),
         params,
@@ -245,6 +246,10 @@ pub(crate) async fn modify(
     if let Some(rel_cert_id) = &modify_req.rel_cert_id {
         sql_sets.push(format!("rel_cert_id = ${}", params.len() + 1));
         params.push(Value::from(rel_cert_id.to_string()));
+    }
+    if let Some(sort) = &modify_req.sort {
+        sql_sets.push(format!("sort = ${}", params.len() + 1));
+        params.push(Value::from(*sort));
     }
     if sql_sets.is_empty() {
         return Ok(());
@@ -472,6 +477,7 @@ async fn do_paginate(
     if let Some(desc_by_update) = desc_by_update {
         sql_order.push(format!("fact_detail.update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
     }
+    sql_order.push(format!("fact_detail.sort ASC"));
 
     let result = conn
         .query_all(
@@ -484,6 +490,7 @@ async fn do_paginate(
               fact_detail.remark, 
               fact_detail.rel_conf_fact_key, 
               fact_detail.rel_conf_fact_col_key, 
+              fact_detail.sort,
               fact_detail.create_time,
               fact_detail.update_time, 
               fact_detail.rel_cert_id, 
@@ -527,6 +534,9 @@ WHERE
                 rel_sql: item.try_get("", "rel_sql")?,
                 rel_url: item.try_get("", "rel_url")?,
                 remark: item.try_get("", "remark")?,
+                create_time: item.try_get("", "create_time")?,
+                update_time: item.try_get("", "update_time")?,
+                sort: item.try_get("", "sort")?,
             })
         })
         .collect::<TardisResult<_>>()?;

@@ -138,6 +138,7 @@ pub async fn init_conf_fact_detail_table_and_conn(
     show_name character varying NOT NULL,
     kind character varying NOT NULL,
     method character varying,
+    sort integer,
     rel_conf_fact_key character varying NOT NULL,
     rel_conf_fact_col_key character varying NOT NULL,
     rel_cert_id character varying,

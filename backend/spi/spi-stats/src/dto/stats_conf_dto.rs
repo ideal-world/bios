@@ -584,6 +584,7 @@ pub struct StatsConfFactDetailAddReq {
     /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
     pub rel_url: Option<String>,
     pub remark: Option<String>,
+    pub sort: Option<i32>,
 }
 
 /// Modify Fact Column Configuration Request Object
@@ -622,6 +623,7 @@ pub struct StatsConfFactDetailModifyReq {
     /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
     pub rel_url: Option<String>,
     pub remark: Option<String>,
+    pub sort: Option<i32>,
 }
 
 /// Fact Column Configuration Response Object
@@ -682,6 +684,9 @@ pub struct StatsConfFactDetailInfoResp {
     /// ps: 返回的数据格式为单个字段，并且返回数据仅需要一条
     pub rel_url: Option<String>,
     pub remark: Option<String>,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    pub sort: Option<i32>,
 }
 
 /// Add Sync DateBase Config Request Object
