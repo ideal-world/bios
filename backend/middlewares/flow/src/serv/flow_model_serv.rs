@@ -383,6 +383,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("新建".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                None,
                 true,
                 ctx,
                 false,
@@ -593,6 +594,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 Some("dynamic_log_tenant_config".to_string()),
                 Some("编辑".to_string()),
                 rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                None,
                 true,
                 ctx,
                 false,
@@ -742,6 +744,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     Some("dynamic_log_tenant_config".to_string()),
                     Some("删除".to_string()),
                     rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths),
+                    None,
                     true,
                     ctx,
                     false,
@@ -1183,6 +1186,7 @@ impl FlowModelServ {
             default: model_detail.default,
             status: model_detail.status,
             rel_transitions,
+            data_source: model_detail.data_source,
         })
     }
 

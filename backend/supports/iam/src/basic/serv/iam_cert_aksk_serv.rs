@@ -1,9 +1,10 @@
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
-use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumRelFilterReq};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::field::TrimString;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -143,6 +144,32 @@ impl IamCertAkSkServ {
         let resp = RbumCertServ::peek_rbum(id, &RbumCertFilterReq { ..Default::default() }, funs, ctx).await?;
         RbumCertServ::delete_rbum(id, funs, ctx).await?;
         IamIdentCacheServ::delete_aksk(&resp.ak, None, funs).await?;
+
+        Self::delete_cert_rel(id, funs, ctx).await?;
+
+        Ok(())
+    }
+
+    async fn delete_cert_rel(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_ids = RbumRelServ::find_id_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                from_rbum_kind: Some(RbumRelFromKind::Cert),
+                from_rbum_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for rel_id in rel_ids {
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, ctx).await?;
+        }
         Ok(())
     }
 }

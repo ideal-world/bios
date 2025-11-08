@@ -145,9 +145,9 @@ impl FlowCiModelApi {
                 &ctx.0,
             )
             .await?;
-            if let (Some(data_source), Some(update_states)) = (&req.0.data_source, &update_states) {
+            if let (Some(_data_source), Some(update_states)) = (&req.0.data_source, &update_states) {
                 for (old_state_id, new_state_id) in update_states.iter() {
-                    FlowLogServ::add_switch_state_log_async_task(data_source, old_state_id, new_state_id, &funs, &ctx.0).await?;
+                    FlowLogServ::add_switch_state_log_async_task(&new_model.id, old_state_id, new_state_id, &funs, &ctx.0).await?;
                 }
             }
             result.insert(rel_main_model.id.clone(), new_model.id.clone());

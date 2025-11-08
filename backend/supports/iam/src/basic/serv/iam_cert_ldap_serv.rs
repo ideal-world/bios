@@ -423,6 +423,7 @@ impl IamCertLdapServ {
                 &cert_conf_id,
                 &account.get_simple_attr(&cert_conf.account_field_map.field_labor_type).unwrap_or_default(),
                 RbumCertStatusKind::Enabled,
+                true,
                 funs,
                 &mock_ctx,
             )
@@ -601,6 +602,7 @@ impl IamCertLdapServ {
                     &cert_conf_id,
                     &account.get_simple_attr(&cert_conf.account_field_map.field_labor_type).unwrap_or_default(),
                     RbumCertStatusKind::Enabled,
+                    true,
                     funs,
                     &mock_ctx,
                 )
@@ -1100,6 +1102,7 @@ impl IamCertLdapServ {
                         &cert_conf_id,
                         &ldap_resp.labor_type,
                         RbumCertStatusKind::Enabled,
+                        false,
                         &funs,
                         &mock_ctx,
                     )
@@ -1152,6 +1155,7 @@ impl IamCertLdapServ {
                         &cert_conf_id,
                         &ldap_resp.labor_type,
                         RbumCertStatusKind::Disabled,
+                        false,
                         &funs,
                         &mock_ctx,
                     )
@@ -1159,7 +1163,7 @@ impl IamCertLdapServ {
                 }
             };
 
-            if let Some(e) = add_result.err() {
+            if let Some(e) = add_result.clone().err() {
                 let err_msg = format!("add account:{:?} failed:{}", ldap_resp, e);
                 tardis::log::error!("{}", err_msg);
                 msg = format!("{msg}{err_msg}\n");
@@ -1168,6 +1172,9 @@ impl IamCertLdapServ {
                 continue;
             } else {
                 success += 1;
+            }
+            if let Ok(account_id) = add_result {
+                IamSearchClient::async_add_or_modify_account_search(&account_id, Box::new(false), "", &funs, &mock_ctx).await?;
             }
             let _ = funs
                 .cache()
@@ -1210,6 +1217,7 @@ impl IamCertLdapServ {
         ldap_cert_conf_id: &str,
         labor_type: &str,
         cert_status: RbumCertStatusKind,
+        sync_search: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
@@ -1249,7 +1257,9 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamSearchClient::async_add_or_modify_account_search(&account_id, Box::new(false), "", funs, ctx).await?;
+        if sync_search {
+            IamSearchClient::async_add_or_modify_account_search(&account_id, Box::new(false), "", funs, ctx).await?;
+        }
         Ok(account_id)
     }
 
