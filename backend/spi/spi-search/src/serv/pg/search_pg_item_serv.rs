@@ -204,10 +204,10 @@ async fn do_save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFunsI
     }, funs, ctx, inst).await?.records.is_empty() {
         let mut add_req = SearchItemAddReq {
             tag: tag.to_string(),
-            kind: save_req.kind.clone(),
+            kind: save_req.kind.clone().unwrap_or_default(),
             key: save_req.key.clone(),
-            title: save_req.title.clone(),
-            content: save_req.content.clone(),
+            title: save_req.title.clone().unwrap_or_default(),
+            content: save_req.content.clone().unwrap_or_default(),
             data_source: save_req.data_source.clone(),
             owner: save_req.owner.clone(),
             own_paths: save_req.own_paths.clone(),
@@ -219,9 +219,9 @@ async fn do_save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFunsI
         self::do_add(&mut add_req, funs, ctx, &conn, &table_name).await?;
     } else {
         let mut modify_req = SearchItemModifyReq {
-            kind: Some(save_req.kind.clone()),
-            title: Some(save_req.title.clone()),
-            content: Some(save_req.content.clone()),
+            kind: save_req.kind.clone(),
+            title: save_req.title.clone(),
+            content: save_req.content.clone(),
             owner: save_req.owner.clone(),
             own_paths: save_req.own_paths.clone(),
             create_time: save_req.create_time.clone(),

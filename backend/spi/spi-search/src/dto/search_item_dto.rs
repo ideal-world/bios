@@ -653,13 +653,13 @@ pub enum SearchWordCombinationsRuleWay {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct SearchSaveItemReq {
     #[oai(validator(min_length = "2"))]
-    pub kind: String,
+    pub kind: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     #[oai(validator(min_length = "1"))]
-    pub title: String,
+    pub title: Option<String>,
     // #[oai(validator(min_length = "2"))]
-    pub content: String,
+    pub content: Option<String>,
     pub data_source: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
