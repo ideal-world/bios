@@ -166,6 +166,7 @@ pub struct IamRoleFilterReq {
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
+    pub desc_by_sort: Option<bool>,
 }
 
 impl RbumItemFilterFetcher for IamRoleFilterReq {
