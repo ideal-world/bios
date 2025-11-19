@@ -126,8 +126,12 @@ impl IamCsRoleApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         for (id, modify_req) in modify_req_map.0.iter_mut() {
             let mut funs = iam_constants::get_tardis_inst();
+            let mut modify_agg_req = IamRoleAggModifyReq {
+                role: Some(modify_req.clone()),
+                res_ids: None,
+            };
             funs.begin().await?;
-            IamRoleServ::modify_item(id, modify_req, &funs, &ctx).await?;
+            IamRoleServ::modify_role_agg(id, &mut modify_agg_req, &funs, &ctx).await?;
             funs.commit().await?;
         }
         ctx.execute_task().await?;
