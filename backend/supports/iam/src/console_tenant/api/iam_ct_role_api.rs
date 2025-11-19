@@ -169,6 +169,7 @@ impl IamCtRoleApi {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::App),
                 in_base: Some(true),
+                in_embed: Some(true),
                 desc_by_sort: Some(true),
                 ..Default::default()
             },
@@ -183,6 +184,7 @@ impl IamCtRoleApi {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::App),
                 in_base: Some(false),
+                in_embed: Some(false),
                 ..Default::default()
             },
             desc_by_create.0,
@@ -195,7 +197,8 @@ impl IamCtRoleApi {
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::Tenant),
-                in_base: Some(true),
+                in_base: Some(false),
+                in_embed: Some(true),
                 desc_by_sort: Some(true),
                 ..Default::default()
             },
@@ -210,6 +213,7 @@ impl IamCtRoleApi {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::Tenant),
                 in_base: Some(false),
+                in_embed: Some(false),
                 ..Default::default()
             },
             desc_by_create.0,

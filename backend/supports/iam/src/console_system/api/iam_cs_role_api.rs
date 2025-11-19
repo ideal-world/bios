@@ -14,7 +14,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
@@ -118,7 +118,7 @@ impl IamCsRoleApi {
     async fn batch_modify(
         &self,
         tenant_id: Query<Option<String>>,
-        mut modify_req_map: Json<HashMap<String, IamRoleAggModifyReq>>,
+        mut modify_req_map: Json<HashMap<String, IamRoleModifyReq>>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Option<String>> {
@@ -127,7 +127,7 @@ impl IamCsRoleApi {
         for (id, modify_req) in modify_req_map.0.iter_mut() {
             let mut funs = iam_constants::get_tardis_inst();
             funs.begin().await?;
-            IamRoleServ::modify_role_agg(id, modify_req, &funs, &ctx).await?;
+            IamRoleServ::modify_item(id, modify_req, &funs, &ctx).await?;
             funs.commit().await?;
         }
         ctx.execute_task().await?;
