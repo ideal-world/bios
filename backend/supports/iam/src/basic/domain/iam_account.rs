@@ -33,8 +33,7 @@ pub struct Model {
     pub ext5: String,
     pub ext6: String,
     pub ext7: String,
-    pub ext8: String,
-    pub ext9: String,
+
     #[sea_orm(extra = "DEFAULT CURRENT_TIMESTAMP")]
     pub effective_time: chrono::DateTime<Utc>,
 
@@ -47,6 +46,16 @@ pub struct Model {
     ///
     /// 用工性质
     pub labor_type: String,
+
+    /// ID card number
+    ///
+    /// 身份证号码
+    pub id_card_no: String,
+
+    /// Employee Code
+    ///
+    /// 工号
+    pub employee_code: String,
 
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
