@@ -21,7 +21,10 @@ use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper:
 
 use crate::{
     dto::search_item_dto::{
-        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq, SearchWordCombinationsRuleWay
+        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp,
+        SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind,
+        SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq,
+        SearchWordCombinationsRuleWay,
     },
     search_config::SearchConfig,
 };
@@ -103,7 +106,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             modify_req.ext = Some(ext);
         }
     };
-    
+
     conn.begin().await?;
     self::do_modify(key, modify_req, funs, &conn, &table_name).await?;
     conn.commit().await?;
@@ -185,23 +188,40 @@ pub async fn save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFuns
     Ok(())
 }
 
-async fn do_save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst, conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<()> {
-    if  self::search(&mut SearchItemSearchReq {
-        tag: tag.to_string(),
-        ctx: SearchItemSearchCtxReq::default(),
-        query: SearchItemQueryReq {
-            keys: Some(vec![save_req.key.clone()]),
-            ..Default::default()
+async fn do_save(
+    tag: &str,
+    save_req: &mut SearchSaveItemReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+    conn: &TardisRelDBlConnection,
+    table_name: &str,
+) -> TardisResult<()> {
+    if self::search(
+        &mut SearchItemSearchReq {
+            tag: tag.to_string(),
+            ctx: SearchItemSearchCtxReq::default(),
+            query: SearchItemQueryReq {
+                keys: Some(vec![save_req.key.clone()]),
+                ..Default::default()
+            },
+            adv_by_or: None,
+            adv_query: None,
+            sort: None,
+            page: SearchItemSearchPageReq {
+                number: 1,
+                size: 1,
+                fetch_total: false,
+            },
         },
-        adv_by_or: None,
-        adv_query: None,
-        sort: None,
-        page: SearchItemSearchPageReq {
-            number: 1,
-            size: 1,
-            fetch_total: false,
-        },
-    }, funs, ctx, inst).await?.records.is_empty() {
+        funs,
+        ctx,
+        inst,
+    )
+    .await?
+    .records
+    .is_empty()
+    {
         let mut add_req = SearchItemAddReq {
             tag: tag.to_string(),
             kind: save_req.kind.clone(),
@@ -250,7 +270,14 @@ pub async fn batch_delete(tag: &str, delete_ids: Vec<String>, funs: &TardisFunsI
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     if !delete_ids.is_empty() {
-        conn.execute_one(&format!("DELETE FROM {table_name} WHERE key in ({})", (0..delete_ids.len()).map(|idx| format!("${}", idx + 1)).collect::<Vec<String>>().join(",")), delete_ids.iter().map(|id| Value::from(id)).collect::<Vec<_>>()).await?;
+        conn.execute_one(
+            &format!(
+                "DELETE FROM {table_name} WHERE key in ({})",
+                (0..delete_ids.len()).map(|idx| format!("${}", idx + 1)).collect::<Vec<String>>().join(",")
+            ),
+            delete_ids.iter().map(|id| Value::from(id)).collect::<Vec<_>>(),
+        )
+        .await?;
     }
     Ok(())
 }

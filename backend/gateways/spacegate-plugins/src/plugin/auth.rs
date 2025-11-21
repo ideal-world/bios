@@ -117,11 +117,12 @@ impl Default for SgPluginAuthConfig {
             cors_allow_origin: "*".to_string(),
             cors_allow_methods: "*".to_string(),
             cors_allow_headers: "*".to_string(),
-            header_is_mix_req: "IS_MIX_REQ".to_string(),
+            // 根据[RFC9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-application-handling-of-fie) 避免历史遗留问题请一定使用`-`连接
+            header_is_mix_req: "Bios-Is-Mix-Req".to_string(),
             fetch_server_config_path: "/starsysApi/apis".to_string(),
             mix_replace_url: "apis".to_string(),
             auth_path_ignore_prefix: "/starsysApi".to_string(),
-            header_is_same_req: "IS_SAME_REQ".to_string(),
+            header_is_same_req: "Bios-Is-Same-Req".to_string(),
             cache_key_is_same_req: "sg:plugin:auth:".to_string(),
         }
     }

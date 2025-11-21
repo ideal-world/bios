@@ -25,6 +25,7 @@ impl Default for InvokeConfig {
             spi_app_id: Default::default(),
             module_urls: HashMap::from([
                 (InvokeModuleKind::Kv.to_string(), "http://127.0.0.1:8080/spi-kv".to_string()),
+                (InvokeModuleKind::Object.to_string(), "http://127.0.0.1:8080/spi-object".to_string()),
                 (InvokeModuleKind::Log.to_string(), "http://127.0.0.1:8080/spi-log".to_string()),
                 (InvokeModuleKind::Search.to_string(), "http://127.0.0.1:8080/spi-search".to_string()),
                 (InvokeModuleKind::Schedule.to_string(), "http://127.0.0.1:8080/schedule".to_string()),
@@ -35,6 +36,7 @@ impl Default for InvokeConfig {
             ]),
             module_configs: HashMap::from([
                 (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Object.to_string(), InvokeModuleConfig { in_event: false }),
                 (InvokeModuleKind::Log.to_string(), InvokeModuleConfig { in_event: false }),
                 (InvokeModuleKind::Search.to_string(), InvokeModuleConfig { in_event: false }),
                 (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false }),

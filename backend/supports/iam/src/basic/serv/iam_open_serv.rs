@@ -25,10 +25,7 @@ use crate::{
         iam_cert_conf_dto::IamCertConfAkSkAddOrModifyReq,
         iam_cert_dto::IamCertAkSkAddReq,
         iam_filer_dto::IamResFilterReq,
-        iam_open_dto::{
-            IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenCertModifyReq, IamOpenCertStateKind,
-            IamOpenRuleResp,
-        },
+        iam_open_dto::{IamOpenAddOrModifyProductReq, IamOpenAkSkAddReq, IamOpenAkSkResp, IamOpenBindAkProductReq, IamOpenCertModifyReq, IamOpenCertStateKind, IamOpenRuleResp},
         iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq},
     },
     iam_config::IamConfig,
@@ -253,17 +250,7 @@ impl IamOpenServ {
             IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
         Self::bind_cert_product(cert_id, &product_id, None, bind_req.create_proj_code.clone(), funs, ctx).await?;
-        Self::bind_cert_spec(
-            cert_id,
-            &spec_id,
-            None,
-            bind_req.start_time,
-            bind_req.end_time,
-            bind_req.api_call_count,
-            funs,
-            ctx,
-        )
-        .await?;
+        Self::bind_cert_spec(cert_id, &spec_id, None, bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
 
         // update cert expire_sec
         if bind_req.end_time.is_some() && bind_req.start_time.is_some() {
@@ -280,16 +267,7 @@ impl IamOpenServ {
             .await?;
         }
 
-        Self::set_rules_cache(
-            cert_id,
-            &spec_id,
-            bind_req.start_time,
-            bind_req.end_time,
-            bind_req.api_call_count,
-            funs,
-            ctx,
-        )
-        .await?;
+        Self::set_rules_cache(cert_id, &spec_id, bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
         Ok(())
     }
 
@@ -344,7 +322,8 @@ impl IamOpenServ {
             ctx,
         )
         .await?
-        .pop(){
+        .pop()
+        {
             RbumRelServ::modify_rel(
                 &rel_id,
                 &mut RbumRelAggModifyReq {
@@ -359,7 +338,8 @@ impl IamOpenServ {
                 },
                 funs,
                 ctx,
-            ).await?;
+            )
+            .await?;
         } else {
             let req = &mut RbumRelAggAddReq {
                 rel: RbumRelAddReq {
@@ -378,7 +358,7 @@ impl IamOpenServ {
             };
             RbumRelServ::add_rel(req, funs, ctx).await?;
         }
-        
+
         if let Some(frequency) = api_call_frequency {
             if frequency > 0 {
                 IamIdentCacheServ::set_open_api_call_frequency(spec_id, None, frequency.to_string().as_str(), funs).await?;
@@ -469,7 +449,7 @@ impl IamOpenServ {
         )
         .await?
         {
-            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None,  None, funs, ctx).await?;
+            Self::set_rules_cache(&rel.from_rbum_id, spec_id, None, None, None, funs, ctx).await?;
         }
         Ok(())
     }
@@ -496,7 +476,9 @@ impl IamOpenServ {
             funs,
             ctx,
         )
-        .await?.map(|c| c.ak) {
+        .await?
+        .map(|c| c.ak)
+        {
             if start_time.is_some() && end_time.is_some() {
                 IamIdentCacheServ::add_or_modify_gateway_rule_info(
                     &ak,
@@ -525,7 +507,7 @@ impl IamOpenServ {
             .ok_or_else(|| funs.err().internal_error("iam_open", "set_rules_cache", "illegal response", "404-iam-res-not-exist"))?;
             IamIdentCacheServ::add_or_modify_gateway_rule_info(&ak, &funs.conf::<IamConfig>().openapi_plugin_dynamic_route, None, &spec.ext, funs).await?;
         }
-        
+
         Ok(())
     }
 

@@ -39,12 +39,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
 
-        let _: Void = client
-        .put(
-            "/ci/item/app/batch/delete",
-            &json!(["a001","a002"]),
-        )
-        .await;
+    let _: Void = client.put("/ci/item/app/batch/delete", &json!(["a001", "a002"])).await;
 
     // mock app items
     let _: Void = client

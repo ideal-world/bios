@@ -8,11 +8,14 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{dto::{
-    flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
-    flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionKind},
-    flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
-}, serv::flow_model_serv::FlowModelServ};
+use crate::{
+    dto::{
+        flow_inst_dto::{FlowInstDetailResp, FlowInstOperateReq, FlowInstStartReq, FlowInstStateKind},
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionKind},
+        flow_state_dto::{FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind},
+    },
+    serv::flow_model_serv::FlowModelServ,
+};
 
 use super::{
     clients::{
@@ -601,15 +604,21 @@ impl FlowLogServ {
         if original_state_id == target_state_id {
             return Ok(());
         }
-        let flow_model = FlowModelServ::find_one_item(&FlowModelFilterReq {
-            basic: RbumBasicFilterReq {
-                with_sub_own_paths: true,
-                own_paths: Some("".to_string()),
-                ids: Some(vec![flow_model_id.to_string()]),
+        let flow_model = FlowModelServ::find_one_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ids: Some(vec![flow_model_id.to_string()]),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }, funs, ctx).await?.unwrap_or_default();
+            funs,
+            ctx,
+        )
+        .await?
+        .unwrap_or_default();
         let original_state = FlowStateServ::get_item(
             original_state_id,
             &FlowStateFilterReq {
