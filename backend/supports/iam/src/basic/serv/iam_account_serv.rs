@@ -93,6 +93,8 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                 Set("".to_string())
             },
             labor_type: Set(add_req.labor_type.as_ref().unwrap_or(&"".to_string()).to_string()),
+            id_card_no: Set(add_req.id_card_no.as_ref().unwrap_or(&"".to_string()).to_string()),
+            employee_code: Set(add_req.employee_code.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -100,8 +102,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             ext5: Set("".to_string()),
             ext6: Set("".to_string()),
             ext7: Set("".to_string()),
-            ext8: Set("".to_string()),
-            ext9: Set("".to_string()),
             ..Default::default()
         })
     }
@@ -128,7 +128,13 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() && modify_req.temporary.is_none() && modify_req.labor_type.is_none() {
+        if modify_req.icon.is_none() 
+            && modify_req.status.is_none() 
+            && modify_req.lock_status.is_none()
+            && modify_req.temporary.is_none()
+            && modify_req.id_card_no.is_none()
+            && modify_req.employee_code.is_none()
+            && modify_req.labor_type.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
@@ -155,6 +161,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
         if let Some(labor_type) = &modify_req.labor_type {
             iam_account.labor_type = Set(labor_type.clone());
+        }
+        if let Some(id_card_no) = &modify_req.id_card_no {
+            iam_account.id_card_no = Set(id_card_no.clone());
+        }
+        if let Some(employee_code) = &modify_req.employee_code {
+            iam_account.employee_code = Set(employee_code.clone());
         }
         if modify_req.disabled == Some(true) {
             iam_account.logout_time = Set(Utc::now());
@@ -242,12 +254,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::Ext5));
         query.column((iam_account::Entity, iam_account::Column::Ext6));
         query.column((iam_account::Entity, iam_account::Column::Ext7));
-        query.column((iam_account::Entity, iam_account::Column::Ext8));
-        query.column((iam_account::Entity, iam_account::Column::Ext9));
         query.column((iam_account::Entity, iam_account::Column::EffectiveTime));
         query.column((iam_account::Entity, iam_account::Column::LogoutTime));
         query.column((iam_account::Entity, iam_account::Column::LogoutType));
         query.column((iam_account::Entity, iam_account::Column::LaborType));
+        query.column((iam_account::Entity, iam_account::Column::IdCardNo));
+        query.column((iam_account::Entity, iam_account::Column::EmployeeCode));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
         }
@@ -290,6 +302,8 @@ impl IamAccountServ {
                 lock_status: add_req.lock_status.clone(),
                 logout_type: add_req.logout_type.clone(),
                 labor_type: add_req.labor_type.clone(),
+                id_card_no: add_req.id_card_no.clone(),
+                employee_code: add_req.employee_code.clone(),
             },
             funs,
             ctx,
@@ -370,6 +384,8 @@ impl IamAccountServ {
                 lock_status: None,
                 logout_type: modify_req.logout_type.clone(),
                 labor_type: modify_req.labor_type.clone(),
+                id_card_no: modify_req.id_card_no.clone(),
+                employee_code: modify_req.employee_code.clone(),
             },
             funs,
             ctx,
@@ -465,6 +481,8 @@ impl IamAccountServ {
                 temporary: None,
                 logout_type: modify_req.logout_type.clone(),
                 labor_type: modify_req.labor_type.clone(),
+                id_card_no: modify_req.id_card_no.clone(),
+                employee_code: modify_req.employee_code.clone(),
             },
             funs,
             &mock_ctx,
@@ -630,6 +648,8 @@ impl IamAccountServ {
             logout_time: account.logout_time,
             logout_type: account.logout_type,
             labor_type: account.labor_type,
+            id_card_no: account.id_card_no,
+            employee_code: account.employee_code,
             is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
             is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
             status: account.status,
@@ -731,6 +751,8 @@ impl IamAccountServ {
                 logout_time: account.logout_time,
                 logout_type: account.logout_type,
                 labor_type: account.labor_type,
+                id_card_no: account.id_card_no,
+                employee_code: account.employee_code,
                 is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
                 is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
                 status: account.status,
@@ -916,6 +938,8 @@ impl IamAccountServ {
                 temporary: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
             funs,
             ctx,

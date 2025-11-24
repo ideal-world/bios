@@ -4,13 +4,10 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq};
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateDetailResp;
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp};
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
@@ -1653,6 +1650,8 @@ impl IamSubDeployServ {
                             scope_level: Some(account.scope_level),
                             logout_type: Some(IamAccountLogoutTypeKind::from_str(account.logout_type.as_str()).unwrap_or(IamAccountLogoutTypeKind::NotLogout)),
                             labor_type: Some(account.labor_type),
+                            id_card_no: Some(account.id_card_no),
+                            employee_code: Some(account.employee_code),
                             temporary: Some(account.temporary),
                             lock_status: Some(account.lock_status),
                             status: Some(account.status),
@@ -1673,7 +1672,9 @@ impl IamSubDeployServ {
                             logout_type: Some(IamAccountLogoutTypeKind::from_str(account.logout_type.as_str()).unwrap_or(IamAccountLogoutTypeKind::NotLogout)),
                             labor_type: Some(account.labor_type),
                             temporary: Some(account.temporary),
-                            lock_status: Some(account.lock_status),
+                            lock_status: Some(account.lock_status), 
+                            id_card_no: Some(account.id_card_no),
+                            employee_code: Some(account.employee_code),
                             status: Some(account.status),
                             icon: Some(account.icon),
                             is_auto: None,
