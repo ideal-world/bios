@@ -164,11 +164,13 @@ impl IamCtRoleApi {
     ) -> TardisApiResult<Vec<IamRoleSummaryResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
-        let app_result = IamRoleServ::find_items(
+        let base_app_result = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 kind: Some(IamRoleKind::App),
                 in_base: Some(true),
+                in_embed: Some(true),
+                desc_by_sort: Some(true),
                 ..Default::default()
             },
             desc_by_create.0,
@@ -177,11 +179,41 @@ impl IamCtRoleApi {
             &ctx.0,
         )
         .await?;
-        let tenant_result = IamRoleServ::find_items(
+        let custom_app_result = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq { ..Default::default() },
-                // kind: Some(IamRoleKind::Tenant),
+                kind: Some(IamRoleKind::App),
                 in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let base_tenant_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::Tenant),
+                in_base: Some(false),
+                in_embed: Some(true),
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let custom_tenant_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::Tenant),
+                in_base: Some(false),
+                in_embed: Some(false),
                 ..Default::default()
             },
             desc_by_create.0,
@@ -192,8 +224,10 @@ impl IamCtRoleApi {
         .await?;
         ctx.0.execute_task().await?;
         let mut result = vec![];
-        result.extend(tenant_result);
-        result.extend(app_result);
+        result.extend(custom_tenant_result);
+        result.extend(base_tenant_result);
+        result.extend(custom_app_result);
+        result.extend(base_app_result);
         TardisResp::ok(result)
     }
 

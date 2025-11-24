@@ -10,7 +10,6 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     futures::future::join_all,
-    log,
     regex::Regex,
     serde_json::{self, json, Map},
     web::web_resp::TardisPage,
@@ -44,7 +43,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     Ok(())
 }
 
-pub async fn do_add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<()> {
+pub async fn do_add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, _ctx: &TardisContext, conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<()> {
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
@@ -224,38 +223,43 @@ async fn do_save(
     {
         let mut add_req = SearchItemAddReq {
             tag: tag.to_string(),
-            kind: save_req.kind.clone(),
+            kind: save_req.kind.clone().unwrap_or_default(),
             key: save_req.key.clone(),
-            title: save_req.title.clone(),
-            content: save_req.content.clone(),
+            title: save_req.title.clone().unwrap_or_default(),
+            content: save_req.content.clone().unwrap_or_default(),
             data_source: save_req.data_source.clone(),
             owner: save_req.owner.clone(),
             own_paths: save_req.own_paths.clone(),
-            create_time: save_req.create_time.clone(),
-            update_time: save_req.update_time.clone(),
+            create_time: save_req.create_time,
+            update_time: save_req.update_time,
             ext: save_req.ext.clone(),
             visit_keys: save_req.visit_keys.clone(),
         };
-        self::do_add(&mut add_req, funs, ctx, &conn, &table_name).await?;
+        self::do_add(&mut add_req, funs, ctx, conn, table_name).await?;
     } else {
         let mut modify_req = SearchItemModifyReq {
-            kind: Some(save_req.kind.clone()),
-            title: Some(save_req.title.clone()),
-            content: Some(save_req.content.clone()),
+            kind: save_req.kind.clone(),
+            title: save_req.title.clone(),
+            content: save_req.content.clone(),
             owner: save_req.owner.clone(),
             own_paths: save_req.own_paths.clone(),
-            create_time: save_req.create_time.clone(),
-            update_time: save_req.update_time.clone(),
+            create_time: save_req.create_time,
+            update_time: save_req.update_time,
             ext: save_req.ext.clone(),
             visit_keys: save_req.visit_keys.clone(),
             ext_override: None,
         };
-        self::do_modify(&save_req.key, &mut modify_req, funs, &conn, &table_name).await?;
+        if let Some(ext) = modify_req.ext.clone() {
+            let mut storage_ext = get_ext(tag, save_req.key.to_string().as_str(), table_name, conn, funs, inst).await?;
+            merge(&mut storage_ext, ext);
+            modify_req.ext = Some(storage_ext);
+        }
+        self::do_modify(&save_req.key, &mut modify_req, funs, conn, table_name).await?;
     }
     Ok(())
 }
 
-pub async fn batch_save(tag: &str, batch_req: &mut Vec<SearchSaveItemReq>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn batch_save(tag: &str, batch_req: &mut [SearchSaveItemReq], funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     conn.begin().await?;
@@ -266,7 +270,7 @@ pub async fn batch_save(tag: &str, batch_req: &mut Vec<SearchSaveItemReq>, funs:
     Ok(())
 }
 
-pub async fn batch_delete(tag: &str, delete_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn batch_delete(tag: &str, delete_ids: Vec<String>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     if !delete_ids.is_empty() {

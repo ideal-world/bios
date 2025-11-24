@@ -1,3 +1,5 @@
+use std::arch::x86_64::_CMP_FALSE_OQ;
+
 use itertools::Itertools;
 use tardis::basic::error::TardisError;
 use tardis::futures::future::join_all;
@@ -19,6 +21,7 @@ use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggCopyReq, IamRo
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
@@ -147,6 +150,90 @@ impl IamCaRoleApi {
         )
         .await?;
         ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find All Roles In App
+    /// 获取项目内所有的角色信息
+    #[oai(path = "/all", method = "get")]
+    async fn find_role_base_app(
+        &self,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamRoleSummaryResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
+        let tenant_id = IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?;
+        let base_app_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(true),
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let custom_app_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let custom_app_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(app_id),
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let custom_tenant_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(tenant_id),
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let mut result = vec![];
+        result.extend(custom_app_result);
+        result.extend(custom_tenant_result);
+        result.extend(base_app_result);
         TardisResp::ok(result)
     }
 
