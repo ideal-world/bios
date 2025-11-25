@@ -90,8 +90,9 @@ impl MessageSendListener {
         //     .await?;
 
         let cert_key = match message.rel_reach_channel {
-            ReachChannelKind::Sms => IAM_KEY_PHONE_V_CODE,
-            ReachChannelKind::Email => IAM_KEY_MAIL_V_CODE,
+            ReachChannelKind::Sms => Some(IAM_KEY_PHONE_V_CODE),
+            ReachChannelKind::Email => Some(IAM_KEY_MAIL_V_CODE),
+            ReachChannelKind::WebHook => None, // WebHook 不需要从 IAM 获取账户信息
             _ => {
                 return Err(TardisError::conflict(
                     &format!("channel [{channel}] not yet implemented", channel = message.rel_reach_channel),
@@ -99,20 +100,33 @@ impl MessageSendListener {
                 ));
             }
         };
-        let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
         let mut to = HashSet::new();
-        for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
-            if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
-                let Some(res_id) = resp.certs.remove(cert_key) else {
-                    log::warn!(
-                        "[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}",
-                        chan = message.rel_reach_channel
-                    );
+        if let Some(cert_key) = cert_key {
+            // 对于需要账户信息的通道（Sms, Email），从 IAM 获取
+            let owner_path = rbum_scope_helper::get_pre_paths(RBUM_SCOPE_LEVEL_TENANT as i16, &message.own_paths).unwrap_or_default();
+            for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
+                if account_id.is_empty() {
                     continue;
-                };
-                to.insert(res_id);
-            } else {
-                log::warn!("[Reach] iam get account info error, account_id: {account_id}")
+                }
+                if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
+                    let Some(res_id) = resp.certs.remove(cert_key) else {
+                        log::warn!(
+                            "[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}",
+                            chan = message.rel_reach_channel
+                        );
+                        continue;
+                    };
+                    to.insert(res_id);
+                } else {
+                    log::warn!("[Reach] iam get account info error, account_id: {account_id}")
+                }
+            }
+        } else {
+            // 对于 WebHook 等不需要账户信息的通道，直接使用 to_res_ids 中的值
+            for account_id in message.to_res_ids.split(ACCOUNT_SPLIT) {
+                if !account_id.is_empty() {
+                    to.insert(account_id.to_string());
+                }
             }
         }
 

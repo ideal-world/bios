@@ -1,5 +1,6 @@
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
-use tardis::{basic::result::TardisResult, log, serde_json::json, testcontainers, tokio};
+use std::collections::HashMap;
+use tardis::{basic::result::TardisResult, log, serde_json::json, tokio};
 
 mod test_reach_common;
 use bios_reach::{dto::*, reach_constants::*, reach_invoke};
@@ -66,13 +67,13 @@ pub async fn test_ct_api() -> TardisResult<()> {
         let template_id = client.add_msg_template(&message_add_req).await?;
         let template = client.get_msg_template_by_id(&template_id).await?;
         assert_eq!(template.name, Some(template_name.clone()));
-        let pages = client.paginate_msg_template(None, Some(10), Some("Email")).await?;
+        let pages = client.paginate_msg_template(None, Some(1), Some(10), Some("Email")).await?;
         assert_eq!(pages.total_size, 0);
-        let pages = client.paginate_msg_template(None, Some(10), Some("Sms")).await?;
+        let pages = client.paginate_msg_template(None, Some(1), Some(10), Some("Sms")).await?;
         assert_eq!(pages.total_size, 1);
-        let all_sms_templates = client.find_msg_template(Some("Sms")).await?;
+        let all_sms_templates = client.find_msg_template(None, Some("Sms")).await?;
         assert_eq!(all_sms_templates.len(), 1);
-        let all_templates = client.find_msg_template(None).await?;
+        let all_templates = client.find_msg_template(None, None).await?;
         assert_eq!(all_templates.len(), 1);
         log::info!("modify msg template");
         client
@@ -286,6 +287,133 @@ pub async fn test_ct_api() -> TardisResult<()> {
         let msg = holder.sms_mocker.get_latest_message(name).await.unwrap();
         assert_eq!(msg, expected_content("", &code));
     }
+
+    // test webhook send
+    {
+        log::info!("test webhook send");
+        let webhook_template_name = random_string(16);
+        let webhook_path = random_string(10);
+        let webhook_url = format!("http://127.0.0.1:8080/webhook/{}", webhook_path);
+        
+        // 创建 webhook 消息模板
+        let webhook_template_id = {
+            let webhook_message_add_req = ReachMessageTemplateAddReq {
+                rel_reach_channel: ReachChannelKind::WebHook,
+                content: "webhook content".into(),
+                variables: "name,code".into(),
+                level_kind: ReachLevelKind::Normal,
+                topic: webhook_url.clone(),
+                timeout_sec: 6000,
+                timeout_strategy: ReachTimeoutStrategyKind::Ignore,
+                kind: ReachTemplateKind::Notice,
+                rel_reach_verify_code_strategy_id: "".into(),
+                sms_template_id: "".into(),
+                sms_signature: "".into(),
+                sms_from: "".into(),
+                code: "test-webhook-code".into(),
+                name: webhook_template_name.clone(),
+                note: "test-webhook-note".into(),
+                icon: "test-webhook-icon".into(),
+                ..Default::default()
+            };
+            client.add_msg_template(&webhook_message_add_req).await?
+        };
+
+        // 测试 POST 方法的 webhook
+        {
+            log::info!("test webhook POST");
+            let webhook_name = "Frank";
+            let webhook_code = random_string(6);
+            let webhook_body = json!({
+                "name": webhook_name,
+                "code": webhook_code,
+                "message": "Hello from webhook"
+            });
+            
+            let mut content_replace = HashMap::new();
+            content_replace.insert("webhook_method".to_string(), "POST".to_string());
+            content_replace.insert("webhook_content".to_string(), webhook_body.to_string());
+            
+            client.general_send(webhook_name, &webhook_template_id, &content_replace).await?;
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            
+            let request = holder.webhook_mocker.get_latest_request(&format!("/webhook/{}", webhook_path)).await;
+            assert!(request.is_some());
+            let request = request.unwrap();
+            assert_eq!(request.method, "POST");
+            assert!(request.body.is_some());
+            let body = request.body.unwrap();
+            assert_eq!(body["name"], webhook_name);
+            assert_eq!(body["code"], webhook_code);
+            assert_eq!(body["message"], "Hello from webhook");
+        }
+
+        // 测试 GET 方法的 webhook
+        {
+            log::info!("test webhook GET");
+            let webhook_name2 = "Grace";
+            let mut content_replace = HashMap::new();
+            content_replace.insert("webhook_method".to_string(), "GET".to_string());
+            
+            client.general_send(webhook_name2, &webhook_template_id, &content_replace).await?;
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            
+            let requests = holder.webhook_mocker.get_all_requests(&format!("/webhook/{}", webhook_path)).await;
+            assert!(requests.len() >= 2, "should have at least 2 webhook requests");
+            let get_request = requests.iter().find(|r| r.method == "GET").expect("GET request should be found");
+            assert_eq!(get_request.method, "GET");
+        }
+
+        // 测试使用 add_message 方式发送 webhook
+        {
+            log::info!("test webhook via add_message");
+            let webhook_name3 = "Henry";
+            let webhook_code3 = random_string(6);
+            let webhook_body3 = json!({
+                "user": webhook_name3,
+                "code": webhook_code3
+            });
+            
+            let add_message_req = ReachMessageAddReq {
+                rbum_item_add_req: RbumItemAddReq {
+                    id: None,
+                    code: None,
+                    name: "test-webhook-msg".into(),
+                    rel_rbum_kind_id: RBUM_KIND_CODE_REACH_MESSAGE.into(),
+                    rel_rbum_domain_id: DOMAIN_CODE.into(),
+                    scope_level: None,
+                    disabled: None,
+                },
+                from_res: "from-res".to_string(),
+                rel_reach_channel: ReachChannelKind::WebHook,
+                receive_kind: ReachReceiveKind::Account,
+                to_res_ids: webhook_name3.into(),
+                rel_reach_msg_signature_id: signature_id.clone(),
+                rel_reach_msg_template_id: webhook_template_id.clone(),
+                reach_status: ReachStatusKind::Pending,
+                content_replace: json!({
+                    "webhook_method": "POST",
+                    "webhook_content": webhook_body3.to_string()
+                })
+                .to_string(),
+            };
+            
+            let message_id = client.add_message(&add_message_req).await?;
+            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+            
+            let message = client.get_msg_by_id(&message_id).await?;
+            assert_eq!(message.reach_status, ReachStatusKind::SendSuccess);
+            
+            let requests = holder.webhook_mocker.get_all_requests(&format!("/webhook/{}", webhook_path)).await;
+            let last_request = requests.last().expect("should have webhook request");
+            assert_eq!(last_request.method, "POST");
+            assert!(last_request.body.is_some());
+            let body = last_request.body.as_ref().unwrap();
+            assert_eq!(body["user"], webhook_name3);
+            assert_eq!(body["code"], webhook_code3);
+        }
+    }
+
     drop(holder);
     Ok(())
 }
