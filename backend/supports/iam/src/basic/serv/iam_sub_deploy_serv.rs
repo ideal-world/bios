@@ -1672,7 +1672,7 @@ impl IamSubDeployServ {
                             logout_type: Some(IamAccountLogoutTypeKind::from_str(account.logout_type.as_str()).unwrap_or(IamAccountLogoutTypeKind::NotLogout)),
                             labor_type: Some(account.labor_type),
                             temporary: Some(account.temporary),
-                            lock_status: Some(account.lock_status), 
+                            lock_status: Some(account.lock_status),
                             id_card_no: Some(account.id_card_no),
                             employee_code: Some(account.employee_code),
                             status: Some(account.status),
