@@ -1240,6 +1240,8 @@ impl IamCertLdapServ {
                 lock_status: None,
                 logout_type: None,
                 labor_type: Some(labor_type.to_string()),
+                id_card_no: None,
+                employee_code: None,
             },
             false,
             funs,

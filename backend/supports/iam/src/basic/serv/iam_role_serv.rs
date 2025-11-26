@@ -360,10 +360,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             query.and_where(Expr::col(iam_role::Column::ExtendRoleId).eq(extend_role_id));
         }
         if let Some(sort) = filter.desc_by_sort {
-            query.order_by(
-                (iam_role::Entity, iam_role::Column::Sort),
-                if sort { Order::Desc } else { Order::Asc },
-            );
+            query.order_by((iam_role::Entity, iam_role::Column::Sort), if sort { Order::Desc } else { Order::Asc });
         }
         Ok(())
     }

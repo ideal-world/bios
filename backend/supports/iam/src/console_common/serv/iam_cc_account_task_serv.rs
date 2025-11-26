@@ -229,15 +229,7 @@ impl IamCcAccountTaskServ {
                     account_id,
                     &mut IamAccountModifyReq {
                         status: Some(next_status),
-                        name: None,
-                        scope_level: None,
-                        disabled: None,
-                        lock_status: None,
-                        is_auto: None,
-                        icon: None,
-                        temporary: None,
-                        logout_type: None,
-                        labor_type: None,
+                        ..Default::default()
                     },
                     funs,
                     ctx,
@@ -255,16 +247,8 @@ impl IamCcAccountTaskServ {
                 IamAccountServ::modify_item(
                     account_id,
                     &mut IamAccountModifyReq {
-                        status: None,
-                        name: None,
-                        scope_level: None,
-                        disabled: None,
                         lock_status: Some(IamAccountLockStateKind::LongTimeNoLoginLocked),
-                        is_auto: None,
-                        icon: None,
-                        temporary: None,
-                        logout_type: None,
-                        labor_type: None,
+                        ..Default::default()
                     },
                     funs,
                     ctx,

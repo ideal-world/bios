@@ -1,7 +1,7 @@
 #![warn(clippy::unwrap_used)]
 
 use crate::plugin::op_redis::{op_redis_allow_api, op_redis_header_expand, op_redis_publisher, op_redis_status};
-pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, bios_error_limit, content_filter, ip_time, license, rewrite_ns_b_ip};
+pub use crate::plugin::{anti_replay, anti_xss, audit_log, auth, bios_error_limit, content_filter, http_method_override, ip_time, license, rewrite_ns_b_ip};
 
 mod consts;
 mod extension;
@@ -17,6 +17,7 @@ pub fn register_lib_plugins(repo: &PluginRepository) {
     repo.register::<anti_replay::AntiReplayPlugin>();
     repo.register::<anti_xss::AntiXssPlugin>();
     repo.register::<rewrite_ns_b_ip::RewriteNsPlugin>();
+    repo.register::<http_method_override::HttpMethodOverridePlugin>();
     repo.register::<audit_log::AuditLogPlugin>();
     repo.register::<auth::AuthPlugin>();
     repo.register::<op_redis_publisher::RedisPublisherPlugin>();

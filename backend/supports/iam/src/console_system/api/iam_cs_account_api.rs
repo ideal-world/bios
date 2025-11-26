@@ -271,14 +271,7 @@ impl IamCsAccountApi {
             &mut IamAccountModifyReq {
                 status: Some(IamAccountStatusKind::Active),
                 is_auto: Some(false),
-                name: None,
-                icon: None,
-                disabled: None,
-                scope_level: None,
-                lock_status: None,
-                temporary: None,
-                logout_type: None,
-                labor_type: None,
+                ..Default::default()
             },
             &funs,
             &ctx,
@@ -330,14 +323,8 @@ impl IamCsAccountApi {
             &mut IamAccountModifyReq {
                 status: Some(IamAccountStatusKind::Logout),
                 is_auto: Some(false),
-                name: None,
-                icon: None,
-                disabled: None,
-                scope_level: None,
-                lock_status: None,
-                temporary: None,
                 logout_type: Some(crate::iam_enumeration::IamAccountLogoutTypeKind::ArtificialLogout),
-                labor_type: None,
+                ..Default::default()
             },
             &funs,
             &ctx,
@@ -364,15 +351,7 @@ impl IamCsAccountApi {
             &id.0,
             &mut IamAccountModifyReq {
                 lock_status: Some(IamAccountLockStateKind::ManualLocked),
-                is_auto: None,
-                name: None,
-                icon: None,
-                disabled: None,
-                scope_level: None,
-                status: None,
-                temporary: None,
-                logout_type: None,
-                labor_type: None,
+                ..Default::default()
             },
             &funs,
             &ctx,

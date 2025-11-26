@@ -17,7 +17,7 @@ use crate::iam_config::IamBasicConfigApi;
 pub struct IamAttrServ;
 
 const ACCOUNT_IDX_MAIN_COLUMN_NAMES: [&str; 3] = ["ext1_idx", "ext2_idx", "ext3_idx"];
-const ACCOUNT_NO_IDX_MAIN_COLUMN_NAMES: [&str; 6] = ["ext4", "ext5", "ext6", "ext7", "ext8", "ext9"];
+const ACCOUNT_NO_IDX_MAIN_COLUMN_NAMES: [&str; 4] = ["ext4", "ext5", "ext6", "ext7"];
 
 impl IamAttrServ {
     pub async fn add_account_attr(add_req: &IamKindAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {

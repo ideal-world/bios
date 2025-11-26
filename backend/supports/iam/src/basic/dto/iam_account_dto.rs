@@ -36,6 +36,9 @@ pub struct IamAccountAggAddReq {
 
     pub labor_type: Option<String>,
 
+    pub id_card_no: Option<String>,
+    pub employee_code: Option<String>,
+
     pub temporary: Option<bool>,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -54,6 +57,8 @@ pub struct IamAccountAddReq {
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
     pub labor_type: Option<String>,
+    pub id_card_no: Option<String>,
+    pub employee_code: Option<String>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
     pub status: Option<IamAccountStatusKind>,
@@ -82,10 +87,13 @@ pub struct IamAccountAggModifyReq {
     pub role_ids: Option<Vec<String>>,
     pub org_cate_ids: Option<Vec<String>>,
 
+    pub id_card_no: Option<String>,
+    pub employee_code: Option<String>,
+
     pub exts: Option<HashMap<String, String>>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct IamAccountModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
@@ -95,6 +103,9 @@ pub struct IamAccountModifyReq {
     pub labor_type: Option<String>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
+
+    pub id_card_no: Option<String>,
+    pub employee_code: Option<String>,
 
     pub status: Option<IamAccountStatusKind>,
     pub is_auto: Option<bool>,
@@ -109,6 +120,9 @@ pub struct IamAccountSelfModifyReq {
     pub disabled: Option<bool>,
     pub logout_type: Option<IamAccountLogoutTypeKind>,
     pub labor_type: Option<String>,
+
+    pub id_card_no: Option<String>,
+    pub employee_code: Option<String>,
     // #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 
@@ -139,6 +153,9 @@ pub struct IamAccountSummaryResp {
     pub logout_type: String,
     pub labor_type: String,
 
+    pub id_card_no: String,
+    pub employee_code: String,
+
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
 
@@ -163,6 +180,9 @@ pub struct IamAccountDetailResp {
     pub logout_type: String,
     pub labor_type: String,
 
+    pub id_card_no: String,
+    pub employee_code: String,
+
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
 
@@ -181,6 +201,9 @@ pub struct IamAccountSummaryAggResp {
     pub logout_time: chrono::DateTime<Utc>,
     pub logout_type: String,
     pub labor_type: String,
+
+    pub id_card_no: String,
+    pub employee_code: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -210,6 +233,9 @@ pub struct IamAccountDetailAggResp {
     pub logout_time: chrono::DateTime<Utc>,
     pub logout_type: String,
     pub labor_type: String,
+
+    pub id_card_no: String,
+    pub employee_code: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
