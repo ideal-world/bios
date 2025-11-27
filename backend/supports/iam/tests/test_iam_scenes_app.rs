@@ -99,6 +99,8 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
         )
         .await;

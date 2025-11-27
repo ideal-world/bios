@@ -157,6 +157,8 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
         )
         .await;

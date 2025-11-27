@@ -11,9 +11,7 @@ use bios_sdk_invoke::{
 use itertools::Itertools;
 
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    serde_json::{self, json},
-    tokio, TardisFunsInst,
+    TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, serde_json::{self, Value, json}, tokio
 };
 
 use crate::{
@@ -23,8 +21,7 @@ use crate::{
             iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         },
         serv::{
-            iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ,
-            iam_tenant_serv::IamTenantServ,
+            clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ
         },
     },
     iam_config::IamConfig,
@@ -133,6 +130,7 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         // let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
+        let mut account_resp_dept_map: HashMap<String, Value> = HashMap::new();
         let global_ctx = TardisContext {
             own_paths: "".to_owned(),
             ..ctx.clone()
@@ -175,6 +173,13 @@ impl IamSearchClient {
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
             account_resp_dept_id.extend(set_items.iter().filter_map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
+            for set_item in set_items {
+                account_resp_dept_map.insert(set_item.rel_rbum_set_cate_id.clone().unwrap_or_default(), json!({
+                    "name": set_item.rel_rbum_set_cate_name,
+                    "own_paths": set_item.own_paths,
+                    "scope_level": set_item.rel_rbum_item_scope_level,
+                }));
+            }
         }
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
@@ -251,6 +256,33 @@ impl IamSearchClient {
             );
         }
         let account_roles = roles_set.into_iter().collect_vec();
+
+        // 岗位
+        let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
+        let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| attr.value.clone());
+        let standard_level_map = IamKvClient::get_item_value("__tag__:_:standardLevel", funs, ctx).await?.unwrap_or_default();
+        let position_map = IamKvClient::get_item_value("__tag__:_:position:all", funs, ctx).await?.unwrap_or_default();
+        let raw_primary = if let Some(pri) = primary_code.clone() {
+            Some(
+                json!({
+                    "name": position_map.iter().find(|pos| pos.code == pri).map(|pos| pos.label.clone()).unwrap_or_default(),
+                    "standard_level": standard_level_map.iter().find(|level| level.code == pri).map(|level| level.label.clone()).unwrap_or_default(),
+                })
+            )
+        } else {
+            None
+        };
+        let raw_secondary = if let Some(sec) = secondary_code.clone() {
+            let sec_arr = sec.split(";").map(
+                |s| json!({
+                    "name": position_map.iter().find(|pos| pos.code == s).map(|pos| pos.label.clone()).unwrap_or_default(),
+                    "standard_level": standard_level_map.iter().find(|level| level.code == s).map(|level| level.label.clone()).unwrap_or_default(),
+                })
+            ).collect_vec();
+            Some(sec_arr)
+        } else {
+            None
+        };
         let mut ext = json!({
             "status": account_resp.status,
             "temporary":account_resp.temporary,
@@ -258,6 +290,7 @@ impl IamSearchClient {
             "role_id": account_roles,
             "role": raw_roles_map,
             "dept_id": account_resp_dept_id,
+            "dept": account_resp_dept_map,
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
             "project_id": account_app_ids,
@@ -270,6 +303,11 @@ impl IamSearchClient {
             "logout_time":account_resp.logout_time,
             "logout_type":account_resp.logout_type,
             "labor_type":account_resp.labor_type,
+            "primary": raw_primary,
+            "primary_code": primary_code,
+            "secondary": raw_secondary,
+            "secondary_code": secondary_code,
+            "standard_level": account_resp.exts.iter().find(|attr| attr.name == "standard_level").map(|attr| attr.value.clone()),
             "scope_level":account_resp.scope_level
         });
         account_resp.exts.iter().map(|attr| ext[&attr.name] = json!(attr.value)).collect_vec();
