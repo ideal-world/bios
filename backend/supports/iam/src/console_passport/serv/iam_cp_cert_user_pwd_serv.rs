@@ -83,16 +83,9 @@ impl IamCpCertUserPwdServ {
         IamAccountServ::modify_item(
             &rbum_item_id,
             &mut IamAccountModifyReq {
-                name: None,
-                scope_level: None,
-                disabled: None,
                 status: Some(IamAccountStatusKind::Active),
                 is_auto: Some(false),
-                icon: None,
-                lock_status: None,
-                temporary: None,
-                logout_type: None,
-                labor_type: None,
+                ..Default::default()
             },
             funs,
             &ctx,

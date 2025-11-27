@@ -10,7 +10,6 @@ use tardis::{
         sea_orm::{FromQueryResult, Value},
     },
     futures::future::join_all,
-    log,
     regex::Regex,
     serde_json::{self, json, Map},
     web::web_resp::TardisPage,
@@ -21,7 +20,10 @@ use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper:
 
 use crate::{
     dto::search_item_dto::{
-        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp, SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq, SearchWordCombinationsRuleWay
+        AdvSearchItemQueryReq, GroupSearchItemSearchReq, GroupSearchItemSearchResp, MultipleSearchItemSearchReq, SearchExportAggResp, SearchExportDataReq, SearchExportDataResp,
+        SearchImportDataReq, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind,
+        SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq,
+        SearchWordCombinationsRuleWay,
     },
     search_config::SearchConfig,
 };
@@ -41,7 +43,7 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     Ok(())
 }
 
-pub async fn do_add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<()> {
+pub async fn do_add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, _ctx: &TardisContext, conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<()> {
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
@@ -103,7 +105,7 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
             modify_req.ext = Some(ext);
         }
     };
-    
+
     conn.begin().await?;
     self::do_modify(key, modify_req, funs, &conn, &table_name).await?;
     conn.commit().await?;
@@ -185,57 +187,79 @@ pub async fn save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFuns
     Ok(())
 }
 
-async fn do_save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst, conn: &TardisRelDBlConnection, table_name: &str) -> TardisResult<()> {
-    if  self::search(&mut SearchItemSearchReq {
-        tag: tag.to_string(),
-        ctx: SearchItemSearchCtxReq::default(),
-        query: SearchItemQueryReq {
-            keys: Some(vec![save_req.key.clone()]),
-            ..Default::default()
+async fn do_save(
+    tag: &str,
+    save_req: &mut SearchSaveItemReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+    conn: &TardisRelDBlConnection,
+    table_name: &str,
+) -> TardisResult<()> {
+    if self::search(
+        &mut SearchItemSearchReq {
+            tag: tag.to_string(),
+            ctx: SearchItemSearchCtxReq::default(),
+            query: SearchItemQueryReq {
+                keys: Some(vec![save_req.key.clone()]),
+                ..Default::default()
+            },
+            adv_by_or: None,
+            adv_query: None,
+            sort: None,
+            page: SearchItemSearchPageReq {
+                number: 1,
+                size: 1,
+                fetch_total: false,
+            },
         },
-        adv_by_or: None,
-        adv_query: None,
-        sort: None,
-        page: SearchItemSearchPageReq {
-            number: 1,
-            size: 1,
-            fetch_total: false,
-        },
-    }, funs, ctx, inst).await?.records.is_empty() {
+        funs,
+        ctx,
+        inst,
+    )
+    .await?
+    .records
+    .is_empty()
+    {
         let mut add_req = SearchItemAddReq {
             tag: tag.to_string(),
-            kind: save_req.kind.clone(),
+            kind: save_req.kind.clone().unwrap_or_default(),
             key: save_req.key.clone(),
-            title: save_req.title.clone(),
-            content: save_req.content.clone(),
+            title: save_req.title.clone().unwrap_or_default(),
+            content: save_req.content.clone().unwrap_or_default(),
             data_source: save_req.data_source.clone(),
             owner: save_req.owner.clone(),
             own_paths: save_req.own_paths.clone(),
-            create_time: save_req.create_time.clone(),
-            update_time: save_req.update_time.clone(),
+            create_time: save_req.create_time,
+            update_time: save_req.update_time,
             ext: save_req.ext.clone(),
             visit_keys: save_req.visit_keys.clone(),
         };
-        self::do_add(&mut add_req, funs, ctx, &conn, &table_name).await?;
+        self::do_add(&mut add_req, funs, ctx, conn, table_name).await?;
     } else {
         let mut modify_req = SearchItemModifyReq {
-            kind: Some(save_req.kind.clone()),
-            title: Some(save_req.title.clone()),
-            content: Some(save_req.content.clone()),
+            kind: save_req.kind.clone(),
+            title: save_req.title.clone(),
+            content: save_req.content.clone(),
             owner: save_req.owner.clone(),
             own_paths: save_req.own_paths.clone(),
-            create_time: save_req.create_time.clone(),
-            update_time: save_req.update_time.clone(),
+            create_time: save_req.create_time,
+            update_time: save_req.update_time,
             ext: save_req.ext.clone(),
             visit_keys: save_req.visit_keys.clone(),
             ext_override: None,
         };
-        self::do_modify(&save_req.key, &mut modify_req, funs, &conn, &table_name).await?;
+        if let Some(ext) = modify_req.ext.clone() {
+            let mut storage_ext = get_ext(tag, save_req.key.to_string().as_str(), table_name, conn, funs, inst).await?;
+            merge(&mut storage_ext, ext);
+            modify_req.ext = Some(storage_ext);
+        }
+        self::do_modify(&save_req.key, &mut modify_req, funs, conn, table_name).await?;
     }
     Ok(())
 }
 
-pub async fn batch_save(tag: &str, batch_req: &mut Vec<SearchSaveItemReq>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn batch_save(tag: &str, batch_req: &mut [SearchSaveItemReq], funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     conn.begin().await?;
@@ -246,11 +270,18 @@ pub async fn batch_save(tag: &str, batch_req: &mut Vec<SearchSaveItemReq>, funs:
     Ok(())
 }
 
-pub async fn batch_delete(tag: &str, delete_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn batch_delete(tag: &str, delete_ids: Vec<String>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     if !delete_ids.is_empty() {
-        conn.execute_one(&format!("DELETE FROM {table_name} WHERE key in ({})", (0..delete_ids.len()).map(|idx| format!("${}", idx + 1)).collect::<Vec<String>>().join(",")), delete_ids.iter().map(|id| Value::from(id)).collect::<Vec<_>>()).await?;
+        conn.execute_one(
+            &format!(
+                "DELETE FROM {table_name} WHERE key in ({})",
+                (0..delete_ids.len()).map(|idx| format!("${}", idx + 1)).collect::<Vec<String>>().join(",")
+            ),
+            delete_ids.iter().map(|id| Value::from(id)).collect::<Vec<_>>(),
+        )
+        .await?;
     }
     Ok(())
 }

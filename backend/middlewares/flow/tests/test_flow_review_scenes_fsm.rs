@@ -518,6 +518,8 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                employee_code: None,
+                id_card_no: None,
             },
         )
         .await;
@@ -559,6 +561,8 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                employee_code: None,
+                id_card_no: None,
             },
         )
         .await;

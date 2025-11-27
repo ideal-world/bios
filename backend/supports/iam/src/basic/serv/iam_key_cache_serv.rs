@@ -514,7 +514,7 @@ impl IamIdentCacheServ {
                     match_path,
                     spec_id
                 )
-                .as_str()
+                .as_str(),
             )
             .await?;
         Ok(())

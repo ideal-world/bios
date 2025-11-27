@@ -4,6 +4,7 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use std::collections::HashMap;
 
 use tardis::basic::error::TardisError;
 use tardis::futures::future::join_all;
@@ -13,7 +14,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
@@ -108,6 +109,39 @@ impl IamCsRoleApi {
         }
     }
 
+    /// Batch Modify Role By Role Id
+    /// 根据角色ID批量修改角色
+    ///
+    /// When code = 202, the return value is the asynchronous task id
+    /// 当 code = 202 时，返回值为异步任务id
+    #[oai(path = "/batch/modify", method = "put")]
+    async fn batch_modify(
+        &self,
+        tenant_id: Query<Option<String>>,
+        mut modify_req_map: Json<HashMap<String, IamRoleModifyReq>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Option<String>> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        for (id, modify_req) in modify_req_map.0.iter_mut() {
+            let mut funs = iam_constants::get_tardis_inst();
+            let mut modify_agg_req = IamRoleAggModifyReq {
+                role: Some(modify_req.clone()),
+                res_ids: None,
+            };
+            funs.begin().await?;
+            IamRoleServ::modify_role_agg(id, &mut modify_agg_req, &funs, &ctx).await?;
+            funs.commit().await?;
+        }
+        ctx.execute_task().await?;
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
+    }
+
     /// Get Role By Role Id
     /// 根据角色ID获取角色
     #[oai(path = "/:id", method = "get")]
@@ -156,6 +190,7 @@ impl IamCsRoleApi {
                 in_base: in_base.0,
                 in_embed: in_embed.0,
                 extend_role_id: extend_role_id.0,
+                desc_by_sort: Some(true),
                 ..Default::default()
             },
             page_number.0,

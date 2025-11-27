@@ -6,8 +6,8 @@ use spacegate_shell::{
 
 pub mod op_redis_allow_api;
 pub mod op_redis_header_expand;
-pub mod op_redis_status;
 pub mod op_redis_publisher;
+pub mod op_redis_status;
 
 fn redis_format_key(req: &Request<SgBody>, matched: &MatchedSgRouter, header: &str, default_header: bool) -> Option<String> {
     let is_method_any_match = matched.method.as_ref().is_none();

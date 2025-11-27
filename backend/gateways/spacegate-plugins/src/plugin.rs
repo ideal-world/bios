@@ -7,6 +7,7 @@ pub mod audit_log;
 pub mod auth;
 pub mod bios_error_limit;
 pub mod content_filter;
+pub mod http_method_override;
 pub mod ip_time;
 pub mod license;
 pub mod notify;
