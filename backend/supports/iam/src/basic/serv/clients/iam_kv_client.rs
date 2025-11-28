@@ -14,12 +14,12 @@ pub struct IamKvClient;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct IamKvValue {
-    pub url: String,
+    pub url: Option<String>,
     pub code: String,
-    pub icon: String,
-    pub color: String,
+    pub icon: Option<String>,
+    pub color: Option<String>,
     pub label: String,
-    pub service: String,
+    pub service: Option<String>,
 }
 
 impl IamKvClient {

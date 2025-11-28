@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
-    serv::rbum_item_serv::RbumItemCrudOperation,
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetItemFilterReq},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
 };
 use bios_sdk_invoke::{
     clients::spi_search_client::SpiSearchClient,
@@ -257,6 +257,25 @@ impl IamSearchClient {
         }
         let account_roles = roles_set.into_iter().collect_vec();
 
+        // 产品组
+        let mut app_set = vec![];
+        let set_cate = RbumSetItemServ::find_detail_rbums(&RbumSetItemFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            rel_rbum_item_ids: Some(vec![account_id.to_string()]),
+            rel_rbum_set_id: Some(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Apps, ""), true, funs, &mock_ctx).await?),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for set_cate in set_cate {
+            app_set.push(json!({
+                "name": set_cate.rel_rbum_set_cate_name,
+                "own_paths": set_cate.own_paths,
+                "scope_level": set_cate.rel_rbum_item_scope_level,
+            }));
+        }
         // 岗位
         let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
         let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| attr.value.clone());
@@ -307,10 +326,9 @@ impl IamSearchClient {
             "primary_code": primary_code,
             "secondary": raw_secondary,
             "secondary_code": secondary_code,
-            "standard_level": account_resp.exts.iter().find(|attr| attr.name == "standard_level").map(|attr| attr.value.clone()),
+            "app_set": app_set,
             "scope_level":account_resp.scope_level
         });
-        account_resp.exts.iter().map(|attr| ext[&attr.name] = json!(attr.value)).collect_vec();
         //add or modify search
         if *is_modify {
             let modify_req = SearchItemModifyReq {
