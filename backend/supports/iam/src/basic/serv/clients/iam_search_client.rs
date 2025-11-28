@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetItemFilterReq},
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetFilterReq, RbumSetItemFilterReq},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::{RbumSetItemServ, RbumSetServ}},
 };
 use bios_sdk_invoke::{
     clients::spi_search_client::SpiSearchClient,
@@ -269,12 +269,23 @@ impl IamSearchClient {
             rel_rbum_set_id: Some(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Apps, ""), true, funs, &mock_ctx).await?),
             ..Default::default()
         }, None, None, funs, ctx).await?;
+        let set_ids = RbumSetServ::find_id_rbums(&RbumSetFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: Some(set_cate.iter().map(|cate| cate.rel_rbum_set_id.clone()).collect_vec()),
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
         for set_cate in set_cate {
-            app_set.push(json!({
-                "name": set_cate.rel_rbum_set_cate_name,
-                "own_paths": set_cate.own_paths,
-                "scope_level": set_cate.rel_rbum_item_scope_level,
-            }));
+            if set_ids.contains(&set_cate.rel_rbum_set_id.clone()) {
+                app_set.push(json!({
+                    "name": set_cate.rel_rbum_set_cate_name,
+                    "own_paths": set_cate.own_paths,
+                    "scope_level": set_cate.rel_rbum_item_scope_level,
+                }));
+            }
         }
         // 岗位
         let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
