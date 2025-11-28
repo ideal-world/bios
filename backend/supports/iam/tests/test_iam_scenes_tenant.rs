@@ -416,6 +416,8 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
         )
         .await;
@@ -452,6 +454,8 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 temporary: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
         )
         .await;
@@ -613,6 +617,8 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
         )
         .await;
@@ -637,6 +643,8 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 lock_status: None,
                 logout_type: None,
                 labor_type: None,
+                id_card_no: None,
+                employee_code: None,
             },
         )
         .await;
