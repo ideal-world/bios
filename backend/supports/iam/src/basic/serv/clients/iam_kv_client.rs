@@ -1,6 +1,7 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_sdk_invoke::clients::spi_kv_client::{KvItemDetailResp, SpiKvClient};
-use tardis::tokio;
+use serde::{Deserialize, Serialize};
+use tardis::{TardisFuns, tokio};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::Value,
@@ -10,6 +11,16 @@ use tardis::{
 use crate::iam_constants;
 
 pub struct IamKvClient;
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct IamKvValue {
+    pub url: Option<String>,
+    pub code: String,
+    pub icon: Option<String>,
+    pub color: Option<String>,
+    pub label: String,
+    pub service: Option<String>,
+}
 
 impl IamKvClient {
     pub async fn async_add_or_modify_item(
@@ -114,6 +125,18 @@ impl IamKvClient {
     pub async fn get_item(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
         if cfg!(feature = "spi_kv") {
             SpiKvClient::get_item(key.to_string(), None, funs, ctx).await
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn get_item_value(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<IamKvValue>>> {
+        if cfg!(feature = "spi_kv") {
+            Ok(
+                SpiKvClient::get_item(key.to_string(), None, funs, ctx).await?.map(|kvresp|
+                    TardisFuns::json.json_to_obj::<Vec<IamKvValue>>(kvresp.value).unwrap_or_default()
+                )
+            )
         } else {
             Ok(None)
         }

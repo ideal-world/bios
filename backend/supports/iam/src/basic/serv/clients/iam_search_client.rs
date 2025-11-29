@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq},
-    serv::rbum_item_serv::RbumItemCrudOperation,
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetFilterReq, RbumSetItemFilterReq},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::{RbumSetItemServ, RbumSetServ}},
 };
 use bios_sdk_invoke::{
     clients::spi_search_client::SpiSearchClient,
@@ -11,9 +11,7 @@ use bios_sdk_invoke::{
 use itertools::Itertools;
 
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    serde_json::{self, json},
-    tokio, TardisFunsInst,
+    TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, serde_json::{self, Value, json}, tokio
 };
 
 use crate::{
@@ -23,8 +21,7 @@ use crate::{
             iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         },
         serv::{
-            iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ,
-            iam_tenant_serv::IamTenantServ,
+            clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ
         },
     },
     iam_config::IamConfig,
@@ -133,6 +130,7 @@ impl IamSearchClient {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         // let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
+        let mut account_resp_dept_map: HashMap<String, Value> = HashMap::new();
         let global_ctx = TardisContext {
             own_paths: "".to_owned(),
             ..ctx.clone()
@@ -175,6 +173,13 @@ impl IamSearchClient {
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
             account_resp_dept_id.extend(set_items.iter().filter_map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
+            for set_item in set_items {
+                account_resp_dept_map.insert(set_item.rel_rbum_set_cate_id.clone().unwrap_or_default(), json!({
+                    "name": set_item.rel_rbum_set_cate_name,
+                    "own_paths": set_item.own_paths,
+                    "scope_level": set_item.rel_rbum_item_scope_level,
+                }));
+            }
         }
 
         let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
@@ -251,13 +256,80 @@ impl IamSearchClient {
             );
         }
         let account_roles = roles_set.into_iter().collect_vec();
-        let mut ext = json!({
+
+        // 产品组
+        let mut raw_app_set_map = HashMap::new();
+        let mut app_set = vec![];
+        let set_cate = RbumSetItemServ::find_detail_rbums(&RbumSetItemFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            rel_rbum_item_ids: Some(vec![account_id.to_string()]),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        let set_ids = RbumSetServ::find_id_rbums(&RbumSetFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: Some(set_cate.iter().map(|cate| cate.rel_rbum_set_id.clone()).collect_vec()),
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            kind: Some(IamSetKind::Apps.to_string()),
+            ..Default::default()
+        }, None, None, funs, ctx).await?;
+        for set_cate in set_cate {
+            if set_ids.contains(&set_cate.rel_rbum_set_id.clone()) {
+                raw_app_set_map.insert(
+                    set_cate.rel_rbum_set_id.clone(), 
+                    json!({
+                        "name": set_cate.rel_rbum_set_cate_name,
+                        "own_paths": set_cate.own_paths,
+                        "scope_level": set_cate.rel_rbum_item_scope_level,
+                    })
+                );
+                app_set.push(set_cate.rel_rbum_set_cate_id);
+            }
+        }
+        // 岗位
+        let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
+        let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| attr.value.clone());
+        let standard_level = account_resp.exts.iter().find(|attr| attr.name == "standard_level").map(|attr| TardisFuns::json.str_to_obj::<HashMap<String,String>>(attr.value.as_str()).unwrap_or_default()).unwrap_or_default();
+        let standard_level_map = IamKvClient::get_item_value("__tag__:_:standardLevel", funs, ctx).await?.unwrap_or_default();
+        let position_map = IamKvClient::get_item_value("__tag__:_:position:all", funs, ctx).await?.unwrap_or_default();
+        let mut raw_primary_map = HashMap::new();
+        if let Some(pri) = primary_code.clone() {
+            let standard_level_code = standard_level.get(&pri).cloned().unwrap_or_default();
+            raw_primary_map.insert(
+                pri.clone(),
+                json!({
+                    "name": position_map.iter().find(|pos| pos.code == pri).map(|pos| pos.label.clone()).unwrap_or_default(),
+                    "standard_level": standard_level_map.iter().find(|level| level.code == standard_level_code).map(|level| level.label.clone()).unwrap_or_default(),
+                })
+            );
+        }
+        let mut raw_secondary_map = HashMap::new();
+        if let Some(sec) = secondary_code.clone() {
+            for s in sec.split(",") {
+                let standard_level_code = standard_level.get(s).cloned().unwrap_or_default();
+                raw_secondary_map.insert(
+                    s.to_string(),
+                    json!({
+                        "name": position_map.iter().find(|pos| pos.code == s).map(|pos| pos.label.clone()).unwrap_or_default(),
+                        "standard_level": standard_level_map.iter().find(|level| level.code == standard_level_code).map(|level| level.label.clone()).unwrap_or_default(),
+                    })
+                );
+            }
+        }
+        let ext = json!({
             "status": account_resp.status,
             "temporary":account_resp.temporary,
             "lock_status": account_resp.lock_status,
             "role_id": account_roles,
             "role": raw_roles_map,
             "dept_id": account_resp_dept_id,
+            "dept": account_resp_dept_map,
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
             "project_id": account_app_ids,
@@ -270,9 +342,14 @@ impl IamSearchClient {
             "logout_time":account_resp.logout_time,
             "logout_type":account_resp.logout_type,
             "labor_type":account_resp.labor_type,
+            "primary": raw_primary_map,
+            "primary_code": primary_code,
+            "secondary": raw_secondary_map,
+            "secondary_code": secondary_code,
+            "app_set": raw_app_set_map,
+            "app_set_id": app_set,
             "scope_level":account_resp.scope_level
         });
-        account_resp.exts.iter().map(|attr| ext[&attr.name] = json!(attr.value)).collect_vec();
         //add or modify search
         if *is_modify {
             let modify_req = SearchItemModifyReq {
