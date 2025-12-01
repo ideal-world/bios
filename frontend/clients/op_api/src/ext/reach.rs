@@ -35,8 +35,8 @@ impl SendChannel for OpApiClient {
         let method = Method::from_bytes(method_str.as_bytes())
             .map_err(|e| TardisError::wrap(&format!("Invalid HTTP method '{}': {}", method_str, e), "400-invalid-webhook-method"))?;
 
-        // 从 content 中获取 webhook_content 作为请求体
-        let webhook_content = content.get("webhook_content").map(|s| s.as_str());
+        // 从 content 中获取 webhook_content 作为请求体 @TODO 暂时写死，后续需要改为通过template content获取
+        let webhook_content = content.get("open_platform_replace").map(|s| s.as_str());
 
         let request = WebhookRequest::new(webhook_url, method, webhook_content);
         self.send_webhook(request).await
