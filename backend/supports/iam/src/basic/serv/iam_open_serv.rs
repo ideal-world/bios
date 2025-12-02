@@ -79,7 +79,7 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
-                Self::save_product_spec_rel(&product.id, &spec.id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), funs, ctx).await?;
+                Self::save_product_spec_rel(&product.id, &spec.id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), spec_req.servers.clone(), funs, ctx).await?;
                 Self::set_rel_ak_cache(&spec.id, funs, ctx).await?;
             } else {
                 let spec_id = IamResServ::add_item(
@@ -96,7 +96,7 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
-                Self::save_product_spec_rel(&product.id, &spec_id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), funs, ctx).await?;
+                Self::save_product_spec_rel(&product.id, &spec_id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), spec_req.servers.clone(), funs, ctx).await?;
                 Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
             }
         }
@@ -148,7 +148,7 @@ impl IamOpenServ {
                 ctx,
             )
             .await?;
-            Self::save_product_spec_rel(&product_id, &spec_id, None, spec.api_call_frequency, spec.bind_api_res.clone(), funs, ctx).await?;
+            Self::save_product_spec_rel(&product_id, &spec_id, None, spec.api_call_frequency, spec.bind_api_res.clone(), spec.servers.clone(), funs, ctx).await?;
             Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
         }
         Ok(())
@@ -173,6 +173,17 @@ impl IamOpenServ {
     }
 
     pub async fn bind_cert_product_and_spec(cert_id: &str, bind_req: &IamOpenBindAkProductReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ak = RbumCertServ::find_one_detail_rbum(
+            &RbumCertFilterReq {
+                id: Some(cert_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "401-iam-cert-code-not-exist"))?
+        .ak;
         let old_product_rels = RbumRelServ::find_detail_rbums(
             &RbumRelFilterReq {
                 from_rbum_id: Some(cert_id.to_string()),
@@ -236,22 +247,15 @@ impl IamOpenServ {
         .id;
 
         if let Some(create_proj_code) = &bind_req.create_proj_code {
-            let ak = RbumCertServ::find_one_detail_rbum(
-                &RbumCertFilterReq {
-                    id: Some(cert_id.to_string()),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?
-            .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_product_and_spec", "illegal response", "401-iam-cert-code-not-exist"))?
-            .ak;
             IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
         Self::bind_cert_product(cert_id, &product_id, None, bind_req.create_proj_code.clone(), funs, ctx).await?;
-        Self::bind_cert_spec(cert_id, &spec_id, None, bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
+        Self::bind_cert_spec(cert_id, &spec_id, None, bind_req.server_code.clone(), bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
 
+        // update ext headers
+        if let Some(ext_headers) = &bind_req.ext_headers {
+            IamIdentCacheServ::set_open_api_extand_header(&ak, None, ext_headers.clone(), funs).await?;
+        }
         // update cert expire_sec
         if bind_req.end_time.is_some() && bind_req.start_time.is_some() {
             RbumCertServ::modify_rbum(
@@ -297,6 +301,7 @@ impl IamOpenServ {
         own_paths: Option<String>,
         api_call_frequency: Option<i32>,
         bind_api_res: Option<Vec<String>>,
+        servers: Option<HashMap<String, Vec<String>>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -369,6 +374,11 @@ impl IamOpenServ {
         if let Some(bind_api_res) = bind_api_res {
             IamIdentCacheServ::add_or_modify_bind_api_res(spec_id, None, bind_api_res, funs).await?;
         }
+        if let Some(servers) = servers {
+            for (server_code, bind_api_res) in servers {
+                IamIdentCacheServ::add_or_modify_bind_api_res(server_code.as_str(), None, bind_api_res, funs).await?;
+            }
+        }
         Ok(())
     }
 
@@ -376,6 +386,7 @@ impl IamOpenServ {
         cert_id: &str,
         spec_id: &str,
         own_paths: Option<String>,
+        server_code: Option<String>,
         start_time: Option<chrono::DateTime<Utc>>,
         end_time: Option<chrono::DateTime<Utc>>,
         api_call_count: Option<u32>,
@@ -426,7 +437,11 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_spec", "illegal response", "401-iam-cert-code-not-exist"))?
         .ak;
 
-        IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Spec-Id".to_string(), spec_id.to_string())]), funs).await?;
+        if let Some(server_code) = server_code {
+            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Res-Id".to_string(), server_code.clone())]), funs).await?;
+        } else {
+            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Res-Id".to_string(), spec_id.to_string())]), funs).await?;
+        }
         Ok(())
     }
 
@@ -757,24 +772,13 @@ impl IamOpenServ {
                 )
                 .await?
                 {
-                    // 1、api调用频率缓存重写
-                    if let Some(api_call_frequency) = IamIdentCacheServ::get_gateway_rule_info(&cert.ak, &funs.conf::<IamConfig>().openapi_plugin_limit, None, funs)
-                        .await?
-                        .map(|s| s.parse::<u32>().unwrap_or_default())
-                    {
-                        IamIdentCacheServ::set_open_api_call_frequency(&spec.id, None, api_call_frequency.to_string().as_str(), funs).await?;
-                    };
-                    // 2、新增ak关联规格ID
-                    IamIdentCacheServ::set_open_api_extand_header(&cert.ak, None, HashMap::from([("Spec-Id".to_string(), spec.id.clone())]), funs).await?;
-                    // 3、新增ak可用状态
-                    IamIdentCacheServ::add_or_modify_gateway_rule_info(
-                        &cert.ak,
-                        &funs.conf::<IamConfig>().openapi_plugin_state,
-                        None,
-                        IamOpenCertStateKind::Enabled.to_string().as_str(),
-                        funs,
-                    )
-                    .await?;
+                    // 更新扩展头的信息
+                    if let Some(mut ext_headers) = IamIdentCacheServ::get_open_api_extand_header(&cert.ak, None, funs).await? {
+                        if let Some(res_id) = ext_headers.get("Spec-Id") {
+                            ext_headers.extend(HashMap::from([("Res-Id".to_string(), res_id.clone())]));
+                        }
+                        IamIdentCacheServ::set_open_api_extand_header(&cert.ak, None, ext_headers, funs).await?;
+                    }
                 }
             }
         }
