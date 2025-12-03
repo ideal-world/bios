@@ -541,6 +541,22 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn get_open_api_extand_header(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<HashMap<String, String>>> {
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let result = funs
+            .cache()
+            .get(&format!(
+                "{}{}:{}:{}:{}",
+                funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                funs.conf::<IamConfig>().openapi_plugin_extand_header,
+                match_method.unwrap_or("*"),
+                match_path,
+                ak
+            ))
+            .await?.map(|s| tardis::TardisFuns::json.str_to_obj::<HashMap<String, String>>(&s).unwrap_or_default());
+        Ok(result)
+    }
+
     pub async fn add_or_modify_bind_api_res(spec_id: &str, match_method: Option<&str>, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", spec_id, bind_api_res,);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
