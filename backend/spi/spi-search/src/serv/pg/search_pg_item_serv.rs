@@ -182,21 +182,7 @@ pub async fn save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFuns
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     conn.begin().await?;
-    self::do_save(tag, save_req, funs, ctx, inst, &conn, &table_name).await?;
-    conn.commit().await?;
-    Ok(())
-}
-
-async fn do_save(
-    tag: &str,
-    save_req: &mut SearchSaveItemReq,
-    funs: &TardisFunsInst,
-    ctx: &TardisContext,
-    inst: &SpiBsInst,
-    conn: &TardisRelDBlConnection,
-    table_name: &str,
-) -> TardisResult<()> {
-    if self::search(
+    let exists_items = self::search(
         &mut SearchItemSearchReq {
             tag: tag.to_string(),
             ctx: SearchItemSearchCtxReq::default(),
@@ -218,9 +204,43 @@ async fn do_save(
         inst,
     )
     .await?
-    .records
-    .is_empty()
+    .records;
+    let exists_item = exists_items.iter().find(|item| item.key == save_req.key.to_string());
+    self::do_save(tag, save_req, exists_item, funs, ctx, &conn, &table_name).await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+async fn do_save(
+    tag: &str,
+    save_req: &mut SearchSaveItemReq,
+    exists_item: Option<&SearchItemSearchResp>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    conn: &TardisRelDBlConnection,
+    table_name: &str,
+) -> TardisResult<()> {
+    if let Some(item) = exists_item
     {
+        let mut modify_req = SearchItemModifyReq {
+            kind: save_req.kind.clone(),
+            title: save_req.title.clone(),
+            content: save_req.content.clone(),
+            owner: save_req.owner.clone(),
+            own_paths: save_req.own_paths.clone(),
+            create_time: save_req.create_time,
+            update_time: save_req.update_time,
+            ext: save_req.ext.clone(),
+            visit_keys: save_req.visit_keys.clone(),
+            ext_override: None,
+        };
+        if let Some(ext) = modify_req.ext.clone() {
+            let mut storage_ext = item.ext.clone();
+            merge(&mut storage_ext, ext);
+            modify_req.ext = Some(storage_ext);
+        }
+        self::do_modify(&save_req.key, &mut modify_req, funs, conn, table_name).await?;
+    } else {
         let mut add_req = SearchItemAddReq {
             tag: tag.to_string(),
             kind: save_req.kind.clone().unwrap_or_default(),
@@ -236,25 +256,6 @@ async fn do_save(
             visit_keys: save_req.visit_keys.clone(),
         };
         self::do_add(&mut add_req, funs, ctx, conn, table_name).await?;
-    } else {
-        let mut modify_req = SearchItemModifyReq {
-            kind: save_req.kind.clone(),
-            title: save_req.title.clone(),
-            content: save_req.content.clone(),
-            owner: save_req.owner.clone(),
-            own_paths: save_req.own_paths.clone(),
-            create_time: save_req.create_time,
-            update_time: save_req.update_time,
-            ext: save_req.ext.clone(),
-            visit_keys: save_req.visit_keys.clone(),
-            ext_override: None,
-        };
-        if let Some(ext) = modify_req.ext.clone() {
-            let mut storage_ext = get_ext(tag, save_req.key.to_string().as_str(), table_name, conn, funs, inst).await?;
-            merge(&mut storage_ext, ext);
-            modify_req.ext = Some(storage_ext);
-        }
-        self::do_modify(&save_req.key, &mut modify_req, funs, conn, table_name).await?;
     }
     Ok(())
 }
@@ -263,8 +264,32 @@ pub async fn batch_save(tag: &str, batch_req: &mut [SearchSaveItemReq], funs: &T
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
     conn.begin().await?;
+    let exists_items = self::search(
+        &mut SearchItemSearchReq {
+            tag: tag.to_string(),
+            ctx: SearchItemSearchCtxReq::default(),
+            query: SearchItemQueryReq {
+                keys: Some(batch_req.iter().map(|req| req.key.clone()).collect()),
+                ..Default::default()
+            },
+            adv_by_or: None,
+            adv_query: None,
+            sort: None,
+            page: SearchItemSearchPageReq {
+                number: 1,
+                size: 1,
+                fetch_total: false,
+            },
+        },
+        funs,
+        ctx,
+        inst,
+    )
+    .await?
+    .records;
     for save_req in batch_req.iter_mut() {
-        self::do_save(tag, save_req, funs, ctx, inst, &conn, &table_name).await?;
+        let exists_item = exists_items.iter().find(|item| item.key == save_req.key.to_string());
+        self::do_save(tag, save_req, exists_item, funs, ctx, &conn, &table_name).await?;
     }
     conn.commit().await?;
     Ok(())
@@ -279,7 +304,7 @@ pub async fn batch_delete(tag: &str, delete_ids: Vec<String>, _funs: &TardisFuns
                 "DELETE FROM {table_name} WHERE key in ({})",
                 (0..delete_ids.len()).map(|idx| format!("${}", idx + 1)).collect::<Vec<String>>().join(",")
             ),
-            delete_ids.iter().map(|id| Value::from(id)).collect::<Vec<_>>(),
+            delete_ids.iter().map(Value::from).collect::<Vec<_>>(),
         )
         .await?;
     }

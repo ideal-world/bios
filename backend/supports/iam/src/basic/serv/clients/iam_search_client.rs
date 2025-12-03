@@ -205,8 +205,9 @@ impl IamSearchClient {
             &mock_ctx,
         )
         .await?;
-        let account_app_ids = raw_account_apps.iter().filter(|app| app.kind == IamAppKind::Project).map(|app| app.id.clone()).collect_vec();
-        let raw_account_apps_map = raw_account_apps
+        let account_app_ids =  raw_account_apps.iter().map(|app| app.id.clone()).collect_vec();
+        let account_contract_ids = raw_account_apps.iter().filter(|app| app.kind == IamAppKind::Project).map(|app| app.id.clone()).collect_vec();
+        let raw_account_contract_map = raw_account_apps
             .iter()
             .filter(|app| app.kind == IamAppKind::Project)
             .map(|app| {
@@ -347,10 +348,10 @@ impl IamSearchClient {
             "dept": account_resp_dept_map,
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
-            "project_id": account_app_ids,
-            "product_id": account_product_ids,
-            "product": raw_account_products_map,
-            "app": raw_account_apps_map,
+            "project_id": account_product_ids,
+            "contract_id": account_contract_ids,
+            "contract": raw_account_contract_map,
+            "app": raw_account_products_map,
             "create_time": account_resp.create_time.to_rfc3339(),
             "certs":account_resp.certs,
             "icon":account_resp.icon,
