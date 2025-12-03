@@ -20,7 +20,9 @@ mod test_search_item;
 
 #[tokio::test]
 async fn test_search() -> TardisResult<()> {
-    env::set_var("RUST_LOG", "debug,test_search=trace,sqlx::query=off");
+    unsafe {
+        env::set_var("RUST_LOG", "debug,test_search=trace,sqlx::query=off");
+    }
 
     let _x = init_search_container::init().await?;
     // init_data(spi_constants::SPI_ES_KIND_CODE, &env::var("TARDIS_FW.ES.URL").unwrap(), false).await?;
