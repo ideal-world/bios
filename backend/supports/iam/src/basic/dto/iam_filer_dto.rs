@@ -68,6 +68,7 @@ pub struct IamAccountFilterReq {
     pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
     pub status: Option<IamAccountStatusKind>,
+    pub others_id: Option<String>,
 }
 
 impl RbumItemFilterFetcher for IamAccountFilterReq {

@@ -122,6 +122,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 labor_type: None,
                 id_card_no: None,
                 employee_code: None,
+                others_id: None,
             },
         )
         .await;
@@ -900,6 +901,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 labor_type: None,
                 id_card_no: None,
                 employee_code: None,
+                others_id: None,
             },
         )
         .await;
@@ -1010,6 +1012,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 labor_type: None,
                 id_card_no: None,
                 employee_code: None,
+                others_id: None,
             },
         )
         .await;

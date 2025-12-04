@@ -39,6 +39,8 @@ pub struct IamAccountAggAddReq {
     pub id_card_no: Option<String>,
     pub employee_code: Option<String>,
 
+    pub others_id: Option<String>,
+
     pub temporary: Option<bool>,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -59,6 +61,7 @@ pub struct IamAccountAddReq {
     pub labor_type: Option<String>,
     pub id_card_no: Option<String>,
     pub employee_code: Option<String>,
+    pub others_id: Option<String>,
     pub temporary: Option<bool>,
     pub lock_status: Option<IamAccountLockStateKind>,
     pub status: Option<IamAccountStatusKind>,
@@ -156,6 +159,8 @@ pub struct IamAccountSummaryResp {
     pub id_card_no: String,
     pub employee_code: String,
 
+    pub others_id: String,
+
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
 
@@ -183,6 +188,8 @@ pub struct IamAccountDetailResp {
     pub id_card_no: String,
     pub employee_code: String,
 
+    pub others_id: String,
+
     pub temporary: bool,
     pub lock_status: IamAccountLockStateKind,
 
@@ -204,6 +211,8 @@ pub struct IamAccountSummaryAggResp {
 
     pub id_card_no: String,
     pub employee_code: String,
+
+    pub others_id: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -236,6 +245,8 @@ pub struct IamAccountDetailAggResp {
 
     pub id_card_no: String,
     pub employee_code: String,
+
+    pub others_id: String,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
