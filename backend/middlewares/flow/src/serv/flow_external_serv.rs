@@ -209,6 +209,7 @@ impl FlowExternalServ {
         is_notify: bool,
         manual_op: Option<bool>,
         callback_op: Option<FlowExternalCallbackOp>,
+        params: Vec<FlowExternalParams>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
@@ -216,6 +217,20 @@ impl FlowExternalServ {
         if external_url.is_empty() {
             return Ok(FlowExternalNotifyChangesResp {});
         }
+        // complete changed_kind
+        let params = params
+            .into_iter()
+            .map(|mut param| {
+                if param.changed_kind.is_none() {
+                    if param.value.clone().unwrap_or_default().to_string().is_empty() {
+                        param.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::Clean);
+                    } else {
+                        param.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
+                    }
+                }
+                param
+            })
+            .collect_vec();
 
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
@@ -232,6 +247,7 @@ impl FlowExternalServ {
             notify: Some(is_notify),
             manual_op,
             sys_time: Some(Utc::now().timestamp_millis()),
+            params,
             ..Default::default()
         };
         let original_resp = funs.web_client().post(&external_url, &body, header).await?;
