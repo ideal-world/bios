@@ -7,19 +7,21 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::{param::Path, param::Query};
-use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
 
 use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants;
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
@@ -439,5 +441,28 @@ impl IamCiAccountApi {
         .await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Batch Bind Account To Role
+    /// 批量绑定账号到角色
+    #[oai(path = "/batch/bind_role", method = "put")]
+    async fn batch_bind_role(
+        &self,
+        bind_map: Json<HashMap<String, String>>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
+        for (account_id, role_id) in bind_map.0.iter() {
+            IamAppServ::add_rel_account(&app_id, account_id, true, &funs, &ctx.0).await?;
+            IamRoleServ::add_rel_account(role_id, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
     }
 }
