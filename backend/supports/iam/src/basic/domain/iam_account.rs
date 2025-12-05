@@ -60,7 +60,6 @@ pub struct Model {
     /// Others ID
     ///
     /// 其他ID
-    #[index(unique)]
     pub others_id: String,
 
     #[fill_ctx(fill = "own_paths")]

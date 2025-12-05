@@ -70,6 +70,23 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Some(IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone()))
     }
 
+    async fn before_add_item(add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(others_id) = &add_req.others_id {
+            if Self::find_one_item(&IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                others_id: Some(others_id.clone()),
+                ..Default::default()
+            }, funs, ctx).await?.is_some() {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add", "others_id already exists", "409-iam-account-others-id-exist"));
+            }
+        }
+        Ok(())
+    }
+
     async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
