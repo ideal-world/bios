@@ -10,7 +10,7 @@ use tardis::log;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
 use tardis::web::poem_openapi;
-<<<<<<< HEAD
+
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
