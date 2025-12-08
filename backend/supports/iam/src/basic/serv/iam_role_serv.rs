@@ -837,7 +837,7 @@ impl IamRoleServ {
                 IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
-        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(true), "", funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(false), "", funs, ctx).await?;
         Ok(())
     }
 
