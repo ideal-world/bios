@@ -57,6 +57,11 @@ pub struct Model {
     /// 工号
     pub employee_code: String,
 
+    /// Others ID
+    ///
+    /// 其他ID
+    pub others_id: String,
+
     #[fill_ctx(fill = "own_paths")]
     pub own_paths: String,
 }

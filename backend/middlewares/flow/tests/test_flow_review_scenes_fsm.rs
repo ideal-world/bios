@@ -520,24 +520,8 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 labor_type: None,
                 employee_code: None,
                 id_card_no: None,
+                others_id: None,
             },
-        )
-        .await;
-    let _: Void = search_client
-        .put(
-            "/ci/item",
-            &json!({
-                "tag":"iam_account",
-                "kind": "iam_account",
-                "key": t1_account_id1,
-                "title": "u001",
-                "content": format!("u001,{:?}", vec!["user_dp1", "devopsxxx1@xx.com"],),
-                "owner":"u001",
-                "own_paths":t1_tenant_id,
-                "create_time":"2022-09-26T23:23:59.000Z",
-                "update_time": "2022-09-27T01:20:20.000Z",
-                "visit_keys":{"apps":[],"tenants":[t1_tenant_id],"roles":[]}
-            }),
         )
         .await;
     let t1_account_id2: String = iam_client
@@ -563,6 +547,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 labor_type: None,
                 employee_code: None,
                 id_card_no: None,
+                others_id: None,
             },
         )
         .await;

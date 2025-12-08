@@ -70,6 +70,23 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Some(IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone()))
     }
 
+    async fn before_add_item(add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(others_id) = &add_req.others_id {
+            if Self::find_one_item(&IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                others_id: Some(others_id.clone()),
+                ..Default::default()
+            }, funs, ctx).await?.is_some() {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add", "others_id already exists", "409-iam-account-others-id-exist"));
+            }
+        }
+        Ok(())
+    }
+
     async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
@@ -95,6 +112,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             labor_type: Set(add_req.labor_type.as_ref().unwrap_or(&"".to_string()).to_string()),
             id_card_no: Set(add_req.id_card_no.as_ref().unwrap_or(&"".to_string()).to_string()),
             employee_code: Set(add_req.employee_code.as_ref().unwrap_or(&"".to_string()).to_string()),
+            others_id: Set(add_req.others_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -261,8 +279,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::LaborType));
         query.column((iam_account::Entity, iam_account::Column::IdCardNo));
         query.column((iam_account::Entity, iam_account::Column::EmployeeCode));
+        query.column((iam_account::Entity, iam_account::Column::OthersId));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
+        }
+        if let Some(others_id) = &filter.others_id {
+            query.and_where(Expr::col(iam_account::Column::OthersId).eq(others_id.as_str()));
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel3 {
             Self::package_rel(query, Alias::new("rbum_rel3"), rbum_item_rel_filter_req);
@@ -305,6 +327,7 @@ impl IamAccountServ {
                 labor_type: add_req.labor_type.clone(),
                 id_card_no: add_req.id_card_no.clone(),
                 employee_code: add_req.employee_code.clone(),
+                others_id: add_req.others_id.clone(),
             },
             funs,
             ctx,
@@ -651,6 +674,7 @@ impl IamAccountServ {
             labor_type: account.labor_type,
             id_card_no: account.id_card_no,
             employee_code: account.employee_code,
+            others_id: account.others_id,
             is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
             is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
             status: account.status,
@@ -754,6 +778,7 @@ impl IamAccountServ {
                 labor_type: account.labor_type,
                 id_card_no: account.id_card_no,
                 employee_code: account.employee_code,
+                others_id: account.others_id,
                 is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
                 is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
                 status: account.status,
