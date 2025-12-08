@@ -418,6 +418,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 labor_type: None,
                 id_card_no: None,
                 employee_code: None,
+                others_id: None,
             },
         )
         .await;
@@ -619,6 +620,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 labor_type: None,
                 id_card_no: None,
                 employee_code: None,
+                others_id: None,
             },
         )
         .await;
@@ -645,6 +647,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 labor_type: None,
                 id_card_no: None,
                 employee_code: None,
+                others_id: None,
             },
         )
         .await;

@@ -384,6 +384,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             labor_type: None,
             id_card_no: None,
             employee_code: None,
+            others_id: None,
         },
         false,
         funs,
