@@ -9,7 +9,7 @@ use bios_basic::rbum::{
     serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
 };
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::DateTime,
@@ -250,7 +250,7 @@ impl IamOpenServ {
             IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
         Self::bind_cert_product(cert_id, &product_id, None, bind_req.create_proj_code.clone(), funs, ctx).await?;
-        Self::bind_cert_spec(cert_id, &spec_id, None, bind_req.server_code.clone(), bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
+        Self::bind_cert_spec(cert_id, &spec_id, None, bind_req.server_codes.clone(), bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
 
         // update ext headers
         if let Some(ext_headers) = &bind_req.ext_headers {
@@ -386,7 +386,7 @@ impl IamOpenServ {
         cert_id: &str,
         spec_id: &str,
         own_paths: Option<String>,
-        server_code: Option<String>,
+        server_codes: Option<Vec<String>>,
         start_time: Option<chrono::DateTime<Utc>>,
         end_time: Option<chrono::DateTime<Utc>>,
         api_call_count: Option<u32>,
@@ -437,10 +437,17 @@ impl IamOpenServ {
         .ok_or_else(|| funs.err().internal_error("iam_open", "bind_cert_spec", "illegal response", "401-iam-cert-code-not-exist"))?
         .ak;
 
-        if let Some(server_code) = server_code {
-            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Res-Id".to_string(), server_code.clone())]), funs).await?;
+        IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Spec-Id".to_string(), spec_id.to_string())]), funs).await?;
+        if let Some(server_codes) = server_codes{
+            let mut api_res = HashSet::new();
+            for server_code in server_codes {
+                api_res.extend(IamIdentCacheServ::get_bind_api_res(server_code.as_str(), None, funs).await?.unwrap_or_default());
+            }
+            IamIdentCacheServ::add_or_modify_ak_bind_api_res(&ak, None, api_res.into_iter().collect_vec(), funs).await?;
         } else {
-            IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Res-Id".to_string(), spec_id.to_string())]), funs).await?;
+            let mut api_res = vec![];
+            api_res.extend(IamIdentCacheServ::get_bind_api_res(spec_id, None, funs).await?.unwrap_or_default());
+            IamIdentCacheServ::add_or_modify_ak_bind_api_res(&ak, None, api_res, funs).await?;
         }
         Ok(())
     }
@@ -774,10 +781,16 @@ impl IamOpenServ {
                 {
                     // 更新扩展头的信息
                     if let Some(mut ext_headers) = IamIdentCacheServ::get_open_api_extand_header(&cert.ak, None, funs).await? {
-                        if let Some(res_id) = ext_headers.get("Spec-Id") {
-                            ext_headers.extend(HashMap::from([("Res-Id".to_string(), res_id.clone())]));
+                        if let Some(res_id) = ext_headers.get("Res-Id") {
+                            ext_headers.extend(HashMap::from([("Spec-Id".to_string(), res_id.clone())]));
                         }
                         IamIdentCacheServ::set_open_api_extand_header(&cert.ak, None, ext_headers, funs).await?;
+                    }
+                    if let Some(ext_headers) = IamIdentCacheServ::get_open_api_extand_header(&cert.ak, None, funs).await? {
+                        if let Some(res_id) = ext_headers.get("Spec-Id") {
+                            let api_res = IamIdentCacheServ::get_bind_api_res(res_id, None, funs).await?.unwrap_or_default();
+                            IamIdentCacheServ::add_or_modify_ak_bind_api_res(&cert.ak, None, api_res, funs).await?;
+                        }
                     }
                 }
             }
