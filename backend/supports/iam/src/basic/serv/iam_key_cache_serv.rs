@@ -604,6 +604,19 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn get_ak_bind_api_res(res_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<Vec<String>>> {
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let result = funs.cache().get(&format!(
+            "{}{}:{}:{}:{}",
+            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+            match_method.unwrap_or("*"),
+            match_path,
+            res_id,
+        )).await?;
+        Ok(result.map(|s| tardis::TardisFuns::json.str_to_obj::<Vec<String>>(&s).unwrap_or_default()))
+    }
+
     pub async fn get_gateway_cumulative_count(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         let result = funs

@@ -745,6 +745,9 @@ impl IamOpenServ {
         )
         .await?;
         for spec in specs {
+            if let Some(api_res) = IamIdentCacheServ::get_ak_bind_api_res(&spec.id, None, funs).await? {
+                IamIdentCacheServ::add_or_modify_bind_api_res(&spec.id, None, api_res, funs).await?;
+            }
             let rel_cert_ids = RbumRelServ::find_detail_rbums(
                 &RbumRelFilterReq {
                     basic: RbumBasicFilterReq {
