@@ -11,7 +11,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountBindRoleReq, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -448,7 +448,7 @@ impl IamCiAccountApi {
     #[oai(path = "/batch/bind_role", method = "put")]
     async fn batch_bind_role(
         &self,
-        bind_map: Json<HashMap<String, String>>,
+        bind_reqs: Json<Vec<IamAccountBindRoleReq>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
@@ -457,9 +457,9 @@ impl IamCiAccountApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
-        for (account_id, role_id) in bind_map.0.iter() {
-            IamAppServ::add_rel_account(&app_id, account_id, true, &funs, &ctx.0).await?;
-            IamRoleServ::add_rel_account(role_id, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+        for bind_req in bind_reqs.0 {
+            IamAppServ::add_rel_account(&app_id, &bind_req.account_id, true, &funs, &ctx.0).await?;
+            IamRoleServ::add_rel_account(&bind_req.role_id, &bind_req.account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;

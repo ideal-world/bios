@@ -360,6 +360,12 @@ pub struct AccountTenantInfo {
     pub apps: Vec<IamAccountAppInfoResp>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountBindRoleReq {
+    pub account_id: String,
+    pub role_id: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountLogoutEvent {
     pub id: String,
