@@ -14,17 +14,21 @@ use tardis::{
     },
     futures::future::try_join_all,
     serde_json::{self, json, Map},
-    web::web_resp::TardisPage,
+    web::{poem::get, web_resp::TardisPage},
     TardisFunsInst,
 };
 
 use super::{stats_pg_conf_fact_detail_serv, stats_pg_record_serv};
 use crate::{
-    dto::stats_query_dto::{
-        StatsQueryDimensionGroupOrderReq, StatsQueryDimensionGroupReq, StatsQueryDimensionOrderReq, StatsQueryMetricsHavingReq, StatsQueryMetricsOrderReq,
-        StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq, StatsQueryRecordDetailColumnResp,
-        StatsQueryRecordDetailResp,
+    dto::{
+        stats_conf_dto::StatsConfFactInfoResp,
+        stats_query_dto::{
+            StatsQueryDimensionGroupOrderReq, StatsQueryDimensionGroupReq, StatsQueryDimensionOrderReq, StatsQueryMetricsHavingReq, StatsQueryMetricsOrderReq,
+            StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq, StatsQueryRecordDetailColumnResp,
+            StatsQueryRecordDetailResp,
+        },
     },
+    serv::pg::stats_pg_conf_fact_serv,
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind, StatsFactDetailKind, StatsQueryAggFunKind},
 };
 const FUNCTION_SUFFIX_FLAG: &str = "__";
@@ -971,6 +975,9 @@ fn package_groups(
     Ok(serde_json::Value::Object(node))
 }
 
+/// Package group aggregation details
+///
+/// 打包分组聚合详情
 fn package_groups_agg(record: serde_json::Value) -> Result<serde_json::Value, String> {
     match record.get("s_agg") {
         Some(agg) => {
@@ -1201,6 +1208,8 @@ pub async fn query_metrics_record_detail_paginated(
 ) -> TardisResult<StatsQueryRecordDetailResp> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
+    let fact = stats_pg_conf_fact_serv::get(&query_req.from, &conn, ctx).await?;
+
     let fact_inst_table_name = package_table_name(&format!("stats_inst_fact_{}", query_req.from), ctx);
     let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
     let rel_external_ids = self::package_rel_external_id_agg(query_req.rel_external_id.clone(), vec![], vec![], query_req._where.clone(), None, None, None);
@@ -1330,13 +1339,23 @@ pub async fn query_metrics_record_detail_paginated(
         });
     }
     if !keys.contains("name") {
-        columns.insert(
-            0,
-            StatsQueryRecordDetailColumnResp {
-                key: "name".to_string(),
-                show_names: "名称".to_string(),
-            },
-        );
+        if let Some(fact) = fact {
+            columns.insert(
+                0,
+                StatsQueryRecordDetailColumnResp {
+                    key: "name".to_string(),
+                    show_names: fact.show_name,
+                },
+            );
+        } else {
+            columns.insert(
+                0,
+                StatsQueryRecordDetailColumnResp {
+                    key: "name".to_string(),
+                    show_names: "名称".to_string(),
+                },
+            );
+        }
     }
     if !keys.contains("ct") {
         columns.push(StatsQueryRecordDetailColumnResp {
