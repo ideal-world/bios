@@ -359,6 +359,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         if let Some(extend_role_id) = &filter.extend_role_id {
             query.and_where(Expr::col(iam_role::Column::ExtendRoleId).eq(extend_role_id));
         }
+        if let Some(extend_role_ids) = &filter.extend_role_ids {
+            query.and_where(Expr::col(iam_role::Column::ExtendRoleId).is_in(extend_role_ids.clone()));
+        }
         if let Some(sort) = filter.desc_by_sort {
             query.order_by((iam_role::Entity, iam_role::Column::Sort), if sort { Order::Desc } else { Order::Asc });
         }
