@@ -5,6 +5,7 @@ use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use tardis::basic::dto::TardisContext;
 use tardis::futures::future::join_all;
 use tardis::log;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -17,6 +18,7 @@ use tardis::TardisFuns;
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountBindRoleReq, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -42,12 +44,18 @@ impl IamCiAccountApi {
     /// Add Account
     /// 添加帐户
     #[oai(path = "/", method = "post")]
-    async fn add(&self, add_req: Json<IamAccountAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamAccountAggAddReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
-        let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx.0).await?;
+        let mock_ctx = TardisContext {
+            owner: TardisFuns::field.nanoid(),
+            ..ctx.0.clone()
+        };
+        add_req.0.id = Some(mock_ctx.owner.clone().into());
+        let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &mock_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(&result, Box::new(false), "", &funs, &mock_ctx).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -70,29 +78,35 @@ impl IamCiAccountApi {
             ..Default::default()
         }, &funs, &ctx.0).await? {
             IamAccountServ::modify_account_agg(&account.id, &modify_req.0, &funs, &ctx.0).await?;
+            IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Add Account
-    /// 添加帐户
-    #[oai(path = "/", method = "post")]
-    async fn batch_add(&self, batch_add_req: Json<Vec<IamAccountAggAddReq>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    /// Batch Add Account
+    /// 批量添加帐户
+    #[oai(path = "/batch", method = "post")]
+    async fn batch_add(&self, mut batch_add_req: Json<Vec<IamAccountAggAddReq>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let ctx_clone = ctx.0.clone();
         
-        join_all(batch_add_req.0.into_iter().map(|add_req| {
-            let ctx_clone = ctx_clone.clone();
+        join_all(batch_add_req.0.into_iter().map(|mut add_req| {
+            let mock_ctx = TardisContext {
+                owner: TardisFuns::field.nanoid(),
+                ..ctx_clone.clone()
+            };
+            add_req.id = Some(mock_ctx.owner.clone().into());
             async move {
                 let mut funs_cp = iam_constants::get_tardis_inst();
                 let others_id = add_req.others_id.clone();
                 funs_cp.begin().await.unwrap_or_default();
-                match IamAccountServ::add_account_agg(&add_req, false, &funs_cp, &ctx_clone).await {
-                    Ok(_) => {
+                match IamAccountServ::add_account_agg(&add_req, false, &funs_cp, &mock_ctx).await {
+                    Ok(result) => {
+                        let _ = IamSearchClient::async_add_or_modify_account_search(&result, Box::new(false), "", &funs_cp, &mock_ctx).await;
                         funs_cp.commit().await.unwrap_or_default();
                     },
                     Err(err) => {
@@ -109,7 +123,7 @@ impl IamCiAccountApi {
 
     /// Modify Account
     /// 修改帐户
-    #[oai(path = "/", method = "put")]
+    #[oai(path = "/batch", method = "put")]
     async fn batch_modify_by_others_id(&self,  batch_modify_req: Json<HashMap<String, IamAccountAggModifyReq>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
@@ -125,6 +139,7 @@ impl IamCiAccountApi {
                 ..Default::default()
             }, &funs, &ctx.0).await? {
                 IamAccountServ::modify_account_agg(&account.id, &modify_req, &funs, &ctx.0).await?;
+                IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx.0).await?;
             }
         }
         

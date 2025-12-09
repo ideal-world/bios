@@ -277,7 +277,7 @@ pub async fn batch_save(tag: &str, batch_req: &mut [SearchSaveItemReq], funs: &T
             sort: None,
             page: SearchItemSearchPageReq {
                 number: 1,
-                size: 1,
+                size: batch_req.len() as u16,
                 fetch_total: false,
             },
         },
