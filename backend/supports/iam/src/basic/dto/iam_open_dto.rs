@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use strum::Display;
@@ -30,16 +32,19 @@ pub struct IamOpenAddSpecReq {
 
     pub bind_api_res: Option<Vec<String>>,
     pub api_call_frequency: Option<i32>,
+    pub servers: Option<HashMap<String, Vec<String>>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamOpenBindAkProductReq {
     pub product_code: String,
     pub spec_code: String,
+    pub server_code: Option<String>,
     pub start_time: Option<chrono::DateTime<Utc>>,
     pub end_time: Option<chrono::DateTime<Utc>>,
     pub api_call_count: Option<u32>,
     pub create_proj_code: Option<String>,
+    pub ext_headers: Option<HashMap<String, String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
