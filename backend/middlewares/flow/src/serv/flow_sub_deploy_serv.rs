@@ -151,8 +151,9 @@ impl FlowSubDeployServ {
             {
                 key_template_id = p_template_id;
             }
-            let key = format!("__tag__:_:_:{}:review_config", key_template_id);
-            if let Some(config) = SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value) {
+            let root_key = format!("__tag__:_:_:{}:review_config", key_template_id);
+            let key = format!("__tag__:_:_:{}:review_config", rel_template_id);
+            if let Some(config) = SpiKvClient::get_item(root_key.clone(), None, funs, ctx).await?.map(|r| r.value) {
                 kv_config.insert(key, config);
             }
         }
@@ -467,9 +468,7 @@ impl FlowSubDeployServ {
         }
         if let Some(rel_kv_config) = import_req.rel_kv_config {
             for (key, val) in rel_kv_config {
-                if SpiKvClient::get_item(key.clone(), None, funs, ctx).await?.map(|r| r.value).is_none() {
-                    SpiKvClient::add_or_modify_item(&key, &val, None, None, Some(RbumScopeLevelKind::Root.to_int()), funs, ctx).await?;
-                }
+                SpiKvClient::add_or_modify_item(&key, &val, None, None, Some(RbumScopeLevelKind::Root.to_int()), funs, ctx).await?;
             }
         }
         Ok(())

@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::dto::flow_model_dto::{
-    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq,
-    FlowModelFindRelStateResp, FlowModelKind, FlowModelSyncModifiedFieldReq,
+    FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSyncModifiedFieldReq
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
@@ -268,7 +267,10 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id.0, None, None, &funs, &ctx.0).await? {
-            FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
+            FlowModelServ::modify_model(&rel.rel_id, &mut FlowModelModifyReq {
+                disabled: Some(true),
+                ..Default::default()
+            }, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;

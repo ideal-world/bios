@@ -88,7 +88,7 @@ impl IamCiAccountApi {
     /// Batch Add Account
     /// 批量添加帐户
     #[oai(path = "/batch", method = "post")]
-    async fn batch_add(&self, mut batch_add_req: Json<Vec<IamAccountAggAddReq>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn batch_add(&self, batch_add_req: Json<Vec<IamAccountAggAddReq>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
