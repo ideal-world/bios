@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    chrono::{DateTime, Local, NaiveDate, Utc},
-    db::sea_orm::{self, prelude::DateTimeWithTimeZone, sea_query::ArrayType, DbErr, QueryResult, TryGetError, TryGetable},
+    chrono::{DateTime, Local, NaiveDate, TimeZone, Utc},
+    db::sea_orm::{self, DbErr, QueryResult, TryGetError, TryGetable, prelude::DateTimeWithTimeZone, sea_query::ArrayType},
     serde_json,
     web::poem_openapi,
 };
@@ -137,8 +137,8 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::Float => sea_orm::Value::Float(Some(*Box::new(0.0))),
             StatsDataTypeKind::Double => sea_orm::Value::Double(Some(*Box::new(0.0))),
             StatsDataTypeKind::Boolean => sea_orm::Value::Bool(Some(*Box::new(false))),
-            StatsDataTypeKind::Date => sea_orm::Value::ChronoDate(Some(Box::new(Local::now().with_timezone(&Utc).date_naive()))),
-            StatsDataTypeKind::DateTime => sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(Local::now().with_timezone(&Utc).fixed_offset()))),
+            StatsDataTypeKind::Date => sea_orm::Value::ChronoDate(Some(Box::new(NaiveDate::from_ymd_opt(1991, 1, 1).unwrap()))),
+            StatsDataTypeKind::DateTime => sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(Utc.with_ymd_and_hms(1991, 1, 1, 0, 0, 0).unwrap().fixed_offset()))),
         })
     }
 
@@ -151,12 +151,12 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::Boolean => sea_orm::Value::Array(ArrayType::Bool, Some(Box::new(vec![sea_orm::Value::Bool(Some(*Box::new(false)))]))),
             StatsDataTypeKind::Date => sea_orm::Value::Array(
                 ArrayType::ChronoDate,
-                Some(Box::new(vec![sea_orm::Value::ChronoDate(Some(Box::new(Local::now().with_timezone(&Utc).date_naive())))])),
+                Some(Box::new(vec![sea_orm::Value::ChronoDate(Some(Box::new(NaiveDate::from_ymd_opt(1991, 1, 1).unwrap())))])),
             ),
             StatsDataTypeKind::DateTime => sea_orm::Value::Array(
                 ArrayType::ChronoDateTimeWithTimeZone,
                 Some(Box::new(vec![sea_orm::Value::ChronoDateTimeWithTimeZone(Some(Box::new(
-                    Local::now().with_timezone(&Utc).fixed_offset(),
+                    Utc.with_ymd_and_hms(1991, 1, 1, 0, 0, 0).unwrap().fixed_offset(),
                 )))])),
             ),
         })
