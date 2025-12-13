@@ -87,7 +87,7 @@ pub struct ReachTriggerGlobalConfigSummaryResp {
     pub rel_reach_msg_template_id: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult, Clone)]
 pub struct ReachTriggerGlobalConfigDetailResp {
     pub id: String,
     pub own_paths: String,

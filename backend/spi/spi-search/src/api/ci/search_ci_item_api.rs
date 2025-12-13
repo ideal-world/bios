@@ -57,7 +57,7 @@ impl SearchCiItemApi {
 
     /// Batch save
     #[oai(path = "/:tag/batch/save", method = "put")]
-    async fn batch_operate(&self, tag: Path<String>, mut batch_req: Json<Vec<SearchSaveItemReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn batch_save(&self, tag: Path<String>, mut batch_req: Json<Vec<SearchSaveItemReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
         search_item_serv::batch_save(&tag.0, &mut batch_req.0, &funs, &ctx.0).await?;

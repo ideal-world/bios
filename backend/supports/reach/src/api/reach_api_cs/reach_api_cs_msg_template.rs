@@ -1,7 +1,4 @@
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-
-use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
@@ -29,7 +26,7 @@ impl ReachMessageTemplateCsApi {
     /// Page find all user reach message message template data
     /// 获取所有用户触达消息消息模板数据分页
     #[oai(method = "get", path = "/page")]
-    pub async fn paginate_msg_template(
+    pub async fn paginate_msg_template_cs(
         &self,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
@@ -68,7 +65,7 @@ impl ReachMessageTemplateCsApi {
     /// Find all user reach message message template data
     /// 获取所有用户触达消息消息模板数据
     #[oai(method = "get", path = "/")]
-    pub async fn find_msg_template(
+    pub async fn find_msg_template_cs(
         &self,
         name: Query<Option<String>>,
         rel_reach_channel: Query<Option<String>>,
@@ -89,7 +86,7 @@ impl ReachMessageTemplateCsApi {
     /// Get user reach message message template data by id
     /// 根据Id获取用户触达消息消息模板数据
     #[oai(method = "get", path = "/:id")]
-    pub async fn get_msg_template_by_id(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<ReachMessageTemplateDetailResp> {
+    pub async fn get_msg_template_by_id_cs(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<ReachMessageTemplateDetailResp> {
         let funs = get_tardis_inst();
         let mut filter = ReachMessageTemplateFilterReq::default();
         filter.base_filter.with_sub_own_paths = true;
@@ -100,7 +97,7 @@ impl ReachMessageTemplateCsApi {
     /// Add user reach message message template data
     /// 添加用户触达消息消息模板
     #[oai(method = "post", path = "/")]
-    pub async fn add_msg_template(&self, mut agg_req: Json<ReachMessageTemplateAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
+    pub async fn add_msg_template_cs(&self, mut agg_req: Json<ReachMessageTemplateAddReq>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<String> {
         let funs = get_tardis_inst();
         let id = ReachMessageTemplateServ::add_rbum(&mut agg_req, &funs, &ctx).await?;
         TardisResp::ok(id)
@@ -109,7 +106,7 @@ impl ReachMessageTemplateCsApi {
     /// Modify user reach message message template data
     /// 编辑用户触达消息消息模板
     #[oai(method = "put", path = "/:id")]
-    pub async fn modify_msg_template(
+    pub async fn modify_msg_template_cs(
         &self,
         id: Path<String>,
         mut mod_req: Json<ReachMessageTemplateModifyReq>,
@@ -123,7 +120,7 @@ impl ReachMessageTemplateCsApi {
     /// Delete user reach message message template
     /// 删除用户触达消息消息模板
     #[oai(method = "delete", path = "/:id")]
-    pub async fn delete_msg_template(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<bool> {
+    pub async fn delete_msg_template_cs(&self, id: Path<String>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = get_tardis_inst();
         let ok = ReachMessageTemplateServ::delete_rbum(&id, &funs, &ctx).await.map_or_else(map_notfound_to_false, |count| Ok(count != 0))?;
         TardisResp::ok(ok)

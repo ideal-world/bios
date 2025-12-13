@@ -45,7 +45,7 @@ pub struct IamAccountAggAddReq {
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub exts: HashMap<String, String>,
+    pub exts: Option<HashMap<String, String>>,
     pub status: Option<RbumCertStatusKind>,
 }
 
@@ -369,6 +369,12 @@ pub struct AccountTenantInfo {
     pub orgs: Vec<String>,
     pub groups: HashMap<String, String>,
     pub apps: Vec<IamAccountAppInfoResp>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountBindRoleReq {
+    pub account_id: String,
+    pub role_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

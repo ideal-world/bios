@@ -39,7 +39,7 @@ pub struct IamOpenAddSpecReq {
 pub struct IamOpenBindAkProductReq {
     pub product_code: String,
     pub spec_code: String,
-    pub server_code: Option<String>,
+    pub server_codes: Option<Vec<String>>,
     pub start_time: Option<chrono::DateTime<Utc>>,
     pub end_time: Option<chrono::DateTime<Utc>>,
     pub api_call_count: Option<u32>,

@@ -52,5 +52,9 @@ bios-client-alisms = { version = "0.2.0", path = "../../../frontend/clients/alis
   "reach",
 ] }
 
+bios-client-op-api = { version = "0.2.0", path = "../../../frontend/clients/op_api", features = [
+  "reach",
+] }
+
 # see [issue](https://github.com/kube-rs/kube/issues/1486)
 json-patch = {version = "=1.2.0"}

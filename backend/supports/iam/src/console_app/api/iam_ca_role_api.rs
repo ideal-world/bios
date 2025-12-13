@@ -189,6 +189,7 @@ impl IamCaRoleApi {
                 kind: Some(IamRoleKind::App),
                 in_base: Some(false),
                 in_embed: Some(false),
+                extend_role_ids: Some(vec!["".to_string()]),
                 ..Default::default()
             },
             desc_by_create.0,
