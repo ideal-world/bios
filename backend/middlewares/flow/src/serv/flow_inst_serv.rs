@@ -1711,6 +1711,21 @@ impl FlowInstServ {
         )
         .await?;
 
+        let mut params = vec![];
+        if let Some(vars) = &transfer_req.vars {
+            for (var_name, value) in vars {
+                params.push(FlowExternalParams {
+                    rel_kind: None,
+                    rel_tag: None,
+                    var_name: Some(var_name.clone()),
+                    var_id: None,
+                    value: Some(value.clone()),
+                    changed_kind: None,
+                    guard_conf: None,
+                });
+            }
+        }
+        
         // notify change state
         if curr_inst.main {
             let inst_ctx = TardisContext {
@@ -1735,6 +1750,7 @@ impl FlowInstServ {
                 next_transition_detail.is_notify,
                 Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
                 Some(callback_kind),
+                params.clone(),
                 &inst_ctx,
                 funs,
             )
@@ -1742,18 +1758,6 @@ impl FlowInstServ {
         }
         // notify modify vars
         if let Some(vars) = &transfer_req.vars {
-            let mut params = vec![];
-            for (var_name, value) in vars {
-                params.push(FlowExternalParams {
-                    rel_kind: None,
-                    rel_tag: None,
-                    var_name: Some(var_name.clone()),
-                    var_id: None,
-                    value: Some(value.clone()),
-                    changed_kind: None,
-                    guard_conf: None,
-                });
-            }
             if !params.is_empty() && flow_inst_detail.main {
                 FlowExternalServ::do_async_modify_field(
                     &flow_inst_detail.tag,
@@ -2313,6 +2317,7 @@ impl FlowInstServ {
                             false,
                             Some(false),
                             Some(FlowExternalCallbackOp::Auto),
+                            vec![],
                             &inst_ctx,
                             funs,
                         )
@@ -2453,6 +2458,7 @@ impl FlowInstServ {
                         false,
                         Some(false),
                         Some(FlowExternalCallbackOp::Auto),
+                        vec![],
                         &inst_ctx,
                         &funs,
                     )

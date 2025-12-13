@@ -118,7 +118,7 @@ pub async fn test(context1: &TardisContext) -> TardisResult<()> {
             end_time: Some(Utc::now()),
             api_call_count: Some(10000),
             create_proj_code: None,
-            server_code: None,
+            server_codes: None,
             ext_headers: None,
         },
         &funs,

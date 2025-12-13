@@ -303,7 +303,7 @@ impl IamAccountServ {
     /// if add_req.status is None.default is RbumCertStatusKind::Enabled
     pub async fn add_account_agg(add_req: &IamAccountAggAddReq, is_ignore_check_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
-        if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
+        if attrs.iter().any(|i| i.required && !add_req.exts.clone().unwrap_or_default().contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
         }
         let mut is_ignore_check_sk = is_ignore_check_sk;
@@ -390,7 +390,9 @@ impl IamAccountServ {
                 .await?;
             }
         }
-        IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, ctx).await?;
+        if let Some(exts) = add_req.exts.clone() {
+            IamAttrServ::add_or_modify_account_attr_values(&account_id, exts, funs, ctx).await?;
+        }
         Ok(account_id)
     }
 

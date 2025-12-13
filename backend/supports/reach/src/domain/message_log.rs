@@ -30,6 +30,7 @@ pub struct Model {
     /// 免扰时间，HH::MM-HH:MM
     pub dnd_time: String,
     /// 免扰策略
+    #[tardis_entity(custom_type = "string", custom_len = "255")]
     pub dnd_strategy: ReachDndStrategyKind,
     /// 开始时间
     pub start_time: chrono::DateTime<Utc>,

@@ -13,9 +13,9 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     tardis::tracing::debug!("[BIOS.Reach] input: {:?}", send_req);
     let err = |msg: &str| funs.err().not_found("reach", "event_listener", msg, "");
 
-    if send_req.receives.is_empty() {
-        return Err(err("receiver is empty"));
-    }
+    // if send_req.receives.is_empty() {
+    //     return Err(err("receiver is empty"));
+    // }
     // trigger scene
     let scene = funs
         .db()
@@ -33,7 +33,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     };
 
     // retrieve all related global configs, group by channel
-    let global_configs = ReachTriggerGlobalConfigService::find_detail_rbums(filter, None, None, funs, ctx).await?.into_iter().fold(HashMap::new(), |mut map, item| {
+    let mut global_configs = ReachTriggerGlobalConfigService::find_detail_rbums(filter, None, None, funs, ctx).await?.into_iter().fold(HashMap::new(), |mut map, item| {
         map.entry(item.rel_reach_channel).or_insert(item);
         map
     });
@@ -44,13 +44,24 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     // retrieve all instance configs, group by group_code
     let filter = &ReachTriggerInstanceConfigFilterReq {
         rel_reach_trigger_scene_id: Some(scene.id),
-        rel_item_id: Some(send_req.rel_item_id),
+        rel_item_id: Some(send_req.rel_item_id.clone()),
         ..Default::default()
     };
     let instances = ReachTriggerInstanceConfigService::find_detail_rbums(filter, None, None, funs, ctx).await?;
     if instances.is_empty() {
         return Ok(());
     }
+    if let Some(webhook_global_config) = global_configs.remove(&ReachChannelKind::WebHook) {
+        let webhook_instances = instances.iter().filter(|inst| inst.rel_reach_channel == ReachChannelKind::WebHook).cloned().collect();
+        send_webhook_message(send_req.clone(), webhook_instances, webhook_global_config.clone(), funs, ctx).await?;
+    }
+    let non_webhook_instances = instances.into_iter().filter(|inst| inst.rel_reach_channel != ReachChannelKind::WebHook).collect();
+    send_non_webhook_message(send_req, non_webhook_instances, global_configs.clone(), funs, ctx).await?;
+    Ok(())
+}
+
+async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTriggerInstanceConfigDetailResp>, global_configs: HashMap<ReachChannelKind, ReachTriggerGlobalConfigDetailResp>,
+    funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let receive_group_code = send_req.receives.into_iter().fold(HashMap::<String, Vec<_>>::new(), |mut map, item| {
         map.entry(item.receive_group_code.clone()).or_default().push(item);
         map
@@ -80,23 +91,6 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
             other_receive_collect
         },
     );
-    //TODO remove?
-    // let (other_receive_collect, other_group_code) = receive_group_code.into_iter().fold(
-    //     (HashMap::new(), HashSet::new()),
-    //     |(mut other_receive_collect, mut other_group_code), (group_code, receives)| {
-    //         if let Some(instance_list) = instance_group_code.get_mut(&group_code) {
-    //             if !instance_list.is_empty() {
-    //                 for r in receives {
-    //                     other_receive_collect.entry(r.receive_kind).or_insert(Vec::new()).extend(r.receive_ids)
-    //                 }
-    //                 for i in instance_list {
-    //                     other_group_code.insert(i.rel_reach_channel);
-    //                 }
-    //             }
-    //         }
-    //         (other_receive_collect, other_group_code)
-    //     },
-    // );
 
     for (_kind, gc) in global_configs {
         for ((receive_kind, rel_reach_channel), to_res_ids) in &other_receive_collect {
@@ -129,5 +123,35 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
         }
     }
 
+    Ok(())
+}
+
+async fn send_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTriggerInstanceConfigDetailResp>, global_config: ReachTriggerGlobalConfigDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    if instances.iter().any(|i| i.rel_reach_channel == global_config.rel_reach_channel) && !global_config.rel_reach_msg_signature_id.is_empty() && !global_config.rel_reach_msg_template_id.is_empty() {
+        ReachMessageServ::add_rbum(
+            &mut ReachMessageAddReq {
+                rbum_item_add_req: RbumItemAddReq {
+                    id: Default::default(),
+                    code: Default::default(),
+                    name: "".into(),
+                    rel_rbum_kind_id: RBUM_KIND_CODE_REACH_MESSAGE.into(),
+                    rel_rbum_domain_id: DOMAIN_CODE.into(),
+                    scope_level: Default::default(),
+                    disabled: Default::default(),
+                },
+                from_res: Default::default(),
+                rel_reach_channel: global_config.rel_reach_channel,
+                receive_kind: ReachReceiveKind::Account,
+                to_res_ids: "".to_string(),
+                rel_reach_msg_signature_id: global_config.rel_reach_msg_signature_id.clone(),
+                rel_reach_msg_template_id: global_config.rel_reach_msg_template_id.clone(),
+                reach_status: ReachStatusKind::Pending,
+                content_replace: tardis::serde_json::to_string(&send_req.replace).expect("convert from string:string map shouldn't fail"),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+    }
     Ok(())
 }

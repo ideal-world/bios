@@ -17,8 +17,7 @@ use tardis::{
 use crate::{
     basic::{
         dto::{
-            iam_account_dto::IamAccountDetailAggResp,
-            iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq},
+            iam_account_dto::IamAccountDetailAggResp, iam_app_dto::IamAppKind, iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq}
         },
         serv::{
             clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ
@@ -206,16 +205,33 @@ impl IamSearchClient {
             &mock_ctx,
         )
         .await?;
-        let account_app_ids = raw_account_apps.iter().map(|app| app.id.clone()).collect_vec();
-        let raw_account_apps_map = raw_account_apps
-            .into_iter()
+        let account_app_ids =  raw_account_apps.iter().map(|app| app.id.clone()).collect_vec();
+        let account_contract_ids = raw_account_apps.iter().filter(|app| app.kind == IamAppKind::Project).map(|app| app.id.clone()).collect_vec();
+        let raw_account_contract_map = raw_account_apps
+            .iter()
+            .filter(|app| app.kind == IamAppKind::Project)
             .map(|app| {
                 (
                     app.id.clone(),
                     json!({
-                        "name": app.name,
-                        "own_paths": app.own_paths,
-                        "scope_level": app.scope_level,
+                        "name": app.name.clone(),
+                        "own_paths": app.own_paths.clone(),
+                        "scope_level": app.scope_level.clone(),
+                    }),
+                )
+            })
+            .collect::<HashMap<String, serde_json::Value>>();
+        let account_product_ids = raw_account_apps.iter().filter(|app| app.kind == IamAppKind::Product).map(|app| app.id.clone()).collect_vec();
+        let raw_account_products_map = raw_account_apps
+            .iter()
+            .filter(|app| app.kind == IamAppKind::Product)
+            .map(|app| {
+                (
+                    app.id.clone(),
+                    json!({
+                        "name": app.name.clone(),
+                        "own_paths": app.own_paths.clone(),
+                        "scope_level": app.scope_level.clone(),
                     }),
                 )
             })
@@ -332,8 +348,10 @@ impl IamSearchClient {
             "dept": account_resp_dept_map,
             "sub_deploy_ids": sub_deploy_ids,
             "auth_sub_deploy_ids": auth_sub_deploy_ids,
-            "project_id": account_app_ids,
-            "app": raw_account_apps_map,
+            "project_id": account_product_ids,
+            "contract_id": account_contract_ids,
+            "contract": raw_account_contract_map,
+            "app": raw_account_products_map,
             "create_time": account_resp.create_time.to_rfc3339(),
             "certs":account_resp.certs,
             "icon":account_resp.icon,
@@ -342,10 +360,10 @@ impl IamSearchClient {
             "logout_time":account_resp.logout_time,
             "logout_type":account_resp.logout_type,
             "labor_type":account_resp.labor_type,
-            "primary": raw_primary_map,
-            "primary_code": primary_code,
-            "secondary": raw_secondary_map,
-            "secondary_code": secondary_code,
+            "primary": primary_code,
+            "primary_map": raw_primary_map,
+            "secondary": secondary_code,
+            "secondary_map": raw_secondary_map,
             "app_set": raw_app_set_map,
             "app_set_id": app_set,
             "scope_level":account_resp.scope_level

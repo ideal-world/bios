@@ -163,6 +163,7 @@ pub struct IamRoleFilterReq {
     pub in_base: Option<bool>,
     pub in_embed: Option<bool>,
     pub extend_role_id: Option<String>,
+    pub extend_role_ids: Option<Vec<String>>,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
