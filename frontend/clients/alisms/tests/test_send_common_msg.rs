@@ -8,6 +8,7 @@ use url::Url;
 #[derive(Debug, Deserialize)]
 pub struct CustomSmsConfig {
     pub base_url: String,
+    pub real_url: Option<String>,
     pub app_key: String,
     pub app_secret: String,
     pub template_code: String,
@@ -21,6 +22,7 @@ async fn send_common_msg() -> TardisResult<()> {
     env::set_var("RUST_LOG", "trace");
     let CustomSmsConfig {
         base_url,
+        real_url,
         app_key,
         app_secret,
         template_code,
@@ -32,7 +34,7 @@ async fn send_common_msg() -> TardisResult<()> {
         let content = std::fs::read_to_string(toml_file).expect("fail to open config file");
         toml::from_str::<CustomSmsConfig>(&content).expect("invalid config")
     };
-    let client = bios_client_alisms::SmsClient::new(base_url, app_key, app_secret);
+    let client = bios_client_alisms::SmsClient::new(base_url, real_url.unwrap_or_default(), app_key, app_secret);
 
     let req = SendSmsRequest {
         phone_numbers: &phone_numbers,

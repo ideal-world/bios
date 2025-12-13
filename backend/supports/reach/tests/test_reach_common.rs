@@ -8,8 +8,9 @@ use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::{rbum::rbum_config::RbumConfig, test::test_http_client::TestHttpClient};
 use bios_client_hwsms::{SmsId, SmsResponse};
 use bios_reach::reach_constants::{get_tardis_inst, DOMAIN_CODE, IAM_KEY_PHONE_V_CODE, RBUM_KIND_CODE_REACH_MESSAGE, REACH_INIT_OWNER};
-use bios_reach::reach_send_channel::SendChannelMap;
+use bios_reach::reach_send_channel::{SendChannelMap, WebHookChannel};
 use serde::{Deserialize, Serialize};
+use tardis::serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use tardis::testcontainers::runners::AsyncRunner;
@@ -35,13 +36,16 @@ pub struct Holder {
     pub mq: ContainerAsync<RabbitMq>,
     pub sms_mocker: HwSmsMockerApi,
     pub iam_mocker: IamMockerApi,
+    pub webhook_mocker: WebhookMockerApi,
 }
 
 pub const TEST_OWNER: &str = "test-reach";
+pub const TEST_AK: &str = "test-reach";
 pub fn get_test_ctx() -> &'static TardisContext {
     static TEST_CTX: OnceLock<TardisContext> = OnceLock::new();
     TEST_CTX.get_or_init(|| TardisContext {
         owner: TEST_OWNER.to_string(),
+        ak: TEST_AK.to_string(),
         ..Default::default()
     })
 }
@@ -67,13 +71,18 @@ pub async fn init_tardis() -> TardisResult<Holder> {
     let web_server = TardisFuns::web_server();
     bios_reach::init(
         &web_server,
-        SendChannelMap::new().with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config()).with_arc_channel(get_tardis_inst().mail()),
+        SendChannelMap::new()
+            .with_arc_channel(bios_client_hwsms::SmsClient::from_reach_config())
+            .with_arc_channel(get_tardis_inst().mail())
+            .with_channel(WebHookChannel::default()),
     )
     .await?;
     let sms_mocker = HwSmsMockerApi::default();
     let iam_mocker = IamMockerApi::default();
+    let webhook_mocker = WebhookMockerApi::default();
     web_server.add_module("sms", WebServerModule::from(sms_mocker.clone()).options(WebServerModuleOption { uniform_error: false })).await;
     web_server.add_module("iam", iam_mocker.clone()).await;
+    web_server.add_module("webhook", WebServerModule::from(webhook_mocker.clone())).await;
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let ctx = TardisContext {
         owner: REACH_INIT_OWNER.into(),
@@ -125,6 +134,7 @@ pub async fn init_tardis() -> TardisResult<Holder> {
         mq: rabbit_container,
         sms_mocker,
         iam_mocker,
+        webhook_mocker,
     };
     Ok(holder)
 }
@@ -230,5 +240,90 @@ impl IamMockerApi {
         };
         resp.certs.insert(IAM_KEY_PHONE_V_CODE.into(), id.0);
         TardisResp::ok(resp)
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct WebhookMockerApi {
+    pub received_requests: Arc<RwLock<HashMap<String, Vec<WebhookRequest>>>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebhookRequest {
+    pub method: String,
+    pub path: String,
+    pub body: Option<serde_json::Value>,
+}
+
+#[allow(dead_code)]
+impl WebhookMockerApi {
+    pub async fn get_latest_request(&self, path: &str) -> Option<WebhookRequest> {
+        self.received_requests.read().await.get(path).and_then(|x| x.last().cloned())
+    }
+
+    pub async fn get_all_requests(&self, path: &str) -> Vec<WebhookRequest> {
+        self.received_requests.read().await.get(path).cloned().unwrap_or_default()
+    }
+
+    pub async fn clear_requests(&self) {
+        self.received_requests.write().await.clear();
+    }
+}
+
+#[poem_openapi::OpenApi]
+impl WebhookMockerApi {
+    #[oai(path = "/:path", method = "post")]
+    async fn handle_post(&self, path: Path<String>, body: Json<Value>) -> TardisApiResult<String> {
+        let path_str = format!("/webhook/{}", path.0);
+        let body = body.0;
+        log::info!("received webhook POST request to path: {}, body: {:?}", path_str, body);
+        let request = WebhookRequest {
+            method: "POST".to_string(),
+            path: path_str.clone(),
+            body: Some(body),
+        };
+        self.received_requests.write().await.entry(path_str).or_insert(vec![]).push(request);
+        TardisResp::ok("OK".to_string())
+    }
+
+    #[oai(path = "/:path", method = "get")]
+    async fn handle_get(&self, path: Path<String>) -> TardisApiResult<String> {
+        let path_str = format!("/webhook/{}", path.0);
+        log::info!("received webhook GET request to path: {}", path_str);
+        let request = WebhookRequest {
+            method: "GET".to_string(),
+            path: path_str.clone(),
+            body: None,
+        };
+        self.received_requests.write().await.entry(path_str).or_insert(vec![]).push(request);
+        TardisResp::ok("OK".to_string())
+    }
+
+    #[oai(path = "/:path", method = "put")]
+    async fn handle_put(&self, path: Path<String>, body: Json<Value>) -> TardisApiResult<String> {
+        let path_str = format!("/webhook/{}", path.0);
+        let body = body.0;
+        log::info!("received webhook PUT request to path: {}, body: {:?}", path_str, body);
+        let request = WebhookRequest {
+            method: "PUT".to_string(),
+            path: path_str.clone(),
+            body: Some(body),
+        };
+        self.received_requests.write().await.entry(path_str).or_insert(vec![]).push(request);
+        TardisResp::ok("OK".to_string())
+    }
+
+    #[oai(path = "/:path", method = "patch")]
+    async fn handle_patch(&self, path: Path<String>, body: Json<Value>) -> TardisApiResult<String> {
+        let path_str = format!("/webhook/{}", path.0);
+        let body = body.0;
+        log::info!("received webhook PATCH request to path: {}, body: {:?}", path_str, body);
+        let request = WebhookRequest {
+            method: "PATCH".to_string(),
+            path: path_str.clone(),
+            body: Some(body),
+        };
+        self.received_requests.write().await.entry(path_str).or_insert(vec![]).push(request);
+        TardisResp::ok("OK".to_string())
     }
 }

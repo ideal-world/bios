@@ -84,7 +84,7 @@ pub struct ReachTriggerInstanceConfigSummaryResp {
     pub receive_group_name: String,
 }
 
-#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult)]
+#[derive(Debug, poem_openapi::Object, Serialize, sea_orm::FromQueryResult, Clone)]
 pub struct ReachTriggerInstanceConfigDetailResp {
     pub id: String,
     pub own_paths: String,

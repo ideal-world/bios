@@ -1234,7 +1234,7 @@ impl IamCertLdapServ {
                 scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 icon: None,
-                exts: HashMap::new(),
+                exts: None,
                 status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
                 lock_status: None,

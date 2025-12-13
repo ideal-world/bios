@@ -557,8 +557,38 @@ impl IamIdentCacheServ {
         Ok(result)
     }
 
-    pub async fn add_or_modify_bind_api_res(spec_id: &str, match_method: Option<&str>, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", spec_id, bind_api_res,);
+    pub async fn add_or_modify_bind_api_res(res_id: &str, match_method: Option<&str>, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", res_id, bind_api_res,);
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let cache_key = format!(
+            "{}{}:res:{}:{}:{}",
+            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+            match_method.unwrap_or("*"),
+            match_path,
+            res_id,
+        );
+        funs.cache().del(cache_key.as_str()).await?;
+
+        funs.cache().set(cache_key.as_str(), &tardis::TardisFuns::json.obj_to_string(&bind_api_res)?).await?;
+        Ok(())
+    }
+
+    pub async fn get_bind_api_res(res_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<Vec<String>>> {
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let result = funs.cache().get(&format!(
+            "{}{}:res:{}:{}:{}",
+            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+            match_method.unwrap_or("*"),
+            match_path,
+            res_id,
+        )).await?;
+        Ok(result.map(|s| tardis::TardisFuns::json.str_to_obj::<Vec<String>>(&s).unwrap_or_default()))
+    }
+
+    pub async fn add_or_modify_ak_bind_api_res(ak: &str, match_method: Option<&str>, bind_api_res: Vec<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("add bind_api_res: spec_id={},bind_api_res={:?}", ak, bind_api_res,);
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
         let cache_key = format!(
             "{}{}:{}:{}:{}",
@@ -566,12 +596,25 @@ impl IamIdentCacheServ {
             funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
             match_method.unwrap_or("*"),
             match_path,
-            spec_id,
+            ak,
         );
         funs.cache().del(cache_key.as_str()).await?;
 
         funs.cache().set(cache_key.as_str(), &tardis::TardisFuns::json.obj_to_string(&bind_api_res)?).await?;
         Ok(())
+    }
+
+    pub async fn get_ak_bind_api_res(res_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<Vec<String>>> {
+        let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
+        let result = funs.cache().get(&format!(
+            "{}{}:{}:{}:{}",
+            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+            match_method.unwrap_or("*"),
+            match_path,
+            res_id,
+        )).await?;
+        Ok(result.map(|s| tardis::TardisFuns::json.str_to_obj::<Vec<String>>(&s).unwrap_or_default()))
     }
 
     pub async fn get_gateway_cumulative_count(ak: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<String>> {

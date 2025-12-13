@@ -180,29 +180,16 @@ impl IamCaRoleApi {
             &ctx.0,
         )
         .await?;
-        let custom_app_result = IamRoleServ::find_items(
-            &IamRoleFilterReq {
-                basic: RbumBasicFilterReq { ..Default::default() },
-                kind: Some(IamRoleKind::App),
-                in_base: Some(false),
-                in_embed: Some(false),
-                ..Default::default()
-            },
-            desc_by_create.0,
-            desc_by_update.0,
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+
         let custom_app_result = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(app_id),
                     ..Default::default()
                 },
                 kind: Some(IamRoleKind::App),
                 in_base: Some(false),
                 in_embed: Some(false),
+                extend_role_ids: Some(vec!["".to_string()]),
                 ..Default::default()
             },
             desc_by_create.0,
@@ -211,7 +198,7 @@ impl IamCaRoleApi {
             &ctx.0,
         )
         .await?;
-        let custom_tenant_result = IamRoleServ::find_items(
+        let custom_tenant_role_ids = IamRoleServ::find_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(tenant_id),
@@ -220,6 +207,20 @@ impl IamCaRoleApi {
                 kind: Some(IamRoleKind::App),
                 in_base: Some(false),
                 in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?.into_iter().map(|r| r.id).collect_vec();
+        let custom_tenant_result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                extend_role_ids: Some(custom_tenant_role_ids),
                 ..Default::default()
             },
             desc_by_create.0,

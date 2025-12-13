@@ -276,6 +276,7 @@ impl IamCiAppApi {
         funs.begin().await?;
         IamAppServ::add_rel_account(&id.0, &account_id.0, false, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -290,6 +291,7 @@ impl IamCiAppApi {
         let tenant_ids = tenant_ids.0.split(',').map(|id| id.to_string()).collect();
         IamAppServ::add_rel_tenant_all(&id.0, tenant_ids, false, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -303,6 +305,7 @@ impl IamCiAppApi {
         funs.begin().await?;
         IamAppServ::add_rel_tenant(&id.0, &tenant_id.0, false, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -316,6 +319,7 @@ impl IamCiAppApi {
         funs.begin().await?;
         IamAppServ::delete_rel_tenant(&id.0, &tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

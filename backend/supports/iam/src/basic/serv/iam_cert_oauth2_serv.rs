@@ -230,7 +230,7 @@ impl IamCertOAuth2Serv {
                 scope_level: None,
                 disabled: None,
                 icon: None,
-                exts: HashMap::new(),
+                exts: None,
                 status: Some(Pending),
                 temporary: None,
                 lock_status: None,

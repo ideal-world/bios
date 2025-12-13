@@ -7,7 +7,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::prelude::Expr;
-use tardis::db::sea_orm::sea_query::SelectStatement;
+use tardis::db::sea_orm::sea_query::{Query, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
@@ -234,7 +234,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         if !op_describe.is_empty() {
             let _ = IamLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
-        IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
+        if modify_req.name.is_some() {
+            IamKvClient::async_add_or_modify_key_name(funs.conf::<IamConfig>().spi.kv_role_prefix.clone(), id.to_string(), role.name.clone(), funs, ctx).await?;
+        }
 
         Ok(())
     }
@@ -358,6 +360,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
         if let Some(extend_role_id) = &filter.extend_role_id {
             query.and_where(Expr::col(iam_role::Column::ExtendRoleId).eq(extend_role_id));
+        }
+        if let Some(extend_role_ids) = &filter.extend_role_ids {
+            query.and_where(Expr::col(iam_role::Column::ExtendRoleId).is_in(extend_role_ids.clone()));
         }
         if let Some(sort) = filter.desc_by_sort {
             query.order_by((iam_role::Entity, iam_role::Column::Sort), if sort { Order::Desc } else { Order::Asc });
@@ -760,6 +765,13 @@ impl IamRoleServ {
                 }))
                 .await?;
             }
+            if let Some(sort) = role.sort {
+                let mut update_statement = Query::update();
+                update_statement.table(iam_role::Entity);
+                update_statement.value(iam_role::Column::Sort, sort);
+                update_statement.and_where(Expr::col((iam_role::Entity, iam_role::Column::ExtendRoleId)).eq(id));
+                funs.db().execute(&update_statement).await?;
+            }
         }
         if let Some(input_res_ids) = &modify_req.res_ids {
             let stored_res = Self::find_simple_rel_res(id, None, None, funs, ctx).await?;
@@ -837,7 +849,7 @@ impl IamRoleServ {
                 IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, true, false, funs, ctx).await?;
             }
         }
-        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(true), "", funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(account_id, Box::new(false), "", funs, ctx).await?;
         Ok(())
     }
 

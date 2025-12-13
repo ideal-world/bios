@@ -151,7 +151,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
                 icon: None,
-                exts: HashMap::from([("ext1_idx".to_string(), "00002".to_string())]),
+                exts: Some(HashMap::from([("ext1_idx".to_string(), "00002".to_string())])),
                 status: None,
                 temporary: None,
                 lock_status: None,
