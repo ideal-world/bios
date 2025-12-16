@@ -531,6 +531,8 @@ impl IamAccountServ {
         let account = IamAccountServ::get_item(account_id, filter, funs, ctx).await?;
         let mut mock_tenant_ctx = ctx.clone();
         mock_tenant_ctx.own_paths = IamTenantServ::get_id_by_ctx(ctx, funs)?;
+        let mut mock_global_ctx = ctx.clone();
+        mock_global_ctx.own_paths = "".to_string();
         let set_id = if use_sys_org {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
@@ -656,7 +658,7 @@ impl IamAccountServ {
         //     }
         // }
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
-        let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
+        let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, &mock_global_ctx).await?;
 
         // let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
         let groups = IamSetServ::find_flat_set_items(&set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
