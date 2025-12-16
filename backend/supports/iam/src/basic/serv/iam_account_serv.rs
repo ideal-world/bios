@@ -15,7 +15,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
-use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
+use tardis::db::sea_orm::sea_query::{Alias, Expr, Query, SelectStatement};
 use tardis::db::sea_orm::*;
 
 use tardis::web::web_resp::{TardisPage, Void};
@@ -1027,5 +1027,15 @@ impl IamAccountServ {
         } else {
             Ok(ctx.clone())
         }
+    }
+
+    pub async fn init_others_id_by_id(id: &str, others_id: &str, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+        let mut update_statement = Query::update();
+        update_statement.table(iam_account::Entity);
+        update_statement.value(iam_account::Column::OthersId, others_id);
+        update_statement.and_where(Expr::col((iam_account::Entity, iam_account::Column::Id)).eq(id));
+
+        funs.db().execute(&update_statement).await?;
+        Ok(())
     }
 }
