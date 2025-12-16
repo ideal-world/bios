@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
+use crate::basic::dto::iam_role_dto::{IamRoleBoneResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
@@ -89,6 +89,49 @@ impl IamCcRoleApi {
                 })
                 .collect(),
         })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[oai(path = "/find", method = "get")]
+    async fn find(
+        &self,
+        id: Query<Option<String>>,
+        name: Query<Option<String>>,
+        kind: Query<Option<IamRoleKind>>,
+        in_base: Query<Option<bool>>,
+        in_embed: Query<Option<bool>>,
+        extend_role_id: Query<Option<String>>,
+        with_sub: Query<Option<bool>>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamRoleSummaryResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: id.0.map(|id| vec![id]),
+                    name: name.0,
+                    with_sub_own_paths: with_sub.0.unwrap_or(false),
+                    ..Default::default()
+                },
+                kind: kind.0,
+                in_base: in_base.0,
+                in_embed: in_embed.0,
+                extend_role_id: extend_role_id.0,
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// Find pub Rel Res By Role Id
