@@ -1622,6 +1622,10 @@ impl RbumItemAttrServ {
         if has_in_ext_table_attrs {
             let attr_values = Self::find_rbums(
                 &RbumItemAttrFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     rel_rbum_item_id: Some(rbum_item_id.to_string()),
                     ..Default::default()
                 },
