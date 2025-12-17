@@ -222,14 +222,31 @@ impl FlowSubDeployServ {
             };
             if import_model.main {
                 let orginal_models = FlowModelServ::find_rel_models(import_model.rel_template_ids.clone().pop(), true, Some(vec![import_model.tag.clone()]), funs, ctx).await?;
-                if !orginal_models.iter().any(|m| m.id == import_model.id) {
-                    let mut add_req = import_model.create_add_req();
-                    let new_model_id = FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;
-                    for orginal_model in &orginal_models {
-                        let mock_ctx = TardisContext {
-                            own_paths: orginal_model.own_paths.clone(),
+                for orginal_model in orginal_models.iter() {
+                    let mock_ctx = TardisContext {
+                        own_paths: orginal_model.own_paths.clone(),
+                        ..Default::default()
+                    };
+                    FlowModelServ::delete_item(&orginal_model.id, funs, &mock_ctx).await?;
+                }
+                let mut add_req = import_model.create_add_req();
+                let new_model_id = FlowModelServ::add_item(&mut add_req, funs, &mock_ctx).await?;
+                let new_model_detail = FlowModelServ::get_item(
+                    &new_model_id,
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
                             ..Default::default()
-                        };
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                if !orginal_models.iter().any(|m| m.id == new_model_detail.id) {
+                    for orginal_model in &orginal_models {
                         let orginal_model_detail = FlowModelServ::get_item(
                             &orginal_model.id,
                             &FlowModelFilterReq {
@@ -244,21 +261,6 @@ impl FlowSubDeployServ {
                             ctx,
                         )
                         .await?;
-                        let new_model_detail = FlowModelServ::get_item(
-                            &new_model_id,
-                            &FlowModelFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    with_sub_own_paths: true,
-                                    own_paths: Some("".to_string()),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                        FlowModelServ::delete_item(&orginal_model.id, funs, &mock_ctx).await?;
                         Self::modify_inst_state(&orginal_model_detail, &new_model_detail, funs, ctx).await?;
                     }
                 }

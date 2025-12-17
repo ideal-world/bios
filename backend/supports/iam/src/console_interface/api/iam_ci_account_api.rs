@@ -165,6 +165,7 @@ impl IamCiAccountApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
 
+        let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.0.own_paths.clone()), &funs).await?;
         let mut not_matched = Vec::new();
 
         for req in init_reqs.0.into_iter() {
@@ -177,7 +178,7 @@ impl IamCiAccountApi {
                         ..Default::default()
                     },
                     ak: Some(req.phone.clone()),
-                    kind: Some(IamCertKernelKind::PhoneVCode.to_string()),
+                    rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id.clone()]),
                     ..Default::default()
                 },
                 &funs,
