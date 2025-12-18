@@ -384,6 +384,12 @@ pub struct FlowModelSummaryResp {
     pub data_source: Option<String>,
 }
 
+impl FlowModelSummaryResp {
+    pub fn states(&self) -> Vec<FlowStateAggResp> {
+        TardisFuns::json.json_to_obj(self.states.clone()).unwrap_or_default()
+    }
+}
+
 impl From<FlowModelAggResp> for FlowModelSummaryResp {
     fn from(value: FlowModelAggResp) -> Self {
         Self {
