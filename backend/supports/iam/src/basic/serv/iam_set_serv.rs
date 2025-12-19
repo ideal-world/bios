@@ -628,7 +628,7 @@ impl IamSetServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.to_string()),
                 rel_rbum_item_ids: Some(vec![account_id.to_string()]),
@@ -641,8 +641,8 @@ impl IamSetServ {
         )
         .await?
         .iter()
-        .filter(|r| r.rel_rbum_set_cate_sys_code.is_some())
-        .map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default())
+        // .filter(|r| r.rel_rbum_set_cate_sys_code.is_some())
+         .map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or("".to_string()))
         .collect::<Vec<String>>();
         if rbum_set_cate_code.is_empty() {
             return Ok(vec![]);
