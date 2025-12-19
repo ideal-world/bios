@@ -355,7 +355,7 @@ impl IamCiAccountApi {
                 apps.push(IamAccountAppInfoResp {
                     app_id: app_id.clone(),
                     app_name: app_name.clone(),
-                    app_kind: IamAppKind::Project,
+                    app_kind: IamAppKind::Product,
                     app_own_paths: format!("{}/{}", ctx.own_paths, app_id),
                     app_icon: "".to_string(),
                     roles: app_role_read.clone(),
