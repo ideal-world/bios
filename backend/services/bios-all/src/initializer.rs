@@ -9,7 +9,7 @@ use crate::config::BiosConfig;
 pub const BIOS_COMPONENT_CODE: &str = "bios";
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
-    bios_mw_event_client::event_client_initializer::init().await?;
+    // bios_mw_event_client::event_client_initializer::init().await?;
     bios_auth::auth_initializer::init(web_server).await?;
     bios_iam::iam_initializer::init(web_server).await?;
     let fun = TardisFuns::inst_with_db_conn(BIOS_COMPONENT_CODE.to_string(), None);
