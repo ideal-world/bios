@@ -123,7 +123,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     );
     let (conf_info, query_limit) = fetch_conf_info(query_req.from.clone(), rel_external_ids.clone(), &conn, funs, ctx).await?;
     // todo 需要更改使用with
-    let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    // let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    let ct_agg = false;
     let conf_limit = query_limit;
     let (conf_info, dim_conf_info, measure_conf_info) = package_dim_mea_conf_info(conf_info)?;
     check_dim_mea(
@@ -1076,7 +1077,9 @@ pub async fn query_metrics_record_paginated(
     let rel_external_ids = self::package_rel_external_id_agg(query_req.rel_external_id.clone(), vec![], vec![], query_req._where.clone(), None, None, None);
     let (conf_info, query_limit) = fetch_conf_info(query_req.from.clone(), rel_external_ids.clone(), &conn, funs, ctx).await?;
     let (conf_info, dim_conf_info, measure_conf_info) = package_dim_mea_conf_info(conf_info)?;
-    let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    // todo 需要更改使用with
+    // let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    let ct_agg = false;
     let conf_limit = query_limit;
     check_dim_mea(
         conf_info.clone(),
@@ -1215,7 +1218,9 @@ pub async fn query_metrics_record_detail_paginated(
     let rel_external_ids = self::package_rel_external_id_agg(query_req.rel_external_id.clone(), vec![], vec![], query_req._where.clone(), None, None, None);
     let (conf_info, query_limit) = fetch_conf_info(query_req.from.clone(), rel_external_ids.clone(), &conn, funs, ctx).await?;
     let (conf_info, dim_conf_info, measure_conf_info) = package_dim_mea_conf_info(conf_info)?;
-    let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    // todo 需要更改使用with
+    // let ct_agg = query_req.group.iter().any(|i| i.code == "ct");
+    let ct_agg = false;
     let conf_limit = query_limit;
     check_dim_mea(
         conf_info.clone(),
