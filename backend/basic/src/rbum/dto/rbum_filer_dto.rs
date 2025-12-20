@@ -421,9 +421,9 @@ pub struct RbumSetItemFilterReq {
     ///
     /// 关联的资源项是否可以不存在
     ///
-    /// Default is ``true``
+    /// Default is ``false``
     ///
-    /// 默认为 ``true``
+    /// 默认为 ``false``
     pub rel_rbum_item_can_not_exist: Option<bool>,
     /// Associated resource item id set
     /// 关联的资源项id列表
