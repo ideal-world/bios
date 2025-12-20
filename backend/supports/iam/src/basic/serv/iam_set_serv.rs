@@ -523,7 +523,7 @@ impl IamSetServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.to_string()),
                 rel_rbum_item_ids: Some(account_ids.clone()),
@@ -541,7 +541,7 @@ impl IamSetServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.to_string()),
                 rel_rbum_item_ids: Some(app_ids),
@@ -653,7 +653,7 @@ impl IamSetServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel_rbum_item_can_not_exist: None,
+                rel_rbum_item_can_not_exist: Some(true),
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: Some(set_id.to_string()),
                 rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_app_id()]),
