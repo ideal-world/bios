@@ -20,7 +20,7 @@ use crate::{
     domain::{flow_inst, flow_model},
     dto::{
         flow_inst_dto::{FlowInstDetailResp, FlowInstFilterReq},
-        flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelUnbindStateReq},
+        flow_model_dto::{FlowModelBindStateReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelStatus, FlowModelUnbindStateReq},
         flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVersionModifyState},
         flow_state_dto::{FlowStateAddReq, FlowStateFilterReq, FlowStateRelModelModifyReq},
         flow_sub_deploy_dto::{FlowSubDeployOneExportAggResp, FlowSubDeployOneImportReq, FlowSubDeployTowExportAggResp, FlowSubDeployTowImportReq},
@@ -108,6 +108,7 @@ impl FlowSubDeployServ {
                     enabled: Some(true),
                     ..Default::default()
                 },
+                status: Some(FlowModelStatus::Enabled),
                 main: Some(false),
                 data_source: Some(id.to_string()),
                 ..Default::default()
@@ -217,7 +218,23 @@ impl FlowSubDeployServ {
         }
         // delete original approve models
         let rel_template_id = import_req.models.first().unwrap().rel_template_ids.first().cloned();
-        for original_approve_model in FlowModelServ::find_rel_models(rel_template_id, false, None, funs, ctx).await? {
+        for original_approve_model in FlowModelServ::find_detail_items(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                main: Some(false),
+                rel_template_id,
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await? {
             let mock_ctx = TardisContext {
                 own_paths: original_approve_model.own_paths.clone(),
                 owner: original_approve_model.owner.clone(),
