@@ -275,21 +275,7 @@ impl FlowSubDeployServ {
                 .await?;
                 if !orginal_models.iter().any(|m| m.id == new_model_detail.id) {
                     for orginal_model in &orginal_models {
-                        let orginal_model_detail = FlowModelServ::get_item(
-                            &orginal_model.id,
-                            &FlowModelFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    with_sub_own_paths: true,
-                                    own_paths: Some("".to_string()),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                        Self::modify_inst_state(&orginal_model_detail, &new_model_detail, funs, ctx).await?;
+                        Self::modify_inst_state(orginal_model.states().into_iter().map(|s| s.id.clone()).collect_vec(), &new_model_detail, funs, ctx).await?;
                     }
                 }
             } else {
@@ -504,70 +490,29 @@ impl FlowSubDeployServ {
         Ok(())
     }
 
-    async fn modify_inst_state(orginal_flow_model: &FlowModelDetailResp, new_flow_model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn modify_inst_state(orginal_state_ids: Vec<String>, new_flow_model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let orginal_state_ids = orginal_flow_model.states().into_iter().map(|s| s.id.clone()).collect_vec();
+        let new_state_ids = new_flow_model.states().into_iter().map(|s| s.id.clone()).collect_vec();
         for orginal_state_id in orginal_state_ids {
-            FlowInstServ::async_unsafe_modify_state(
-                &FlowInstFilterReq {
-                    tags: Some(vec![orginal_flow_model.tag.clone()]),
-                    current_state_id: Some(orginal_state_id.clone()),
-                    with_sub: Some(true),
-                    ..Default::default()
-                },
-                &new_flow_model.init_state_id,
-                new_flow_model,
-                funs,
-                &global_ctx,
-            )
-            .await?;
+            if !new_state_ids.contains(&orginal_state_id) {
+                FlowInstServ::async_unsafe_modify_state(
+                    &FlowInstFilterReq {
+                        tags: Some(vec![new_flow_model.tag.clone()]),
+                        current_state_id: Some(orginal_state_id.clone()),
+                        with_sub: Some(true),
+                        ..Default::default()
+                    },
+                    &new_flow_model.init_state_id,
+                    new_flow_model,
+                    funs,
+                    &global_ctx,
+                )
+                .await?;   
+            }
         }
-        
-        // let model_update_time = flow_model.update_time;
-        // let mut modify_state_map = HashMap::new();
-        // init map
-        // for state in flow_model.states() {
-        //     modify_state_map.insert(state.id.clone(), vec![state.id.clone()]);
-        // }
-        // complete map
-        // if let Some(switch_state_logs) = switch_state_logs {
-        //     for delete_log in switch_state_logs.into_iter().filter(|log| log.ts >= model_update_time) {
-        //         let log_content = TardisFuns::json.json_to_obj::<LogParamContent>(delete_log.content.clone())?;
-        //         let orginal_state = log_content.sub_id.clone().unwrap_or_default();
-        //         let new_state = log_content.operand_id.clone().unwrap_or_default();
-        //         let orginal_modify_states = modify_state_map.get(&orginal_state).cloned().unwrap_or_default();
-        //         let state_map = modify_state_map.entry(new_state.clone()).or_insert(vec![]);
-        //         for orginal_modify_state in orginal_modify_states {
-        //             state_map.push(orginal_modify_state);
-        //         }
-        //         modify_state_map.remove(&orginal_state);
-        //     }
-        // }
-        // update inst state
-        // for (new_state_id, orginal_states) in modify_state_map {
-        //     for orginal_state_id in orginal_states {
-        //         if orginal_state_id == new_state_id {
-        //             continue;
-        //         }
-        //         FlowInstServ::async_unsafe_modify_state(
-        //             &FlowInstFilterReq {
-        //                 flow_version_id: Some(flow_model.current_version_id.clone()),
-        //                 current_state_id: Some(orginal_state_id.clone()),
-        //                 with_sub: Some(true),
-        //                 ..Default::default()
-        //             },
-        //             &new_state_id,
-        //             flow_model,
-        //             funs,
-        //             &global_ctx,
-        //         )
-        //         .await?;
-        //     }
-        // }
-
         Ok(())
     }
 
