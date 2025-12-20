@@ -105,6 +105,7 @@ impl FlowSubDeployServ {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
+                    enabled: Some(true),
                     ..Default::default()
                 },
                 main: Some(false),
