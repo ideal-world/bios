@@ -670,9 +670,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             Self::delete_item(&child_model.id, funs, &mock_ctx).await?;
         }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        if !detail.main {
-            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
-        }
         join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &RbumRelFromKind::Item, flow_model_id, None, None, funs, ctx)
                 .await?
