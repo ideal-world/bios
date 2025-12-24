@@ -25,7 +25,7 @@ use crate::{
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::{IamRelKind, IamSetKind},
+    iam_enumeration::{IamRelKind, IamSetKind, IamCertKernelKind},
 };
 pub struct IamSearchClient;
 
@@ -356,6 +356,7 @@ impl IamSearchClient {
             "certs":account_resp.certs,
             "icon":account_resp.icon,
             "logout_msg":logout_msg,
+            "phone_number": account_resp.certs.get(&IamCertKernelKind::PhoneVCode.to_string()),
             "disabled":account_resp.disabled,
             "logout_time":account_resp.logout_time,
             "logout_type":account_resp.logout_type,

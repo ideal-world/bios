@@ -18,18 +18,9 @@ use bios_sdk_invoke::dto::search_item_dto::{
 use itertools::Itertools;
 use serde_json::Value;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    db::sea_orm::{
-        self,
-        sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        EntityName, Set,
-    },
-    futures::future::join_all,
-    log::{debug, error},
-    serde_json::json,
-    tokio,
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
+        self, EntityName, Iden, Set, sea_query::{Alias, Cond, Expr, Query, SelectStatement}
+    }, futures::future::join_all, log::{debug, error}, serde_json::json, tokio, web::web_resp::TardisPage
 };
 
 use crate::{
@@ -326,6 +317,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                         .await?
                         .into_iter()
                         .map(|rel| async move {
+                            let rel_template_id = rel.rel_id.clone();
+                            let data_source = Self::find_data_source_by_template_id(&rel_template_id, funs, ctx).await?;
                             let mock_ctx = TardisContext {
                                 own_paths: rel.rel_own_paths,
                                 ..ctx.clone()
@@ -335,9 +328,9 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                     flow_model_id,
                                     &FlowModelAssociativeOperationKind::Reference,
                                     FlowModelKind::AsTemplateAndAsModel,
-                                    Some(rel.rel_id.clone()),
+                                    Some(rel_template_id),
                                     &None,
-                                    None,
+                                    data_source,
                                     funs,
                                     &mock_ctx,
                                 )
@@ -347,8 +340,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                                     flow_model_id,
                                     &FlowModelAssociativeOperationKind::Reference,
                                     FlowModelKind::AsTemplateAndAsModel,
-                                    Some(rel.rel_id.clone()),
-                                    None,
+                                    Some(rel_template_id),
+                                    data_source,
                                     funs,
                                     &mock_ctx,
                                 )
@@ -677,9 +670,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             Self::delete_item(&child_model.id, funs, &mock_ctx).await?;
         }
         let detail = Self::get_item(flow_model_id, &FlowModelFilterReq::default(), funs, ctx).await?;
-        if !detail.main {
-            return Err(funs.err().not_found(&Self::get_obj_name(), "delete_item", "the model prohibit delete", "500-flow-model-prohibit-delete"));
-        }
         join_all(
             FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowModelTemplate, &RbumRelFromKind::Item, flow_model_id, None, None, funs, ctx)
                 .await?
@@ -1284,7 +1274,6 @@ impl FlowModelServ {
             };
             Self::delete_item(&orginal_model.id, funs, &mock_ctx).await?;
         }
-
         Ok(new_model)
     }
 
@@ -2743,5 +2732,24 @@ impl FlowModelServ {
             page += 1;
         }
         Ok(())
+    }
+
+    async fn find_data_source_by_template_id(template_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+        if let Some(rel_model_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, template_id, None, None, funs, ctx).await?.into_iter().map(|rel| rel.rel_id).collect_vec().pop() {
+            return Ok(Self::get_item(
+                &rel_model_id,
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }, 
+                funs, 
+                ctx
+            ).await?.data_source);
+        }
+        Ok(None)
     }
 }
