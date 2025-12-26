@@ -1904,7 +1904,7 @@ impl FlowInstServ {
                 {
                     return true;
                 }
-                if model_transition.guard_by_creator && !(flow_inst.create_ctx.own_paths != ctx.own_paths || flow_inst.create_ctx.owner != ctx.owner) {
+                if model_transition.guard_by_creator && flow_inst.create_ctx.owner == ctx.owner {
                     return true;
                 }
                 if !model_transition.guard_by_spec_account_ids.is_empty() && model_transition.guard_by_spec_account_ids.contains(&ctx.owner) {

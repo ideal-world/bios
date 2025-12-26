@@ -1094,7 +1094,7 @@ impl IamCertLdapServ {
             funs.begin().await?;
             let add_result = match sync_config.account_way_to_add {
                 WayToAdd::SynchronizeCert => {
-                    let result = Self::do_add_account(
+                    let mut result = Self::do_add_account(
                         &ldap_resp.account_id,
                         &ldap_resp.display_name,
                         &ldap_resp.user_name,
@@ -1124,6 +1124,7 @@ impl IamCertLdapServ {
                             let err_msg = format!("add account:{}add phone phone:{} failed:{}", mock_ctx.owner, ldap_resp.mobile.clone(), e);
                             tardis::log::error!("{}", err_msg);
                             msg = format!("{msg}{err_msg}\n");
+                            result = Err(e);
                         }
 
                         //添加email
@@ -1142,6 +1143,7 @@ impl IamCertLdapServ {
                             let err_msg = format!("add account:{} add email:{} failed:{}", mock_ctx.owner, ldap_resp.email.clone(), e);
                             tardis::log::error!("{}", err_msg);
                             msg = format!("{msg}{err_msg}\n");
+                            result = Err(e);
                         }
                     }
                     result

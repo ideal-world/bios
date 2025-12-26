@@ -239,6 +239,14 @@ impl
         .await
         .into_iter()
         .collect::<TardisResult<Vec<()>>>()?;
+        // sync delete transition
+        let mut transition_ids = vec![];
+        for state in detail.states() {
+            for transition in state.transitions {
+                transition_ids.push(transition.id);
+            }
+        }
+        FlowTransitionServ::delete_transitions(id, &transition_ids, funs, ctx).await?;
         Ok(Some(detail))
     }
 
