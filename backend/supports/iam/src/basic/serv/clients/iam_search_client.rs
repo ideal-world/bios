@@ -339,6 +339,7 @@ impl IamSearchClient {
             }
         }
         let ext = json!({
+            "name": account_resp.name,
             "status": account_resp.status,
             "temporary":account_resp.temporary,
             "lock_status": account_resp.lock_status,
