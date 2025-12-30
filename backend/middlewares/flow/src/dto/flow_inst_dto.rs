@@ -673,7 +673,7 @@ pub struct FlowInstBatchCheckAuthReq {
 pub struct FlowInstFindRelModelReq {
     pub transition_id: Option<String>,
     pub tag: String,
-    pub vars: HashMap<String, Value>,
+    pub vars: Option<HashMap<String, Value>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Copy, Clone)]
