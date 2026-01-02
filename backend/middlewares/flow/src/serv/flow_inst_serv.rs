@@ -19,8 +19,8 @@ use tardis::{
     chrono::{DateTime, Datelike, Utc},
     db::sea_orm::{
         self,
-        sea_query::{Alias, Cond, Expr, Query, SelectStatement},
-        JoinType, Order, Set,
+        sea_query::{Alias, Expr, Query, SelectStatement},
+        Order, Set,
     },
     futures_util::future::join_all,
     log::{debug, error},
@@ -35,11 +35,7 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq,
-            FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq,
-            FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp,
-            FlowInstOperateReq, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp,
-            FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq,
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstQueryResult, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq
         },
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
         flow_model_version_dto::FlowModelVersionFilterReq,
@@ -568,8 +564,6 @@ impl FlowInstServ {
 
     async fn package_ext_query(query: &mut SelectStatement, filter: &FlowInstFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_model_version_table = Alias::new("flow_model_version");
-        let rel_model_table = Alias::new("rbum_rel");
-        let flow_state_item = Alias::new("flow_state_item");
         query
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
@@ -593,35 +587,15 @@ impl FlowInstServ {
                 Expr::col((flow_model_version_table.clone(), Alias::new("rel_model_id"))).if_null(""),
                 Alias::new("rel_flow_model_id"),
             )
-            .expr_as(Expr::col((flow_state_item.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("current_state_name"))
             .expr_as(Expr::col((flow_state::Entity, Alias::new("color"))).if_null(""), Alias::new("current_state_color"))
-            .expr_as(Expr::col((RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone())).if_null(""), Alias::new("rel_flow_model_name"))
-            .expr_as(Expr::col((rel_model_table.clone(), Alias::new("ext"))).if_null(""), Alias::new("rel_transition"))
             .from(flow_inst::Entity)
-            .join_as(
-                JoinType::LeftJoin,
-                RBUM_ITEM_TABLE.clone(),
-                flow_state_item.clone(),
-                Expr::col((flow_state_item.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
-            )
             .left_join(
                 flow_model_version_table.clone(),
                 Expr::col((flow_model_version_table.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
             )
             .left_join(
-                RBUM_ITEM_TABLE.clone(),
-                Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::RelFlowVersionId)),
-            )
-            .left_join(
                 flow_state::Entity,
                 Expr::col((flow_state::Entity, ID_FIELD.clone())).equals((flow_inst::Entity, flow_inst::Column::CurrentStateId)),
-            )
-            .left_join(
-                rel_model_table.clone(),
-                Cond::all()
-                    .add(Expr::col((rel_model_table.clone(), Alias::new("from_rbum_id"))).equals((flow_model_version_table.clone(), flow_model_version::Column::RelModelId)))
-                    .add(Expr::col((rel_model_table.clone(), Alias::new("to_rbum_item_id"))).equals((flow_inst::Entity, flow_inst::Column::RelTransitionId)))
-                    .add(Expr::col((rel_model_table.clone(), Alias::new("tag"))).eq("FlowModelTransition".to_string())),
             );
         if let Some(ids) = &filter.ids {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(ids));
@@ -689,15 +663,175 @@ impl FlowInstServ {
     }
 
     pub async fn find_ids(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstIdsResult {
+            pub id: String,
+        }
         let mut query = Query::select();
         Self::package_ext_query(&mut query, filter, funs, ctx).await?;
-        Ok(funs.db().find_dtos::<FlowInstSummaryResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
+        query.clear_selects().columns([flow_inst::Column::Id]);
+        Ok(funs.db().find_dtos::<FlowInstIdsResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
     }
 
     pub async fn find_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstSummaryResult>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct StateNameResult {
+            pub id: String,
+            pub name: String,
+        }
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct ModelVersionNameResult {
+            pub id: String,
+            pub name: String,
+        }
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct TransitionRelResult {
+            pub from_rbum_id: String,
+            pub to_rbum_item_id: String,
+            pub ext: Option<String>,
+        }
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct ModelVersionResult {
+            pub id: String,
+            pub rel_model_id: String,
+        }
+        
         let mut query = Query::select();
         Self::package_ext_query(&mut query, filter, funs, ctx).await?;
-        funs.db().find_dtos::<FlowInstSummaryResult>(&query).await
+        let query_result = funs.db().find_dtos::<FlowInstQueryResult>(&query).await?;
+        
+        let state_ids: Vec<String> = query_result.iter().map(|inst| inst.current_state_id.clone()).unique().collect();
+        let version_ids: Vec<String> = query_result.iter().map(|inst| inst.rel_flow_version_id.clone()).unique().collect();
+        let transition_ids: Vec<String> = query_result
+            .iter()
+            .filter_map(|inst| inst.rel_transition_id.clone())
+            .unique()
+            .collect();
+        
+        let state_name_map: HashMap<String, String> = if !state_ids.is_empty() {
+            let mut state_name_query = Query::select();
+            state_name_query
+                .columns([
+                    (RBUM_ITEM_TABLE.clone(), ID_FIELD.clone()),
+                    (RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone()),
+                ])
+                .from(RBUM_ITEM_TABLE.clone())
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).is_in(state_ids.clone()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap_or_default()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_domain_id().unwrap_or_default()));
+            funs.db()
+                .find_dtos::<StateNameResult>(&state_name_query)
+                .await?
+                .into_iter()
+                .map(|r| (r.id, r.name))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        let model_version_name_map: HashMap<String, String> = if !version_ids.is_empty() {
+            let mut model_version_name_query = Query::select();
+            model_version_name_query
+                .columns([
+                    (RBUM_ITEM_TABLE.clone(), ID_FIELD.clone()),
+                    (RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone()),
+                ])
+                .from(RBUM_ITEM_TABLE.clone())
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).is_in(version_ids.clone()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowModelVersionServ::get_rbum_kind_id().unwrap_or_default()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowModelVersionServ::get_rbum_domain_id().unwrap_or_default()));
+            funs.db()
+                .find_dtos::<ModelVersionNameResult>(&model_version_name_query)
+                .await?
+                .into_iter()
+                .map(|r| (r.id, r.name))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        let model_version_map: HashMap<String, String> = if !version_ids.is_empty() {
+            let mut model_version_query = Query::select();
+            model_version_query
+                .columns([
+                    (flow_model_version::Entity, flow_model_version::Column::Id),
+                    (flow_model_version::Entity, flow_model_version::Column::RelModelId),
+                ])
+                .from(flow_model_version::Entity)
+                .and_where(Expr::col((flow_model_version::Entity, flow_model_version::Column::Id)).is_in(version_ids.clone()));
+            funs.db()
+                .find_dtos::<ModelVersionResult>(&model_version_query)
+                .await?
+                .into_iter()
+                .map(|r| (r.id, r.rel_model_id))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        let transition_rel_map: HashMap<(String, String), String> = if !transition_ids.is_empty() {
+            use bios_basic::rbum::domain::rbum_rel;
+            let rel_model_ids: Vec<String> = model_version_map.values().cloned().unique().collect();
+            if !rel_model_ids.is_empty() {
+                let mut transition_rel_query = Query::select();
+                transition_rel_query
+                    .columns([
+                        (rbum_rel::Entity, rbum_rel::Column::FromRbumId),
+                        (rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
+                        (rbum_rel::Entity, rbum_rel::Column::Ext),
+                    ])
+                    .from(rbum_rel::Entity)
+                    .and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).is_in(rel_model_ids))
+                    .and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).is_in(transition_ids))
+                    .and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Tag)).eq("FlowModelTransition".to_string()));
+                funs.db()
+                    .find_dtos::<TransitionRelResult>(&transition_rel_query)
+                    .await?
+                    .into_iter()
+                    .map(|r| ((r.from_rbum_id, r.to_rbum_item_id), r.ext.unwrap_or_default()))
+                    .collect()
+            } else {
+                HashMap::new()
+            }
+        } else {
+            HashMap::new()
+        };
+        
+        Ok(query_result.into_iter().map(|inst|{
+            let rel_flow_model_id = model_version_map.get(&inst.rel_flow_version_id).cloned();
+            let rel_transition = if let (Some(model_id), Some(transition_id)) = (rel_flow_model_id.as_ref(), inst.rel_transition_id.as_ref()) {
+                transition_rel_map
+                    .get(&(model_id.clone(), transition_id.clone()))
+                    .cloned()
+            } else {
+                None
+            };
+            FlowInstSummaryResult {
+                id: inst.id,
+                code: inst.code,
+                rel_flow_version_id: inst.rel_flow_version_id.clone(),
+                rel_flow_model_id: inst.rel_flow_model_id,
+                rel_flow_model_name: model_version_name_map.get(&inst.rel_flow_version_id).cloned(),
+                current_vars: inst.current_vars,
+                current_state_id: inst.current_state_id.clone(),
+                current_state_name: state_name_map.get(&inst.current_state_id).cloned().unwrap_or_default(),
+                current_state_color: inst.current_state_color,
+                rel_business_obj_id: inst.rel_business_obj_id,
+                create_ctx: inst.create_ctx,
+                create_time: inst.create_time,
+                update_time: inst.update_time,
+                finish_ctx: inst.finish_ctx,
+                finish_time: inst.finish_time,
+                finish_abort: inst.finish_abort,
+                output_message: inst.output_message,
+                rel_transition,
+                own_paths: inst.own_paths,
+                tag: inst.tag,
+            }
+        }).collect_vec())
     }
 
     pub async fn find_detail_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstDetailResp>> {
@@ -1237,8 +1371,8 @@ impl FlowInstServ {
                     id: inst.id,
                     code: inst.code,
                     rel_flow_version_id: inst.rel_flow_version_id,
-                    rel_flow_model_id: rel_flow_model_id,
-                    rel_flow_model_name: rel_flow_model_name,
+                    rel_flow_model_id,
+                    rel_flow_model_name,
                     rel_transition_id: inst.rel_transition_id,
                     rel_inst_id: inst.rel_inst_id,
                     tag: inst.tag,
@@ -1303,9 +1437,132 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<FlowInstSummaryResp>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct StateNameResult {
+            pub id: String,
+            pub name: String,
+        }
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct ModelVersionNameResult {
+            pub id: String,
+            pub name: String,
+        }
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct TransitionRelResult {
+            pub from_rbum_id: String,
+            pub to_rbum_item_id: String,
+            pub ext: Option<String>,
+        }
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct ModelVersionResult {
+            pub id: String,
+            pub rel_model_id: String,
+        }
+
         let mut query = Query::select();
         Self::package_ext_query(&mut query, filter, funs, ctx).await?;
-        let (flow_insts, total_size) = funs.db().paginate_dtos::<FlowInstSummaryResult>(&query, page_number as u64, page_size as u64).await?;
+        let (flow_insts, total_size) = funs.db().paginate_dtos::<FlowInstQueryResult>(&query, page_number as u64, page_size as u64).await?;
+        
+        let state_ids: Vec<String> = flow_insts.iter().map(|inst| inst.current_state_id.clone()).unique().collect();
+        let version_ids: Vec<String> = flow_insts.iter().map(|inst| inst.rel_flow_version_id.clone()).unique().collect();
+        let transition_ids: Vec<String> = flow_insts
+            .iter()
+            .filter_map(|inst| inst.rel_transition_id.clone())
+            .unique()
+            .collect();
+        
+        let state_name_map: HashMap<String, String> = if !state_ids.is_empty() {
+            let mut state_name_query = Query::select();
+            state_name_query
+                .columns([
+                    (RBUM_ITEM_TABLE.clone(), ID_FIELD.clone()),
+                    (RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone()),
+                ])
+                .from(RBUM_ITEM_TABLE.clone())
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).is_in(state_ids.clone()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_kind_id().unwrap_or_default()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowStateServ::get_rbum_domain_id().unwrap_or_default()));
+            funs.db()
+                .find_dtos::<StateNameResult>(&state_name_query)
+                .await?
+                .into_iter()
+                .map(|r| (r.id, r.name))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        let model_version_name_map: HashMap<String, String> = if !version_ids.is_empty() {
+            let mut model_version_name_query = Query::select();
+            model_version_name_query
+                .columns([
+                    (RBUM_ITEM_TABLE.clone(), ID_FIELD.clone()),
+                    (RBUM_ITEM_TABLE.clone(), NAME_FIELD.clone()),
+                ])
+                .from(RBUM_ITEM_TABLE.clone())
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), ID_FIELD.clone())).is_in(version_ids.clone()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_KIND_ID_FIELD.clone())).eq(FlowModelVersionServ::get_rbum_kind_id().unwrap_or_default()))
+                .and_where(Expr::col((RBUM_ITEM_TABLE.clone(), REL_DOMAIN_ID_FIELD.clone())).eq(FlowModelVersionServ::get_rbum_domain_id().unwrap_or_default()));
+            funs.db()
+                .find_dtos::<ModelVersionNameResult>(&model_version_name_query)
+                .await?
+                .into_iter()
+                .map(|r| (r.id, r.name))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        let model_version_map: HashMap<String, String> = if !version_ids.is_empty() {
+            let mut model_version_query = Query::select();
+            model_version_query
+                .columns([
+                    (flow_model_version::Entity, flow_model_version::Column::Id),
+                    (flow_model_version::Entity, flow_model_version::Column::RelModelId),
+                ])
+                .from(flow_model_version::Entity)
+                .and_where(Expr::col((flow_model_version::Entity, flow_model_version::Column::Id)).is_in(version_ids.clone()));
+            funs.db()
+                .find_dtos::<ModelVersionResult>(&model_version_query)
+                .await?
+                .into_iter()
+                .map(|r| (r.id, r.rel_model_id))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        let transition_rel_map: HashMap<(String, String), String> = if !transition_ids.is_empty() {
+            use bios_basic::rbum::domain::rbum_rel;
+            let rel_model_ids: Vec<String> = model_version_map.values().cloned().unique().collect();
+            if !rel_model_ids.is_empty() {
+                let mut transition_rel_query = Query::select();
+                transition_rel_query
+                    .columns([
+                        (rbum_rel::Entity, rbum_rel::Column::FromRbumId),
+                        (rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
+                        (rbum_rel::Entity, rbum_rel::Column::Ext),
+                    ])
+                    .from(rbum_rel::Entity)
+                    .and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).is_in(rel_model_ids))
+                    .and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).is_in(transition_ids))
+                    .and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Tag)).eq("FlowModelTransition".to_string()));
+                funs.db()
+                    .find_dtos::<TransitionRelResult>(&transition_rel_query)
+                    .await?
+                    .into_iter()
+                    .map(|r| ((r.from_rbum_id, r.to_rbum_item_id), r.ext.unwrap_or_default()))
+                    .collect()
+            } else {
+                HashMap::new()
+            }
+        } else {
+            HashMap::new()
+        };
+
         Ok(TardisPage {
             page_size: page_size as u64,
             page_number: page_number as u64,
@@ -1315,9 +1572,9 @@ impl FlowInstServ {
                 .map(|inst| FlowInstSummaryResp {
                     id: inst.id,
                     code: inst.code,
-                    rel_flow_version_id: inst.rel_flow_version_id,
-                    rel_flow_model_id: inst.rel_flow_model_id,
-                    rel_flow_model_name: inst.rel_flow_model_name,
+                    rel_flow_version_id: inst.rel_flow_version_id.clone(),
+                    rel_flow_model_id: inst.rel_flow_model_id.clone(),
+                    rel_flow_model_name: model_version_name_map.get(&inst.rel_flow_version_id).cloned(),
                     create_ctx: TardisFuns::json.json_to_obj(inst.create_ctx).unwrap_or_default(),
                     create_time: inst.create_time,
                     update_time: inst.update_time,
@@ -1326,11 +1583,11 @@ impl FlowInstServ {
                     finish_abort: inst.finish_abort.is_some(),
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
-                    current_state_id: inst.current_state_id,
-                    current_state_name: inst.current_state_name,
+                    current_state_id: inst.current_state_id.clone(),
+                    current_state_name: state_name_map.get(&inst.current_state_id).cloned().unwrap_or_default(),
                     current_state_color: inst.current_state_color,
                     rel_business_obj_id: inst.rel_business_obj_id,
-                    rel_transition: inst.rel_transition.map(|ext| TardisFuns::json.str_to_obj::<FlowModelRelTransitionExt>(&ext).unwrap_or_default()),
+                    rel_transition: transition_rel_map.get(&(inst.rel_flow_model_id.clone().unwrap_or_default(), inst.rel_transition_id.clone().unwrap_or_default())).cloned().map(|ext| TardisFuns::json.str_to_obj::<FlowModelRelTransitionExt>(&ext).unwrap_or_default()),
                     tag: inst.tag,
                 })
                 .collect_vec(),

@@ -610,6 +610,33 @@ pub struct FlowInstFilterReq {
 }
 
 #[derive(sea_orm::FromQueryResult, Debug, Clone)]
+pub struct FlowInstQueryResult {
+    pub id: String,
+    pub code: String,
+    pub rel_flow_version_id: String,
+    pub rel_flow_model_id: Option<String>,
+    pub rel_transition_id: Option<String>,
+
+    pub current_vars: Option<Value>,
+    pub current_state_id: String,
+    pub current_state_color: Option<String>,
+    pub rel_business_obj_id: String,
+
+    pub create_ctx: Value,
+    pub create_time: DateTime<Utc>,
+    pub update_time: Option<DateTime<Utc>>,
+
+    pub finish_ctx: Option<Value>,
+    pub finish_time: Option<DateTime<Utc>>,
+    pub finish_abort: Option<bool>,
+    pub output_message: Option<String>,
+
+    pub own_paths: String,
+
+    pub tag: String,
+}
+
+#[derive(sea_orm::FromQueryResult, Debug, Clone)]
 pub struct FlowInstSummaryResult {
     pub id: String,
     pub code: String,
