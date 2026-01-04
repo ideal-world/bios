@@ -4,6 +4,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use tardis::basic::error::TardisError;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -12,9 +13,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq,
-    FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp,
-    FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSingleCopyOrReferenceCcReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -526,5 +525,52 @@ impl FlowCcModelApi {
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Creating or referencing single model
+    ///
+    /// 创建或引用单个模型
+    #[oai(path = "/copy_or_reference_single_model", method = "post")]
+    async fn copy_or_reference_single_model(
+        &self,
+        req: Json<FlowModelSingleCopyOrReferenceCcReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<FlowModelAggResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let rel_model_id = if let Some(rel_model_id) = req.0.rel_model_id {
+            Ok(rel_model_id)
+        } else {
+            // 获取默认的模板ID
+            let default_model = FlowModelServ::find_one_item(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tags: Some(vec![req.0.tag.clone()]),
+                main: Some(req.0.main),
+                default: Some(true),
+                rel_model_ids: Some(vec!["".to_string()]),
+                ..Default::default()
+            }, &funs, &ctx.0).await?;
+            if let Some(default_model) = default_model {
+                Ok(default_model.id)
+            } else {
+                Err(funs.err().not_found(
+                    "flow_model_serv",
+                    "copy_or_reference_single_model",
+                    "default model not found",
+                    "404-flow-model-not-found",
+                ))
+            }
+        }?;
+        let new_model = FlowModelServ::copy_or_reference_main_model(&rel_model_id, &req.0.op, FlowModelKind::AsModel, None, &req.0.update_states, None, &funs, &ctx.0).await?;
+
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(new_model)
     }
 }

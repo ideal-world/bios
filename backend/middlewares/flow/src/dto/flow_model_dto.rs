@@ -804,7 +804,7 @@ pub struct FlowModelCopyOrReferenceReq {
 
 /// 创建或引用模型请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowModelSingleCopyOrReferenceReq {
+pub struct FlowModelSingleCopyOrReferenceCaReq {
     /// 关联的模型ID列表
     pub tag: String,
     /// 关联的模型ID
@@ -827,6 +827,23 @@ pub struct FlowModelCopyOrReferenceCiReq {
     /// 切换模板时，状态更新映射
     pub update_states: Option<HashMap<String, HashMap<String, String>>>,
     pub data_source: Option<String>,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelSingleCopyOrReferenceCcReq { 
+    /// 标签
+    pub tag: String,
+    /// 是否为主流程
+    pub main: bool,
+    /// 工作流模型类型
+    pub kind: FlowModelKind,
+    /// 关联的模型ID
+    pub rel_model_id: Option<String>,
+    /// 关联操作
+    pub op: FlowModelAssociativeOperationKind,
+    /// 切换模板时，状态更新映射
+    pub update_states: Option<HashMap<String, String>>,
 }
 
 /// 检查关联模板请求
