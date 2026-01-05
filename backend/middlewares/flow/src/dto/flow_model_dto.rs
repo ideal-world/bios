@@ -844,19 +844,17 @@ pub struct FlowModelAddAndCopyModelReq {
     pub icon: Option<String>,
     #[oai(validator(max_length = "2000"))]
     pub info: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     /// 标签
     pub tag: String,
-    /// 是否为主流程
-    pub main: bool,
     /// 工作流模型类型
     pub kind: FlowModelKind,
     
     /// 关联的模型ID
     pub rel_model_id: Option<String>,
-    /// 关联操作
-    pub op: FlowModelAssociativeOperationKind,
     /// 切换模板时，状态更新映射
     pub update_states: Option<HashMap<String, String>>,
 }

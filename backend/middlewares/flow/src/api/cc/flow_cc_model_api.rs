@@ -531,52 +531,18 @@ impl FlowCcModelApi {
     ///
     /// 创建并复制模型配置
     #[oai(path = "/add_and_copy", method = "post")]
-    async fn add_and_copy_single_model(
+    async fn add_and_copy(
         &self,
         req: Json<FlowModelAddAndCopyModelReq>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<FlowModelAggResp> {
         let mut funs = flow_constants::get_tardis_inst();
-        
-        let rel_model_id = if let Some(rel_model_id) = req.0.rel_model_id {
-            Ok(rel_model_id)
-        } else {
-            // 获取默认的模板ID
-            let default_model = FlowModelServ::find_one_item(&FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                tags: Some(vec![req.0.tag.clone()]),
-                main: Some(req.0.main),
-                default: Some(true),
-                rel_model_ids: Some(vec!["".to_string()]),
-                ..Default::default()
-            }, &funs, &ctx.0).await?;
-            if let Some(default_model) = default_model {
-                Ok(default_model.id)
-            } else {
-                Err(funs.err().not_found(
-                    "flow_model_serv",
-                    "copy_or_reference_single_model",
-                    "default model not found",
-                    "404-flow-model-not-found",
-                ))
-            }
-        }?;
         funs.begin().await?;
-        let new_model = FlowModelServ::copy_or_reference_main_model(&rel_model_id, &req.0.op, req.0.kind, None, &req.0.update_states, None, &funs, &ctx.0).await?;
-        FlowModelServ::modify_model(&new_model.id, &mut FlowModelModifyReq {
-            name: Some(req.0.name.clone()),
-            info: req.0.info.clone(),
-            scope_level: req.0.scope_level.clone(),
-            ..Default::default()
-        }, &funs, &ctx.0).await?;
+        let result = FlowModelServ::add_and_copy(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(new_model)
+        TardisResp::ok(result)
     }
 }

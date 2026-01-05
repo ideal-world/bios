@@ -28,9 +28,7 @@ use crate::{
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_model_dto::{
-            FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq,
-            FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind,
-            FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq,
+            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -2755,5 +2753,59 @@ impl FlowModelServ {
             ).await?.data_source);
         }
         Ok(None)
+    }
+
+    pub async fn add_and_copy(req: &FlowModelAddAndCopyModelReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
+        let rel_model_id = if let Some(rel_model_id) = &req.rel_model_id {
+            Ok(rel_model_id.clone())
+        } else {
+            // 获取默认的模板ID
+            let default_model = FlowModelServ::find_one_item(&FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tags: Some(vec![req.tag.clone()]),
+                main: Some(true),
+                default: Some(true),
+                rel_model_ids: Some(vec!["".to_string()]),
+                ..Default::default()
+            }, funs, ctx).await?;
+            if let Some(default_model) = default_model {
+                Ok(default_model.id)
+            } else {
+                Err(funs.err().not_found(
+                    "flow_model_serv",
+                    "copy_or_reference_single_model",
+                    "default model not found",
+                    "404-flow-model-not-found",
+                ))
+            }
+        }?;
+        let rel_model = Self::get_item(
+            &rel_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let new_model_id = Self::copy_main_model(&rel_model, req.kind, None, None, funs, ctx).await?;
+        let new_model = Self::get_item_detail_aggs(&new_model_id, false, funs, ctx).await?;
+        Self::modify_model(&new_model.id, &mut FlowModelModifyReq {
+            name: Some(req.name.clone()),
+            info: req.info.clone(),
+            scope_level: req.scope_level.clone(),
+            rel_template_ids: req.rel_template_ids.clone(),
+            ..Default::default()
+        }, funs, ctx).await?;
+        Ok(new_model)
     }
 }
