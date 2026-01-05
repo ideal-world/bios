@@ -14,6 +14,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp};
 use crate::serv::plugin_bs_serv::PluginBsServ;
+use crate::serv::plugin_rel_serv::PluginRelServ;
 #[derive(Clone)]
 
 pub struct PluginCiBsApi;
@@ -233,6 +234,16 @@ impl PluginCiBsApi {
             &ctx.0,
         )
         .await?;
+        TardisResp::ok(result)
+    }
+
+    /// Show Plugin Service Rel App/Tenant Attr Value
+    ///
+    /// 获取插件服务关系属性值
+    #[oai(path = "/rel/show/value", method = "get")]
+    async fn show_rel_attr(&self, rel_id: Query<String>, attr_name: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let funs = crate::get_tardis_inst();
+        let result = PluginRelServ::show_rel_attr(&rel_id.0, &attr_name.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
