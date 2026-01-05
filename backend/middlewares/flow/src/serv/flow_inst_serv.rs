@@ -669,7 +669,7 @@ impl FlowInstServ {
         }
         let mut query = Query::select();
         Self::package_ext_query(&mut query, filter, funs, ctx).await?;
-        query.clear_selects().columns([flow_inst::Column::Id]);
+        query.clear_selects().columns([(flow_inst::Entity, flow_inst::Column::Id),]);
         Ok(funs.db().find_dtos::<FlowInstIdsResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
     }
 

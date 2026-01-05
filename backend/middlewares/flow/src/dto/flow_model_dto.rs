@@ -831,13 +831,22 @@ pub struct FlowModelCopyOrReferenceCiReq {
 
 /// 创建或引用模型请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowModelSingleCopyOrReferenceCcReq { 
+pub struct FlowModelAddAndCopyModelReq { 
+    #[oai(validator(min_length = "2", max_length = "200"))]
+    pub name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub icon: Option<String>,
+    #[oai(validator(max_length = "2000"))]
+    pub info: Option<String>,
+
+    pub scope_level: Option<RbumScopeLevelKind>,
     /// 标签
     pub tag: String,
     /// 是否为主流程
     pub main: bool,
     /// 工作流模型类型
     pub kind: FlowModelKind,
+    
     /// 关联的模型ID
     pub rel_model_id: Option<String>,
     /// 关联操作

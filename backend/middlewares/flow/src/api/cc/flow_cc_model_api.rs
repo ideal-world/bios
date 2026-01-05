@@ -13,7 +13,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSingleCopyOrReferenceCcReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelAddAndCopyModelReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -527,18 +527,18 @@ impl FlowCcModelApi {
         TardisResp::ok(result)
     }
 
-    /// Creating or referencing single model
+    /// Creating and copy model
     ///
-    /// 创建或引用单个模型
-    #[oai(path = "/copy_or_reference_single_model", method = "post")]
-    async fn copy_or_reference_single_model(
+    /// 创建并复制模型配置
+    #[oai(path = "/add_and_copy", method = "post")]
+    async fn add_and_copy_single_model(
         &self,
-        req: Json<FlowModelSingleCopyOrReferenceCcReq>,
+        req: Json<FlowModelAddAndCopyModelReq>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<FlowModelAggResp> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
+        
         let rel_model_id = if let Some(rel_model_id) = req.0.rel_model_id {
             Ok(rel_model_id)
         } else {
@@ -566,8 +566,14 @@ impl FlowCcModelApi {
                 ))
             }
         }?;
-        let new_model = FlowModelServ::copy_or_reference_main_model(&rel_model_id, &req.0.op, FlowModelKind::AsModel, None, &req.0.update_states, None, &funs, &ctx.0).await?;
-
+        funs.begin().await?;
+        let new_model = FlowModelServ::copy_or_reference_main_model(&rel_model_id, &req.0.op, req.0.kind, None, &req.0.update_states, None, &funs, &ctx.0).await?;
+        FlowModelServ::modify_model(&new_model.id, &mut FlowModelModifyReq {
+            name: Some(req.0.name.clone()),
+            info: req.0.info.clone(),
+            scope_level: req.0.scope_level.clone(),
+            ..Default::default()
+        }, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
