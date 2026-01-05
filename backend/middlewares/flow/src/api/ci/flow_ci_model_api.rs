@@ -231,6 +231,13 @@ impl FlowCiModelApi {
                     .await?;
                 }
             }
+        } else {
+            // 复制操作，需删除应用和模板的关联关系
+            if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(&ctx.0) {
+                if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
+                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                }
+            }
         }
         
         // 添加或修改审批配置

@@ -341,6 +341,14 @@ pub struct IamAccountExtSysAddReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountOthersIdInitReq {
+    /// 账号绑定的手机号
+    pub phone: String,
+    /// 需要初始化的 others_id
+    pub others_id: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountExtSysBatchAddReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub account_id: Vec<String>,

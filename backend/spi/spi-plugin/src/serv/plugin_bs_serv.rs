@@ -19,7 +19,6 @@ use bios_sdk_invoke::clients::{
     spi_kv_client::SpiKvClient,
     spi_log_client::{LogDynamicContentReq, SpiLogClient},
 };
-use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,

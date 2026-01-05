@@ -386,6 +386,12 @@ pub struct FlowModelSummaryResp {
     pub data_source: Option<String>,
 }
 
+impl FlowModelSummaryResp {
+    pub fn states(&self) -> Vec<FlowStateAggResp> {
+        TardisFuns::json.json_to_obj(self.states.clone()).unwrap_or_default()
+    }
+}
+
 impl From<FlowModelAggResp> for FlowModelSummaryResp {
     fn from(value: FlowModelAggResp) -> Self {
         Self {
@@ -568,7 +574,7 @@ impl FlowModelDetailResp {
             icon: Some(self.icon.clone()),
             info: Some(self.info.clone()),
             kind: self.kind,
-            status: self.status,
+            status: self.status.clone(),
             rel_transition_ids,
             rel_template_ids: Some(self.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
@@ -576,7 +582,7 @@ impl FlowModelDetailResp {
                 name: self.name.as_str().into(),
                 rel_model_id: Some(self.id.clone()),
                 bind_states: Some(states),
-                status: FlowModelVesionState::Enabled,
+                status: if self.status == FlowModelStatus::Disabled {FlowModelVesionState::Disabled} else {FlowModelVesionState::Enabled},
                 scope_level: Some(self.scope_level.clone()),
                 disabled: Some(self.disabled),
             }),
