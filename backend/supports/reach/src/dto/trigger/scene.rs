@@ -25,6 +25,9 @@ pub struct ReachTriggerSceneAddReq {
     #[oai(validator(max_length = "2000"))]
     /// 父场景ID
     pub pid: Option<String>,
+    #[oai(validator(max_length = "2000"))]
+    /// 接收方组编码集合
+    pub receive_group_codes: Option<String>,
 }
 
 impl ReachTriggerSceneAddReq {
@@ -40,6 +43,7 @@ impl ReachTriggerSceneAddReq {
                 disabled: Some(false),
             },
             pid: Default::default(),
+            receive_group_codes: Default::default(),
         }
     }
     pub fn pid(mut self, pid: impl Into<String>) -> Self {
@@ -55,6 +59,9 @@ pub struct ReachTriggerSceneModifyReq {
     #[oai(validator(max_length = "255"))]
     /// 名称
     pub name: String,
+    #[oai(validator(max_length = "2000"))]
+    /// 接收方组编码集合
+    pub receive_group_codes: Option<String>,
 }
 
 /// 用户触达触发场景过滤请求
@@ -83,6 +90,8 @@ pub struct ReachTriggerSceneSummaryResp {
     pub name: String,
     /// 父场景ID
     pub pid: String,
+    /// 接收方组编码集合
+    pub receive_group_codes: String,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
@@ -99,6 +108,8 @@ pub struct ReachTriggerSceneDetailResp {
     pub name: String,
     /// 父场景ID
     pub pid: String,
+    /// 接收方组编码集合
+    pub receive_group_codes: String,
 }
 
 pub struct ReachTriggerSceneTree {
