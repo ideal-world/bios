@@ -2797,15 +2797,25 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        let new_model_id = Self::copy_main_model(&rel_model, req.kind, None, None, funs, ctx).await?;
-        let new_model = Self::get_item_detail_aggs(&new_model_id, false, funs, ctx).await?;
-        Self::modify_model(&new_model.id, &mut FlowModelModifyReq {
-            name: Some(req.name.clone()),
+        let mut add_req = FlowModelAddReq {
+            name: req.name.clone(),
+            icon: req.icon.clone(),
             info: req.info.clone(),
             scope_level: req.scope_level.clone(),
+            tag: Some(req.tag.clone()),
+            kind: req.kind.clone(),
             rel_template_ids: req.rel_template_ids.clone(),
-            ..Default::default()
-        }, funs, ctx).await?;
-        Ok(new_model)
+            default: Some(false),
+            template: req.kind != FlowModelKind::AsModel,
+            ..rel_model.clone().into()
+        };
+        if req.kind == FlowModelKind::AsModel {
+            add_req.rel_model_id = Some("".to_string());
+            add_req.scope_level = Some(rbum_scope_helper::get_scope_level_by_context(ctx)?);
+        }
+
+        add_req.set_edit_state(true); // 复制的模板所有配置项皆可编辑
+        let new_model_id = Self::add_item(&mut add_req, funs, ctx).await?;
+        Self::get_item_detail_aggs(&new_model_id, false, funs, ctx).await
     }
 }
