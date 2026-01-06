@@ -74,13 +74,7 @@ impl FlowConfigServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
-        let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
-        let key = if let Some(template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await? {
-            format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase())
-        } else {
-            format!("__tag__:{}:{}:_:{}_config", tenant_paths, app_paths, root_tag.to_ascii_lowercase())
-        };
+        let key = Self::get_root_config_key(None, root_tag, ctx);
 
         if let Ok(root_config) = Self::get_root_config(root_tag, funs, ctx).await {
             if let Some(mut child_config) = Self::get_root_config_by_tag(&root_config, child_tag)? {
@@ -116,11 +110,33 @@ impl FlowConfigServ {
         Ok(())
     }
 
+    pub async fn add_or_modify_root_config(rel_template_id: String, target_template_id: Option<String>, root_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let source_key = Self::get_root_config_key(Some(rel_template_id), root_tag, ctx);
+        let config = SpiKvClient::get_item(source_key, None, funs, ctx).await?;
+        if let Some(config) = config {
+            let config = TardisFuns::json.json_to_obj::<Vec<FlowRootConfigResp>>(config.value)?;
+            let target_key = Self::get_root_config_key(target_template_id, root_tag, ctx);
+            SpiKvClient::add_or_modify_item(&target_key, &config, None, None, None, funs, ctx).await
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn get_root_config_by_tag(config: &[FlowRootConfigResp], tag: &str) -> TardisResult<Option<FlowReviewConfigLabelResp>> {
         if let Some(config) = config.iter().find(|conf| conf.code == *tag) {
             TardisFuns::json.str_to_obj::<FlowReviewConfigLabelResp>(&config.label).map_or(Ok(None), |o| Ok(Some(o)))
         } else {
             Ok(None)
+        }
+    }
+
+    fn get_root_config_key(rel_template_id: Option<String>, root_tag: &str, ctx: &TardisContext) -> String {
+        let tenant_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default();
+        let app_paths = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
+        if let Some(rel_template_id) = rel_template_id {
+            format!("__tag__:_:_:{}:{}_config", rel_template_id, root_tag.to_ascii_lowercase())
+        } else {
+            format!("__tag__:{}:{}:_:{}_config", tenant_paths, app_paths, root_tag.to_ascii_lowercase())
         }
     }
 }
