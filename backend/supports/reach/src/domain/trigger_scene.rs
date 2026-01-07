@@ -35,9 +35,6 @@ pub struct Model {
     #[tardis_entity(custom_len = "2000")]
     /// 父场景ID
     pub pid: Option<String>,
-    #[tardis_entity(custom_type = "string", custom_len = "2000")]
-    /// 接收方组编码集合
-    pub receive_group_codes: String,
 }
 
 impl From<&ReachTriggerSceneAddReq> for ActiveModel {
@@ -50,7 +47,6 @@ impl From<&ReachTriggerSceneAddReq> for ActiveModel {
         fill_by_add_req!(value => {
             pid,
         } model);
-        model.receive_group_codes = Set(value.receive_group_codes.as_ref().map(ToString::to_string).unwrap_or_default());
         model.code = Set(value.rbum_add_req.code.as_ref().map(ToString::to_string).unwrap_or_default());
         model.name = Set(value.rbum_add_req.name.to_string());
         model
@@ -67,7 +63,6 @@ impl From<&ReachTriggerSceneModifyReq> for ActiveModel {
             code,
             name,
         } model);
-        model.receive_group_codes = Set(value.receive_group_codes.as_ref().map(ToString::to_string).unwrap_or_default());
         model
     }
 }
