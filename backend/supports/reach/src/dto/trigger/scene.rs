@@ -16,6 +16,7 @@ use tardis::{
 };
 
 use crate::serv::ReachTriggerSceneService;
+use super::ReachTriggerGlobalConfigSummaryResp;
 
 /// 添加用户触达触发场景请求
 #[derive(Debug, poem_openapi::Object)]
@@ -99,6 +100,15 @@ pub struct ReachTriggerSceneDetailResp {
     pub name: String,
     /// 父场景ID
     pub pid: String,
+}
+
+/// 用户触达触发场景及其全局配置实例响应
+#[derive(Debug, poem_openapi::Object, Serialize, Deserialize)]
+pub struct ReachTriggerSceneWithGlobalInstancesResp {
+    /// 场景信息
+    pub scene: ReachTriggerSceneSummaryResp,
+    /// 全局配置实例列表
+    pub global_instances: Vec<ReachTriggerGlobalConfigSummaryResp>,
 }
 
 pub struct ReachTriggerSceneTree {
