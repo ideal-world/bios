@@ -4,6 +4,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use tardis::basic::error::TardisError;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -12,9 +13,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq,
-    FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp,
-    FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelAddAndCopyModelReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -522,6 +521,25 @@ impl FlowCcModelApi {
             )
             .await?;
         }
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Creating and copy model
+    ///
+    /// 创建并复制模型配置
+    #[oai(path = "/add_and_copy", method = "post")]
+    async fn add_and_copy(
+        &self,
+        req: Json<FlowModelAddAndCopyModelReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<FlowModelAggResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowModelServ::add_and_copy(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

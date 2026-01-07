@@ -9,7 +9,7 @@ use tardis::web::{
 };
 
 use crate::{
-    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceReq},
+    dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceCaReq},
     flow_constants,
     helper::task_handler_helper,
     serv::{
@@ -93,7 +93,7 @@ impl FlowCaModelApi {
     #[oai(path = "/copy_or_reference_single_model", method = "post")]
     async fn copy_or_reference_single_model(
         &self,
-        req: Json<FlowModelSingleCopyOrReferenceReq>,
+        req: Json<FlowModelSingleCopyOrReferenceCaReq>,
         ctx: TardisContextExtractor,
         _request: &Request,
     ) -> TardisApiResult<FlowModelAggResp> {
