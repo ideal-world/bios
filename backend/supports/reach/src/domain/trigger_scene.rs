@@ -35,6 +35,9 @@ pub struct Model {
     #[tardis_entity(custom_len = "2000")]
     /// 父场景ID
     pub pid: Option<String>,
+    #[tardis_entity(custom_type = "string", custom_len = "50")]
+    /// 类型
+    pub kind: String,
 }
 
 impl From<&ReachTriggerSceneAddReq> for ActiveModel {
@@ -49,6 +52,8 @@ impl From<&ReachTriggerSceneAddReq> for ActiveModel {
         } model);
         model.code = Set(value.rbum_add_req.code.as_ref().map(ToString::to_string).unwrap_or_default());
         model.name = Set(value.rbum_add_req.name.to_string());
+        let kind = value.kind.unwrap_or_default();
+        model.kind = Set(kind.as_str().to_string());
         model
     }
 }
@@ -63,6 +68,9 @@ impl From<&ReachTriggerSceneModifyReq> for ActiveModel {
             code,
             name,
         } model);
+        if let Some(kind) = &value.kind {
+            model.kind = Set(kind.as_str().to_string());
+        }
         model
     }
 }

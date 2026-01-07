@@ -48,12 +48,17 @@ impl ReachTriggerSceneCcApi {
     /// Find all trigger scenes with global instances
     /// 获取所有场景及其全局配置实例
     #[oai(method = "get", path = "/with_global_instances")]
-    pub async fn find_trigger_scenes_with_global_instances(&self, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachTriggerSceneWithGlobalInstancesResp>> {
+    pub async fn find_trigger_scenes_with_global_instances(&self, kind: Query<Option<ReachTriggerSceneKind>>, TardisContextExtractor(ctx): TardisContextExtractor) -> TardisApiResult<Vec<ReachTriggerSceneWithGlobalInstancesResp>> {
         let funs = get_tardis_inst();
         // 获取所有场景
         let mut filter = ReachTriggerSceneFilterReq::default();
         filter.base_filter.basic.with_sub_own_paths = true;
         filter.base_filter.basic.own_paths = Some(String::default());
+        filter.kinds = if let Some(kind) = kind.0 {
+            Some(vec![kind, ReachTriggerSceneKind::All])
+        } else {
+            Some(vec![ReachTriggerSceneKind::All])
+        };
         let scenes = ReachTriggerSceneService::find_rbums(&filter, None, None, &funs, &ctx).await?;
         
         // 为每个场景获取其 global_instances

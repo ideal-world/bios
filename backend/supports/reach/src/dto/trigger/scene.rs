@@ -18,6 +18,72 @@ use tardis::{
 use crate::serv::ReachTriggerSceneService;
 use super::ReachTriggerGlobalConfigSummaryResp;
 
+/// 触发场景类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, poem_openapi::Enum)]
+#[serde(rename_all = "PascalCase")]
+#[oai(rename_all = "PascalCase")]
+pub enum ReachTriggerSceneKind {
+    /// 全部
+    All,
+    /// 系统
+    System,
+    /// 租户
+    Tenant,
+    /// 应用
+    App,
+}
+
+impl ReachTriggerSceneKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ReachTriggerSceneKind::All => "All",
+            ReachTriggerSceneKind::System => "System",
+            ReachTriggerSceneKind::Tenant => "Tenant",
+            ReachTriggerSceneKind::App => "App",
+        }
+    }
+}
+
+impl From<ReachTriggerSceneKind> for String {
+    fn from(kind: ReachTriggerSceneKind) -> Self {
+        kind.as_str().to_string()
+    }
+}
+
+impl TryFrom<String> for ReachTriggerSceneKind {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "All" => Ok(ReachTriggerSceneKind::All),
+            "System" => Ok(ReachTriggerSceneKind::System),
+            "Tenant" => Ok(ReachTriggerSceneKind::Tenant),
+            "App" => Ok(ReachTriggerSceneKind::App),
+            _ => Err(format!("Invalid kind value: {}", value)),
+        }
+    }
+}
+
+impl TryFrom<&str> for ReachTriggerSceneKind {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "All" => Ok(ReachTriggerSceneKind::All),
+            "System" => Ok(ReachTriggerSceneKind::System),
+            "Tenant" => Ok(ReachTriggerSceneKind::Tenant),
+            "App" => Ok(ReachTriggerSceneKind::App),
+            _ => Err(format!("Invalid kind value: {}", value)),
+        }
+    }
+}
+
+impl Default for ReachTriggerSceneKind {
+    fn default() -> Self {
+        ReachTriggerSceneKind::All
+    }
+}
+
 /// 添加用户触达触发场景请求
 #[derive(Debug, poem_openapi::Object)]
 pub struct ReachTriggerSceneAddReq {
@@ -26,6 +92,8 @@ pub struct ReachTriggerSceneAddReq {
     #[oai(validator(max_length = "2000"))]
     /// 父场景ID
     pub pid: Option<String>,
+    /// 类型
+    pub kind: Option<ReachTriggerSceneKind>,
 }
 
 impl ReachTriggerSceneAddReq {
@@ -41,10 +109,15 @@ impl ReachTriggerSceneAddReq {
                 disabled: Some(false),
             },
             pid: Default::default(),
+            kind: None,
         }
     }
     pub fn pid(mut self, pid: impl Into<String>) -> Self {
         self.pid = Some(pid.into());
+        self
+    }
+    pub fn kind(mut self, kind: ReachTriggerSceneKind) -> Self {
+        self.kind = Some(kind);
         self
     }
 }
@@ -56,6 +129,8 @@ pub struct ReachTriggerSceneModifyReq {
     #[oai(validator(max_length = "255"))]
     /// 名称
     pub name: String,
+    /// 类型
+    pub kind: Option<ReachTriggerSceneKind>,
 }
 
 /// 用户触达触发场景过滤请求
@@ -69,6 +144,8 @@ pub struct ReachTriggerSceneFilterReq {
     #[oai(validator(max_length = "255"))]
     /// 名称
     pub name: Option<String>,
+    /// 类型列表
+    pub kinds: Option<Vec<ReachTriggerSceneKind>>,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
@@ -84,6 +161,8 @@ pub struct ReachTriggerSceneSummaryResp {
     pub name: String,
     /// 父场景ID
     pub pid: String,
+    /// 类型
+    pub kind: String,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]
@@ -100,6 +179,8 @@ pub struct ReachTriggerSceneDetailResp {
     pub name: String,
     /// 父场景ID
     pub pid: String,
+    /// 类型
+    pub kind: String,
 }
 
 /// 用户触达触发场景及其全局配置实例响应
