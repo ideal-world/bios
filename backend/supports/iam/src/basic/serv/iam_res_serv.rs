@@ -723,55 +723,84 @@ impl IamResServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<HashMap<String, Vec<IamResSummaryResp>>> {
-        // todo 优化接口
+        // 1. 提前获取所有角色并批量检查禁用状态
         let raw_roles = IamAccountServ::find_simple_rel_roles(&ctx.owner, true, Some(true), None, funs, ctx).await?;
-        let mut roles: Vec<RbumRelBoneResp> = vec![];
-        let mut result = HashMap::new();
-        for role in raw_roles {
-            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                roles.push(role)
-            }
-        }
-        let global_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
-        for app_id in app_ids {
-            let mut res_ids = HashSet::new();
-            let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.clone()))?;
-            let app_role_ids =
-                roles.iter().filter(|r| r.rel_own_paths == app_ctx.own_paths || r.rel_own_paths == ctx.own_paths).map(|r| r.rel_id.to_string()).collect::<Vec<String>>();
-            // TODO default empty res
-            res_ids.insert("".to_string());
-            for role_id in app_role_ids {
-                let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
-                res_ids.extend(rel_res_ids.into_iter());
-                if role_id.contains(':') {
-                    let extend_role_id = role_id.split(':').collect::<Vec<&str>>()[0];
-                    let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, extend_role_id, None, None, funs, &global_ctx).await?;
-                    res_ids.extend(rel_res_ids.into_iter());
-                }
-            }
-            let res_codes = if let Some(res_codes) = &res_codes {
-                let codes = res_codes.clone();
-                Some(res_codes.iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*", code)).chain(codes).collect::<Vec<String>>())
-            } else {
-                None
-            };
-            let res = Self::find_items(
-                &IamResFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ids: Some(res_ids.into_iter().collect()),
-                        codes: res_codes.clone(),
-                        ..Default::default()
-                    },
+        // 批量检查角色禁用状态，减少数据库查询
+        let role_ids: Vec<String> = raw_roles.iter().map(|r| r.rel_id.clone()).collect();
+        let disabled_role_ids = IamRoleServ::find_id_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(role_ids),
+                    enabled: Some(true),
                     ..Default::default()
                 },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            result.insert(app_id, res);
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let roles: Vec<RbumRelBoneResp> = raw_roles.into_iter().filter(|role| !disabled_role_ids.contains(&role.rel_id)).collect();
+        let global_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+
+        // 2. 提前处理 res_codes，避免在循环中重复操作
+        let processed_res_codes =
+            res_codes.as_ref().map(|codes| codes.iter().map(|code| format!("{}/{}/{}", IamResKind::Ele.to_int(), "*", code)).chain(codes.iter().cloned()).collect::<Vec<String>>());
+
+        // 3. 并发处理每个 app_id
+        let tasks = app_ids.into_iter().map(|app_id| {
+            let roles = roles.clone();
+            let global_ctx = global_ctx.clone();
+            let processed_res_codes = processed_res_codes.clone();
+            let ctx = ctx.clone();
+
+            async move {
+                let mut res_ids = HashSet::new();
+                res_ids.insert("".to_string()); // default empty res
+
+                let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.clone()))?;
+                let app_role_ids: Vec<String> =
+                    roles.iter().filter(|r| r.rel_own_paths == app_ctx.own_paths || r.rel_own_paths == ctx.own_paths).map(|r| r.rel_id.to_string()).collect();
+
+                for role_id in app_role_ids {
+                    let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
+                    res_ids.extend(rel_res_ids.into_iter());
+
+                    if role_id.contains(':') {
+                        let extend_role_id = role_id.split(':').collect::<Vec<&str>>()[0];
+                        let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, extend_role_id, None, None, funs, &global_ctx).await?;
+                        res_ids.extend(rel_res_ids.into_iter());
+                    }
+                }
+
+                let res = Self::find_items(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ids: Some(res_ids.into_iter().collect()),
+                            codes: processed_res_codes,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    &ctx,
+                )
+                .await?;
+
+                Ok::<(String, Vec<IamResSummaryResp>), tardis::basic::error::TardisError>((app_id, res))
+            }
+        });
+        // 4. 等待所有并发任务完成并组装结果
+        let results = join_all(tasks).await;
+        let mut result = HashMap::new();
+        for res in results {
+            let (app_id, res_list) = res?;
+            result.insert(app_id, res_list);
         }
         Ok(result)
     }
