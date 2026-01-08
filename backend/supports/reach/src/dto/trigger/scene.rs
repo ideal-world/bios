@@ -31,6 +31,8 @@ pub enum ReachTriggerSceneKind {
     Tenant,
     /// 应用
     App,
+    /// 合同
+    Contract,
 }
 
 impl ReachTriggerSceneKind {
@@ -40,6 +42,7 @@ impl ReachTriggerSceneKind {
             ReachTriggerSceneKind::System => "System",
             ReachTriggerSceneKind::Tenant => "Tenant",
             ReachTriggerSceneKind::App => "App",
+            ReachTriggerSceneKind::Contract => "Contract",
         }
     }
 }
@@ -59,6 +62,7 @@ impl TryFrom<String> for ReachTriggerSceneKind {
             "System" => Ok(ReachTriggerSceneKind::System),
             "Tenant" => Ok(ReachTriggerSceneKind::Tenant),
             "App" => Ok(ReachTriggerSceneKind::App),
+            "Contract" => Ok(ReachTriggerSceneKind::Contract),
             _ => Err(format!("Invalid kind value: {}", value)),
         }
     }
@@ -73,6 +77,7 @@ impl TryFrom<&str> for ReachTriggerSceneKind {
             "System" => Ok(ReachTriggerSceneKind::System),
             "Tenant" => Ok(ReachTriggerSceneKind::Tenant),
             "App" => Ok(ReachTriggerSceneKind::App),
+            "Contract" => Ok(ReachTriggerSceneKind::Contract),
             _ => Err(format!("Invalid kind value: {}", value)),
         }
     }

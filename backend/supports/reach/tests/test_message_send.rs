@@ -230,7 +230,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
     // add trigger instance config
     let rel_item_id = "test".to_string();
     let receive_group_code = random_string(10);
-    let receive_group_name = "test_receive_group".to_string();
     {
         log::info!("add trigger instance config");
         let add_trigger_instance_config_req = ReachTriggerInstanceConfigAddOrModifyReq {
@@ -238,7 +237,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
             rel_reach_channel: ReachChannelKind::Sms,
             rel_item_id: rel_item_id.clone(),
             receive_group_code: receive_group_code.clone(),
-            receive_group_name: receive_group_name.clone(),
             delete_kind: false,
         };
         let agg_req = ReachTriggerInstanceConfigAddOrModifyAggReq {
