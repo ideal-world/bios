@@ -1,0 +1,95 @@
+# # 用于编译可执行文件
+# FROM rust:1.86-alpine AS builder
+# WORKDIR /app
+
+# RUN apk update && \
+#     apk add --no-cache -U openssl-dev \
+#     apt install protobuf-compiler \
+#     build-base \
+#     openssl-libs-static &&\
+#     rm -rf /var/cache/apk/*
+
+# ENV OPENSSL_LIB_DIR=/usr/lib
+# ENV OPENSSL_INCLUDE_DIR=/usr/include
+# ENV OPENSSL_STATIC=1
+
+# # 复制整个项目代码
+# COPY . .
+
+# RUN --mount=type=cache,id=bios_spacegate_cargo_target,target=/app/target/ \
+#     --mount=type=cache,id=bios_spacegate_cargo_registry,target=/usr/local/cargo/registry \
+#     --mount=type=cache,id=bios_spacegate_cargo_git,target=/usr/local/cargo/git \
+#     cargo build --release --bin bios-spacegate \
+#     && cp target/release/bios-spacegate /app/bios-spacegate
+
+# # 用于运行可执行文件
+# FROM alpine:latest
+# LABEL org.opencontainers.image.source=https://github.com/ideal-world/aios
+# # 使用最新的 Alpine 镜像
+# ENV TZ=Asia/Shanghai
+
+# WORKDIR /home
+# # 创建用于放置配置文件的目录 /config
+# RUN mkdir -p /home/config
+
+# # 更新软件包，安装 tzdata，设置时区为上海，删除 tzdata 并清理缓存
+# RUN apk update && \
+#     apk add --no-cache tzdata && \
+#     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+#     echo "Asia/Shanghai" > /etc/timezone && \
+#     apk del tzdata && \
+#     apk add curl && \
+#     rm -rf /var/cache/apk/*
+
+# COPY --from=builder /app/bios-spacegate /home/spacegate
+
+# #platform
+# EXPOSE 80
+
+# CMD ["./spacegate"]
+
+FROM rust-base:latest AS builder
+WORKDIR /bios
+RUN apt-get update
+RUN apt-get install -y protobuf-compiler
+COPY . .
+RUN --mount=type=cache,id=bios_spacegate_cargo_target,target=/app/target/ \
+    --mount=type=cache,id=bios_spacegate_cargo_registry,target=/usr/local/cargo/registry \
+    --mount=type=cache,id=bios_spacegate_cargo_git,target=/usr/local/cargo/git \
+    cargo build --release --bin bios-spacegate \
+    && cp target/release/bios-spacegate /app/bios-spacegate
+
+# 编译为 release 版本
+RUN cargo build --release -p bios-spacegate
+
+FROM ubuntu:22.04
+
+ENV TZ=Asia/Shanghai
+
+RUN apt-get update && \
+    apt-get install -yq tzdata && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+RUN apt install -y --reinstall ca-certificates
+RUN update-ca-certificates -f
+RUN  echo 'ca_certificate=/etc/ssl/certs/ca-certificates.crt'  >> /root/.wgetrc
+
+RUN sed -i '1i\openssl_conf = default_conf' /usr/lib/ssl/openssl.cnf
+RUN echo '[ default_conf ] \n\
+ssl_conf = ssl_sect \n\
+[ssl_sect] \n\
+system_default = system_default_sect \n\
+[system_default_sect] \n\
+MinProtocol = TLSv1 \n\
+CipherString = DEFAULT:@SECLEVEL=1 \n'\
+>>/usr/lib/ssl/openssl.cnf
+
+WORKDIR /bios
+
+RUN mkdir -p ./config/locale/
+COPY --from=builder /app/bios-spacegate /bios/spacegate
+
+EXPOSE 80
+
+CMD ["./spacegate"]

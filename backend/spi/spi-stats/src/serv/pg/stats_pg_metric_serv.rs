@@ -14,19 +14,16 @@ use tardis::{
     },
     futures::future::try_join_all,
     serde_json::{self, json, Map},
-    web::{poem::get, web_resp::TardisPage},
+    web::web_resp::TardisPage,
     TardisFunsInst,
 };
 
 use super::{stats_pg_conf_fact_detail_serv, stats_pg_record_serv};
 use crate::{
-    dto::{
-        stats_conf_dto::StatsConfFactInfoResp,
-        stats_query_dto::{
-            StatsQueryDimensionGroupOrderReq, StatsQueryDimensionGroupReq, StatsQueryDimensionOrderReq, StatsQueryMetricsHavingReq, StatsQueryMetricsOrderReq,
-            StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq, StatsQueryRecordDetailColumnResp,
-            StatsQueryRecordDetailResp,
-        },
+    dto::stats_query_dto::{
+        StatsQueryDimensionGroupOrderReq, StatsQueryDimensionGroupReq, StatsQueryDimensionOrderReq, StatsQueryMetricsHavingReq, StatsQueryMetricsOrderReq,
+        StatsQueryMetricsRecordReq, StatsQueryMetricsReq, StatsQueryMetricsResp, StatsQueryMetricsSelectReq, StatsQueryMetricsWhereReq, StatsQueryRecordDetailColumnResp,
+        StatsQueryRecordDetailResp,
     },
     serv::pg::stats_pg_conf_fact_serv,
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind, StatsFactDetailKind, StatsQueryAggFunKind},

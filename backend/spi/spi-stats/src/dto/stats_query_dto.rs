@@ -75,6 +75,14 @@ pub struct StatsQueryMetricsReq {
     /// 分组后的过滤条件
     /// code和fun必须存在于Select中
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
+    /// Whether to return complete data including all combinations of dimensions
+    /// If true, all combinations of dimensions will be returned, with null or 0 for missing data
+    /// If false or null, only existing data combinations will be returned
+    /// 
+    /// 是否返回包含所有维度组合的完整数据
+    /// 如果为true，则返回所有维度组合，缺失数据以null或0表示
+    /// 如果为false或null，则只返回存在数据的组合
+    pub dim_complete_data: Option<bool>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub limit: Option<u32>,
