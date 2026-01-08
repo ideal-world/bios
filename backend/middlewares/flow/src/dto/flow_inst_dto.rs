@@ -305,6 +305,38 @@ pub struct FlowInstArtifactsModifyReq {
     pub rel_model_version_id: Option<String>,                          // 关联的子业务对象所使用的模型版本
 }
 
+// 流程实例中数据存储更新（API请求，只允许修改 rel_child_objs 和 operator_map）
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default, poem_openapi::Object)]
+pub struct FlowInstArtifactsModifyApiReq {
+    pub operator_map: Option<HashMap<String, Vec<String>>>,            // 操作人映射 key为节点ID,对应的value为节点对应的操作人ID列表
+    pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,              // 关联的子业务对象
+}
+
+impl From<FlowInstArtifactsModifyApiReq> for FlowInstArtifactsModifyReq {
+    fn from(api_req: FlowInstArtifactsModifyApiReq) -> Self {
+        FlowInstArtifactsModifyReq {
+            state: None,
+            add_his_operator: None,
+            curr_operators: None,
+            add_approval_result: None,
+            form_state_map: None,
+            clear_form_result: None,
+            clear_approval_result: None,
+            prev_non_auto_state_id: None,
+            prev_non_auto_account_id: None,
+            curr_approval_total: None,
+            curr_vars: None,
+            add_referral_map: None,
+            remove_referral_map: None,
+            clear_referral_map: None,
+            operator_map: api_req.operator_map,
+            rel_child_objs: api_req.rel_child_objs,
+            rel_transition_id: None,
+            rel_model_version_id: None,
+        }
+    }
+}
+
 /// 审批结果类型
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Enum, Default, Eq, Hash, PartialEq, Clone)]
 pub enum FlowApprovalResultKind {
