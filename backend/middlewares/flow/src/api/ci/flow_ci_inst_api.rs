@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::chrono::Utc;
@@ -15,16 +17,18 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
+    FlowInstAbortReq, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
     FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
 };
+use crate::dto::flow_model_version_dto::FlowModelVersionFilterReq;
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
 use crate::serv::flow_event_serv::FlowEventServ;
 use crate::serv::flow_inst_serv::FlowInstServ;
+use crate::serv::flow_model_version_serv::FlowModelVersionServ;
 use crate::serv::flow_transition_serv::FlowTransitionServ;
 #[derive(Clone)]
 pub struct FlowCiInstApi;
@@ -532,6 +536,65 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         FlowInstServ::sync_state_color(&req.0, &funs, &ctx.0).await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify Instance Artifacts
+    ///
+    /// 修改实例的数据对象
+    #[oai(path = "/:flow_inst_id/artifacts", method = "patch")]
+    async fn modify_inst_artifacts(
+        &self,
+        flow_inst_id: Path<String>,
+        modify_req: Json<FlowInstArtifactsModifyApiReq>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+        if !inst.main {
+            return TardisResp::err(
+                funs.err().bad_request(
+                    "flow_ci_inst_api",
+                    "modify_inst_artifacts",
+                    "Only main instances can modify artifacts",
+                    "400-flow-inst-not-main",
+                ),
+            );
+        }
+        // 检查当前状态是否为初始状态
+        let model_version = FlowModelVersionServ::get_item(
+            &inst.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        if inst.current_state_id != model_version.init_state_id {
+            return TardisResp::err(
+                funs.err().bad_request(
+                    "flow_ci_inst_api",
+                    "modify_inst_artifacts",
+                    "Only instances in initial state can modify artifacts",
+                    "400-flow-inst-not-initial-state",
+                ),
+            );
+        }
+        funs.begin().await?;
+        let modify_req_internal: FlowInstArtifactsModifyReq = modify_req.0.into();
+        FlowInstServ::modify_inst_artifacts(&flow_inst_id.0, &modify_req_internal, &funs, &ctx.0).await?;
+        funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
