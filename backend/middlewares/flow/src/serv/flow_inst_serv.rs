@@ -3560,7 +3560,7 @@ impl FlowInstServ {
     }
 
     // 修改实例的数据对象
-    async fn modify_inst_artifacts(inst_id: &str, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_inst_artifacts(inst_id: &str, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
         let mut inst_artifacts = inst.artifacts.unwrap_or_default();
         if let Some(state) = modify_artifacts.state {
