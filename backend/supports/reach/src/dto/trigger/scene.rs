@@ -94,6 +94,9 @@ pub struct ReachTriggerSceneAddReq {
     pub pid: Option<String>,
     /// 类型
     pub kind: Option<ReachTriggerSceneKind>,
+    /// 排序
+    #[oai(default)]
+    pub sort: i32,
 }
 
 impl ReachTriggerSceneAddReq {
@@ -110,6 +113,7 @@ impl ReachTriggerSceneAddReq {
             },
             pid: Default::default(),
             kind: None,
+            sort: 0,
         }
     }
     pub fn pid(mut self, pid: impl Into<String>) -> Self {
@@ -131,6 +135,9 @@ pub struct ReachTriggerSceneModifyReq {
     pub name: String,
     /// 类型
     pub kind: Option<ReachTriggerSceneKind>,
+    /// 排序
+    #[oai(default)]
+    pub sort: Option<i32>,
 }
 
 /// 用户触达触发场景过滤请求
@@ -146,6 +153,8 @@ pub struct ReachTriggerSceneFilterReq {
     pub name: Option<String>,
     /// 类型列表
     pub kinds: Option<Vec<ReachTriggerSceneKind>>,
+    /// 排序
+    pub sort_asc: Option<bool>,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult)]

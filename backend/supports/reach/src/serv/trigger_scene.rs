@@ -66,6 +66,9 @@ impl
                 query.and_where(trigger_scene::Column::Kind.is_in(kind_strings));
             }
         }
+        if let Some(sort_asc) = filter.sort_asc {
+            query.order_by(trigger_scene::Column::Sort, if sort_asc { Order::Asc } else { Order::Desc });
+        }
         query.with_filter(Self::get_table_name(), &filter.base_filter.basic, is_detail, false, ctx);
         Ok(query)
     }

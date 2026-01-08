@@ -28,6 +28,7 @@ impl ReachTriggerSceneCcApi {
         let mut filter = ReachTriggerSceneFilterReq::default();
         filter.base_filter.basic.with_sub_own_paths = true;
         filter.base_filter.basic.own_paths = Some(String::default());
+        filter.sort_asc = Some(true);
         let resp = ReachTriggerSceneService::find_rbums(&filter, None, None, &funs, &ctx).await?;
         TardisResp::ok(resp)
     }
@@ -54,6 +55,7 @@ impl ReachTriggerSceneCcApi {
         let mut filter = ReachTriggerSceneFilterReq::default();
         filter.base_filter.basic.with_sub_own_paths = true;
         filter.base_filter.basic.own_paths = Some(String::default());
+        filter.sort_asc = Some(true);
         filter.kinds = if let Some(kind) = kind.0 {
             Some(vec![kind, ReachTriggerSceneKind::All])
         } else {
