@@ -214,6 +214,7 @@ pub trait S3 {
         special: Option<bool>,
         bs_id: Option<&str>,
         bucket: Option<&str>,
+        obj_exp: Option<u32>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
@@ -221,7 +222,19 @@ pub trait S3 {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
         let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
-        client.initiate_multipart_upload(object_path, content_type.as_deref(), bucket_name.as_deref()).await
+        let headers = obj_exp
+            .map(|o| -> TardisResult<HeaderMap> {
+                let mut headers = HeaderMap::new();
+                headers.insert(
+                    "x-obs-expires",
+                    HeaderValue::from_str(&o.to_string())
+                        .map_err(|_| TardisError::internal_error("Cannot convert expires to header value", "500-spi-object-invalid-header-value"))?,
+                );
+                Ok(headers)
+            })
+            .transpose()?;
+        let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
+        client.initiate_multipart_upload(&path, content_type.as_deref(), bucket_name.as_deref(), headers).await
     }
 
     async fn batch_build_create_presign_url(
@@ -233,6 +246,7 @@ pub trait S3 {
         special: Option<bool>,
         bs_id: Option<&str>,
         bucket: Option<&str>,
+        obj_exp: Option<u32>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
@@ -240,7 +254,8 @@ pub trait S3 {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
         let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
-        client.batch_build_create_presign_url(object_path, upload_id, part_number, expire_sec, bucket_name.as_deref()).await
+        let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
+        client.batch_build_create_presign_url(&path, upload_id, part_number, expire_sec, bucket_name.as_deref()).await
     }
 
     async fn complete_multipart_upload(
@@ -251,6 +266,7 @@ pub trait S3 {
         special: Option<bool>,
         bs_id: Option<&str>,
         bucket: Option<&str>,
+        obj_exp: Option<u32>,
         _funs: &TardisFunsInst,
         _ctx: &TardisContext,
         inst: &SpiBsInst,
@@ -258,7 +274,8 @@ pub trait S3 {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
         let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
-        client.complete_multipart_upload(object_path, upload_id, parts, bucket_name.as_deref()).await
+        let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
+        client.complete_multipart_upload(&path, upload_id, parts, bucket_name.as_deref()).await
     }
 
     fn get_bucket_name(private: Option<bool>, special: Option<bool>, obj_exp: Option<u32>, bucket_name: Option<&str>, bs_id: Option<&str>, inst: &SpiBsInst) -> Option<String> {
