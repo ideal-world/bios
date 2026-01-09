@@ -222,8 +222,19 @@ pub trait S3 {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
         let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
+        let headers = obj_exp
+            .map(|o| -> TardisResult<HeaderMap> {
+                let mut headers = HeaderMap::new();
+                headers.insert(
+                    "x-obs-expires",
+                    HeaderValue::from_str(&o.to_string())
+                        .map_err(|_| TardisError::internal_error("Cannot convert expires to header value", "500-spi-object-invalid-header-value"))?,
+                );
+                Ok(headers)
+            })
+            .transpose()?;
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
-        client.initiate_multipart_upload(&path, content_type.as_deref(), bucket_name.as_deref()).await
+        client.initiate_multipart_upload(&path, content_type.as_deref(), bucket_name.as_deref(), headers).await
     }
 
     async fn batch_build_create_presign_url(
