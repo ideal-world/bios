@@ -64,6 +64,8 @@ pub struct SgPluginAuthConfig {
     pub header_is_mix_req: String,
     pub header_is_same_req: String,
     pub cache_key_is_same_req: String,
+    /// Timeout in seconds for same request cache
+    pub cache_same_req_timeout_sec: u64,
     pub fetch_server_config_path: String,
     pub mix_replace_url: String,
     pub auth_path_ignore_prefix: String,
@@ -124,6 +126,7 @@ impl Default for SgPluginAuthConfig {
             auth_path_ignore_prefix: "/starsysApi".to_string(),
             header_is_same_req: "Bios-Is-Same-Req".to_string(),
             cache_key_is_same_req: "sg:plugin:auth:".to_string(),
+            cache_same_req_timeout_sec: 10,
         }
     }
 }
@@ -137,6 +140,8 @@ pub struct AuthPlugin {
     header_is_same_req: HeaderName,
     /// key=format!({cache_key}{req_id})
     cache_key_is_same_req: String,
+    /// Timeout in seconds for same request cache
+    cache_same_req_timeout_sec: u64,
     fetch_server_config_path: String,
     /// Specify the part of the mix request url that needs to be replaced.
     /// Default is `apis`
@@ -167,6 +172,7 @@ impl From<SgPluginAuthConfig> for AuthPlugin {
             mix_replace_url: value.mix_replace_url,
             auth_path_ignore_prefix: value.auth_path_ignore_prefix,
             cache_key_is_same_req: value.cache_key_is_same_req,
+            cache_same_req_timeout_sec: value.cache_same_req_timeout_sec,
         }
     }
 }
@@ -218,7 +224,7 @@ impl AuthPlugin {
 
         let req_id = TardisFuns::crypto.key.rand_16_hex();
         req.headers_mut().insert(self.header_is_same_req.clone(), HeaderValue::from_str(&req_id)?);
-        conn.set_ex(format!("{}{}", self.cache_key_is_same_req, req_id), "", 5).await?;
+        conn.set_ex(format!("{}{}", self.cache_key_is_same_req, req_id), "", self.cache_same_req_timeout_sec).await?;
         Ok(false)
     }
 

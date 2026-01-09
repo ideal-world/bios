@@ -2,6 +2,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq},
         rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelAttrAggAddReq},
+        rbum_rel_attr_dto::RbumRelAttrDetailResp,
         rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelDetailResp, RbumRelSimpleFindReq},
     },
     rbum_enumeration::RbumRelFromKind,
@@ -410,5 +411,27 @@ impl PluginRelServ {
             .await?,
         };
         Ok(resp)
+    }
+
+    pub async fn show_rel_attr(rel_id: &str, attr_name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let attrs = RbumRelAttrServ::find_rbums(
+            &RbumRelExtFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                rel_rbum_rel_id: Some(rel_id.to_string()),
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(attr) = attrs.iter().find(|attr| attr.name == attr_name) {
+            return Ok(attr.value.to_string());
+        }
+        Ok("".to_string())
     }
 }

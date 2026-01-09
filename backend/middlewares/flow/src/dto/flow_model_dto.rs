@@ -16,6 +16,8 @@ use tardis::{
     TardisFuns,
 };
 
+use crate::dto::flow_config_dto::FlowRootConfigResp;
+
 use super::{
     flow_cond_dto::BasicQueryCondInfo,
     flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionModifyReq, FlowModelVesionState},
@@ -384,6 +386,12 @@ pub struct FlowModelSummaryResp {
     pub data_source: Option<String>,
 }
 
+impl FlowModelSummaryResp {
+    pub fn states(&self) -> Vec<FlowStateAggResp> {
+        TardisFuns::json.json_to_obj(self.states.clone()).unwrap_or_default()
+    }
+}
+
 impl From<FlowModelAggResp> for FlowModelSummaryResp {
     fn from(value: FlowModelAggResp) -> Self {
         Self {
@@ -566,7 +574,7 @@ impl FlowModelDetailResp {
             icon: Some(self.icon.clone()),
             info: Some(self.info.clone()),
             kind: self.kind,
-            status: self.status,
+            status: self.status.clone(),
             rel_transition_ids,
             rel_template_ids: Some(self.rel_template_ids.clone()),
             add_version: Some(FlowModelVersionAddReq {
@@ -574,7 +582,7 @@ impl FlowModelDetailResp {
                 name: self.name.as_str().into(),
                 rel_model_id: Some(self.id.clone()),
                 bind_states: Some(states),
-                status: FlowModelVesionState::Enabled,
+                status: if self.status == FlowModelStatus::Disabled {FlowModelVesionState::Disabled} else {FlowModelVesionState::Enabled},
                 scope_level: Some(self.scope_level.clone()),
                 disabled: Some(self.disabled),
             }),
@@ -802,7 +810,7 @@ pub struct FlowModelCopyOrReferenceReq {
 
 /// 创建或引用模型请求
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowModelSingleCopyOrReferenceReq {
+pub struct FlowModelSingleCopyOrReferenceCaReq {
     /// 关联的模型ID列表
     pub tag: String,
     /// 关联的模型ID
@@ -825,6 +833,30 @@ pub struct FlowModelCopyOrReferenceCiReq {
     /// 切换模板时，状态更新映射
     pub update_states: Option<HashMap<String, HashMap<String, String>>>,
     pub data_source: Option<String>,
+}
+
+/// 创建或引用模型请求
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelAddAndCopyModelReq { 
+    #[oai(validator(min_length = "2", max_length = "200"))]
+    pub name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub icon: Option<String>,
+    #[oai(validator(max_length = "2000"))]
+    pub info: Option<String>,
+    /// 关联模板ID（目前可能是页面模板ID，或者是项目模板ID）
+    pub rel_template_ids: Option<Vec<String>>,
+
+    pub scope_level: Option<RbumScopeLevelKind>,
+    /// 标签
+    pub tag: String,
+    /// 工作流模型类型
+    pub kind: FlowModelKind,
+    
+    /// 关联的模型ID
+    pub rel_model_id: Option<String>,
+    /// 切换模板时，状态更新映射
+    pub update_states: Option<HashMap<String, String>>,
 }
 
 /// 检查关联模板请求

@@ -25,7 +25,7 @@ use crate::{
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::{IamRelKind, IamSetKind},
+    iam_enumeration::{IamRelKind, IamSetKind, IamCertKernelKind},
 };
 pub struct IamSearchClient;
 
@@ -310,7 +310,7 @@ impl IamSearchClient {
         }
         // 岗位
         let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
-        let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| attr.value.clone());
+        let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| if attr.value.is_empty() { vec![] } else {attr.value.clone().split(",").map(|a| a.to_string()).collect_vec()});
         let standard_level = account_resp.exts.iter().find(|attr| attr.name == "standard_level").map(|attr| TardisFuns::json.str_to_obj::<HashMap<String,String>>(attr.value.as_str()).unwrap_or_default()).unwrap_or_default();
         let standard_level_map = IamKvClient::get_item_value("__tag__:_:standardLevel", funs, ctx).await?.unwrap_or_default();
         let position_map = IamKvClient::get_item_value("__tag__:_:position:all", funs, ctx).await?.unwrap_or_default();
@@ -327,8 +327,8 @@ impl IamSearchClient {
         }
         let mut raw_secondary_map = HashMap::new();
         if let Some(sec) = secondary_code.clone() {
-            for s in sec.split(",") {
-                let standard_level_code = standard_level.get(s).cloned().unwrap_or_default();
+            for s in sec {
+                let standard_level_code = standard_level.get(&s).cloned().unwrap_or_default();
                 raw_secondary_map.insert(
                     s.to_string(),
                     json!({
@@ -339,6 +339,7 @@ impl IamSearchClient {
             }
         }
         let ext = json!({
+            "name": account_resp.name,
             "status": account_resp.status,
             "temporary":account_resp.temporary,
             "lock_status": account_resp.lock_status,
@@ -356,6 +357,7 @@ impl IamSearchClient {
             "certs":account_resp.certs,
             "icon":account_resp.icon,
             "logout_msg":logout_msg,
+            "phone_number": account_resp.certs.get(&IamCertKernelKind::PhoneVCode.to_string()),
             "disabled":account_resp.disabled,
             "logout_time":account_resp.logout_time,
             "logout_type":account_resp.logout_type,
