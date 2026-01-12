@@ -216,6 +216,7 @@ pub async fn test_ct_api() -> TardisResult<()> {
             rel_reach_msg_template_id: template_id.clone(),
             rel_reach_msg_signature_id: signature_id.clone(),
             rel_reach_channel: ReachChannelKind::Sms,
+            receive_group_codes: Some("CREATOR_GROUP".to_string()),
         };
         let agg_req = ReachTriggerGlobalConfigAddOrModifyAggReq {
             global_config: vec![add_trigger_global_config_req],
@@ -223,12 +224,12 @@ pub async fn test_ct_api() -> TardisResult<()> {
         client.add_or_modify_global_config(&agg_req).await?;
         let all_configs = client.find_trigger_global_config().await?;
         assert_eq!(all_configs.len(), 1);
+        assert_eq!(all_configs[0].receive_group_codes, "CREATOR_GROUP".to_string());
     };
 
     // add trigger instance config
     let rel_item_id = "test".to_string();
     let receive_group_code = random_string(10);
-    let receive_group_name = "test_receive_group".to_string();
     {
         log::info!("add trigger instance config");
         let add_trigger_instance_config_req = ReachTriggerInstanceConfigAddOrModifyReq {
@@ -236,7 +237,6 @@ pub async fn test_ct_api() -> TardisResult<()> {
             rel_reach_channel: ReachChannelKind::Sms,
             rel_item_id: rel_item_id.clone(),
             receive_group_code: receive_group_code.clone(),
-            receive_group_name: receive_group_name.clone(),
             delete_kind: false,
         };
         let agg_req = ReachTriggerInstanceConfigAddOrModifyAggReq {
