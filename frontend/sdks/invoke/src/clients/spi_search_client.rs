@@ -5,7 +5,7 @@ use tardis::TardisFunsInst;
 
 #[cfg(feature = "event")]
 use crate::clients::event_client::mq_client_node;
-use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp};
+use crate::dto::search_item_dto::{SearchEventItemDeleteReq, SearchEventItemModifyReq, SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchSaveItemReq};
 #[cfg(feature = "event")]
 use crate::invoke_config::InvokeConfigApi as _;
 use crate::invoke_enumeration::InvokeModuleKind;
@@ -108,6 +108,22 @@ impl SpiSearchClient {
         let resp =
             funs.web_client().put::<SearchItemSearchReq, TardisResp<TardisPage<SearchItemSearchResp>>>(format!("{search_url}/ci/item/search"), search_req, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)
+    }
+
+    /// Batch save
+    pub async fn batch_save(tag: &str, batch_req: &Vec<SearchSaveItemReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/batch/save"), batch_req, headers.clone()).await?;
+        Ok(())
+    }
+
+    /// Batch Delete
+    pub async fn batch_delete(tag: &str, batch_req: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/batch/delete"), batch_req, headers.clone()).await?;
+        Ok(())
     }
 }
 #[cfg(feature = "event")]

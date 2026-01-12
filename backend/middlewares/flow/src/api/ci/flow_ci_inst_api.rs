@@ -554,46 +554,8 @@ impl FlowCiInstApi {
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        if !inst.main {
-            return TardisResp::err(
-                funs.err().bad_request(
-                    "flow_ci_inst_api",
-                    "modify_inst_artifacts",
-                    "Only main instances can modify artifacts",
-                    "400-flow-inst-not-main",
-                ),
-            );
-        }
-        // 检查当前状态是否为初始状态
-        let model_version = FlowModelVersionServ::get_item(
-            &inst.rel_flow_version_id,
-            &FlowModelVersionFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    enabled: Some(true),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        if inst.current_state_id != model_version.init_state_id {
-            return TardisResp::err(
-                funs.err().bad_request(
-                    "flow_ci_inst_api",
-                    "modify_inst_artifacts",
-                    "Only instances in initial state can modify artifacts",
-                    "400-flow-inst-not-initial-state",
-                ),
-            );
-        }
         funs.begin().await?;
-        let modify_req_internal: FlowInstArtifactsModifyReq = modify_req.0.into();
-        FlowInstServ::modify_inst_artifacts(&flow_inst_id.0, &modify_req_internal, &funs, &ctx.0).await?;
+        FlowInstServ::modify_inst_artifacts_with_validation(&flow_inst_id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
