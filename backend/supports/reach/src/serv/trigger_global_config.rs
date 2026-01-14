@@ -70,7 +70,7 @@ impl
             rel_reach_channel: Some(add_req.rel_reach_channel),
             ..Default::default()
         };
-        filter.base_filter.basic.with_sub_own_paths = true;
+        filter.base_filter.basic.with_sub_own_paths = false;
 
         if 0 != Self::count_rbums(&filter, funs, ctx).await? {
             log::warn!(
@@ -109,7 +109,7 @@ impl
 impl ReachTriggerGlobalConfigService {
     async fn add_or_modify_by_single_req(mut req: ReachTriggerGlobalConfigAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut filter = ReachTriggerGlobalConfigFilterReq::default();
-        filter.base_filter.basic.with_sub_own_paths = true;
+        filter.base_filter.basic.with_sub_own_paths = false;
         filter.rel_reach_channel = Some(req.rel_reach_channel);
         filter.rel_reach_trigger_scene_id = Some(req.rel_reach_trigger_scene_id.clone());
         if let Some(trigger_global_config) = Self::find_one_rbum(&filter, funs, ctx).await? {
