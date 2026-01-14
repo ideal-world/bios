@@ -113,7 +113,7 @@ impl IamCiRoleApi {
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
         for s in split {
-            IamRoleServ::delete_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+            IamRoleServ::delete_rel_account(&id.0, s, None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
@@ -128,7 +128,7 @@ impl IamCiRoleApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
-        IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+        IamRoleServ::delete_rel_account(&id.0, &account_id.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
