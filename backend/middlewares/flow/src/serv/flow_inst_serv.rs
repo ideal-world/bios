@@ -35,7 +35,7 @@ use crate::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
-            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstQueryResult, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq
+            FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstQueryResult, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq
         },
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
         flow_model_version_dto::FlowModelVersionFilterReq,
@@ -3560,7 +3560,7 @@ impl FlowInstServ {
     }
 
     // 修改实例的数据对象
-    pub async fn modify_inst_artifacts(inst_id: &str, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn modify_inst_artifacts(inst_id: &str, modify_artifacts: &FlowInstArtifactsModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
         let mut inst_artifacts = inst.artifacts.unwrap_or_default();
         if let Some(state) = modify_artifacts.state {
@@ -3649,6 +3649,89 @@ impl FlowInstServ {
         };
         funs.db().update_one(flow_inst, ctx).await?;
 
+        Ok(())
+    }
+
+    // 修改实例的数据对象（带验证，用于CI API）
+    pub async fn modify_inst_artifacts_with_validation(
+        inst_id: &str,
+        modify_req: &FlowInstArtifactsModifyApiReq,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let inst = Self::get(inst_id, funs, ctx).await?;
+        if !inst.main {
+            return Err(funs.err().bad_request(
+                "flow_inst_serv",
+                "modify_inst_artifacts_with_validation",
+                "Only main instances can modify artifacts",
+                "400-flow-inst-not-main",
+            ));
+        }
+        // 检查当前状态是否为初始状态
+        let model_version = FlowModelVersionServ::get_item(
+            &inst.rel_flow_version_id,
+            &FlowModelVersionFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if inst.current_state_id != model_version.init_state_id {
+            return Err(funs.err().bad_request(
+                "flow_inst_serv",
+                "modify_inst_artifacts_with_validation",
+                "Only instances in initial state can modify artifacts",
+                "400-flow-inst-not-in-initial-state",
+            ));
+        }
+        // 判断rel_child_objs是否为空，如果不为空则筛选新增和删除的数据
+        if let Some(new_rel_child_objs) = &modify_req.rel_child_objs {
+            if !new_rel_child_objs.is_empty() {
+                let old_rel_child_objs = inst.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default();
+                // 筛选新增的数据：在新列表中但不在旧列表中的
+                let added_rel_child_objs: Vec<FlowInstRelChildObj> = new_rel_child_objs
+                    .iter()
+                    .filter(|new_obj| !old_rel_child_objs.contains(new_obj))
+                    .cloned()
+                    .collect();
+                // 筛选删除的数据：在旧列表中但不在新列表中的
+                let removed_rel_child_objs: Vec<FlowInstRelChildObj> = old_rel_child_objs
+                    .iter()
+                    .filter(|old_obj| !new_rel_child_objs.contains(old_obj))
+                    .cloned()
+                    .collect();
+                for added_rel_child_obj in added_rel_child_objs {
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: added_rel_child_obj.tag.clone(),
+                        status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
+                        rel_state: Some(inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
+                        rel_transition_state_name: Some("".to_string()),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &added_rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                }
+                for removed_rel_child_obj in removed_rel_child_objs {
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: removed_rel_child_obj.tag.clone(),
+                        status: Some("".to_string()),
+                        rel_state: Some(inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
+                        rel_transition_state_name: Some("".to_string()),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &removed_rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                }
+            }
+        }
+        let modify_req_internal: FlowInstArtifactsModifyReq = modify_req.clone().into();
+        Self::modify_inst_artifacts(inst_id, &modify_req_internal, funs, ctx).await?;
         Ok(())
     }
 
@@ -3994,10 +4077,13 @@ impl FlowInstServ {
             }
             // 通过
             FlowStateOperatorKind::Pass => {
-                let curr_operators = artifacts.curr_operators.unwrap_or_default();
-                let referral_map = artifacts.referral_map.clone().unwrap_or_default();
+                // 重新从数据库读取最新的实例，避免并发问题
+                let latest_inst = Self::get(&inst.id, funs, ctx).await?;
+                let latest_artifacts = latest_inst.artifacts.clone().unwrap_or_default();
+                let curr_operators = latest_artifacts.curr_operators.unwrap_or_default();
+                let referral_map = latest_artifacts.referral_map.clone().unwrap_or_default();
                 if !curr_operators.contains(&ctx.owner)
-                    && !referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
+                    && !referral_map.get(&latest_inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
                 {
                     return Err(funs.err().internal_error("flow_inst_serv", "operate", "flow inst operate failed", "500-flow-inst-operate-prohibited"));
                 }
@@ -4014,8 +4100,8 @@ impl FlowInstServ {
                     )
                     .await?;
                 }
-                if referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
-                    if let Some(current_referral_map) = referral_map.get(&inst.current_state_id) {
+                if referral_map.get(&latest_inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                    if let Some(current_referral_map) = referral_map.get(&latest_inst.current_state_id) {
                         let master_account_ids = current_referral_map.get(&ctx.owner).cloned().unwrap_or_default();
                         for master_account_id in master_account_ids {
                             Self::modify_inst_artifacts(
@@ -4057,8 +4143,9 @@ impl FlowInstServ {
                             ctx,
                         )
                         .await?;
-                        let mut prev_non_auto_state_id = artifacts.prev_non_auto_state_id.unwrap_or_default();
-                        prev_non_auto_state_id.push(inst.current_state_id.clone());
+                        // 使用重新读取的最新实例的 artifacts
+                        let mut prev_non_auto_state_id = curr_inst.artifacts.clone().unwrap_or_default().prev_non_auto_state_id.unwrap_or_default();
+                        prev_non_auto_state_id.push(curr_inst.current_state_id.clone());
                         Self::modify_inst_artifacts(
                             &inst.id,
                             &FlowInstArtifactsModifyReq {
@@ -4095,10 +4182,13 @@ impl FlowInstServ {
             }
             // 拒绝
             FlowStateOperatorKind::Overrule => {
-                let curr_operators = artifacts.curr_operators.unwrap_or_default();
-                let referral_map = artifacts.referral_map.unwrap_or_default();
+                // 重新从数据库读取最新的实例，避免并发问题
+                let latest_inst = Self::get(&inst.id, funs, ctx).await?;
+                let latest_artifacts = latest_inst.artifacts.clone().unwrap_or_default();
+                let curr_operators = latest_artifacts.curr_operators.unwrap_or_default();
+                let referral_map = latest_artifacts.referral_map.unwrap_or_default();
                 if !curr_operators.contains(&ctx.owner)
-                    && !referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
+                    && !referral_map.get(&latest_inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner))
                 {
                     return Err(funs.err().internal_error("flow_inst_serv", "operate", "flow inst operate failed", "500-flow-inst-operate-prohibited"));
                 }
@@ -4115,8 +4205,8 @@ impl FlowInstServ {
                     )
                     .await?;
                 }
-                if referral_map.get(&inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
-                    if let Some(current_referral_map) = referral_map.get(&inst.current_state_id) {
+                if referral_map.get(&latest_inst.current_state_id).map_or_else(|| false, |current_referral_map| current_referral_map.contains_key(&ctx.owner)) {
+                    if let Some(current_referral_map) = referral_map.get(&latest_inst.current_state_id) {
                         let master_account_ids = current_referral_map.get(&ctx.owner).cloned().unwrap_or_default();
                         for master_account_id in master_account_ids {
                             Self::modify_inst_artifacts(

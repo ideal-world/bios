@@ -280,6 +280,23 @@ impl IamCiAppApi {
         TardisResp::ok(Void {})
     }
 
+    /// Batch Delete App Rel Account
+    /// 批量删除应用关联账号
+    #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
+    async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        let split = account_ids.0.split(',').collect::<Vec<_>>();
+        for s in split {
+            IamAppServ::delete_rel_account(&id.0, s, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Add App Rel tenant All
     /// 添加应用关联租户
     #[oai(path = "/:id/tenant/all", method = "put")]
