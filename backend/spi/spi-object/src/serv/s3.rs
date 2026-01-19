@@ -221,7 +221,7 @@ pub trait S3 {
     ) -> TardisResult<String> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp, bucket, bs_id, inst);
         let headers = obj_exp
             .map(|o| -> TardisResult<HeaderMap> {
                 let mut headers = HeaderMap::new();
@@ -253,7 +253,7 @@ pub trait S3 {
     ) -> TardisResult<Vec<String>> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp, bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         client.batch_build_create_presign_url(&path, upload_id, part_number, expire_sec, bucket_name.as_deref()).await
     }
@@ -273,7 +273,7 @@ pub trait S3 {
     ) -> TardisResult<()> {
         let bs_inst = inst.inst::<TardisOSClient>();
         let client = bs_inst.0;
-        let bucket_name = Self::get_bucket_name(private, special, None, bucket, bs_id, inst);
+        let bucket_name = Self::get_bucket_name(private, special, obj_exp, bucket, bs_id, inst);
         let path = Self::rebuild_path(bucket_name.as_deref(), object_path, obj_exp, client).await?;
         client.complete_multipart_upload(&path, upload_id, parts, bucket_name.as_deref()).await
     }

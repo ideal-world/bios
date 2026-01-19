@@ -1029,6 +1029,20 @@ impl FlowInstServ {
                 }
             }
         }
+        if flow_inst_detail.main {
+            if let Some(rel_child_objs) = flow_inst_detail.artifacts.clone().map(|artifacts| artifacts.rel_child_objs.unwrap_or_default()) {
+                for rel_child_obj in rel_child_objs {
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: rel_child_obj.tag.clone(),
+                        status: Some("".to_string()),
+                        rel_state: Some(flow_inst_detail.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
+                        rel_transition_state_name: Some("".to_string()),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                }
+            }
+        }
         Ok(())
     }
 
