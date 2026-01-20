@@ -1,8 +1,14 @@
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 
+use crate::basic::dto::iam_account_dto::IamAccountDetailAggResp;
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
@@ -27,9 +33,50 @@ pub async fn check_cert(account_name_with_tenant: &str, pwd: &str) -> TardisResu
     }
 }
 
-// pub async fn get_account() -> TardisResult<bool> {
-//
-// }
+pub async fn get_account_detail(account_name_with_tenant: &str) -> TardisResult<Option<IamAccountDetailAggResp>> {
+    let funs = iam_constants::get_tardis_inst();
+    let (tenant_id, ak) = get_basic_info(account_name_with_tenant, &funs).await?;
+    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), &funs).await?;
+    
+    let ctx = IamCertServ::try_use_tenant_ctx(Default::default(), Some(tenant_id.clone()))?;
+    
+    if let Some(cert) = RbumCertServ::find_one_detail_rbum(
+        &RbumCertFilterReq {
+            basic: RbumBasicFilterReq {
+                own_paths: Some(tenant_id.clone()),
+                ..Default::default()
+            },
+            ak: Some(ak),
+            rel_rbum_cert_conf_ids: Some(vec![rbum_cert_conf_id]),
+            ..Default::default()
+        },
+        &funs,
+        &ctx,
+    )
+    .await?
+    {
+        let account = IamAccountServ::get_account_detail_aggs(
+            &cert.rel_rbum_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            true,
+            &funs,
+            &ctx,
+        )
+        .await?;
+        Ok(Some(account))
+    } else {
+        Ok(None)
+    }
+}
 
 async fn get_basic_info<'a>(account_name_with_tenant: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
     let mut account_name_with_tenant = account_name_with_tenant.split('/');
