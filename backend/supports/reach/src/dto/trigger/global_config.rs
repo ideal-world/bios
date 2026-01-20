@@ -23,6 +23,10 @@ pub struct ReachTriggerGlobalConfigAddReq {
     pub rel_reach_msg_signature_id: String,
     /// 用户触达消息模板Id
     pub rel_reach_msg_template_id: String,
+    #[serde(default)]
+    #[oai(default, validator(max_length = "2000"))]
+    /// 接收方组编码集合
+    pub receive_group_codes: Option<String>,
 }
 
 #[derive(Debug, poem_openapi::Object, Default)]
@@ -45,6 +49,9 @@ pub struct ReachTriggerGlobalConfigModifyReq {
     #[oai(validator(max_length = "255"))]
     /// 用户触达消息模板Id
     pub rel_reach_msg_template_id: Option<String>,
+    #[oai(validator(max_length = "2000"))]
+    /// 接收方组编码集合
+    pub receive_group_codes: Option<String>,
 }
 
 #[derive(Debug, poem_openapi::Object, Default)]
@@ -85,6 +92,8 @@ pub struct ReachTriggerGlobalConfigSummaryResp {
     pub rel_reach_msg_signature_id: String,
     /// 用户触达消息模板Id
     pub rel_reach_msg_template_id: String,
+    /// 接收方组编码集合
+    pub receive_group_codes: String,
 }
 
 #[derive(Debug, poem_openapi::Object, Serialize, Deserialize, sea_orm::FromQueryResult, Clone)]
@@ -103,4 +112,6 @@ pub struct ReachTriggerGlobalConfigDetailResp {
     pub rel_reach_msg_signature_id: String,
     /// 用户触达消息模板Id
     pub rel_reach_msg_template_id: String,
+    /// 接收方组编码集合
+    pub receive_group_codes: String,
 }
