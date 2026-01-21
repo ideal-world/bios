@@ -142,7 +142,7 @@ impl LdapSession {
                                     },
                                     LdapPartialAttribute {
                                         atype: "mail".to_string(),
-                                        vals: vec![account.certs.get("email").unwrap_or(&"".to_string()).to_string().into()],
+                                        vals: vec![account.certs.get("MailVCode").unwrap_or(&"".to_string()).to_string().into()],
                                     },
                                     LdapPartialAttribute {
                                         atype: "employeeNumber".to_string(),
@@ -178,42 +178,6 @@ impl LdapSession {
                 } else {
                     vec![req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string())]
                 }
-                // match ldap_processor::check_exist(cn).await {
-                //     Ok(true) => vec![
-                //         req.gen_result_entry(LdapSearchResultEntry {
-                //             dn: format!("CN={},DC={}", cn, config.dc),
-                //             attributes: vec![
-                //                 LdapPartialAttribute {
-                //                     atype: "sAMAccountName".to_string(),
-                //                     vals: vec![cn.to_string().into()],
-                //                 },
-                //                 // TODO
-                //                 LdapPartialAttribute {
-                //                     atype: "mail".to_string(),
-                //                     vals: vec![format!("{cn}@example.com").into()],
-                //                 },
-                //                 // TODO
-                //                 LdapPartialAttribute {
-                //                     atype: "cn".to_string(),
-                //                     vals: vec![cn.to_string().into()],
-                //                 },
-                //                 // TODO
-                //                 LdapPartialAttribute {
-                //                     atype: "givenName".to_string(),
-                //                     vals: vec!["".to_string().into()],
-                //                 },
-                //                 // TODO
-                //                 LdapPartialAttribute {
-                //                     atype: "sn".to_string(),
-                //                     vals: vec![cn.to_string().into()],
-                //                 },
-                //             ],
-                //         }),
-                //         req.gen_success(),
-                //     ],
-                //     Ok(false) => vec![req.gen_error(LdapResultCode::NoSuchObject, "CN not exist".to_string())],
-                //     Err(_) => vec![req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string())],
-                // }
             }
             LdapFilter::Present(k) => {
                 if k == "objectClass" && req.base.is_empty() {
