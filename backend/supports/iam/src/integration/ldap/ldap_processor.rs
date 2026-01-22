@@ -1,5 +1,6 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -8,6 +9,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 
 use crate::basic::dto::iam_account_dto::IamAccountDetailAggResp;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::clients::iam_kv_client::IamKvClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -91,4 +93,36 @@ async fn get_basic_info<'a>(account_name_with_tenant: &str, funs: &TardisFunsIns
     };
     let tenant_id = IamCpCertUserPwdServ::get_tenant_id(tenant_id, funs).await?;
     Ok((tenant_id, ak))
+}
+
+/// Get labor_type label from KV by code
+pub async fn get_labor_type_label(labor_type_code: &str) -> TardisResult<String> {
+    if labor_type_code.is_empty() {
+        return Ok(String::new());
+    }
+    let funs = iam_constants::get_tardis_inst();
+    let ctx = TardisContext::default();
+    let labor_type_map = IamKvClient::get_item_value("_:_:iam:account_labor_type", &funs, &ctx).await?.unwrap_or_default();
+    let label = labor_type_map
+        .iter()
+        .find(|item| item.code == labor_type_code)
+        .map(|item| item.label.clone())
+        .unwrap_or_else(|| labor_type_code.to_string());
+    Ok(label)
+}
+
+/// Get position label from KV by code
+pub async fn get_position_label(position_code: &str) -> TardisResult<String> {
+    if position_code.is_empty() {
+        return Ok(String::new());
+    }
+    let funs = iam_constants::get_tardis_inst();
+    let ctx = TardisContext::default();
+    let position_map = IamKvClient::get_item_value("__tag__:_:position:all", &funs, &ctx).await?.unwrap_or_default();
+    let label = position_map
+        .iter()
+        .find(|item| item.code == position_code)
+        .map(|item| item.label.clone())
+        .unwrap_or_else(|| position_code.to_string());
+    Ok(label)
 }

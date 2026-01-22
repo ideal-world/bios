@@ -112,6 +112,11 @@ impl LdapSession {
                 }
                 if let Ok(account) = ldap_processor::get_account_detail(cn).await {
                     if let Some(account) = account {
+                        // Get labor_type label from KV
+                        let labor_type_label = ldap_processor::get_labor_type_label(&account.labor_type).await.unwrap_or_else(|_| account.labor_type.clone());
+                        // Get position label from KV
+                        let primary_code = account.exts.iter().find(|ext| ext.name == "primary").map(|ext| ext.value.clone()).unwrap_or_default();
+                        let primary_label = ldap_processor::get_position_label(&primary_code).await.unwrap_or_else(|_| primary_code.clone());
                         vec![
                             req.gen_result_entry(LdapSearchResultEntry {
                                 dn: format!("cn={},ou=staff,dc={}", cn, config.dc),
@@ -122,7 +127,7 @@ impl LdapSession {
                                     },
                                     LdapPartialAttribute {
                                         atype: "employeeType".to_string(),
-                                        vals: vec![account.labor_type.clone().into()],
+                                        vals: vec![labor_type_label.clone().into()],
                                     },
                                     LdapPartialAttribute {
                                         atype: "ou".to_string(),
@@ -150,11 +155,11 @@ impl LdapSession {
                                     },
                                     LdapPartialAttribute {
                                         atype: "title".to_string(),
-                                        vals: vec![account.labor_type.clone().into()],
+                                        vals: vec![primary_label.into()],
                                     },
                                     LdapPartialAttribute {
                                         atype: "businessCategory".to_string(),
-                                        vals: vec![account.labor_type.clone().into()],
+                                        vals: vec![labor_type_label.into()],
                                     },
                                     LdapPartialAttribute {
                                         atype: "givenName".to_string(),
