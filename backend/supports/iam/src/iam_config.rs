@@ -104,6 +104,10 @@ pub struct IamLdapConfig {
     pub dc: String,
     pub bind_dn: String,
     pub bind_password: String,
+    /// Labor type translation map: code -> label
+    pub labor_type_map: Option<std::collections::HashMap<String, String>>,
+    /// Position translation map: code -> label
+    pub position_map: Option<std::collections::HashMap<String, String>>,
 }
 
 impl Default for IamLdapConfig {
@@ -113,6 +117,8 @@ impl Default for IamLdapConfig {
             dc: "bios".to_string(),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
+            labor_type_map: None,
+            position_map: None,
         }
     }
 }
