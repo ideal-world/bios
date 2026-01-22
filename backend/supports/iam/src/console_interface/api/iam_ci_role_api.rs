@@ -1,5 +1,6 @@
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleRelAccountCertResp, IamRoleSummaryResp};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::iam_enumeration::IamRoleKind;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -250,10 +251,25 @@ impl IamCiRoleApi {
         .into_iter()
         .map(|r| (r.rel_rbum_id, r.rel_rbum_cert_conf_name.unwrap_or_default(), r.ak))
         .collect_vec();
+        let accounts = IamAccountServ::find_detail_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(account_ids.clone()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         let result = account_ids
             .iter()
             .map(|account_id| IamRoleRelAccountCertResp {
                 account_id: account_id.clone(),
+                account: accounts.iter().find(|account| &account.id == account_id).cloned(),
                 certs: certs.iter().filter(|cert| &cert.0 == account_id).map(|r| (r.1.clone(), r.2.clone())).collect(),
             })
             .collect_vec();
