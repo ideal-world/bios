@@ -34,4 +34,19 @@ impl ReachMessageCiApi {
         message_send(body, &funs, &ctx).await?;
         TardisResp::ok(VOID)
     }
+
+    /// Batch send messages by template id
+    /// 根据模板id批量发送信息
+    #[oai(method = "put", path = "/batch/send")]
+    #[tardis::log::instrument(skip_all, fields(module = "reach"))]
+    pub async fn message_batch_send(&self, body: Json<Vec<ReachMsgSendReq>>, request: &Request, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut ctx = ctx.0;
+        let funs = get_tardis_inst();
+        let body = body.0;
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx)?;
+        for send_req in body {
+            message_send(send_req, &funs, &ctx).await?;
+        }
+        TardisResp::ok(VOID)
+    }
 }
