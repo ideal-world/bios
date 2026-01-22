@@ -8,6 +8,7 @@ use tardis::web::poem_openapi;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
+use crate::basic::dto::iam_account_dto::IamAccountDetailResp;
 use crate::iam_enumeration::IamRoleKind;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -125,5 +126,6 @@ pub struct IamRoleDetailResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleRelAccountCertResp {
     pub account_id: String,
+    pub account: Option<IamAccountDetailResp>,
     pub certs: HashMap<String, String>,
 }
