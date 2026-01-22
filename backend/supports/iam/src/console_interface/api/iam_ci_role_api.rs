@@ -206,7 +206,7 @@ impl IamCiRoleApi {
         for app_id in apps_split {
             let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.to_string()))?;
             for account_id in account_split.clone() {
-                IamRoleServ::delete_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
+                IamRoleServ::delete_rel_account(&id.0, account_id, None, &funs, &mock_app_ctx).await?;
             }
         }
         funs.commit().await?;

@@ -22,9 +22,6 @@ pub struct ReachTriggerInstanceConfigAddOrModifyReq {
     #[oai(validator(max_length = "255"))]
     /// 接收组编码
     pub receive_group_code: String,
-    #[oai(validator(max_length = "255"))]
-    /// 接收组名称
-    pub receive_group_name: String,
     /// 是否删除
     pub delete_kind: bool,
 }
@@ -36,7 +33,7 @@ impl From<ReachTriggerInstanceConfigAddOrModifyReq> for ReachTriggerInstanceConf
             rel_reach_channel: val.rel_reach_channel,
             rel_item_id: val.rel_item_id,
             receive_group_code: val.receive_group_code,
-            receive_group_name: val.receive_group_name,
+            receive_group_name: String::new(),
         }
     }
 }
