@@ -19,9 +19,10 @@ pub fn build_account_search_response(
 
     // 处理根DSE查询
     if is_root_dse_query(query) {
+        let root_dse_attributes = build_root_dse_attributes(config, &query.attributes);
         results.push(req.gen_result_entry(LdapSearchResultEntry {
             dn: format!("DC={}", config.dc),
-            attributes: vec![],
+            attributes: root_dse_attributes,
         }));
         results.push(req.gen_success());
         return results;
@@ -271,4 +272,58 @@ fn build_ldap_attributes(account: &IamAccountDetailAggResp, config: &IamLdapConf
     }
 
     attributes
+}
+
+/// 构建 RootDSE 属性
+/// RootDSE (Root Directory Service Entry) 是 LDAP 服务器的根入口点
+/// 它包含服务器的能力信息和配置信息
+fn build_root_dse_attributes(config: &IamLdapConfig, requested_attrs: &[String]) -> Vec<LdapPartialAttribute> {
+    let base_dn = format!("DC={}", config.dc);
+    
+    // 构建所有可用的 RootDSE 属性
+    let mut all_attributes = vec![
+        // namingContexts: 命名上下文（base DN）
+        LdapPartialAttribute {
+            atype: "namingContexts".to_string(),
+            vals: vec![base_dn.clone().into()],
+        },
+        // subschemaSubentry: Schema 子条目位置（Apache Directory Studio 需要此属性）
+        LdapPartialAttribute {
+            atype: "subschemaSubentry".to_string(),
+            vals: vec![format!("cn=schema,{}", base_dn).into()],
+        },
+        // supportedLDAPVersion: 支持的 LDAP 版本
+        LdapPartialAttribute {
+            atype: "supportedLDAPVersion".to_string(),
+            vals: vec!["3".to_string().into()],
+        },
+        // supportedControl: 支持的控件（可选）
+        LdapPartialAttribute {
+            atype: "supportedControl".to_string(),
+            vals: vec!["1.2.840.113556.1.4.319".to_string().into()], // Paged results control
+        },
+        // supportedExtension: 支持的扩展（可选）
+        LdapPartialAttribute {
+            atype: "supportedExtension".to_string(),
+            vals: vec!["1.3.6.1.4.1.4203.1.11.3".to_string().into()], // Who am I extension
+        },
+        // supportedSASLMechanisms: 支持的 SASL 机制
+        LdapPartialAttribute {
+            atype: "supportedSASLMechanisms".to_string(),
+            vals: vec!["PLAIN".to_string().into()],
+        },
+        // vendorName: 供应商名称
+        LdapPartialAttribute {
+            atype: "vendorName".to_string(),
+            vals: vec!["BIOS".to_string().into()],
+        },
+        // vendorVersion: 供应商版本
+        LdapPartialAttribute {
+            atype: "vendorVersion".to_string(),
+            vals: vec!["1.0".to_string().into()],
+        },
+    ];
+    
+    // 根据请求的属性列表过滤属性
+    filter_attributes_by_request(&all_attributes, requested_attrs)
 }

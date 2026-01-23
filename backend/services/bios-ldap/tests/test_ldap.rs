@@ -1497,7 +1497,7 @@ async fn test_ldap_account() -> TardisResult<()> {
             "",  // 空 base 用于搜索根 DSE
             Scope::Base,  // Base scope 用于根 DSE
             "(objectClass=*)",
-            vec!["sAMAccountName", "cn"],
+            vec!["*"],  // 请求所有属性
         )
         .await
         .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
@@ -1511,6 +1511,158 @@ async fn test_ldap_account() -> TardisResult<()> {
     info!("[Test] Found {} entries in root DSE", entries2.len());
     // 根 DSE 应该至少返回 DC 条目
     assert!(!entries2.is_empty(), "Root DSE search should return at least one entry");
+    
+    let root_dse_entry = &entries2[0];
+    info!("[Test] Root DSE DN: {}", root_dse_entry.dn);
+    info!("[Test] Root DSE attributes: {:?}", root_dse_entry.attrs.keys().collect::<Vec<_>>());
+    
+    // 验证 RootDSE 包含必要的属性
+    // 1. namingContexts - 命名上下文（base DN）
+    assert!(
+        root_dse_entry.attrs.contains_key("namingContexts"),
+        "RootDSE should contain namingContexts attribute"
+    );
+    let naming_contexts = root_dse_entry.attrs.get("namingContexts").unwrap();
+    assert!(!naming_contexts.is_empty(), "namingContexts should not be empty");
+    assert_eq!(
+        naming_contexts[0], base_dn,
+        "namingContexts should match base DN: {}, got: {}",
+        base_dn, naming_contexts[0]
+    );
+    info!("[Test] namingContexts: {:?}", naming_contexts);
+    
+    // 2. subschemaSubentry - Schema 子条目位置（Apache Directory Studio 需要此属性）
+    assert!(
+        root_dse_entry.attrs.contains_key("subschemaSubentry"),
+        "RootDSE should contain subschemaSubentry attribute (required by Apache Directory Studio)"
+    );
+    let subschema_subentry = root_dse_entry.attrs.get("subschemaSubentry").unwrap();
+    assert!(!subschema_subentry.is_empty(), "subschemaSubentry should not be empty");
+    assert!(
+        subschema_subentry[0].contains("cn=schema"),
+        "subschemaSubentry should contain 'cn=schema', got: {}",
+        subschema_subentry[0]
+    );
+    info!("[Test] subschemaSubentry: {:?}", subschema_subentry);
+    
+    // 3. supportedLDAPVersion - 支持的 LDAP 版本
+    assert!(
+        root_dse_entry.attrs.contains_key("supportedLDAPVersion"),
+        "RootDSE should contain supportedLDAPVersion attribute"
+    );
+    let supported_version = root_dse_entry.attrs.get("supportedLDAPVersion").unwrap();
+    assert!(!supported_version.is_empty(), "supportedLDAPVersion should not be empty");
+    assert!(
+        supported_version.contains(&"3".to_string()),
+        "supportedLDAPVersion should include version 3, got: {:?}",
+        supported_version
+    );
+    info!("[Test] supportedLDAPVersion: {:?}", supported_version);
+    
+    // 4. vendorName - 供应商名称
+    assert!(
+        root_dse_entry.attrs.contains_key("vendorName"),
+        "RootDSE should contain vendorName attribute"
+    );
+    let vendor_name = root_dse_entry.attrs.get("vendorName").unwrap();
+    assert!(!vendor_name.is_empty(), "vendorName should not be empty");
+    info!("[Test] vendorName: {:?}", vendor_name);
+    
+    // 5. vendorVersion - 供应商版本
+    assert!(
+        root_dse_entry.attrs.contains_key("vendorVersion"),
+        "RootDSE should contain vendorVersion attribute"
+    );
+    let vendor_version = root_dse_entry.attrs.get("vendorVersion").unwrap();
+    assert!(!vendor_version.is_empty(), "vendorVersion should not be empty");
+    info!("[Test] vendorVersion: {:?}", vendor_version);
+    
+    // 6. supportedSASLMechanisms - 支持的 SASL 机制
+    assert!(
+        root_dse_entry.attrs.contains_key("supportedSASLMechanisms"),
+        "RootDSE should contain supportedSASLMechanisms attribute"
+    );
+    let sasl_mechanisms = root_dse_entry.attrs.get("supportedSASLMechanisms").unwrap();
+    assert!(!sasl_mechanisms.is_empty(), "supportedSASLMechanisms should not be empty");
+    info!("[Test] supportedSASLMechanisms: {:?}", sasl_mechanisms);
+    
+    info!("[Test] RootDSE test completed successfully - all required attributes present");
+    
+    // 测试 4.1: 测试 RootDSE 特定属性查询（只请求 subschemaSubentry）
+    info!("[Test] Test 4.1: Querying RootDSE with specific attribute (subschemaSubentry)");
+    let (rs_subschema, _res_subschema) = ldap
+        .search(
+            "",
+            Scope::Base,
+            "(objectClass=*)",
+            vec!["subschemaSubentry"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_subschema: Vec<SearchEntry> = rs_subschema
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    assert!(!entries_subschema.is_empty(), "RootDSE search should return at least one entry");
+    let subschema_entry = &entries_subschema[0];
+    
+    // 验证只返回了请求的属性
+    assert!(
+        subschema_entry.attrs.contains_key("subschemaSubentry"),
+        "RootDSE should contain subschemaSubentry when requested"
+    );
+    assert_eq!(
+        subschema_entry.attrs.len(),
+        1,
+        "RootDSE should only return requested attribute, got: {:?}",
+        subschema_entry.attrs.keys().collect::<Vec<_>>()
+    );
+    info!("[Test] RootDSE subschemaSubentry query test passed");
+    
+    // 测试 4.2: 测试 RootDSE 多个属性查询
+    info!("[Test] Test 4.2: Querying RootDSE with multiple specific attributes");
+    let (rs_multi_attr, _res_multi_attr) = ldap
+        .search(
+            "",
+            Scope::Base,
+            "(objectClass=*)",
+            vec!["namingContexts", "subschemaSubentry", "supportedLDAPVersion"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_multi_attr: Vec<SearchEntry> = rs_multi_attr
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    assert!(!entries_multi_attr.is_empty(), "RootDSE search should return at least one entry");
+    let multi_attr_entry = &entries_multi_attr[0];
+    
+    // 验证返回了所有请求的属性
+    assert!(
+        multi_attr_entry.attrs.contains_key("namingContexts"),
+        "RootDSE should contain namingContexts"
+    );
+    assert!(
+        multi_attr_entry.attrs.contains_key("subschemaSubentry"),
+        "RootDSE should contain subschemaSubentry"
+    );
+    assert!(
+        multi_attr_entry.attrs.contains_key("supportedLDAPVersion"),
+        "RootDSE should contain supportedLDAPVersion"
+    );
+    assert_eq!(
+        multi_attr_entry.attrs.len(),
+        3,
+        "RootDSE should return exactly 3 requested attributes, got: {:?}",
+        multi_attr_entry.attrs.keys().collect::<Vec<_>>()
+    );
+    info!("[Test] RootDSE multiple attributes query test passed");
     
     // 测试 4.5: 使用 objectClass=* 在 base_dn 下进行全量查询
     info!("[Test] Test 4.5: Full query with objectClass=* in base DN (should return all entries)");
