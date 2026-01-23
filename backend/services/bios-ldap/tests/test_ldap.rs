@@ -1710,6 +1710,270 @@ async fn test_ldap_account() -> TardisResult<()> {
     }
     info!("[Test] Full query found all test users successfully");
     
+    // 测试 4.5.1: objectClass 相等查询 - 使用固定列表中的值（inetOrgPerson）
+    info!("[Test] Test 4.5.1: objectClass equality query - using inetOrgPerson (should return all users)");
+    let (rs_obj_eq1, _res_obj_eq1) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=inetOrgPerson)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_eq1: Vec<SearchEntry> = rs_obj_eq1
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=inetOrgPerson found {} entries", entries_obj_eq1.len());
+    assert!(entries_obj_eq1.len() >= 3, "objectClass=inetOrgPerson should return at least 3 test users, found {}", entries_obj_eq1.len());
+    
+    // 验证所有测试用户都在结果中
+    let mut found_obj_eq1_usernames: Vec<String> = entries_obj_eq1
+        .iter()
+        .filter_map(|entry| {
+            entry.attrs.get("sAMAccountName")
+                .and_then(|v| v.first()).cloned()
+        })
+        .collect();
+    found_obj_eq1_usernames.sort();
+    info!("[Test] objectClass=inetOrgPerson found usernames: {:?}", found_obj_eq1_usernames);
+    for expected_username in &expected_usernames_full {
+        assert!(
+            found_obj_eq1_usernames.contains(&expected_username.to_string()),
+            "objectClass=inetOrgPerson should find user: {}, found: {:?}",
+            expected_username,
+            found_obj_eq1_usernames
+        );
+    }
+    info!("[Test] objectClass=inetOrgPerson query completed successfully");
+    
+    // 测试 4.5.2: objectClass 相等查询 - 使用固定列表中的另一个值（uidObject）
+    info!("[Test] Test 4.5.2: objectClass equality query - using uidObject (should return all users)");
+    let (rs_obj_eq2, _res_obj_eq2) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=uidObject)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_eq2: Vec<SearchEntry> = rs_obj_eq2
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=uidObject found {} entries", entries_obj_eq2.len());
+    assert!(entries_obj_eq2.len() >= 3, "objectClass=uidObject should return at least 3 test users, found {}", entries_obj_eq2.len());
+    info!("[Test] objectClass=uidObject query completed successfully");
+    
+    // 测试 4.5.3: objectClass 相等查询 - 使用固定列表中的另一个值（top）
+    info!("[Test] Test 4.5.3: objectClass equality query - using top (should return all users)");
+    let (rs_obj_eq3, _res_obj_eq3) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=top)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_eq3: Vec<SearchEntry> = rs_obj_eq3
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=top found {} entries", entries_obj_eq3.len());
+    assert!(entries_obj_eq3.len() >= 3, "objectClass=top should return at least 3 test users, found {}", entries_obj_eq3.len());
+    info!("[Test] objectClass=top query completed successfully");
+    
+    // 测试 4.5.4: objectClass 相等查询 - 使用不在固定列表中的值（应该返回空结果）
+    info!("[Test] Test 4.5.4: objectClass equality query - using value not in fixed list (should return empty)");
+    let (rs_obj_eq4, _res_obj_eq4) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=person)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_eq4: Vec<SearchEntry> = rs_obj_eq4
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=person found {} entries", entries_obj_eq4.len());
+    assert!(entries_obj_eq4.is_empty(), "objectClass=person should return empty result (not in fixed list), found {}", entries_obj_eq4.len());
+    info!("[Test] objectClass=person query correctly returned empty result");
+    
+    // 测试 4.5.5: objectClass 子串匹配查询 - 前缀匹配（initial）
+    info!("[Test] Test 4.5.5: objectClass substring query - prefix match (initial)");
+    let (rs_obj_sub1, _res_obj_sub1) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=inet*)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_sub1: Vec<SearchEntry> = rs_obj_sub1
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=inet* found {} entries", entries_obj_sub1.len());
+    assert!(entries_obj_sub1.len() >= 3, "objectClass=inet* should return at least 3 test users, found {}", entries_obj_sub1.len());
+    info!("[Test] objectClass=inet* query completed successfully");
+    
+    // 测试 4.5.6: objectClass 子串匹配查询 - 后缀匹配（final）
+    info!("[Test] Test 4.5.6: objectClass substring query - suffix match (final)");
+    let (rs_obj_sub2, _res_obj_sub2) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=*Person)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_sub2: Vec<SearchEntry> = rs_obj_sub2
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=*Person found {} entries", entries_obj_sub2.len());
+    assert!(entries_obj_sub2.len() >= 3, "objectClass=*Person should return at least 3 test users, found {}", entries_obj_sub2.len());
+    info!("[Test] objectClass=*Person query completed successfully");
+    
+    // 测试 4.5.7: objectClass 子串匹配查询 - 任意位置匹配（any）
+    info!("[Test] Test 4.5.7: objectClass substring query - any position match (any)");
+    let (rs_obj_sub3, _res_obj_sub3) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=*Object*)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_sub3: Vec<SearchEntry> = rs_obj_sub3
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=*Object* found {} entries", entries_obj_sub3.len());
+    assert!(entries_obj_sub3.len() >= 3, "objectClass=*Object* should return at least 3 test users, found {}", entries_obj_sub3.len());
+    info!("[Test] objectClass=*Object* query completed successfully");
+    
+    // 测试 4.5.8: objectClass 子串匹配查询 - 不匹配的值（应该返回空结果）
+    info!("[Test] Test 4.5.8: objectClass substring query - non-matching value (should return empty)");
+    let (rs_obj_sub4, _res_obj_sub4) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(objectClass=*Group*)",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_sub4: Vec<SearchEntry> = rs_obj_sub4
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass=*Group* found {} entries", entries_obj_sub4.len());
+    assert!(entries_obj_sub4.is_empty(), "objectClass=*Group* should return empty result (no matching fixed value), found {}", entries_obj_sub4.len());
+    info!("[Test] objectClass=*Group* query correctly returned empty result");
+    
+    // 测试 4.5.9: objectClass 与其他条件的 AND 组合
+    info!("[Test] Test 4.5.9: objectClass combined with AND filter");
+    let (rs_obj_and, _res_obj_and) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(&(objectClass=inetOrgPerson)(sAMAccountName=testuser1))",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_and: Vec<SearchEntry> = rs_obj_and
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass AND sAMAccountName found {} entries", entries_obj_and.len());
+    assert!(!entries_obj_and.is_empty(), "objectClass AND sAMAccountName should find at least one entry");
+    let found_obj_and_username = entries_obj_and[0].attrs.get("sAMAccountName").and_then(|v| v.first()).unwrap();
+    assert_eq!(found_obj_and_username, "testuser1", "Should find testuser1");
+    info!("[Test] objectClass AND filter query completed successfully");
+    
+    // 测试 4.5.10: objectClass 与其他条件的 OR 组合
+    info!("[Test] Test 4.5.10: objectClass combined with OR filter");
+    let (rs_obj_or, _res_obj_or) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(|(objectClass=inetOrgPerson)(sAMAccountName=nonexistent))",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_or: Vec<SearchEntry> = rs_obj_or
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] objectClass OR filter found {} entries", entries_obj_or.len());
+    assert!(entries_obj_or.len() >= 3, "objectClass OR filter should return at least 3 test users, found {}", entries_obj_or.len());
+    info!("[Test] objectClass OR filter query completed successfully");
+    
+    // 测试 4.5.11: objectClass 与 NOT 组合
+    info!("[Test] Test 4.5.11: objectClass combined with NOT filter");
+    let (rs_obj_not, _res_obj_not) = ldap
+        .search(
+            &base_dn,
+            Scope::Subtree,
+            "(!(objectClass=person))",
+            vec!["sAMAccountName", "cn", "objectClass"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP search error: {e:?}"), "500-ldap-search-error"))?;
+    
+    let entries_obj_not: Vec<SearchEntry> = rs_obj_not
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] NOT(objectClass=person) found {} entries", entries_obj_not.len());
+    // NOT(objectClass=person) 应该返回所有用户，因为 person 不在固定列表中，所以 objectClass=person 返回空，NOT 后返回所有
+    assert!(entries_obj_not.len() >= 3, "NOT(objectClass=person) should return at least 3 test users, found {}", entries_obj_not.len());
+    info!("[Test] objectClass NOT filter query completed successfully");
+    
     // 定义期望的用户名列表，用于后续的 scope 测试
     let expected_usernames: Vec<&str> = vec!["testuser1", "testuser2", "testuser3"];
     

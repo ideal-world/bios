@@ -276,8 +276,28 @@ fn build_sql_where_clause(
     }
 }
 
+/// objectClass 的固定值列表
+const OBJECT_CLASS_VALUES: &[&str] = &["inetOrgPerson", "uidObject", "top"];
+
+/// 检查是否为 objectClass 属性
+fn is_object_class(attr: &str) -> bool {
+    attr.to_lowercase() == "objectclass"
+}
+
+/// 检查 objectClass 值是否在固定列表中
+fn is_valid_object_class_value(value: &str) -> bool {
+    OBJECT_CLASS_VALUES.iter().any(|&v| v.eq_ignore_ascii_case(value))
+}
+
 /// 根据 LDAP 属性名获取对应的数据库查询字段
 fn get_db_field(attr: &str) -> TardisResult<&'static str> {
+    // 如果是 objectClass，直接返回错误，因为 objectClass 需要特殊处理
+    if is_object_class(attr) {
+        return Err(tardis::basic::error::TardisError::format_error(
+            "objectClass should be handled by special functions",
+            "406-iam-ldap-objectclass-special-handling",
+        ));
+    }
     LDAP_ATTR_TO_DB_FIELD
         .get(attr.to_lowercase().as_str())
         .copied()
@@ -291,6 +311,18 @@ fn get_db_field(attr: &str) -> TardisResult<&'static str> {
 
 /// 构建精确匹配的WHERE条件
 fn build_equality_where_clause(attribute: &str, value: &str) -> TardisResult<String> {
+    // 特殊处理 objectClass
+    if is_object_class(attribute) {
+        // 检查查询的值是否在固定列表中
+        if is_valid_object_class_value(value) {
+            // 如果在列表中，返回总是为真的条件（所有账户都有这些 objectClass）
+            return Ok("1=1".to_string());
+        } else {
+            // 如果不在列表中，返回总是为假的条件（没有账户有这个 objectClass）
+            return Ok("1=0".to_string());
+        }
+    }
+    
     let escaped_value = value.replace("'", "''"); // SQL注入防护
     let field = get_db_field(attribute)?;
     Ok(format!("{} = '{}'", field, escaped_value))
@@ -298,6 +330,11 @@ fn build_equality_where_clause(attribute: &str, value: &str) -> TardisResult<Str
 
 /// 构建存在性查询的WHERE条件
 fn build_present_where_clause(attribute: &str) -> TardisResult<String> {
+    // 特殊处理 objectClass：所有账户都有 objectClass，所以总是返回真
+    if is_object_class(attribute) {
+        return Ok("1=1".to_string());
+    }
+    
     let field = get_db_field(attribute)?;
     Ok(format!("{} IS NOT NULL AND {} != ''", field, field))
 }
@@ -307,6 +344,57 @@ fn build_substring_where_clause(
     attribute: &str,
     substrings: &ldap3_proto::proto::LdapSubstringFilter,
 ) -> TardisResult<String> {
+    // 特殊处理 objectClass：检查子串过滤器是否匹配固定值列表中的任何一个
+    if is_object_class(attribute) {
+        // 如果所有部分都为空，则视为存在性查询，返回真
+        if substrings.initial.is_none() && substrings.any.is_empty() && substrings.final_.is_none() {
+            return Ok("1=1".to_string());
+        }
+        
+        // 检查是否有任何一个固定值匹配整个子串过滤器
+        let matched = OBJECT_CLASS_VALUES.iter().any(|&value| {
+            let value_lower = value.to_lowercase();
+            
+            // 检查 initial 部分
+            if let Some(initial) = &substrings.initial {
+                if !value_lower.starts_with(&initial.to_lowercase()) {
+                    return false;
+                }
+            }
+            
+            // 检查 any 部分（所有 any 部分都必须在值中出现）
+            let mut remaining_value = if let Some(initial) = &substrings.initial {
+                value_lower[initial.len()..].to_string()
+            } else {
+                value_lower.clone()
+            };
+            
+            for any_part in &substrings.any {
+                let any_lower = any_part.to_lowercase();
+                if let Some(pos) = remaining_value.to_lowercase().find(&any_lower) {
+                    remaining_value = remaining_value[pos + any_lower.len()..].to_string();
+                } else {
+                    return false;
+                }
+            }
+            
+            // 检查 final 部分
+            if let Some(final_part) = &substrings.final_ {
+                if !remaining_value.to_lowercase().ends_with(&final_part.to_lowercase()) {
+                    return false;
+                }
+            }
+            
+            true
+        });
+        
+        return if matched {
+            Ok("1=1".to_string())
+        } else {
+            Ok("1=0".to_string())
+        };
+    }
+    
     let escaped_initial = substrings.initial.as_ref().map(|s| s.replace("'", "''"));
     let escaped_any = substrings
         .any
@@ -330,6 +418,14 @@ fn build_substring_where_clause(
 
 /// 构建比较查询的WHERE条件（仅支持 employeenumber 等可比较字段）
 fn build_comparison_where_clause(attribute: &str, value: &str, operator: &str) -> TardisResult<String> {
+    // objectClass 不支持比较查询，返回错误
+    if is_object_class(attribute) {
+        return Err(tardis::basic::error::TardisError::format_error(
+            "objectClass does not support comparison operations",
+            "406-iam-ldap-objectclass-no-comparison",
+        ));
+    }
+    
     let field = get_db_field(attribute)?;
     let escaped_value = value.replace("'", "''");
     Ok(format!("{} {} '{}'", field, operator, escaped_value))
