@@ -1577,8 +1577,8 @@ impl FlowModelServ {
                 status: Some(FlowModelStatus::Enabled),
                 ..Default::default()
             },
-            Some(true),
             None,
+            Some(true),
             funs,
             ctx,
         )
