@@ -48,7 +48,6 @@
 //!   -v /opt/volumes/gitlab/var/log/gitlab:/var/log/gitlab \
 //!   -v /opt/volumes/gitlab/var/opt/gitlab:/var/opt/gitlab \
 //!   -dit gitlab/gitlab-ce
-//!
 use std::net;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -61,203 +60,130 @@ use tardis::futures::SinkExt;
 use tardis::futures::StreamExt;
 use tardis::log::{error, info, trace};
 
-use tardis::regex::Regex;
 use tardis::tokio::net::{TcpListener, TcpStream};
 use tardis::{tokio, TardisFuns};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use crate::iam_config::{IamConfig, IamLdapConfig};
 use crate::iam_constants;
-use crate::integration::ldap::ldap_processor;
+use crate::integration::ldap::ldap_auth;
+use crate::integration::ldap::ldap_parser;
+use crate::integration::ldap::account::{account_query, account_result};
+use crate::integration::ldap::organization::{org_query, org_result};
 
-lazy_static! {
-    static ref CN_R: Regex = Regex::new(r"(,|^)[cC][nN]=(.+?)(,|$)").expect("Regular parsing error");
-}
-
+/// LDAP会话管理
 struct LdapSession {
     dn: String,
 }
 
 impl LdapSession {
+    /// 处理LDAP绑定请求（认证）
     pub async fn do_bind(&mut self, req: &SimpleBindRequest, config: &IamLdapConfig) -> LdapMsg {
+        // 管理员绑定
         if req.dn == config.bind_dn && req.pw == config.bind_password {
             self.dn = req.dn.to_string();
-            req.gen_success()
-        } else if req.dn.is_empty() && req.pw.is_empty() {
+            return req.gen_success();
+        }
+
+        // 匿名绑定
+        if req.dn.is_empty() && req.pw.is_empty() {
             self.dn = "Anonymous".to_string();
-            req.gen_invalid_cred()
-        } else if !req.dn.to_lowercase().contains(&format!("DC={}", config.dc).to_lowercase()) {
-            req.gen_invalid_cred()
-        } else {
-            self.dn = req.dn.to_string();
-            match extract_cn(&req.dn) {
-                None => req.gen_invalid_cred(),
-                Some(cn) => match ldap_processor::check_cert(&cn, &req.pw).await {
-                    Ok(true) => req.gen_success(),
-                    Ok(false) => req.gen_invalid_cred(),
-                    Err(_) => req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string()),
-                },
-            }
+            return req.gen_invalid_cred();
+        }
+
+        // 验证DN格式
+        if !req.dn.to_lowercase().contains(&format!("DC={}", config.dc).to_lowercase()) {
+            return req.gen_invalid_cred();
+        }
+
+        // 用户绑定：从DN提取CN并验证凭证
+        self.dn = req.dn.to_string();
+        match ldap_parser::extract_cn_from_dn(&req.dn) {
+            None => req.gen_invalid_cred(),
+            Some(cn) => match ldap_auth::check_cert(&cn, &req.pw).await {
+                Ok(true) => req.gen_success(),
+                Ok(false) => req.gen_invalid_cred(),
+                Err(_) => req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string()),
+            },
         }
     }
 
+    /// 处理LDAP搜索请求
     pub async fn do_search(&mut self, req: &SearchRequest, config: &IamLdapConfig) -> Vec<LdapMsg> {
-        match &req.filter {
-            LdapFilter::And(_) | LdapFilter::Or(_) | LdapFilter::Not(_) | LdapFilter::Substring(_, _) => {
-                vec![req.gen_error(LdapResultCode::Other, "This operation is not currently supported".to_string())]
-            }
-            LdapFilter::Equality(_, cn) => {
-                if !req.base.to_lowercase().contains(&format!("DC={}", config.dc).to_lowercase()) {
-                    return vec![req.gen_error(LdapResultCode::NoSuchObject, "DN is invalid".to_string())];
-                }
-                if let Ok(account) = ldap_processor::get_account_detail(cn).await {
-                    if let Some(account) = account {
-                        // Get labor_type label from config
-                        let labor_type_label = ldap_processor::get_labor_type_label(&account.labor_type, config);
-                        // Get position label from config
-                        let primary_code = account.exts.iter().find(|ext| ext.name == "primary").map(|ext| ext.value.clone()).unwrap_or_default();
-                        let primary_label = ldap_processor::get_position_label(&primary_code, config);
-                        vec![
-                            req.gen_result_entry(LdapSearchResultEntry {
-                                dn: format!("cn={},ou=staff,dc={}", cn, config.dc),
-                                attributes: vec![
-                                    LdapPartialAttribute {
-                                        atype: "uid".to_string(),
-                                        vals: vec![cn.to_string().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "employeeType".to_string(),
-                                        vals: vec![labor_type_label.clone().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "ou".to_string(),
-                                        vals: vec!["staff".to_string().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "cn".to_string(),
-                                        vals: vec![cn.to_string().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "objectClass".to_string(),
-                                        vals: vec!["inetOrgPerson".into(), "uidObject".into(), "top".into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "mobile".to_string(),
-                                        vals: vec![cn.to_string().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "mail".to_string(),
-                                        vals: vec![account.certs.get("MailVCode").unwrap_or(&"".to_string()).to_string().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "employeeNumber".to_string(),
-                                        vals: vec![account.employee_code.clone().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "title".to_string(),
-                                        vals: vec![primary_label.into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "businessCategory".to_string(),
-                                        vals: vec![labor_type_label.into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "givenName".to_string(),
-                                        vals: vec![account.name.clone().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "displayName".to_string(),
-                                        vals: vec![account.name.clone().into()],
-                                    },
-                                    LdapPartialAttribute {
-                                        atype: "sn".to_string(),
-                                        vals: vec![account.name.clone().into()],
-                                    },
-                                ],
-                            }),
-                            req.gen_success(),
-                        ]
-                    } else {
-                        vec![req.gen_error(LdapResultCode::NoSuchObject, "CN not exist".to_string())]
+        // 解析搜索请求
+        let query = match ldap_parser::parse_search_request(req, config) {
+            Ok(q) => q,
+            Err(_) => return build_error_response(
+                req,
+                LdapResultCode::Other,
+                "Invalid search request".to_string(),
+            ),
+        };
+
+        // 识别查询类型（账号或组织）
+        let entity_type = ldap_parser::identify_entity_type(&query);
+
+        // 根据查询类型路由到相应的处理逻辑
+        match entity_type {
+            ldap_parser::LdapEntityType::Account => {
+                // 执行账号查询
+                let accounts = match account_query::execute_ldap_account_search(&query, config).await {
+                    Ok(accounts) => accounts,
+                    Err(_) => {
+                        return build_error_response(
+                            req,
+                            LdapResultCode::Unavailable,
+                            "Service internal error".to_string(),
+                        );
                     }
-                } else {
-                    vec![req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string())]
-                }
+                };
+
+                // 组装并返回LDAP响应
+                account_result::build_account_search_response(req, &query, accounts, config)
             }
-            LdapFilter::Present(k) => {
-                if k == "objectClass" && req.base.is_empty() {
-                    // https://ldap.com/dit-and-the-ldap-root-dse/
-                    // https://docs.oracle.com/cd/E19957-01/817-6707/srvrinfo.html
-                    return vec![
-                        req.gen_result_entry(LdapSearchResultEntry {
-                            dn: format!("DC={}", config.dc),
-                            attributes: vec![],
-                        }),
-                        req.gen_success(),
-                    ];
-                }
-                if !req.base.to_lowercase().contains(&format!("DC={}", config.dc).to_lowercase()) {
-                    return vec![req.gen_error(LdapResultCode::NoSuchObject, "DN is invalid".to_string())];
-                }
-                match extract_cn(&req.base) {
-                    None => vec![req.gen_error(LdapResultCode::NoSuchObject, "CN is invalid".to_string())],
-                    Some(cn) => match ldap_processor::check_exist(&cn).await {
-                        Ok(true) => vec![
-                            req.gen_result_entry(LdapSearchResultEntry {
-                                dn: format!("CN={},DC={}", cn, config.dc),
-                                attributes: vec![
-                                    LdapPartialAttribute {
-                                        atype: "sAMAccountName".to_string(),
-                                        vals: vec![cn.clone().into()],
-                                    },
-                                    // TODO
-                                    LdapPartialAttribute {
-                                        atype: "mail".to_string(),
-                                        vals: vec![format!("{}@example.com", cn.clone()).into()],
-                                    },
-                                    // TODO
-                                    LdapPartialAttribute {
-                                        atype: "cn".to_string(),
-                                        vals: vec![cn.clone().into()],
-                                    },
-                                    // TODO
-                                    LdapPartialAttribute {
-                                        atype: "givenName".to_string(),
-                                        vals: vec!["".to_string().into()],
-                                    },
-                                    // TODO
-                                    LdapPartialAttribute {
-                                        atype: "sn".to_string(),
-                                        vals: vec![cn.clone().into()],
-                                    },
-                                ],
-                            }),
-                            req.gen_success(),
-                        ],
-                        Ok(false) => vec![req.gen_error(LdapResultCode::NoSuchObject, "CN not exist".to_string())],
-                        Err(_) => vec![req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string())],
-                    },
-                }
+            ldap_parser::LdapEntityType::Organization => {
+                // 执行组织查询（保留代码逻辑，但不返回结果）
+                let _orgs = match org_query::execute_ldap_org_search(&query, config).await {
+                    Ok(orgs) => orgs,
+                    Err(_) => {
+                        return build_error_response(
+                            req,
+                            LdapResultCode::Unavailable,
+                            "Service internal error".to_string(),
+                        );
+                    }
+                };
+
+                // 不返回组织结果，返回空结果
+                vec![req.gen_success()]
             }
-            _ => {
-                // TODO
-                Vec::new()
+            ldap_parser::LdapEntityType::Unknown => {
+                // 如果无法确定类型，默认尝试账号查询
+                // 这通常发生在查询根DN或没有明确OU的情况下
+                let accounts = match account_query::execute_ldap_account_search(&query, config).await {
+                    Ok(accounts) => accounts,
+                    Err(_) => {
+                        return build_error_response(
+                            req,
+                            LdapResultCode::Unavailable,
+                            "Service internal error".to_string(),
+                        );
+                    }
+                };
+
+                // 只返回账号查询结果（即使为空，也不再尝试组织查询）
+                account_result::build_account_search_response(req, &query, accounts, config)
             }
         }
     }
 
+    /// 处理Whoami请求
     pub fn do_whoami(&mut self, req: &WhoamiRequest) -> LdapMsg {
         req.gen_success(format!("DN: {}", self.dn).as_str())
     }
 }
 
-fn extract_cn(dn: &str) -> Option<String> {
-    match CN_R.captures(dn) {
-        None => None,
-        Some(cap) => cap.get(2).map(|cn| cn.as_str().to_string()),
-    }
-}
-
+/// 处理客户端连接
 #[allow(clippy::blocks_in_conditions)]
 async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<IamConfig>) {
     let config = &config.ldap;
@@ -305,6 +231,7 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
     }
 }
 
+/// 启动LDAP服务器
 pub async fn start() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<IamConfig>(iam_constants::COMPONENT_CODE);
     let config = &config.ldap;
@@ -326,4 +253,9 @@ pub async fn start() -> TardisResult<()> {
     });
     info!("[TardisLdapServer] Started ldap://{}", addr_str);
     Ok(())
+}
+
+/// 构建错误响应
+fn build_error_response(req: &SearchRequest, code: LdapResultCode, message: String) -> Vec<LdapMsg> {
+    vec![req.gen_error(code, message)]
 }
