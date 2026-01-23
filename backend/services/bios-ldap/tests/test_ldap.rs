@@ -1664,6 +1664,254 @@ async fn test_ldap_account() -> TardisResult<()> {
     );
     info!("[Test] RootDSE multiple attributes query test passed");
     
+    // 测试 4.3: Schema 查询（Apache Directory Studio 连接时需要的查询）
+    info!("[Test] Test 4.3: Querying LDAP Schema (subschema entry)");
+    let schema_dn = format!("cn=schema,{}", base_dn);
+    info!("[Test] Schema DN: {}", schema_dn);
+    
+    // 测试 4.3.1: 基本 Schema 查询 - 查询所有 schema 属性
+    info!("[Test] Test 4.3.1: Basic schema query with all attributes");
+    let (rs_schema, _res_schema) = ldap
+        .search(
+            &schema_dn,
+            Scope::Base,
+            "(objectClass=subschema)",
+            vec!["*"],  // 请求所有属性
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?;
+    
+    let entries_schema: Vec<SearchEntry> = rs_schema
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    info!("[Test] Found {} entries in schema query", entries_schema.len());
+    assert_eq!(entries_schema.len(), 1, "Schema query should return exactly one entry");
+    
+    let schema_entry = &entries_schema[0];
+    info!("[Test] Schema entry DN: {}", schema_entry.dn);
+    assert_eq!(schema_entry.dn.to_lowercase(), schema_dn.to_lowercase(), "Schema entry DN should match schema DN");
+    
+    info!("[Test] Schema entry attributes: {:?}", schema_entry.attrs.keys().collect::<Vec<_>>());
+    
+    // 验证 Schema 条目包含必要的属性
+    // 1. objectClass - 应该包含 subschema
+    assert!(
+        schema_entry.attrs.contains_key("objectClass"),
+        "Schema entry should contain objectClass attribute"
+    );
+    let object_classes = schema_entry.attrs.get("objectClass").unwrap();
+    assert!(
+        object_classes.iter().any(|oc| oc.to_lowercase() == "subschema"),
+        "Schema entry objectClass should contain 'subschema', got: {:?}",
+        object_classes
+    );
+    info!("[Test] Schema objectClass: {:?}", object_classes);
+    
+    // 2. objectClasses - 对象类定义
+    assert!(
+        schema_entry.attrs.contains_key("objectClasses"),
+        "Schema entry should contain objectClasses attribute"
+    );
+    let object_classes_def = schema_entry.attrs.get("objectClasses").unwrap();
+    assert!(!object_classes_def.is_empty(), "objectClasses should not be empty");
+    info!("[Test] Found {} object class definitions", object_classes_def.len());
+    
+    // 验证一些常见的对象类是否存在
+    let object_classes_str = object_classes_def.join(" ");
+    assert!(
+        object_classes_str.to_lowercase().contains("person"),
+        "objectClasses should contain 'person' definition"
+    );
+    assert!(
+        object_classes_str.to_lowercase().contains("inetorgperson"),
+        "objectClasses should contain 'inetOrgPerson' definition"
+    );
+    info!("[Test] objectClasses contains expected definitions");
+    
+    // 3. attributeTypes - 属性类型定义
+    assert!(
+        schema_entry.attrs.contains_key("attributeTypes"),
+        "Schema entry should contain attributeTypes attribute"
+    );
+    let attribute_types = schema_entry.attrs.get("attributeTypes").unwrap();
+    assert!(!attribute_types.is_empty(), "attributeTypes should not be empty");
+    info!("[Test] Found {} attribute type definitions", attribute_types.len());
+    
+    // 验证一些常见的属性类型是否存在
+    let attribute_types_str = attribute_types.join(" ");
+    assert!(
+        attribute_types_str.to_lowercase().contains("cn") || attribute_types_str.to_lowercase().contains("commonname"),
+        "attributeTypes should contain 'cn' definition"
+    );
+    assert!(
+        attribute_types_str.to_lowercase().contains("mail") || attribute_types_str.to_lowercase().contains("rfc822mailbox"),
+        "attributeTypes should contain 'mail' definition"
+    );
+    info!("[Test] attributeTypes contains expected definitions");
+    
+    // 4. ldapSyntaxes - LDAP 语法定义
+    assert!(
+        schema_entry.attrs.contains_key("ldapSyntaxes"),
+        "Schema entry should contain ldapSyntaxes attribute"
+    );
+    let ldap_syntaxes = schema_entry.attrs.get("ldapSyntaxes").unwrap();
+    assert!(!ldap_syntaxes.is_empty(), "ldapSyntaxes should not be empty");
+    info!("[Test] Found {} LDAP syntax definitions", ldap_syntaxes.len());
+    
+    // 5. matchingRules - 匹配规则定义
+    assert!(
+        schema_entry.attrs.contains_key("matchingRules"),
+        "Schema entry should contain matchingRules attribute"
+    );
+    let matching_rules = schema_entry.attrs.get("matchingRules").unwrap();
+    assert!(!matching_rules.is_empty(), "matchingRules should not be empty");
+    info!("[Test] Found {} matching rule definitions", matching_rules.len());
+    
+    // 6. matchingRuleUse - 匹配规则使用定义
+    assert!(
+        schema_entry.attrs.contains_key("matchingRuleUse"),
+        "Schema entry should contain matchingRuleUse attribute"
+    );
+    let matching_rule_use = schema_entry.attrs.get("matchingRuleUse").unwrap();
+    assert!(!matching_rule_use.is_empty(), "matchingRuleUse should not be empty");
+    info!("[Test] Found {} matching rule use definitions", matching_rule_use.len());
+    
+    // 7. createTimestamp 和 modifyTimestamp - 时间戳
+    assert!(
+        schema_entry.attrs.contains_key("createTimestamp"),
+        "Schema entry should contain createTimestamp attribute"
+    );
+    let create_timestamp = schema_entry.attrs.get("createTimestamp").unwrap();
+    assert_eq!(create_timestamp.len(), 1, "createTimestamp should have exactly one value");
+    assert!(
+        create_timestamp[0].ends_with('Z'),
+        "createTimestamp should end with 'Z' (UTC), got: {}",
+        create_timestamp[0]
+    );
+    info!("[Test] createTimestamp: {}", create_timestamp[0]);
+    
+    assert!(
+        schema_entry.attrs.contains_key("modifyTimestamp"),
+        "Schema entry should contain modifyTimestamp attribute"
+    );
+    let modify_timestamp = schema_entry.attrs.get("modifyTimestamp").unwrap();
+    assert_eq!(modify_timestamp.len(), 1, "modifyTimestamp should have exactly one value");
+    assert!(
+        modify_timestamp[0].ends_with('Z'),
+        "modifyTimestamp should end with 'Z' (UTC), got: {}",
+        modify_timestamp[0]
+    );
+    info!("[Test] modifyTimestamp: {}", modify_timestamp[0]);
+    
+    info!("[Test] Basic schema query test completed successfully");
+    
+    // 测试 4.3.2: Schema 查询 - 只请求特定属性（Apache Directory Studio 的标准查询）
+    info!("[Test] Test 4.3.2: Schema query with specific attributes (Apache Directory Studio style)");
+    let (rs_schema_specific, _res_schema_specific) = ldap
+        .search(
+            &schema_dn,
+            Scope::Base,
+            "(objectClass=subschema)",
+            vec!["objectClasses", "attributeTypes", "ldapSyntaxes", "matchingRules", "matchingRuleUse", "createTimestamp", "modifyTimestamp"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?;
+    
+    let entries_schema_specific: Vec<SearchEntry> = rs_schema_specific
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    assert_eq!(entries_schema_specific.len(), 1, "Schema query should return exactly one entry");
+    let schema_entry_specific = &entries_schema_specific[0];
+    
+    // 验证返回的属性是请求的属性
+    let requested_attrs = vec!["objectClasses", "attributeTypes", "ldapSyntaxes", "matchingRules", "matchingRuleUse", "createTimestamp", "modifyTimestamp"];
+    for attr in &requested_attrs {
+        assert!(
+            schema_entry_specific.attrs.contains_key(*attr),
+            "Schema entry should contain requested attribute: {}",
+            attr
+        );
+    }
+    
+    // 验证返回的属性数量（应该包含请求的属性，可能还有 objectClass）
+    assert!(
+        schema_entry_specific.attrs.len() >= requested_attrs.len(),
+        "Schema entry should contain at least {} attributes (requested), got: {}",
+        requested_attrs.len(),
+        schema_entry_specific.attrs.len()
+    );
+    
+    info!("[Test] Schema query with specific attributes test passed");
+    
+    // 测试 4.3.3: Schema 查询 - 只请求 objectClasses
+    info!("[Test] Test 4.3.3: Schema query requesting only objectClasses");
+    let (rs_schema_obj, _res_schema_obj) = ldap
+        .search(
+            &schema_dn,
+            Scope::Base,
+            "(objectClass=subschema)",
+            vec!["objectClasses"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?;
+    
+    let entries_schema_obj: Vec<SearchEntry> = rs_schema_obj
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    assert_eq!(entries_schema_obj.len(), 1, "Schema query should return exactly one entry");
+    let schema_entry_obj = &entries_schema_obj[0];
+    
+    assert!(
+        schema_entry_obj.attrs.contains_key("objectClasses"),
+        "Schema entry should contain objectClasses when requested"
+    );
+    assert!(
+        schema_entry_obj.attrs.len() <= 2,  // objectClasses + 可能的 objectClass
+        "Schema entry should return only requested attribute (and possibly objectClass), got: {:?}",
+        schema_entry_obj.attrs.keys().collect::<Vec<_>>()
+    );
+    
+    info!("[Test] Schema query with only objectClasses test passed");
+    
+    // 测试 4.3.4: Schema 查询 - 只请求 attributeTypes
+    info!("[Test] Test 4.3.4: Schema query requesting only attributeTypes");
+    let (rs_schema_attr, _res_schema_attr) = ldap
+        .search(
+            &schema_dn,
+            Scope::Base,
+            "(objectClass=subschema)",
+            vec!["attributeTypes"],
+        )
+        .await
+        .map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?
+        .success().map_err(|e| tardis::basic::error::TardisError::internal_error(&format!("LDAP schema search error: {e:?}"), "500-ldap-schema-search-error"))?;
+    
+    let entries_schema_attr: Vec<SearchEntry> = rs_schema_attr
+        .into_iter()
+        .map(SearchEntry::construct)
+        .collect();
+    
+    assert_eq!(entries_schema_attr.len(), 1, "Schema query should return exactly one entry");
+    let schema_entry_attr = &entries_schema_attr[0];
+    
+    assert!(
+        schema_entry_attr.attrs.contains_key("attributeTypes"),
+        "Schema entry should contain attributeTypes when requested"
+    );
+    
+    info!("[Test] Schema query with only attributeTypes test passed");
+    
+    info!("[Test] All schema query tests completed successfully");
+    
     // 测试 4.5: 使用 objectClass=* 在 base_dn 下进行全量查询
     info!("[Test] Test 4.5: Full query with objectClass=* in base DN (should return all entries)");
     let (rs_full, _res_full) = ldap

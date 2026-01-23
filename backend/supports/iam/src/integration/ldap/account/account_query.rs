@@ -50,6 +50,11 @@ pub async fn execute_ldap_account_search(
         return Ok(vec![]);
     }
 
+    // 处理Schema查询（特殊 case，不需要查询账户）
+    if ldap_parser::is_subschema_query(query) {
+        return Ok(vec![]);
+    }
+
     // 处理简单存在性查询（从base DN提取CN，检查账户是否存在）
     if ldap_parser::is_simple_present_query(query) {
         if let Some(cn) = ldap_parser::extract_cn_from_base(&query.base) {
@@ -272,6 +277,9 @@ fn build_sql_where_clause(
         }
         ldap_parser::LdapQueryType::RootDse => {
             Ok("1=0".to_string()) // 根DSE查询不返回任何结果
+        }
+        ldap_parser::LdapQueryType::Subschema => {
+            Ok("1=0".to_string()) // Schema查询不返回任何结果
         }
     }
 }

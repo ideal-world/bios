@@ -45,6 +45,8 @@ pub struct LdapSearchQuery {
 pub enum LdapQueryType {
     /// 根DSE查询
     RootDse,
+    /// Schema查询（subschema）
+    Subschema,
     /// 精确匹配查询
     Equality {
         attribute: String,
@@ -106,6 +108,15 @@ pub fn parse_search_request(req: &SearchRequest, config: &IamLdapConfig) -> Tard
         if let LdapQueryType::Present { attribute } = &query_type {
             if attribute == "objectClass" {
                 query_type = LdapQueryType::RootDse;
+            }
+        }
+    }
+
+    // 检查是否为Schema查询：base是cn=schema,DC=xxx且过滤器为Equality(objectClass=subschema)
+    if is_schema_base_dn(&req.base, config) {
+        if let LdapQueryType::Equality { attribute, value } = &query_type {
+            if attribute.to_lowercase() == "objectclass" && value.to_lowercase() == "subschema" {
+                query_type = LdapQueryType::Subschema;
             }
         }
     }
@@ -190,6 +201,17 @@ pub fn extract_cn_from_dn(dn: &str) -> Option<String> {
 /// 检查是否为根DSE查询
 pub fn is_root_dse_query(query: &LdapSearchQuery) -> bool {
     matches!(query.query_type, LdapQueryType::RootDse)
+}
+
+/// 检查是否为Schema查询
+pub fn is_subschema_query(query: &LdapSearchQuery) -> bool {
+    matches!(query.query_type, LdapQueryType::Subschema)
+}
+
+/// 检查base DN是否为schema DN（cn=schema,DC=xxx）
+fn is_schema_base_dn(base: &str, config: &IamLdapConfig) -> bool {
+    let schema_dn = format!("cn=schema,DC={}", config.dc);
+    base.to_lowercase() == schema_dn.to_lowercase()
 }
 
 /// 检查是否为简单存在性查询（用于检查账户是否存在）
