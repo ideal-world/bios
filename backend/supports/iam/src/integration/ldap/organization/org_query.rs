@@ -44,11 +44,6 @@ pub async fn execute_ldap_org_search(
     let funs = iam_constants::get_tardis_inst();
     let ctx = TardisContext::default();
 
-    // 处理根DSE查询（特殊 case，不需要查询组织）
-    if ldap_parser::is_root_dse_query(query) {
-        return Ok(vec![]);
-    }
-
     // 获取组织Set ID
     let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
 

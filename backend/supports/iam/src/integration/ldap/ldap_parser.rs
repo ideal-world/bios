@@ -18,6 +18,10 @@ lazy_static! {
 /// LDAP查询实体类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LdapEntityType {
+    /// 根DSE查询
+    RootDse,
+    /// Schema查询
+    Subschema,
     /// 账号
     Account,
     /// 组织
@@ -253,8 +257,18 @@ pub fn extract_ou_from_base(base: &str) -> Option<String> {
     }
 }
 
-/// 识别查询的实体类型（账号或组织）
+/// 识别查询的实体类型（根查询、schema查询、账号或组织）
 pub fn identify_entity_type(query: &LdapSearchQuery) -> LdapEntityType {
+    // 优先检查是否为根DSE查询
+    if is_root_dse_query(query) {
+        return LdapEntityType::RootDse;
+    }
+
+    // 检查是否为Schema查询
+    if is_subschema_query(query) {
+        return LdapEntityType::Subschema;
+    }
+
     // 从base DN中提取OU
     if let Some(ou) = extract_ou_from_base(&query.base) {
         let ou_lower = ou.to_lowercase();

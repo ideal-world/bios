@@ -45,16 +45,6 @@ pub async fn execute_ldap_account_search(
 ) -> TardisResult<Vec<IamAccountDetailAggResp>> {
     let funs = iam_constants::get_tardis_inst();
 
-    // 处理根DSE查询（特殊 case，不需要查询账户）
-    if ldap_parser::is_root_dse_query(query) {
-        return Ok(vec![]);
-    }
-
-    // 处理Schema查询（特殊 case，不需要查询账户）
-    if ldap_parser::is_subschema_query(query) {
-        return Ok(vec![]);
-    }
-
     // 处理简单存在性查询（从base DN提取CN，检查账户是否存在）
     if ldap_parser::is_simple_present_query(query) {
         if let Some(cn) = ldap_parser::extract_cn_from_base(&query.base) {

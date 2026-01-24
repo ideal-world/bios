@@ -70,6 +70,7 @@ use crate::integration::ldap::ldap_auth;
 use crate::integration::ldap::ldap_parser;
 use crate::integration::ldap::account::{account_query, account_result};
 use crate::integration::ldap::organization::{org_query, org_result};
+use crate::integration::ldap::system::system_result;
 
 /// LDAP会话管理
 struct LdapSession {
@@ -120,11 +121,19 @@ impl LdapSession {
             ),
         };
 
-        // 识别查询类型（账号或组织）
+        // 识别查询类型（根查询、schema查询、账号或组织）
         let entity_type = ldap_parser::identify_entity_type(&query);
 
         // 根据查询类型路由到相应的处理逻辑
         match entity_type {
+            ldap_parser::LdapEntityType::RootDse => {
+                // 处理根DSE查询
+                system_result::build_system_search_response(req, &query, config)
+            }
+            ldap_parser::LdapEntityType::Subschema => {
+                // 处理Schema查询
+                system_result::build_system_search_response(req, &query, config)
+            }
             ldap_parser::LdapEntityType::Account => {
                 // 执行账号查询
                 let accounts = match account_query::execute_ldap_account_search(&query, config).await {
