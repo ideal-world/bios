@@ -5,7 +5,7 @@
 use ldap3_proto::simple::*;
 
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{is_root_dse_query, is_subschema_query, LdapSearchQuery};
+use crate::integration::ldap::ldap_parser::{LdapQueryType, LdapSearchQuery, is_root_dse_query, is_subschema_query};
 
 /// 构建LDAP系统查询响应（根查询和Schema查询）
 pub fn build_system_search_response(
@@ -16,29 +16,27 @@ pub fn build_system_search_response(
     let mut results = Vec::new();
 
     // 处理根DSE查询
-    if is_root_dse_query(query) {
-        let root_dse_attributes = build_root_dse_attributes(config, &query.attributes);
-        results.push(req.gen_result_entry(LdapSearchResultEntry {
-            dn: format!("DC={}", config.dc),
-            attributes: root_dse_attributes,
-        }));
-        results.push(req.gen_success());
-        return results;
+    match query.query_type {
+        LdapQueryType::RootDse => {
+            let root_dse_attributes = build_root_dse_attributes(config, &query.attributes);
+            results.push(req.gen_result_entry(LdapSearchResultEntry {
+                dn: "".to_string(),
+                attributes: root_dse_attributes,
+            }));
+            results.push(req.gen_success());
+        }
+        LdapQueryType::Subschema => {
+            let schema_attributes = build_subschema_attributes(config, &query.attributes);
+            results.push(req.gen_result_entry(LdapSearchResultEntry {
+                dn: format!("cn=schema,DC={}", config.dc),
+                attributes: schema_attributes,
+            }));
+            results.push(req.gen_success());
+        }
+        _ => {
+            results.push(req.gen_success());
+        }
     }
-
-    // 处理Schema查询
-    if is_subschema_query(query) {
-        let schema_attributes = build_subschema_attributes(config, &query.attributes);
-        results.push(req.gen_result_entry(LdapSearchResultEntry {
-            dn: format!("cn=schema,DC={}", config.dc),
-            attributes: schema_attributes,
-        }));
-        results.push(req.gen_success());
-        return results;
-    }
-
-    // 如果都不是，返回空结果
-    results.push(req.gen_success());
     results
 }
 
@@ -77,7 +75,7 @@ fn build_root_dse_attributes(config: &IamLdapConfig, requested_attrs: &[String])
     let base_dn = format!("DC={}", config.dc);
     
     // 构建所有可用的 RootDSE 属性
-    let mut all_attributes = vec![
+    let all_attributes = vec![
         // namingContexts: 命名上下文（base DN）
         LdapPartialAttribute {
             atype: "namingContexts".to_string(),
@@ -92,16 +90,6 @@ fn build_root_dse_attributes(config: &IamLdapConfig, requested_attrs: &[String])
         LdapPartialAttribute {
             atype: "supportedLDAPVersion".to_string(),
             vals: vec!["3".to_string().into()],
-        },
-        // supportedControl: 支持的控件（可选）
-        LdapPartialAttribute {
-            atype: "supportedControl".to_string(),
-            vals: vec!["1.2.840.113556.1.4.319".to_string().into()], // Paged results control
-        },
-        // supportedExtension: 支持的扩展（可选）
-        LdapPartialAttribute {
-            atype: "supportedExtension".to_string(),
-            vals: vec!["1.3.6.1.4.1.4203.1.11.3".to_string().into()], // Who am I extension
         },
         // supportedSASLMechanisms: 支持的 SASL 机制
         LdapPartialAttribute {
