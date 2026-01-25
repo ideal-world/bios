@@ -232,9 +232,6 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
-        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
-        let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         Self::modify_item(
             id,
             &mut IamAppModifyReq {
@@ -250,6 +247,23 @@ impl IamAppServ {
             ctx,
         )
         .await?;
+        let app = Self::get_item(
+            id,
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_owned()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
+        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
+        let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         if let Some(admin_ids) = &modify_req.admin_ids {
             if !original_app_admin_account_ids.is_empty() {
                 // add new admins
@@ -262,6 +276,20 @@ impl IamAppServ {
                 // delete old admins
                 for account_id in original_app_admin_account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
                     IamRoleServ::delete_rel_account(&app_admin_role_id, account_id, None, funs, ctx).await?;
+                }
+            }
+        }
+        if app.kind == IamAppKind::Project {
+            let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, ctx).await?;
+            if let Some(admin_ids) = &modify_req.admin_ids {
+                if !original_app_admin_account_ids.is_empty() {
+                    // add new admins
+                    for admin_id in admin_ids {
+                        if !original_app_admin_account_ids.contains(admin_id) {
+                            IamAppServ::add_rel_account(id, admin_id, true, funs, ctx).await?;
+                            IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, ctx).await?;
+                        }
+                    }
                 }
             }
         }
