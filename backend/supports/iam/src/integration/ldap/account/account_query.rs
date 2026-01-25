@@ -5,13 +5,15 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemAttrServ;
+use bios_basic::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
 use lazy_static::lazy_static;
 use ldap3_proto::proto::LdapSubstringFilter;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
 
 // LDAP 属性名 -> 数据库查询字段 映射，用于根据传入的 attr 拼接 SQL 条件
 lazy_static! {
@@ -36,13 +38,14 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::IamLdapConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
+use crate::integration::ldap::account::account_result::LdapAccountFields;
 use crate::integration::ldap::ldap_parser;
 
 /// 执行LDAP账户搜索查询
 pub async fn execute_ldap_account_search(
     query: &ldap_parser::LdapSearchQuery,
     config: &IamLdapConfig,
-) -> TardisResult<Vec<IamAccountDetailAggResp>> {
+) -> TardisResult<Vec<LdapAccountFields>> {
     let funs = iam_constants::get_tardis_inst();
 
     // 处理简单存在性查询（从base DN提取CN，检查账户是否存在）
@@ -52,7 +55,16 @@ pub async fn execute_ldap_account_search(
                 Ok(true) => {
                     // 账户存在，返回账户详情
                     if let Ok(Some(account)) = get_account_by_cn(&cn).await {
-                        return Ok(vec![account]);
+                        return Ok(vec![LdapAccountFields {
+                            id: account.id.clone(),
+                            name: account.name.clone(),
+                            employee_code: account.employee_code,
+                            labor_type: account.labor_type.clone(),
+                            user_pwd: account.certs.get(&IamCertKernelKind::UserPwd.to_string()).cloned().unwrap_or_default(),
+                            phone: account.certs.get(&IamCertKernelKind::PhoneVCode.to_string()).cloned(),
+                            mail: account.certs.get(&IamCertKernelKind::MailVCode.to_string()).cloned(),
+                            primary_code: account.exts.iter().find(|e| e.name == "primary").map(|e| e.value.clone()),
+                        }]);
                     }
                 }
                 Ok(false) => return Ok(vec![]),
@@ -66,39 +78,9 @@ pub async fn execute_ldap_account_search(
     let ctx = TardisContext::default();
 
     // 根据query参数构建SQL查询，获取符合条件的account id列表
-    let account_ids = build_and_execute_sql_query(query, config, &funs, &ctx).await?;
+    let account_fields = build_and_execute_sql_query(query, config, &funs, &ctx).await?;
 
-    // 如果查询结果为空，直接返回
-    if account_ids.is_empty() {
-        return Ok(vec![]);
-    }
-
-    // 调用IamAccountServ::get_account_detail_aggs获取账户详情
-    let mut account_details = Vec::new();
-    for account_id in account_ids {
-        if let Ok(detail) = IamAccountServ::get_account_detail_aggs(
-            &account_id,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            true,
-            true,
-            true,
-            &funs,
-            &ctx,
-        )
-        .await
-        {
-            account_details.push(detail);
-        }
-    }
-
-    Ok(account_details)
+    Ok(account_fields)
 }
 
 /// 检查账户是否存在
@@ -168,8 +150,8 @@ async fn build_and_execute_sql_query(
     query: &ldap_parser::LdapSearchQuery,
     config: &IamLdapConfig,
     funs: &TardisFunsInst,
-    _ctx: &TardisContext,
-) -> TardisResult<Vec<String>> {
+    ctx: &TardisContext,
+) -> TardisResult<Vec<LdapAccountFields>> {
     // 构建SQL WHERE条件
     let (join, where_clause) = if ldap_parser::is_full_query(query) {
         ("", "".to_string())
@@ -189,30 +171,72 @@ async fn build_and_execute_sql_query(
         &funs,
     )
     .await?;
+    let phone_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(
+        &IamCertKernelKind::PhoneVCode.to_string(),
+        Some("".to_string()),
+        &funs,
+    )
+    .await?;
+    let rbum_item_attr_kind_id = RbumKindAttrServ::find_one_rbum(&RbumKindAttrFilterReq {
+        basic: RbumBasicFilterReq {
+            name: Some("primary".to_string()),
+            own_paths: Some("".to_string()),
+            ..Default::default()
+        },
+        ..Default::default()
+    }, funs, ctx).await?.map(|r| r.id).unwrap_or_default();
 
     let sql = format!(
         r#"
-        SELECT iam_account.id
-        FROM iam_account
-        LEFT JOIN rbum_cert AS user_pwd_cert ON user_pwd_cert.rel_rbum_id = iam_account.id 
-            AND user_pwd_cert.rel_rbum_kind = 0 AND user_pwd_cert.rel_rbum_cert_conf_id = '{}'
-        LEFT JOIN rbum_cert AS mail_vcode_cert ON mail_vcode_cert.rel_rbum_id = iam_account.id 
-            AND mail_vcode_cert.rel_rbum_kind = 0 AND mail_vcode_cert.rel_rbum_cert_conf_id = '{}'
-        LEFT JOIN rbum_item ON rbum_item.id = iam_account.id
-        WHERE rbum_item.disabled = false AND rbum_item.scope_level = 0 AND rbum_item.own_paths = '' {} {}
+        SELECT
+            iam_account.id,
+            rbum_item.name,
+            iam_account.employee_code,
+            iam_account.labor_type,
+            user_pwd_cert.ak as user_pwd,
+            phone_vcode_cert.ak as phone,
+            mail_vcode_cert.ak as mail,
+            rbum_ext.value as primary_code
+        FROM
+            iam_account
+            INNER JOIN rbum_cert AS user_pwd_cert ON user_pwd_cert.rel_rbum_id = iam_account.id
+            AND user_pwd_cert.rel_rbum_kind = 0
+            AND user_pwd_cert.rel_rbum_cert_conf_id = '{}'
+            INNER JOIN rbum_item ON rbum_item.id = iam_account.id
+            LEFT JOIN rbum_cert AS mail_vcode_cert ON mail_vcode_cert.rel_rbum_id = iam_account.id
+            AND mail_vcode_cert.rel_rbum_kind = 0
+            AND mail_vcode_cert.rel_rbum_cert_conf_id = '{}'
+            LEFT JOIN rbum_cert AS phone_vcode_cert ON phone_vcode_cert.rel_rbum_id = iam_account.id
+            AND phone_vcode_cert.rel_rbum_kind = 0
+            AND phone_vcode_cert.rel_rbum_cert_conf_id = '{}'
+            LEFT JOIN rbum_item_attr AS rbum_ext ON rbum_ext.rel_rbum_item_id = iam_account.id
+            AND rbum_ext.rel_rbum_kind_attr_id = '{}'
+        WHERE
+            rbum_item.disabled = false
+            AND rbum_item.scope_level = 0
+            AND rbum_item.own_paths = '' {} {}
         "#,
-        user_pwd_conf_id, mail_vcode_conf_id, join, where_clause
+        user_pwd_conf_id, mail_vcode_conf_id, phone_vcode_conf_id, rbum_item_attr_kind_id, join, where_clause
     );
 
     let result = funs.db().query_all(&sql, vec![]).await?;
 
     // 提取account id列表
-    let account_ids: Vec<String> = result
+    let account_fields: Vec<LdapAccountFields> = result
         .into_iter()
-        .filter_map(|row| row.try_get::<String>("", "id").ok())
+        .map(|row| LdapAccountFields {
+            id: row.try_get::<String>("", "id").unwrap_or_default(),
+            name: row.try_get::<String>("", "name").unwrap_or_default(),
+            employee_code: row.try_get::<String>("", "employee_code").unwrap_or_default(),
+            labor_type: row.try_get::<String>("", "labor_type").unwrap_or_default(),
+            user_pwd: row.try_get::<String>("", "user_pwd").unwrap_or_default(),
+            phone: row.try_get::<Option<String>>("", "phone").unwrap_or(None),
+            mail: row.try_get::<Option<String>>("", "mail").unwrap_or(None),
+            primary_code: row.try_get::<Option<String>>("", "primary_code").unwrap_or(None),
+        })
         .collect();
 
-    Ok(account_ids)
+    Ok(account_fields)
 }
 
 /// 根据LDAP查询类型构建SQL WHERE条件

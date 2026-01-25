@@ -4,15 +4,40 @@
 
 use ldap3_proto::simple::*;
 
-use crate::basic::dto::iam_account_dto::IamAccountDetailAggResp;
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery, extract_cn_from_base};
+use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery};
+
+/// LDAP属性构建所需的账户字段
+/// 
+/// 该结构体包含了构建LDAP属性所需的所有账户字段，
+/// 用于从 `IamAccountDetailAggResp` 中提取必要信息。
+#[derive(Debug, Clone)]
+pub struct LdapAccountFields {
+    /// 账户ID（作为账户名的fallback）
+    pub id: String,
+    /// 账户名称
+    pub name: String,
+    /// 员工编号
+    pub employee_code: String,
+    /// 劳动类型代码
+    pub labor_type: String,
+    /// 证书信息映射
+    /// - "UserPwd": 账户名
+    /// - "MailVCode": 邮箱
+    /// - "PhoneVCode": 手机号（可选）
+    pub user_pwd: String,
+    pub phone: Option<String>,
+
+    pub mail: Option<String>,
+    /// 扩展属性列表（用于查找职位信息，查找 name == "primary" 的项）
+    pub primary_code: Option<String>,
+}
 
 /// 构建LDAP账户搜索响应
 pub fn build_account_search_response(
     req: &SearchRequest,
     query: &LdapSearchQuery,
-    accounts: Vec<IamAccountDetailAggResp>,
+    accounts: Vec<LdapAccountFields>,
     specified_cn: Option<String>,
     config: &IamLdapConfig,
 ) -> Vec<LdapMsg> {
@@ -27,7 +52,7 @@ pub fn build_account_search_response(
     // 为每个账户构建LDAP条目
     for account in accounts {
         // 从账户信息中提取CN
-        let cn = extract_cn_from_account(&account, config);
+        let cn = account.user_pwd.clone();
 
         // 构建LDAP属性
         let all_attributes = build_ldap_attributes(&account, config);
@@ -51,23 +76,6 @@ pub fn build_account_search_response(
         }
     }
     results
-}
-
-/// 从账户信息中提取CN（账户名）
-fn extract_cn_from_account(account: &IamAccountDetailAggResp, _config: &IamLdapConfig) -> String {
-    // 如果base中没有CN，尝试从账户凭证中获取账户名
-    // 查找UserPwd类型的凭证
-    if let Some(account_name) = account.certs.get("UserPwd") {
-        return account_name.clone();
-    }
-
-    // 如果都没有，使用员工编号或ID作为fallback
-    if !account.employee_code.is_empty() {
-        return account.employee_code.clone();
-    }
-
-    // 最后使用账户ID（不推荐，但作为最后的fallback）
-    account.id.clone()
 }
 
 /// 获取劳动类型标签
@@ -129,38 +137,31 @@ fn filter_attributes_by_request(
 }
 
 /// 构建LDAP属性列表
-fn build_ldap_attributes(account: &IamAccountDetailAggResp, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
+fn build_ldap_attributes(fields: &LdapAccountFields, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
+    // 将账户信息转换为LDAP字段结构
+    build_ldap_attributes_from_fields(&fields, config)
+}
+
+/// 从LDAP账户字段构建LDAP属性列表
+fn build_ldap_attributes_from_fields(fields: &LdapAccountFields, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
     // 获取劳动类型标签
-    let labor_type_label = get_labor_type_label(&account.labor_type, config);
+    let labor_type_label = get_labor_type_label(&fields.labor_type, config);
 
     // 获取职位标签
-    let primary_code = account
-        .exts
-        .iter()
-        .find(|ext| ext.name == "primary")
-        .map(|ext| ext.value.clone())
-        .unwrap_or_default();
-    let primary_label = get_position_label(&primary_code, config);
+    let primary_label = fields
+        .primary_code
+        .clone().unwrap_or_default();
+    let primary_label = get_position_label(&primary_label, config);
 
     // 提取账户名（CN）
-    let cn = account
-        .certs
-        .get("UserPwd")
-        .cloned()
-        .unwrap_or_else(|| {
-            if !account.employee_code.is_empty() {
-                account.employee_code.clone()
-            } else {
-                account.id.clone()
-            }
-        });
+    let cn = fields
+        .user_pwd
+        .clone();
 
     // 提取邮箱
-    let mail = account
-        .certs
-        .get("MailVCode")
-        .cloned()
-        .unwrap_or_default();
+    let mail = fields
+        .mail
+        .clone().unwrap_or_default();
 
     // 构建属性列表
     let mut attributes = vec![
@@ -193,8 +194,12 @@ fn build_ldap_attributes(account: &IamAccountDetailAggResp, config: &IamLdapConf
             vals: vec![mail.clone().into()],
         },
         LdapPartialAttribute {
+            atype: "hasSubordinates".to_string(),
+            vals: vec!["FALSE".into()],
+        },
+        LdapPartialAttribute {
             atype: "employeeNumber".to_string(),
-            vals: vec![account.employee_code.clone().into()],
+            vals: vec![fields.employee_code.clone().into()],
         },
         LdapPartialAttribute {
             atype: "title".to_string(),
@@ -206,20 +211,20 @@ fn build_ldap_attributes(account: &IamAccountDetailAggResp, config: &IamLdapConf
         },
         LdapPartialAttribute {
             atype: "givenName".to_string(),
-            vals: vec![account.name.clone().into()],
+            vals: vec![fields.name.clone().into()],
         },
         LdapPartialAttribute {
             atype: "displayName".to_string(),
-            vals: vec![account.name.clone().into()],
+            vals: vec![fields.name.clone().into()],
         },
         LdapPartialAttribute {
             atype: "sn".to_string(),
-            vals: vec![account.name.clone().into()],
+            vals: vec![fields.name.clone().into()],
         },
     ];
 
     // 添加手机号（如果有）
-    if let Some(phone) = account.certs.get("PhoneVCode") {
+    if let Some(phone) = &fields.phone {
         attributes.push(LdapPartialAttribute {
             atype: "mobile".to_string(),
             vals: vec![phone.clone().into()],
