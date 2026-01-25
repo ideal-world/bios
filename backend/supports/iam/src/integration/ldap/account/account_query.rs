@@ -201,19 +201,23 @@ async fn build_and_execute_sql_query(
             iam_account
             INNER JOIN rbum_cert AS user_pwd_cert ON user_pwd_cert.rel_rbum_id = iam_account.id
             AND user_pwd_cert.rel_rbum_kind = 0
+            AND user_pwd_cert.status = 1
             AND user_pwd_cert.rel_rbum_cert_conf_id = '{}'
             INNER JOIN rbum_item ON rbum_item.id = iam_account.id
             LEFT JOIN rbum_cert AS mail_vcode_cert ON mail_vcode_cert.rel_rbum_id = iam_account.id
             AND mail_vcode_cert.rel_rbum_kind = 0
+            AND mail_vcode_cert.status = 1
             AND mail_vcode_cert.rel_rbum_cert_conf_id = '{}'
             LEFT JOIN rbum_cert AS phone_vcode_cert ON phone_vcode_cert.rel_rbum_id = iam_account.id
             AND phone_vcode_cert.rel_rbum_kind = 0
+            AND phone_vcode_cert.status = 1
             AND phone_vcode_cert.rel_rbum_cert_conf_id = '{}'
             LEFT JOIN rbum_item_attr AS rbum_ext ON rbum_ext.rel_rbum_item_id = iam_account.id
             AND rbum_ext.rel_rbum_kind_attr_id = '{}'
         WHERE
             rbum_item.disabled = false
             AND rbum_item.scope_level = 0
+            AND iam_account.status = 0
             AND rbum_item.own_paths = '' {} {}
         "#,
         user_pwd_conf_id, mail_vcode_conf_id, phone_vcode_conf_id, rbum_item_attr_kind_id, join, where_clause

@@ -330,7 +330,7 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
 }
 
 // 判断search时是否返回域节点
-pub fn should_return_domain_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
+pub fn should_return_domain_level_in_search(_level: LdapBaseDnLevel, _scope: LdapSearchScope) -> bool {
     false
 }
 

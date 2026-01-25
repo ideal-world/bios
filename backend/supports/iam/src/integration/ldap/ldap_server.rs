@@ -145,7 +145,7 @@ impl LdapSession {
                         );
                     }
                 };
-                // 首先判断scope是否是base
+                // 首先判断scope是否是base，如果确定是base，则直接按当前dn查询并筛选返回
                 if query.scope == LdapSearchScope::Base {
                     match base_dn_level {
                         LdapBaseDnLevel::Domain => {
@@ -191,6 +191,7 @@ impl LdapSession {
                         }
                     }
                 }
+                
                 if system_result::should_return_domain_level_in_search(base_dn_level.clone(), query.scope.clone()) {
                     let entrys = vec![ldap_entity::LdapEntity::build_dc_node(config).entry];
                     let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
@@ -204,7 +205,7 @@ impl LdapSession {
                     let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
                     results.append(&mut filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect());
                 }
-                if account_result::should_return_account_level_in_search(base_dn_level.clone(), query.scope.clone()) {
+                if account_result::should_return_account_level_in_search(base_dn_level.clone(), query.scope.clone(), config) {
                     let accounts = match account_query::execute_ldap_account_search(&query, config).await {
                         Ok(accounts) => accounts,
                         Err(_) => {
@@ -217,11 +218,11 @@ impl LdapSession {
                     };
                     results.append(&mut account_result::build_account_search_response(req, &query, accounts, None, config));
                 }
-                if org_result::should_return_org_level_in_search(base_dn_level.clone(), query.scope.clone()) {
+                if org_result::should_return_org_level_in_search(base_dn_level.clone(), query.scope.clone(), config) {
                     // 组织查询先忽略，后续实现
                 }
                 results.push(req.gen_success());
-                return results;
+                results
             }
         }
     }

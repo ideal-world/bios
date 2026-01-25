@@ -163,7 +163,10 @@ fn build_ldap_attributes(org: &RbumSetTreeNodeResp, config: &IamLdapConfig) -> V
 }
 
 // 判断search时是否返回组织节点
-pub fn should_return_org_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
-    matches!(level, LdapBaseDnLevel::Domain) && (matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
-    || matches!(level, LdapBaseDnLevel::Ou(_)) && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
+pub fn should_return_org_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope, config: &IamLdapConfig) -> bool {
+    match level {
+        LdapBaseDnLevel::Domain => matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children),
+        LdapBaseDnLevel::Ou(ref ou) => ou.to_lowercase() == config.ou_organization.to_lowercase() && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children)),
+        _ => false,
+    }
 }
