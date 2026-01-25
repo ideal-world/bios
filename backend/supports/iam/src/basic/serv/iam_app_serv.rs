@@ -199,6 +199,7 @@ impl IamAppServ {
         .await?;
         IamRoleServ::add_app_copy_role_agg(&app_id, funs, &app_ctx).await?;
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
+        let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, &app_ctx).await?;
         // TODO 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
@@ -206,6 +207,9 @@ impl IamAppServ {
             for admin_id in admin_ids {
                 IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
                 IamRoleServ::add_rel_account(&app_admin_role_id, admin_id, None, funs, &app_ctx).await?;
+                if add_req.kind == Some(IamAppKind::Project) {
+                    IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, &app_ctx).await?;
+                }
             }
         }
         //refresh ctx
@@ -282,13 +286,10 @@ impl IamAppServ {
         if app.kind == IamAppKind::Project {
             let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, ctx).await?;
             if let Some(admin_ids) = &modify_req.admin_ids {
-                if !original_app_admin_account_ids.is_empty() {
-                    // add new admins
-                    for admin_id in admin_ids {
-                        if !original_app_admin_account_ids.contains(admin_id) {
-                            IamAppServ::add_rel_account(id, admin_id, true, funs, ctx).await?;
-                            IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, ctx).await?;
-                        }
+                // add new admins
+                for admin_id in admin_ids {
+                    if !original_app_admin_account_ids.contains(admin_id) {
+                        IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, ctx).await?;
                     }
                 }
             }
