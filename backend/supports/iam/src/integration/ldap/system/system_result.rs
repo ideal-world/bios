@@ -5,38 +5,46 @@
 use ldap3_proto::simple::*;
 
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{LdapQueryType, LdapSearchQuery, is_root_dse_query, is_subschema_query};
+use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapQueryType, LdapSearchQuery, is_root_dse_query, is_subschema_query};
 
-/// 构建LDAP系统查询响应（根查询和Schema查询）
-pub fn build_system_search_response(
+/// 构建LDAP根查询响应
+pub fn build_root_dse_search_response(
     req: &SearchRequest,
     query: &LdapSearchQuery,
     config: &IamLdapConfig,
 ) -> Vec<LdapMsg> {
-    let mut results = Vec::new();
-
-    // 处理根DSE查询
-    match query.query_type {
-        LdapQueryType::RootDse => {
-            let root_dse_attributes = build_root_dse_attributes(config, &query.attributes);
-            results.push(req.gen_result_entry(LdapSearchResultEntry {
-                dn: "".to_string(),
-                attributes: root_dse_attributes,
-            }));
-            results.push(req.gen_success());
-        }
-        LdapQueryType::Subschema => {
-            let schema_attributes = build_subschema_attributes(config, &query.attributes);
-            results.push(req.gen_result_entry(LdapSearchResultEntry {
-                dn: format!("cn=schema,DC={}", config.dc),
-                attributes: schema_attributes,
-            }));
-            results.push(req.gen_success());
-        }
-        _ => {
-            results.push(req.gen_success());
-        }
+    // 根DSE只支持base scope
+    if req.scope != LdapSearchScope::Base {
+        return vec![req.gen_error(LdapResultCode::ProtocolError, "Root DSE only supports base scope".to_string())];
     }
+    
+    let mut results = Vec::new();
+    let root_dse_attributes = build_root_dse_attributes(config, query);
+    results.push(req.gen_result_entry(LdapSearchResultEntry {
+        dn: "".to_string(),
+        attributes: root_dse_attributes,
+    }));
+    results.push(req.gen_success());
+    results
+}
+
+/// 构建LDAP Schema查询响应
+pub fn build_subschema_search_response(
+    req: &SearchRequest,
+    query: &LdapSearchQuery,
+    config: &IamLdapConfig,
+) -> Vec<LdapMsg> {
+    // Schema查询只支持base scope
+    if req.scope != LdapSearchScope::Base {
+        return vec![req.gen_error(LdapResultCode::ProtocolError, "Schema query only supports base scope".to_string())];
+    }
+    let mut results = Vec::new();
+    let schema_attributes = build_subschema_attributes(config, query);
+    results.push(req.gen_result_entry(LdapSearchResultEntry {
+        dn: config.schema_dn.clone(),
+        attributes: schema_attributes,
+    }));
+    results.push(req.gen_success());
     results
 }
 
@@ -71,20 +79,24 @@ fn filter_attributes_by_request(
 /// 构建 RootDSE 属性
 /// RootDSE (Root Directory Service Entry) 是 LDAP 服务器的根入口点
 /// 它包含服务器的能力信息和配置信息
-fn build_root_dse_attributes(config: &IamLdapConfig, requested_attrs: &[String]) -> Vec<LdapPartialAttribute> {
-    let base_dn = format!("DC={}", config.dc);
-    
+fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) -> Vec<LdapPartialAttribute> {
+    // 判断是否为 (!(objectClass=*)) 的情况
+    if let LdapQueryType::Not { filter } = &query.query_type {
+        if matches!(filter.as_ref(), LdapQueryType::Present { attribute } if attribute == "objectClass") {
+            return vec![];
+        }
+    }
     // 构建所有可用的 RootDSE 属性
     let all_attributes = vec![
         // namingContexts: 命名上下文（base DN）
         LdapPartialAttribute {
             atype: "namingContexts".to_string(),
-            vals: vec![base_dn.clone().into()],
+            vals: vec![config.base_dn.clone().into()],
         },
         // subschemaSubentry: Schema 子条目位置（Apache Directory Studio 需要此属性）
         LdapPartialAttribute {
             atype: "subschemaSubentry".to_string(),
-            vals: vec![format!("cn=schema,{}", base_dn).into()],
+            vals: vec![config.schema_dn.clone().into()],
         },
         // supportedLDAPVersion: 支持的 LDAP 版本
         LdapPartialAttribute {
@@ -109,15 +121,19 @@ fn build_root_dse_attributes(config: &IamLdapConfig, requested_attrs: &[String])
     ];
     
     // 根据请求的属性列表过滤属性
-    filter_attributes_by_request(&all_attributes, requested_attrs)
+    filter_attributes_by_request(&all_attributes, &query.attributes)
 }
 
 /// 构建 Schema (Subschema) 属性
 /// Schema 查询用于返回 LDAP 服务器的 schema 定义信息
 /// 这是 Apache Directory Studio 等客户端在连接时需要的标准查询
-fn build_subschema_attributes(config: &IamLdapConfig, requested_attrs: &[String]) -> Vec<LdapPartialAttribute> {
-    let base_dn = format!("DC={}", config.dc);
-    
+fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) -> Vec<LdapPartialAttribute> {
+    // 判断是否为 (!(objectClass=subschema)) 的情况
+    if let LdapQueryType::Not { filter } = &query.query_type {
+        if matches!(filter.as_ref(), LdapQueryType::Equality { attribute, value } if attribute == "objectClass" && value == "subschema") {
+            return vec![];
+        }
+    }
     // 构建所有可用的 Schema 属性
     let mut all_attributes = vec![
         // objectClass: 标识这是一个 subschema 条目
@@ -310,5 +326,15 @@ fn build_subschema_attributes(config: &IamLdapConfig, requested_attrs: &[String]
     });
     
     // 根据请求的属性列表过滤属性
-    filter_attributes_by_request(&all_attributes, requested_attrs)
+    filter_attributes_by_request(&all_attributes, &query.attributes)
+}
+
+// 判断search时是否返回域节点
+pub fn should_return_domain_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
+    false
+}
+
+// 判断search时是否返回OU节点
+pub fn should_return_ou_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
+    matches!(level, LdapBaseDnLevel::Domain) && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
 }

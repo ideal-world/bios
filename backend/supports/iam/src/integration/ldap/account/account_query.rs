@@ -265,12 +265,6 @@ fn build_sql_where_clause(
                 },
             )
         }
-        ldap_parser::LdapQueryType::RootDse => {
-            Ok("1=0".to_string()) // 根DSE查询不返回任何结果
-        }
-        ldap_parser::LdapQueryType::Subschema => {
-            Ok("1=0".to_string()) // Schema查询不返回任何结果
-        }
     }
 }
 

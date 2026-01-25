@@ -6,13 +6,14 @@ use ldap3_proto::simple::*;
 
 use crate::basic::dto::iam_account_dto::IamAccountDetailAggResp;
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapSearchQuery};
+use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery, extract_cn_from_base};
 
 /// 构建LDAP账户搜索响应
 pub fn build_account_search_response(
     req: &SearchRequest,
     query: &LdapSearchQuery,
     accounts: Vec<IamAccountDetailAggResp>,
+    specified_cn: Option<String>,
     config: &IamLdapConfig,
 ) -> Vec<LdapMsg> {
     let mut results = Vec::new();
@@ -26,7 +27,7 @@ pub fn build_account_search_response(
     // 为每个账户构建LDAP条目
     for account in accounts {
         // 从账户信息中提取CN
-        let cn = extract_cn_from_account(&account, &query.base, config);
+        let cn = extract_cn_from_account(&account, config);
 
         // 构建LDAP属性
         let all_attributes = build_ldap_attributes(&account, config);
@@ -34,61 +35,26 @@ pub fn build_account_search_response(
         // 根据请求的属性列表过滤属性
         let attributes = filter_attributes_by_request(&all_attributes, &query.attributes);
 
-        // 创建结果条目（账号使用 ou=staff）
-        results.push(req.gen_result_entry(LdapSearchResultEntry {
-            dn: format!("cn={},ou=staff,dc={}", cn, config.dc),
-            attributes,
-        }));
+        if let Some(specified_cn) = specified_cn.clone() {
+            if specified_cn == cn {
+                results.push(req.gen_result_entry(LdapSearchResultEntry {
+                    dn: format!("cn={},ou={},{}", cn, config.ou_staff, config.base_dn),
+                    attributes,
+                }));
+            }
+        } else {
+            // 创建结果条目（账号使用 ou=config.ou_staff）
+            results.push(req.gen_result_entry(LdapSearchResultEntry {
+                dn: format!("cn={},ou={},{}", cn, config.ou_staff, config.base_dn),
+                attributes,
+            }));
+        }
     }
-
-    // 添加成功响应
-    results.push(req.gen_success());
     results
 }
 
-/// 构建简化结果（用于Present过滤器等简单查询）
-pub fn build_simple_account_result(
-    req: &SearchRequest,
-    cn: &str,
-    config: &IamLdapConfig,
-) -> Vec<LdapMsg> {
-    vec![
-        req.gen_result_entry(LdapSearchResultEntry {
-            dn: format!("CN={},OU=staff,DC={}", cn, config.dc),
-            attributes: vec![
-                LdapPartialAttribute {
-                    atype: "sAMAccountName".to_string(),
-                    vals: vec![cn.to_string().into()],
-                },
-                LdapPartialAttribute {
-                    atype: "mail".to_string(),
-                    vals: vec![format!("{}@example.com", cn).into()],
-                },
-                LdapPartialAttribute {
-                    atype: "cn".to_string(),
-                    vals: vec![cn.to_string().into()],
-                },
-                LdapPartialAttribute {
-                    atype: "givenName".to_string(),
-                    vals: vec!["".to_string().into()],
-                },
-                LdapPartialAttribute {
-                    atype: "sn".to_string(),
-                    vals: vec![cn.to_string().into()],
-                },
-            ],
-        }),
-        req.gen_success(),
-    ]
-}
-
 /// 从账户信息中提取CN（账户名）
-fn extract_cn_from_account(account: &IamAccountDetailAggResp, base: &str, _config: &IamLdapConfig) -> String {
-    // 优先从base DN中提取CN
-    if let Some(cn) = extract_cn_from_base(base) {
-        return cn;
-    }
-
+fn extract_cn_from_account(account: &IamAccountDetailAggResp, _config: &IamLdapConfig) -> String {
     // 如果base中没有CN，尝试从账户凭证中获取账户名
     // 查找UserPwd类型的凭证
     if let Some(account_name) = account.certs.get("UserPwd") {
@@ -216,7 +182,7 @@ fn build_ldap_attributes(account: &IamAccountDetailAggResp, config: &IamLdapConf
         },
         LdapPartialAttribute {
             atype: "ou".to_string(),
-            vals: vec!["staff".to_string().into()],
+            vals: vec![config.ou_staff.clone().into()],
         },
         LdapPartialAttribute {
             atype: "objectClass".to_string(),
@@ -261,4 +227,10 @@ fn build_ldap_attributes(account: &IamAccountDetailAggResp, config: &IamLdapConf
     }
 
     attributes
+}
+
+// 判断search时是否返回账号节点
+pub fn should_return_account_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
+    matches!(level, LdapBaseDnLevel::Domain) && (matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
+    || matches!(level, LdapBaseDnLevel::Ou(_)) && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
 }

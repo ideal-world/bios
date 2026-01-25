@@ -102,8 +102,14 @@ pub struct IamConfig {
 pub struct IamLdapConfig {
     pub port: u16,
     pub dc: String,
+    pub base_dn: String,
     pub bind_dn: String,
     pub bind_password: String,
+    /// OU 名称：账号所在组织单位（DN 中 ou= 值）
+    pub ou_staff: String,
+    /// OU 名称：组织所在组织单位（DN 中 ou= 值）
+    pub ou_organization: String,
+    pub schema_dn: String,
     /// Labor type translation map: code -> label
     pub labor_type_map: Option<std::collections::HashMap<String, String>>,
     /// Position translation map: code -> label
@@ -112,11 +118,16 @@ pub struct IamLdapConfig {
 
 impl Default for IamLdapConfig {
     fn default() -> Self {
+        let dc = "bios".to_string();
         IamLdapConfig {
             port: 10389,
-            dc: "bios".to_string(),
+            dc: dc.clone(),
+            base_dn: format!("DC={}", dc),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
+            ou_staff: "staff".to_string(),
+            ou_organization: "organizations".to_string(),
+            schema_dn: "cn=Subschema".to_string(),
             labor_type_map: None,
             position_map: None,
         }

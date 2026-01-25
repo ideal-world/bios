@@ -67,8 +67,10 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 use crate::iam_config::{IamConfig, IamLdapConfig};
 use crate::iam_constants;
 use crate::integration::ldap::ldap_auth;
+use crate::integration::ldap::ldap_entity;
 use crate::integration::ldap::ldap_parser;
 use crate::integration::ldap::account::{account_query, account_result};
+use crate::integration::ldap::ldap_parser::LdapBaseDnLevel;
 use crate::integration::ldap::organization::{org_query, org_result};
 use crate::integration::ldap::system::system_result;
 
@@ -93,7 +95,7 @@ impl LdapSession {
         }
 
         // 验证DN格式
-        if !req.dn.to_lowercase().contains(&format!("DC={}", config.dc).to_lowercase()) {
+        if !req.dn.to_lowercase().contains(&config.base_dn.to_lowercase()) {
             return req.gen_invalid_cred();
         }
 
@@ -111,77 +113,115 @@ impl LdapSession {
 
     /// 处理LDAP搜索请求
     pub async fn do_search(&mut self, req: &SearchRequest, config: &IamLdapConfig) -> Vec<LdapMsg> {
-        // 解析搜索请求
-        let query = match ldap_parser::parse_search_request(req, config) {
-            Ok(q) => q,
-            Err(_) => return build_error_response(
-                req,
-                LdapResultCode::Other,
-                "Invalid search request".to_string(),
-            ),
-        };
-
         // 识别查询类型（根查询、schema查询、账号或组织）
-        let entity_type = ldap_parser::identify_entity_type(&query);
+        let entity_type = ldap_parser::identify_entity_type(req, config);
+        // 解析查询
+        let query = match ldap_parser::parse_search_request(req, entity_type, config) {
+            Ok(q) => q,
+            Err(_) => {
+                return vec![req.gen_error(LdapResultCode::InvalidDNSyntax, "Invalid search request".to_string())];
+            }
+        };
 
         // 根据查询类型路由到相应的处理逻辑
         match entity_type {
             ldap_parser::LdapEntityType::RootDse => {
                 // 处理根DSE查询
-                system_result::build_system_search_response(req, &query, config)
+                system_result::build_root_dse_search_response(req, &query, config)
             }
             ldap_parser::LdapEntityType::Subschema => {
                 // 处理Schema查询
-                system_result::build_system_search_response(req, &query, config)
+                system_result::build_subschema_search_response(req, &query, config)
             }
-            ldap_parser::LdapEntityType::Account => {
-                // 执行账号查询
-                let accounts = match account_query::execute_ldap_account_search(&query, config).await {
-                    Ok(accounts) => accounts,
-                    Err(_) => {
+            ldap_parser::LdapEntityType::Entry => {
+                let mut results = Vec::new();
+                let base_dn_level = match ldap_parser::get_base_dn_level(&query.base, config) {
+                    Some(level) => level,
+                    None => {
                         return build_error_response(
                             req,
-                            LdapResultCode::Unavailable,
-                            "Service internal error".to_string(),
+                            LdapResultCode::InvalidDNSyntax,
+                            "Invalid base DN".to_string(),
                         );
                     }
                 };
-
-                // 组装并返回LDAP响应
-                account_result::build_account_search_response(req, &query, accounts, config)
-            }
-            ldap_parser::LdapEntityType::Organization => {
-                // 执行组织查询（保留代码逻辑，但不返回结果）
-                let _orgs = match org_query::execute_ldap_org_search(&query, config).await {
-                    Ok(orgs) => orgs,
-                    Err(_) => {
-                        return build_error_response(
-                            req,
-                            LdapResultCode::Unavailable,
-                            "Service internal error".to_string(),
-                        );
+                // 首先判断scope是否是base
+                if query.scope == LdapSearchScope::Base {
+                    match base_dn_level {
+                        LdapBaseDnLevel::Domain => {
+                            let entrys = vec![ldap_entity::LdapEntity::build_dc_node(config).entry];
+                            let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
+                            results = filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect();
+                            results.push(req.gen_success());
+                            return results;
+                        }
+                        LdapBaseDnLevel::Ou(ou) => {
+                            // ou 值已经包含在枚举中
+                            let entrys = vec![ldap_entity::LdapEntity::build_ou_node(&ou, config).entry];
+                            let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
+                            results = filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect();
+                            results.push(req.gen_success());
+                            return results;
+                        },
+                        LdapBaseDnLevel::Item(ou, cn) => {
+                            // Item 中第一个值存放的是 ou，第二个值存放的是 cn
+                            if ou.to_lowercase() == config.ou_staff.to_lowercase() {
+                                let accounts = match account_query::execute_ldap_account_search(&query, config).await {
+                                    Ok(accounts) => accounts,
+                                    Err(_) => {
+                                        return build_error_response(
+                                            req,
+                                            LdapResultCode::Unavailable,
+                                            "Service internal error".to_string(),
+                                        );
+                                    }
+                                };
+                                results = account_result::build_account_search_response(req, &query, accounts, Some(cn), config);
+                                results.push(req.gen_success());
+                                return results;
+                            } else if ou.to_lowercase() == config.ou_organization.to_lowercase() {
+                                return vec![req.gen_success()]; // 组织查询（保留代码逻辑，但不返回结果）
+                            } else {
+                                return build_error_response(
+                                    req,
+                                    LdapResultCode::InvalidDNSyntax,
+                                    "Invalid base DN".to_string(),
+                                );
+                            }
+                        }
                     }
-                };
-
-                // 不返回组织结果，返回空结果
-                vec![req.gen_success()]
-            }
-            ldap_parser::LdapEntityType::Unknown => {
-                // 如果无法确定类型，默认尝试账号查询
-                // 这通常发生在查询根DN或没有明确OU的情况下
-                let accounts = match account_query::execute_ldap_account_search(&query, config).await {
-                    Ok(accounts) => accounts,
-                    Err(_) => {
-                        return build_error_response(
-                            req,
-                            LdapResultCode::Unavailable,
-                            "Service internal error".to_string(),
-                        );
-                    }
-                };
-
-                // 只返回账号查询结果（即使为空，也不再尝试组织查询）
-                account_result::build_account_search_response(req, &query, accounts, config)
+                }
+                if system_result::should_return_domain_level_in_search(base_dn_level.clone(), query.scope.clone()) {
+                    let entrys = vec![ldap_entity::LdapEntity::build_dc_node(config).entry];
+                    let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
+                    results.append(&mut filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect());
+                }
+                if system_result::should_return_ou_level_in_search(base_dn_level.clone(), query.scope.clone()) {
+                    let entrys = vec![
+                        ldap_entity::LdapEntity::build_ou_node(config.ou_staff.as_str(), config).entry,
+                        ldap_entity::LdapEntity::build_ou_node(config.ou_organization.as_str(), config).entry,
+                    ];
+                    let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
+                    results.append(&mut filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect());
+                }
+                if account_result::should_return_account_level_in_search(base_dn_level.clone(), query.scope.clone()) {
+                    let accounts = match account_query::execute_ldap_account_search(&query, config).await {
+                        Ok(accounts) => accounts,
+                        Err(_) => {
+                            return build_error_response(
+                                req,
+                                LdapResultCode::Unavailable,
+                                "Service internal error".to_string(),
+                            );
+                        }
+                    };
+                    results.append(&mut account_result::build_account_search_response(req, &query, accounts, None, config));
+                }
+                if org_result::should_return_org_level_in_search(base_dn_level.clone(), query.scope.clone()) {
+                    // 组织查询先忽略，后续实现
+                }
+                results.push(req.gen_success());
+                return results;
             }
         }
     }

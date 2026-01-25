@@ -1539,8 +1539,8 @@ async fn test_ldap_account() -> TardisResult<()> {
     let subschema_subentry = root_dse_entry.attrs.get("subschemaSubentry").unwrap();
     assert!(!subschema_subentry.is_empty(), "subschemaSubentry should not be empty");
     assert!(
-        subschema_subentry[0].contains("cn=schema"),
-        "subschemaSubentry should contain 'cn=schema', got: {}",
+        subschema_subentry[0].contains("cn=Subschema"),
+        "subschemaSubentry should contain 'cn=Subschema', got: {}",
         subschema_subentry[0]
     );
     info!("[Test] subschemaSubentry: {:?}", subschema_subentry);
@@ -1666,7 +1666,7 @@ async fn test_ldap_account() -> TardisResult<()> {
     
     // 测试 4.3: Schema 查询（Apache Directory Studio 连接时需要的查询）
     info!("[Test] Test 4.3: Querying LDAP Schema (subschema entry)");
-    let schema_dn = format!("cn=schema,{}", base_dn);
+    let schema_dn = "cn=Subschema".to_string();
     info!("[Test] Schema DN: {}", schema_dn);
     
     // 测试 4.3.1: 基本 Schema 查询 - 查询所有 schema 属性
@@ -2227,7 +2227,7 @@ async fn test_ldap_account() -> TardisResult<()> {
     
     // 测试 4.6: 测试不同的 Scope - Base scope（只搜索 base DN 本身）
     info!("[Test] Test 4.6: Testing Base scope - searching specific user DN");
-    let specific_user_dn = format!("CN={},DC={}", test_username, ldap_dc);
+    let specific_user_dn = format!("CN={},ou=staff,DC={}", test_username, ldap_dc);
     let (rs_base, _res_base) = ldap
         .search(
             &specific_user_dn,
@@ -2255,7 +2255,7 @@ async fn test_ldap_account() -> TardisResult<()> {
     info!("[Test] Test 4.7: Testing OneLevel scope - searching direct children of base DN");
     let (rs_onelevel, _res_onelevel) = ldap
         .search(
-            &base_dn,
+            &format!("ou=staff,{}", base_dn),
             Scope::OneLevel,
             "(objectClass=*)",
             vec!["sAMAccountName", "cn"],
@@ -2300,7 +2300,7 @@ async fn test_ldap_account() -> TardisResult<()> {
     info!("[Test] Test 4.8: Testing Subtree scope - searching all descendants of base DN");
     let (rs_subtree, _res_subtree) = ldap
         .search(
-            &base_dn,
+            &format!("ou=staff,{}", base_dn),
             Scope::Subtree,
             "(objectClass=*)",
             vec!["sAMAccountName", "cn"],

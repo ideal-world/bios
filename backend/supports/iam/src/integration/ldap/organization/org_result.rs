@@ -6,7 +6,7 @@ use ldap3_proto::simple::*;
 
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeNodeResp;
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapSearchQuery};
+use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery, extract_cn_from_base};
 
 /// 构建LDAP组织搜索响应
 pub fn build_org_search_response(
@@ -34,9 +34,9 @@ pub fn build_org_search_response(
         // 根据请求的属性列表过滤属性
         let attributes = filter_attributes_by_request(&all_attributes, &query.attributes);
 
-        // 创建结果条目（组织使用 ou=organizations）
+        // 创建结果条目（组织使用 ou=config.ou_organization）
         results.push(req.gen_result_entry(LdapSearchResultEntry {
-            dn: format!("cn={},ou=organizations,dc={}", cn, config.dc),
+            dn: format!("cn={},ou={},{}", cn, config.ou_organization, config.base_dn),
             attributes,
         }));
     }
@@ -91,7 +91,7 @@ fn filter_attributes_by_request(
 }
 
 /// 构建LDAP属性列表
-fn build_ldap_attributes(org: &RbumSetTreeNodeResp, _config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
+fn build_ldap_attributes(org: &RbumSetTreeNodeResp, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
     // 使用name作为CN，如果没有则使用sys_code
     let cn = if !org.name.is_empty() {
         org.name.clone()
@@ -107,7 +107,7 @@ fn build_ldap_attributes(org: &RbumSetTreeNodeResp, _config: &IamLdapConfig) -> 
         },
         LdapPartialAttribute {
             atype: "ou".to_string(),
-            vals: vec!["organizations".to_string().into()],
+            vals: vec![config.ou_organization.clone().into()],
         },
         LdapPartialAttribute {
             atype: "objectClass".to_string(),
@@ -160,4 +160,10 @@ fn build_ldap_attributes(org: &RbumSetTreeNodeResp, _config: &IamLdapConfig) -> 
     }
 
     attributes
+}
+
+// 判断search时是否返回组织节点
+pub fn should_return_org_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
+    matches!(level, LdapBaseDnLevel::Domain) && (matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
+    || matches!(level, LdapBaseDnLevel::Ou(_)) && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
 }

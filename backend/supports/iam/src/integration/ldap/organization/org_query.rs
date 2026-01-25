@@ -176,7 +176,6 @@ fn matches_ldap_query(
         ldap_parser::LdapQueryType::Not { filter } => {
             Ok(!matches_ldap_query(org, filter, _config)?)
         }
-        ldap_parser::LdapQueryType::RootDse => Ok(false),
         _ => Ok(true), // 其他查询类型默认匹配
     }
 }
