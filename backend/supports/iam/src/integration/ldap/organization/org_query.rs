@@ -12,12 +12,12 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
+use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamLdapConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
 use crate::integration::ldap::ldap_parser;
-use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_set_serv::IamSetServ;
 
 // LDAP 属性名 -> 组织字段 映射
 lazy_static! {
@@ -37,10 +37,7 @@ lazy_static! {
 }
 
 /// 执行LDAP组织搜索查询
-pub async fn execute_ldap_org_search(
-    query: &ldap_parser::LdapSearchQuery,
-    config: &IamLdapConfig,
-) -> TardisResult<Vec<RbumSetTreeNodeResp>> {
+pub async fn execute_ldap_org_search(query: &ldap_parser::LdapSearchQuery, config: &IamLdapConfig) -> TardisResult<Vec<RbumSetTreeNodeResp>> {
     let funs = iam_constants::get_tardis_inst();
     let ctx = TardisContext::default();
 
@@ -62,7 +59,7 @@ pub async fn execute_ldap_org_search(
 
     // 过滤结果
     let mut orgs = tree_result.main;
-    
+
     // 如果查询条件不是全量查询，需要进一步过滤
     if !ldap_parser::is_full_query(query) {
         orgs = filter_orgs_by_query(&orgs, &query.query_type, config)?;
@@ -72,11 +69,7 @@ pub async fn execute_ldap_org_search(
 }
 
 /// 将LDAP查询条件应用到组织树过滤器
-fn apply_ldap_query_to_filter(
-    query_type: &ldap_parser::LdapQueryType,
-    filter: &mut RbumSetTreeFilterReq,
-    _config: &IamLdapConfig,
-) -> TardisResult<()> {
+fn apply_ldap_query_to_filter(query_type: &ldap_parser::LdapQueryType, filter: &mut RbumSetTreeFilterReq, _config: &IamLdapConfig) -> TardisResult<()> {
     match query_type {
         ldap_parser::LdapQueryType::Equality { attribute, value } => {
             // 如果是 sys_code 查询，可以优化查询
@@ -102,11 +95,7 @@ fn apply_ldap_query_to_filter(
 }
 
 /// 根据LDAP查询条件过滤组织列表
-fn filter_orgs_by_query(
-    orgs: &[RbumSetTreeNodeResp],
-    query_type: &ldap_parser::LdapQueryType,
-    _config: &IamLdapConfig,
-) -> TardisResult<Vec<RbumSetTreeNodeResp>> {
+fn filter_orgs_by_query(orgs: &[RbumSetTreeNodeResp], query_type: &ldap_parser::LdapQueryType, _config: &IamLdapConfig) -> TardisResult<Vec<RbumSetTreeNodeResp>> {
     let mut filtered = Vec::new();
 
     for org in orgs {
@@ -119,11 +108,7 @@ fn filter_orgs_by_query(
 }
 
 /// 检查组织是否匹配LDAP查询条件
-fn matches_ldap_query(
-    org: &RbumSetTreeNodeResp,
-    query_type: &ldap_parser::LdapQueryType,
-    _config: &IamLdapConfig,
-) -> TardisResult<bool> {
+fn matches_ldap_query(org: &RbumSetTreeNodeResp, query_type: &ldap_parser::LdapQueryType, _config: &IamLdapConfig) -> TardisResult<bool> {
     match query_type {
         ldap_parser::LdapQueryType::Equality { attribute, value } => {
             let field = get_org_field(attribute)?;
@@ -138,7 +123,7 @@ fn matches_ldap_query(
         ldap_parser::LdapQueryType::Substring { attribute, substrings } => {
             let field = get_org_field(attribute)?;
             let org_value = get_org_field_value(org, field).to_lowercase();
-            
+
             let mut matches = true;
             if let Some(initial) = &substrings.initial {
                 if !org_value.starts_with(&initial.to_lowercase()) {
@@ -173,9 +158,7 @@ fn matches_ldap_query(
             }
             Ok(false)
         }
-        ldap_parser::LdapQueryType::Not { filter } => {
-            Ok(!matches_ldap_query(org, filter, _config)?)
-        }
+        ldap_parser::LdapQueryType::Not { filter } => Ok(!matches_ldap_query(org, filter, _config)?),
         _ => Ok(true), // 其他查询类型默认匹配
     }
 }
@@ -185,12 +168,7 @@ fn get_org_field(attr: &str) -> TardisResult<&'static str> {
     LDAP_ATTR_TO_ORG_FIELD
         .get(attr.to_lowercase().as_str())
         .copied()
-        .ok_or_else(|| {
-            tardis::basic::error::TardisError::format_error(
-                &format!("Unsupported LDAP attribute for organization: {}", attr),
-                "406-iam-ldap-unsupported-org-attribute",
-            )
-        })
+        .ok_or_else(|| tardis::basic::error::TardisError::format_error(&format!("Unsupported LDAP attribute for organization: {}", attr), "406-iam-ldap-unsupported-org-attribute"))
 }
 
 /// 获取组织的字段值

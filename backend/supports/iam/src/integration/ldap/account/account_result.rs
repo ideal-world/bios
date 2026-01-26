@@ -8,7 +8,7 @@ use crate::iam_config::IamLdapConfig;
 use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery};
 
 /// LDAP属性构建所需的账户字段
-/// 
+///
 /// 该结构体包含了构建LDAP属性所需的所有账户字段，
 /// 用于从 `IamAccountDetailAggResp` 中提取必要信息。
 #[derive(Debug, Clone)]
@@ -84,10 +84,7 @@ fn get_labor_type_label(labor_type_code: &str, config: &IamLdapConfig) -> String
         return String::new();
     }
     if let Some(ref labor_type_map) = config.labor_type_map {
-        labor_type_map
-            .get(labor_type_code)
-            .cloned()
-            .unwrap_or_else(|| labor_type_code.to_string())
+        labor_type_map.get(labor_type_code).cloned().unwrap_or_else(|| labor_type_code.to_string())
     } else {
         labor_type_code.to_string()
     }
@@ -99,10 +96,7 @@ fn get_position_label(position_code: &str, config: &IamLdapConfig) -> String {
         return String::new();
     }
     if let Some(ref position_map) = config.position_map {
-        position_map
-            .get(position_code)
-            .cloned()
-            .unwrap_or_else(|| position_code.to_string())
+        position_map.get(position_code).cloned().unwrap_or_else(|| position_code.to_string())
     } else {
         position_code.to_string()
     }
@@ -113,10 +107,7 @@ fn get_position_label(position_code: &str, config: &IamLdapConfig) -> String {
 /// - 如果请求列表为空或包含"*"，返回所有用户属性
 /// - 如果请求了"+*"，返回所有操作属性（当前实现不返回操作属性）
 /// - 否则只返回请求的属性
-fn filter_attributes_by_request(
-    all_attributes: &[LdapPartialAttribute],
-    requested_attrs: &[String],
-) -> Vec<LdapPartialAttribute> {
+fn filter_attributes_by_request(all_attributes: &[LdapPartialAttribute], requested_attrs: &[String]) -> Vec<LdapPartialAttribute> {
     // 如果请求列表为空或包含"*"，返回所有属性
     if requested_attrs.is_empty() || requested_attrs.iter().any(|attr| attr == "*") {
         return all_attributes.to_vec();
@@ -129,11 +120,7 @@ fn filter_attributes_by_request(
 
     // 只返回请求的属性（不区分大小写）
     let requested_lower: Vec<String> = requested_attrs.iter().map(|a| a.to_lowercase()).collect();
-    all_attributes
-        .iter()
-        .filter(|attr| requested_lower.contains(&attr.atype.to_lowercase()))
-        .cloned()
-        .collect()
+    all_attributes.iter().filter(|attr| requested_lower.contains(&attr.atype.to_lowercase())).cloned().collect()
 }
 
 /// 构建LDAP属性列表
@@ -148,20 +135,14 @@ fn build_ldap_attributes_from_fields(fields: &LdapAccountFields, config: &IamLda
     let labor_type_label = get_labor_type_label(&fields.labor_type, config);
 
     // 获取职位标签
-    let primary_label = fields
-        .primary_code
-        .clone().unwrap_or_default();
+    let primary_label = fields.primary_code.clone().unwrap_or_default();
     let primary_label = get_position_label(&primary_label, config);
 
     // 提取账户名（CN）
-    let cn = fields
-        .user_pwd
-        .clone();
+    let cn = fields.user_pwd.clone();
 
     // 提取邮箱
-    let mail = fields
-        .mail
-        .clone().unwrap_or_default();
+    let mail = fields.mail.clone().unwrap_or_default();
 
     // 构建属性列表
     let mut attributes = vec![
@@ -238,7 +219,10 @@ fn build_ldap_attributes_from_fields(fields: &LdapAccountFields, config: &IamLda
 pub fn should_return_account_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope, config: &IamLdapConfig) -> bool {
     match level {
         LdapBaseDnLevel::Domain => matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children),
-        LdapBaseDnLevel::Ou(ref ou) => ou.to_lowercase() == config.ou_staff.to_lowercase() && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children)),
+        LdapBaseDnLevel::Ou(ref ou) => {
+            ou.to_lowercase() == config.ou_staff.to_lowercase()
+                && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
+        }
         _ => false,
     }
 }

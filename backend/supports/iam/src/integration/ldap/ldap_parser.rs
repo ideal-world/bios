@@ -2,9 +2,9 @@
 //!
 //! 负责解析LDAP搜索请求和过滤器，将LDAP协议层的请求转换为内部查询结构
 
+use lazy_static::lazy_static;
 use ldap3_proto::proto::LdapSubstringFilter;
 use ldap3_proto::simple::*;
-use lazy_static::lazy_static;
 use tardis::basic::result::TardisResult;
 use tardis::regex::Regex;
 
@@ -44,46 +44,23 @@ pub struct LdapSearchQuery {
 #[derive(Debug, Clone)]
 pub enum LdapQueryType {
     /// 精确匹配查询
-    Equality {
-        attribute: String,
-        value: String,
-    },
+    Equality { attribute: String, value: String },
     /// 存在性查询
-    Present {
-        attribute: String,
-    },
+    Present { attribute: String },
     /// AND组合查询
-    And {
-        filters: Vec<LdapQueryType>,
-    },
+    And { filters: Vec<LdapQueryType> },
     /// OR组合查询
-    Or {
-        filters: Vec<LdapQueryType>,
-    },
+    Or { filters: Vec<LdapQueryType> },
     /// NOT查询
-    Not {
-        filter: Box<LdapQueryType>,
-    },
+    Not { filter: Box<LdapQueryType> },
     /// 子串匹配查询
-    Substring {
-        attribute: String,
-        substrings: LdapSubstringFilter,
-    },
+    Substring { attribute: String, substrings: LdapSubstringFilter },
     /// 大于等于查询
-    GreaterOrEqual {
-        attribute: String,
-        value: String,
-    },
+    GreaterOrEqual { attribute: String, value: String },
     /// 小于等于查询
-    LessOrEqual {
-        attribute: String,
-        value: String,
-    },
+    LessOrEqual { attribute: String, value: String },
     /// 近似匹配查询
-    ApproxMatch {
-        attribute: String,
-        value: String,
-    },
+    ApproxMatch { attribute: String, value: String },
 }
 
 /// LDAP Base 层级类型枚举
@@ -107,10 +84,7 @@ pub enum LdapBaseDnLevel {
 pub fn parse_search_request(req: &SearchRequest, entity_type: LdapEntityType, config: &IamLdapConfig) -> TardisResult<LdapSearchQuery> {
     // 验证base DN
     if !validate_base_dn(&req.base, entity_type, config) {
-        return Err(tardis::basic::error::TardisError::format_error(
-            "Invalid base DN",
-            "406-iam-ldap-invalid-base-dn",
-        ));
+        return Err(tardis::basic::error::TardisError::format_error("Invalid base DN", "406-iam-ldap-invalid-base-dn"));
     }
 
     // 解析过滤器
@@ -127,15 +101,9 @@ pub fn parse_search_request(req: &SearchRequest, entity_type: LdapEntityType, co
 /// 验证base DN是否有效
 fn validate_base_dn(base: &str, entity_type: LdapEntityType, config: &IamLdapConfig) -> bool {
     match entity_type {
-        LdapEntityType::RootDse => {
-            base.is_empty()
-        }
-        LdapEntityType::Subschema => {
-            base.to_lowercase() == config.schema_dn.to_lowercase()
-        }
-        LdapEntityType::Entry => {
-            base.to_lowercase().contains(&config.base_dn.to_lowercase())
-        }
+        LdapEntityType::RootDse => base.is_empty(),
+        LdapEntityType::Subschema => base.to_lowercase() == config.schema_dn.to_lowercase(),
+        LdapEntityType::Entry => base.to_lowercase().contains(&config.base_dn.to_lowercase()),
     }
 }
 
@@ -146,20 +114,14 @@ fn parse_filter(filter: &LdapFilter) -> TardisResult<LdapQueryType> {
             attribute: attr.clone(),
             value: value.clone(),
         }),
-        LdapFilter::Present(attr) => Ok(LdapQueryType::Present {
-            attribute: attr.clone(),
-        }),
+        LdapFilter::Present(attr) => Ok(LdapQueryType::Present { attribute: attr.clone() }),
         LdapFilter::And(filters) => {
             let parsed_filters: Result<Vec<LdapQueryType>, _> = filters.iter().map(parse_filter).collect();
-            Ok(LdapQueryType::And {
-                filters: parsed_filters?,
-            })
+            Ok(LdapQueryType::And { filters: parsed_filters? })
         }
         LdapFilter::Or(filters) => {
             let parsed_filters: Result<Vec<LdapQueryType>, _> = filters.iter().map(parse_filter).collect();
-            Ok(LdapQueryType::Or {
-                filters: parsed_filters?,
-            })
+            Ok(LdapQueryType::Or { filters: parsed_filters? })
         }
         LdapFilter::Not(filter) => Ok(LdapQueryType::Not {
             filter: Box::new(parse_filter(filter)?),
@@ -180,10 +142,7 @@ fn parse_filter(filter: &LdapFilter) -> TardisResult<LdapQueryType> {
             attribute: attr.clone(),
             value: value.clone(),
         }),
-        _ => Err(tardis::basic::error::TardisError::format_error(
-            "Unsupported filter",
-            "406-iam-ldap-unsupported-filter",
-        )),
+        _ => Err(tardis::basic::error::TardisError::format_error("Unsupported filter", "406-iam-ldap-unsupported-filter")),
     }
 }
 
@@ -253,22 +212,22 @@ pub fn parse_base_dn_components(base: &str, config: &IamLdapConfig) -> (Option<S
     let mut cn = None;
     let mut ou = None;
     let mut dc = None;
-    
+
     // 提取 CN
     if let Some(cn_val) = extract_cn_from_base(base) {
         cn = Some(cn_val);
     }
-    
+
     // 提取 OU
     if let Some(ou_val) = extract_ou_from_base(base) {
         ou = Some(ou_val);
     }
-    
+
     // 提取 DC（通过检查是否包含配置的 base_dn）
     if base.to_lowercase().contains(&config.base_dn.to_lowercase()) {
         dc = Some(config.dc.clone());
     }
-    
+
     (cn, ou, dc)
 }
 
@@ -276,9 +235,9 @@ pub fn get_base_dn_level(base: &str, config: &IamLdapConfig) -> Option<LdapBaseD
     if base.is_empty() {
         return Some(LdapBaseDnLevel::Domain);
     }
-    
+
     let (cn, ou, _) = parse_base_dn_components(base, config);
-    
+
     if let Some(cn_val) = cn {
         // Item 中第一个值存放的是 ou，第二个值存放的是 cn
         if let Some(ou_val) = ou {
@@ -298,47 +257,21 @@ pub fn get_base_dn_level(base: &str, config: &IamLdapConfig) -> Option<LdapBaseD
 }
 
 /// 检查 LdapSearchResultEntry 是否匹配 LdapQueryType
-/// 
+///
 /// 该函数用于在内存中对搜索结果进行过滤，检查条目是否满足查询条件
 pub fn entry_matches_query(entry: &LdapSearchResultEntry, query: &LdapQueryType) -> bool {
     match query {
-        LdapQueryType::Equality { attribute, value } => {
-            get_attribute_values(entry, attribute)
-                .iter()
-                .any(|v| v.eq_ignore_ascii_case(value))
-        }
-        LdapQueryType::Present { attribute } => {
-            entry.attributes
-                .iter()
-                .any(|attr| attr.atype.eq_ignore_ascii_case(attribute))
-        }
-        LdapQueryType::And { filters } => {
-            filters.iter().all(|filter| entry_matches_query(entry, filter))
-        }
-        LdapQueryType::Or { filters } => {
-            filters.iter().any(|filter| entry_matches_query(entry, filter))
-        }
-        LdapQueryType::Not { filter } => {
-            !entry_matches_query(entry, filter)
-        }
-        LdapQueryType::Substring { attribute, substrings } => {
-            match_substring(entry, attribute, substrings)
-        }
-        LdapQueryType::GreaterOrEqual { attribute, value } => {
-            get_attribute_values(entry, attribute)
-                .iter()
-                .any(|v| compare_values(v, value) >= 0)
-        }
-        LdapQueryType::LessOrEqual { attribute, value } => {
-            get_attribute_values(entry, attribute)
-                .iter()
-                .any(|v| compare_values(v, value) <= 0)
-        }
+        LdapQueryType::Equality { attribute, value } => get_attribute_values(entry, attribute).iter().any(|v| v.eq_ignore_ascii_case(value)),
+        LdapQueryType::Present { attribute } => entry.attributes.iter().any(|attr| attr.atype.eq_ignore_ascii_case(attribute)),
+        LdapQueryType::And { filters } => filters.iter().all(|filter| entry_matches_query(entry, filter)),
+        LdapQueryType::Or { filters } => filters.iter().any(|filter| entry_matches_query(entry, filter)),
+        LdapQueryType::Not { filter } => !entry_matches_query(entry, filter),
+        LdapQueryType::Substring { attribute, substrings } => match_substring(entry, attribute, substrings),
+        LdapQueryType::GreaterOrEqual { attribute, value } => get_attribute_values(entry, attribute).iter().any(|v| compare_values(v, value) >= 0),
+        LdapQueryType::LessOrEqual { attribute, value } => get_attribute_values(entry, attribute).iter().any(|v| compare_values(v, value) <= 0),
         LdapQueryType::ApproxMatch { attribute, value } => {
             // 近似匹配通常使用不区分大小写的比较
-            get_attribute_values(entry, attribute)
-                .iter()
-                .any(|v| v.eq_ignore_ascii_case(value))
+            get_attribute_values(entry, attribute).iter().any(|v| v.eq_ignore_ascii_case(value))
         }
     }
 }
@@ -360,34 +293,30 @@ fn get_attribute_values(entry: &LdapSearchResultEntry, attribute: &str) -> Vec<S
 }
 
 /// 匹配子串过滤器
-fn match_substring(
-    entry: &LdapSearchResultEntry,
-    attribute: &str,
-    substrings: &LdapSubstringFilter,
-) -> bool {
+fn match_substring(entry: &LdapSearchResultEntry, attribute: &str, substrings: &LdapSubstringFilter) -> bool {
     let values = get_attribute_values(entry, attribute);
-    
+
     // 如果没有任何值，不匹配
     if values.is_empty() {
         return false;
     }
-    
+
     // 如果所有子串部分都为空，匹配所有值
     if substrings.initial.is_none() && substrings.any.is_empty() && substrings.final_.is_none() {
         return true;
     }
-    
+
     // 检查每个值是否匹配子串模式
     values.iter().any(|value| {
         let value_lower = value.to_lowercase();
-        
+
         // 检查初始子串
         if let Some(initial) = &substrings.initial {
             if !value_lower.starts_with(&initial.to_lowercase()) {
                 return false;
             }
         }
-        
+
         // 检查中间任意子串
         let mut remaining_value = if let Some(initial) = &substrings.initial {
             if value_lower.len() < initial.len() {
@@ -397,7 +326,7 @@ fn match_substring(
         } else {
             value_lower.clone()
         };
-        
+
         for any_part in &substrings.any {
             let any_lower = any_part.to_lowercase();
             if let Some(pos) = remaining_value.to_lowercase().find(&any_lower) {
@@ -406,14 +335,14 @@ fn match_substring(
                 return false;
             }
         }
-        
+
         // 检查结尾子串
         if let Some(final_part) = &substrings.final_ {
             if !remaining_value.to_lowercase().ends_with(&final_part.to_lowercase()) {
                 return false;
             }
         }
-        
+
         true
     })
 }
@@ -425,21 +354,14 @@ fn compare_values(v1: &str, v2: &str) -> i32 {
     if let (Ok(n1), Ok(n2)) = (v1.parse::<f64>(), v2.parse::<f64>()) {
         return (n1 - n2).signum() as i32;
     }
-    
+
     // 如果无法解析为数值，使用字符串比较（不区分大小写）
     v1.to_lowercase().cmp(&v2.to_lowercase()) as i32
 }
 
 /// 使用 LdapQueryType 筛选 LdapSearchResultEntry 列表
-/// 
+///
 /// 返回所有匹配查询条件的条目
-pub fn filter_entries_by_query(
-    entries: &[LdapSearchResultEntry],
-    query: &LdapQueryType,
-) -> Vec<LdapSearchResultEntry> {
-    entries
-        .iter()
-        .filter(|entry| entry_matches_query(entry, query))
-        .cloned()
-        .collect()
+pub fn filter_entries_by_query(entries: &[LdapSearchResultEntry], query: &LdapQueryType) -> Vec<LdapSearchResultEntry> {
+    entries.iter().filter(|entry| entry_matches_query(entry, query)).cloned().collect()
 }

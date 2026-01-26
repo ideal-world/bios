@@ -4,7 +4,7 @@
 
 use ldap3_proto::simple::*;
 
-use crate::{iam_config::IamLdapConfig};
+use crate::iam_config::IamLdapConfig;
 
 /// LDAP 实体数据
 /// 存储 LDAP 搜索结果条目及其父 DN
@@ -34,10 +34,7 @@ impl LdapEntity {
             },
         ];
         Self {
-            entry: LdapSearchResultEntry {
-                dn,
-                attributes,
-            },
+            entry: LdapSearchResultEntry { dn, attributes },
             parent_dn: "".to_string(),
         }
     }
@@ -60,10 +57,7 @@ impl LdapEntity {
             },
         ];
         Self {
-            entry: LdapSearchResultEntry {
-                dn,
-                attributes,
-            },
+            entry: LdapSearchResultEntry { dn, attributes },
             parent_dn,
         }
     }

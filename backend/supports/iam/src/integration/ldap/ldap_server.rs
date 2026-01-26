@@ -66,10 +66,10 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 
 use crate::iam_config::{IamConfig, IamLdapConfig};
 use crate::iam_constants;
+use crate::integration::ldap::account::{account_query, account_result};
 use crate::integration::ldap::ldap_auth;
 use crate::integration::ldap::ldap_entity;
 use crate::integration::ldap::ldap_parser;
-use crate::integration::ldap::account::{account_query, account_result};
 use crate::integration::ldap::ldap_parser::LdapBaseDnLevel;
 use crate::integration::ldap::organization::{org_query, org_result};
 use crate::integration::ldap::system::system_result;
@@ -138,11 +138,7 @@ impl LdapSession {
                 let base_dn_level = match ldap_parser::get_base_dn_level(&query.base, config) {
                     Some(level) => level,
                     None => {
-                        return build_error_response(
-                            req,
-                            LdapResultCode::InvalidDNSyntax,
-                            "Invalid base DN".to_string(),
-                        );
+                        return build_error_response(req, LdapResultCode::InvalidDNSyntax, "Invalid base DN".to_string());
                     }
                 };
                 // 首先判断scope是否是base，如果确定是base，则直接按当前dn查询并筛选返回
@@ -162,18 +158,14 @@ impl LdapSession {
                             results = filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect();
                             results.push(req.gen_success());
                             return results;
-                        },
+                        }
                         LdapBaseDnLevel::Item(ou, cn) => {
                             // Item 中第一个值存放的是 ou，第二个值存放的是 cn
                             if ou.to_lowercase() == config.ou_staff.to_lowercase() {
                                 let accounts = match account_query::execute_ldap_account_search(&query, config).await {
                                     Ok(accounts) => accounts,
                                     Err(_) => {
-                                        return build_error_response(
-                                            req,
-                                            LdapResultCode::Unavailable,
-                                            "Service internal error".to_string(),
-                                        );
+                                        return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
                                     }
                                 };
                                 results = account_result::build_account_search_response(req, &query, accounts, Some(cn), config);
@@ -182,16 +174,12 @@ impl LdapSession {
                             } else if ou.to_lowercase() == config.ou_organization.to_lowercase() {
                                 return vec![req.gen_success()]; // 组织查询（保留代码逻辑，但不返回结果）
                             } else {
-                                return build_error_response(
-                                    req,
-                                    LdapResultCode::InvalidDNSyntax,
-                                    "Invalid base DN".to_string(),
-                                );
+                                return build_error_response(req, LdapResultCode::InvalidDNSyntax, "Invalid base DN".to_string());
                             }
                         }
                     }
                 }
-                
+
                 if system_result::should_return_domain_level_in_search(base_dn_level.clone(), query.scope.clone()) {
                     let entrys = vec![ldap_entity::LdapEntity::build_dc_node(config).entry];
                     let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
@@ -209,11 +197,7 @@ impl LdapSession {
                     let accounts = match account_query::execute_ldap_account_search(&query, config).await {
                         Ok(accounts) => accounts,
                         Err(_) => {
-                            return build_error_response(
-                                req,
-                                LdapResultCode::Unavailable,
-                                "Service internal error".to_string(),
-                            );
+                            return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
                         }
                     };
                     results.append(&mut account_result::build_account_search_response(req, &query, accounts, None, config));

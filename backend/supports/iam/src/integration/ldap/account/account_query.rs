@@ -42,10 +42,7 @@ use crate::integration::ldap::account::account_result::LdapAccountFields;
 use crate::integration::ldap::ldap_parser;
 
 /// 执行LDAP账户搜索查询
-pub async fn execute_ldap_account_search(
-    query: &ldap_parser::LdapSearchQuery,
-    config: &IamLdapConfig,
-) -> TardisResult<Vec<LdapAccountFields>> {
+pub async fn execute_ldap_account_search(query: &ldap_parser::LdapSearchQuery, config: &IamLdapConfig) -> TardisResult<Vec<LdapAccountFields>> {
     let funs = iam_constants::get_tardis_inst();
 
     // 处理简单存在性查询（从base DN提取CN，检查账户是否存在）
@@ -86,24 +83,14 @@ pub async fn execute_ldap_account_search(
 /// 检查账户是否存在
 pub async fn check_account_exists(ak: &str) -> TardisResult<bool> {
     let funs = iam_constants::get_tardis_inst();
-    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        &IamCertKernelKind::UserPwd.to_string(),
-        Some("".to_string()),
-        &funs,
-    )
-    .await?;
+    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some("".to_string()), &funs).await?;
     bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ::check_exist(ak, &rbum_cert_conf_id, "", &funs).await
 }
 
 /// 根据CN获取账户详情
 pub async fn get_account_by_cn(ak: &str) -> TardisResult<Option<IamAccountDetailAggResp>> {
     let funs = iam_constants::get_tardis_inst();
-    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        &IamCertKernelKind::UserPwd.to_string(),
-        Some("".to_string()),
-        &funs,
-    )
-    .await?;
+    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some("".to_string()), &funs).await?;
 
     let ctx = IamCertServ::try_use_tenant_ctx(Default::default(), Some("".to_string()))?;
 
@@ -159,32 +146,24 @@ async fn build_and_execute_sql_query(
         ("AND", build_sql_where_clause(&query.query_type, config)?)
     };
     // 构建完整的SQL查询语句
-    let user_pwd_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        &IamCertKernelKind::UserPwd.to_string(),
-        Some("".to_string()),
-        &funs,
-    )
-    .await?;
-    let mail_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        &IamCertKernelKind::MailVCode.to_string(),
-        Some("".to_string()),
-        &funs,
-    )
-    .await?;
-    let phone_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        &IamCertKernelKind::PhoneVCode.to_string(),
-        Some("".to_string()),
-        &funs,
-    )
-    .await?;
-    let rbum_item_attr_kind_id = RbumKindAttrServ::find_one_rbum(&RbumKindAttrFilterReq {
-        basic: RbumBasicFilterReq {
-            name: Some("primary".to_string()),
-            own_paths: Some("".to_string()),
+    let user_pwd_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some("".to_string()), &funs).await?;
+    let mail_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some("".to_string()), &funs).await?;
+    let phone_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some("".to_string()), &funs).await?;
+    let rbum_item_attr_kind_id = RbumKindAttrServ::find_one_rbum(
+        &RbumKindAttrFilterReq {
+            basic: RbumBasicFilterReq {
+                name: Some("primary".to_string()),
+                own_paths: Some("".to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         },
-        ..Default::default()
-    }, funs, ctx).await?.map(|r| r.id).unwrap_or_default();
+        funs,
+        ctx,
+    )
+    .await?
+    .map(|r| r.id)
+    .unwrap_or_default();
 
     let sql = format!(
         r#"
@@ -244,44 +223,25 @@ async fn build_and_execute_sql_query(
 }
 
 /// 根据LDAP查询类型构建SQL WHERE条件
-fn build_sql_where_clause(
-    query_type: &ldap_parser::LdapQueryType,
-    _config: &IamLdapConfig,
-) -> TardisResult<String> {
+fn build_sql_where_clause(query_type: &ldap_parser::LdapQueryType, _config: &IamLdapConfig) -> TardisResult<String> {
     match query_type {
-        ldap_parser::LdapQueryType::Equality { attribute, value } => {
-            build_equality_where_clause(attribute, value)
-        }
-        ldap_parser::LdapQueryType::Present { attribute } => {
-            build_present_where_clause(attribute)
-        }
+        ldap_parser::LdapQueryType::Equality { attribute, value } => build_equality_where_clause(attribute, value),
+        ldap_parser::LdapQueryType::Present { attribute } => build_present_where_clause(attribute),
         ldap_parser::LdapQueryType::And { filters } => {
-            let conditions: Vec<String> = filters
-                .iter()
-                .map(|f| build_sql_where_clause(f, _config))
-                .collect::<Result<Vec<_>, _>>()?;
+            let conditions: Vec<String> = filters.iter().map(|f| build_sql_where_clause(f, _config)).collect::<Result<Vec<_>, _>>()?;
             Ok(format!("({})", conditions.join(" AND ")))
         }
         ldap_parser::LdapQueryType::Or { filters } => {
-            let conditions: Vec<String> = filters
-                .iter()
-                .map(|f| build_sql_where_clause(f, _config))
-                .collect::<Result<Vec<_>, _>>()?;
+            let conditions: Vec<String> = filters.iter().map(|f| build_sql_where_clause(f, _config)).collect::<Result<Vec<_>, _>>()?;
             Ok(format!("({})", conditions.join(" OR ")))
         }
         ldap_parser::LdapQueryType::Not { filter } => {
             let condition = build_sql_where_clause(filter, _config)?;
             Ok(format!("NOT ({})", condition))
         }
-        ldap_parser::LdapQueryType::Substring { attribute, substrings } => {
-            build_substring_where_clause(attribute, substrings)
-        }
-        ldap_parser::LdapQueryType::GreaterOrEqual { attribute, value } => {
-            build_comparison_where_clause(attribute, value, ">=")
-        }
-        ldap_parser::LdapQueryType::LessOrEqual { attribute, value } => {
-            build_comparison_where_clause(attribute, value, "<=")
-        }
+        ldap_parser::LdapQueryType::Substring { attribute, substrings } => build_substring_where_clause(attribute, substrings),
+        ldap_parser::LdapQueryType::GreaterOrEqual { attribute, value } => build_comparison_where_clause(attribute, value, ">="),
+        ldap_parser::LdapQueryType::LessOrEqual { attribute, value } => build_comparison_where_clause(attribute, value, "<="),
         ldap_parser::LdapQueryType::ApproxMatch { attribute, value } => {
             // 近似匹配使用LIKE查询
             build_substring_where_clause(
@@ -321,12 +281,7 @@ fn get_db_field(attr: &str) -> TardisResult<&'static str> {
     LDAP_ATTR_TO_DB_FIELD
         .get(attr.to_lowercase().as_str())
         .copied()
-        .ok_or_else(|| {
-            tardis::basic::error::TardisError::format_error(
-                &format!("Unsupported LDAP attribute: {}", attr),
-                "406-iam-ldap-unsupported-attribute",
-            )
-        })
+        .ok_or_else(|| tardis::basic::error::TardisError::format_error(&format!("Unsupported LDAP attribute: {}", attr), "406-iam-ldap-unsupported-attribute"))
 }
 
 /// 构建精确匹配的WHERE条件
@@ -342,7 +297,7 @@ fn build_equality_where_clause(attribute: &str, value: &str) -> TardisResult<Str
             return Ok("1=0".to_string());
         }
     }
-    
+
     let escaped_value = value.replace("'", "''"); // SQL注入防护
     let field = get_db_field(attribute)?;
     Ok(format!("{} = '{}'", field, escaped_value))
@@ -354,41 +309,38 @@ fn build_present_where_clause(attribute: &str) -> TardisResult<String> {
     if is_object_class(attribute) {
         return Ok("1=1".to_string());
     }
-    
+
     let field = get_db_field(attribute)?;
     Ok(format!("{} IS NOT NULL AND {} != ''", field, field))
 }
 
 /// 构建子串匹配的WHERE条件
-fn build_substring_where_clause(
-    attribute: &str,
-    substrings: &ldap3_proto::proto::LdapSubstringFilter,
-) -> TardisResult<String> {
+fn build_substring_where_clause(attribute: &str, substrings: &ldap3_proto::proto::LdapSubstringFilter) -> TardisResult<String> {
     // 特殊处理 objectClass：检查子串过滤器是否匹配固定值列表中的任何一个
     if is_object_class(attribute) {
         // 如果所有部分都为空，则视为存在性查询，返回真
         if substrings.initial.is_none() && substrings.any.is_empty() && substrings.final_.is_none() {
             return Ok("1=1".to_string());
         }
-        
+
         // 检查是否有任何一个固定值匹配整个子串过滤器
         let matched = OBJECT_CLASS_VALUES.iter().any(|&value| {
             let value_lower = value.to_lowercase();
-            
+
             // 检查 initial 部分
             if let Some(initial) = &substrings.initial {
                 if !value_lower.starts_with(&initial.to_lowercase()) {
                     return false;
                 }
             }
-            
+
             // 检查 any 部分（所有 any 部分都必须在值中出现）
             let mut remaining_value = if let Some(initial) = &substrings.initial {
                 value_lower[initial.len()..].to_string()
             } else {
                 value_lower.clone()
             };
-            
+
             for any_part in &substrings.any {
                 let any_lower = any_part.to_lowercase();
                 if let Some(pos) = remaining_value.to_lowercase().find(&any_lower) {
@@ -397,30 +349,22 @@ fn build_substring_where_clause(
                     return false;
                 }
             }
-            
+
             // 检查 final 部分
             if let Some(final_part) = &substrings.final_ {
                 if !remaining_value.to_lowercase().ends_with(&final_part.to_lowercase()) {
                     return false;
                 }
             }
-            
+
             true
         });
-        
-        return if matched {
-            Ok("1=1".to_string())
-        } else {
-            Ok("1=0".to_string())
-        };
+
+        return if matched { Ok("1=1".to_string()) } else { Ok("1=0".to_string()) };
     }
-    
+
     let escaped_initial = substrings.initial.as_ref().map(|s| s.replace("'", "''"));
-    let escaped_any = substrings
-        .any
-        .iter()
-        .map(|s| s.replace("'", "''"))
-        .collect::<Vec<_>>();
+    let escaped_any = substrings.any.iter().map(|s| s.replace("'", "''")).collect::<Vec<_>>();
     let escaped_final = substrings.final_.as_ref().map(|s| s.replace("'", "''"));
     let field = get_db_field(attribute)?;
     let mut patterns = Vec::new();
@@ -445,7 +389,7 @@ fn build_comparison_where_clause(attribute: &str, value: &str, operator: &str) -
             "406-iam-ldap-objectclass-no-comparison",
         ));
     }
-    
+
     let field = get_db_field(attribute)?;
     let escaped_value = value.replace("'", "''");
     Ok(format!("{} {} '{}'", field, operator, escaped_value))

@@ -5,19 +5,15 @@
 use ldap3_proto::simple::*;
 
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapQueryType, LdapSearchQuery, is_root_dse_query, is_subschema_query};
+use crate::integration::ldap::ldap_parser::{is_root_dse_query, is_subschema_query, LdapBaseDnLevel, LdapQueryType, LdapSearchQuery};
 
 /// 构建LDAP根查询响应
-pub fn build_root_dse_search_response(
-    req: &SearchRequest,
-    query: &LdapSearchQuery,
-    config: &IamLdapConfig,
-) -> Vec<LdapMsg> {
+pub fn build_root_dse_search_response(req: &SearchRequest, query: &LdapSearchQuery, config: &IamLdapConfig) -> Vec<LdapMsg> {
     // 根DSE只支持base scope
     if req.scope != LdapSearchScope::Base {
         return vec![req.gen_error(LdapResultCode::ProtocolError, "Root DSE only supports base scope".to_string())];
     }
-    
+
     let mut results = Vec::new();
     let root_dse_attributes = build_root_dse_attributes(config, query);
     results.push(req.gen_result_entry(LdapSearchResultEntry {
@@ -29,11 +25,7 @@ pub fn build_root_dse_search_response(
 }
 
 /// 构建LDAP Schema查询响应
-pub fn build_subschema_search_response(
-    req: &SearchRequest,
-    query: &LdapSearchQuery,
-    config: &IamLdapConfig,
-) -> Vec<LdapMsg> {
+pub fn build_subschema_search_response(req: &SearchRequest, query: &LdapSearchQuery, config: &IamLdapConfig) -> Vec<LdapMsg> {
     // Schema查询只支持base scope
     if req.scope != LdapSearchScope::Base {
         return vec![req.gen_error(LdapResultCode::ProtocolError, "Schema query only supports base scope".to_string())];
@@ -53,10 +45,7 @@ pub fn build_subschema_search_response(
 /// - 如果请求列表为空或包含"*"，返回所有用户属性
 /// - 如果请求了"+*"，返回所有操作属性（当前实现不返回操作属性）
 /// - 否则只返回请求的属性
-fn filter_attributes_by_request(
-    all_attributes: &[LdapPartialAttribute],
-    requested_attrs: &[String],
-) -> Vec<LdapPartialAttribute> {
+fn filter_attributes_by_request(all_attributes: &[LdapPartialAttribute], requested_attrs: &[String]) -> Vec<LdapPartialAttribute> {
     // 如果请求列表为空或包含"*"，返回所有属性
     if requested_attrs.is_empty() || requested_attrs.iter().any(|attr| attr == "*") {
         return all_attributes.to_vec();
@@ -69,11 +58,7 @@ fn filter_attributes_by_request(
 
     // 只返回请求的属性（不区分大小写）
     let requested_lower: Vec<String> = requested_attrs.iter().map(|a| a.to_lowercase()).collect();
-    all_attributes
-        .iter()
-        .filter(|attr| requested_lower.contains(&attr.atype.to_lowercase()))
-        .cloned()
-        .collect()
+    all_attributes.iter().filter(|attr| requested_lower.contains(&attr.atype.to_lowercase())).cloned().collect()
 }
 
 /// 构建 RootDSE 属性
@@ -119,7 +104,7 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
             vals: vec!["1.0".to_string().into()],
         },
     ];
-    
+
     // 根据请求的属性列表过滤属性
     filter_attributes_by_request(&all_attributes, &query.attributes)
 }
@@ -324,7 +309,7 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         atype: "modifyTimestamp".to_string(),
         vals: vec![timestamp.into()],
     });
-    
+
     // 根据请求的属性列表过滤属性
     filter_attributes_by_request(&all_attributes, &query.attributes)
 }
@@ -336,5 +321,6 @@ pub fn should_return_domain_level_in_search(_level: LdapBaseDnLevel, _scope: Lda
 
 // 判断search时是否返回OU节点
 pub fn should_return_ou_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope) -> bool {
-    matches!(level, LdapBaseDnLevel::Domain) && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
+    matches!(level, LdapBaseDnLevel::Domain)
+        && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
 }

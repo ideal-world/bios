@@ -4,17 +4,12 @@
 
 use ldap3_proto::simple::*;
 
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeNodeResp;
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery, extract_cn_from_base};
+use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapBaseDnLevel, LdapSearchQuery};
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeNodeResp;
 
 /// 构建LDAP组织搜索响应
-pub fn build_org_search_response(
-    req: &SearchRequest,
-    query: &LdapSearchQuery,
-    orgs: Vec<RbumSetTreeNodeResp>,
-    config: &IamLdapConfig,
-) -> Vec<LdapMsg> {
+pub fn build_org_search_response(req: &SearchRequest, query: &LdapSearchQuery, orgs: Vec<RbumSetTreeNodeResp>, config: &IamLdapConfig) -> Vec<LdapMsg> {
     let mut results = Vec::new();
 
     // 如果没有组织，返回空结果
@@ -67,10 +62,7 @@ fn extract_cn_from_org(org: &RbumSetTreeNodeResp, base: &str, _config: &IamLdapC
 }
 
 /// 根据请求的属性列表过滤属性
-fn filter_attributes_by_request(
-    all_attributes: &[LdapPartialAttribute],
-    requested_attrs: &[String],
-) -> Vec<LdapPartialAttribute> {
+fn filter_attributes_by_request(all_attributes: &[LdapPartialAttribute], requested_attrs: &[String]) -> Vec<LdapPartialAttribute> {
     // 如果请求列表为空或包含"*"，返回所有属性
     if requested_attrs.is_empty() || requested_attrs.iter().any(|attr| attr == "*") {
         return all_attributes.to_vec();
@@ -83,21 +75,13 @@ fn filter_attributes_by_request(
 
     // 只返回请求的属性（不区分大小写）
     let requested_lower: Vec<String> = requested_attrs.iter().map(|a| a.to_lowercase()).collect();
-    all_attributes
-        .iter()
-        .filter(|attr| requested_lower.contains(&attr.atype.to_lowercase()))
-        .cloned()
-        .collect()
+    all_attributes.iter().filter(|attr| requested_lower.contains(&attr.atype.to_lowercase())).cloned().collect()
 }
 
 /// 构建LDAP属性列表
 fn build_ldap_attributes(org: &RbumSetTreeNodeResp, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
     // 使用name作为CN，如果没有则使用sys_code
-    let cn = if !org.name.is_empty() {
-        org.name.clone()
-    } else {
-        org.sys_code.clone()
-    };
+    let cn = if !org.name.is_empty() { org.name.clone() } else { org.sys_code.clone() };
 
     // 构建属性列表
     let mut attributes = vec![
@@ -166,7 +150,10 @@ fn build_ldap_attributes(org: &RbumSetTreeNodeResp, config: &IamLdapConfig) -> V
 pub fn should_return_org_level_in_search(level: LdapBaseDnLevel, scope: LdapSearchScope, config: &IamLdapConfig) -> bool {
     match level {
         LdapBaseDnLevel::Domain => matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children),
-        LdapBaseDnLevel::Ou(ref ou) => ou.to_lowercase() == config.ou_organization.to_lowercase() && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children)),
+        LdapBaseDnLevel::Ou(ref ou) => {
+            ou.to_lowercase() == config.ou_organization.to_lowercase()
+                && (matches!(scope, LdapSearchScope::OneLevel) || matches!(scope, LdapSearchScope::Subtree) || matches!(scope, LdapSearchScope::Children))
+        }
         _ => false,
     }
 }
