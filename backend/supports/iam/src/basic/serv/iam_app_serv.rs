@@ -199,6 +199,7 @@ impl IamAppServ {
         .await?;
         IamRoleServ::add_app_copy_role_agg(&app_id, funs, &app_ctx).await?;
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
+        let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, tenant_ctx).await?;
         // TODO 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
@@ -206,6 +207,9 @@ impl IamAppServ {
             for admin_id in admin_ids {
                 IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
                 IamRoleServ::add_rel_account(&app_admin_role_id, admin_id, None, funs, &app_ctx).await?;
+                if add_req.kind == Some(IamAppKind::Project) {
+                    IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, tenant_ctx).await?;
+                }
             }
         }
         //refresh ctx
@@ -232,9 +236,7 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
-        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
-        let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
+        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         Self::modify_item(
             id,
             &mut IamAppModifyReq {
@@ -250,6 +252,23 @@ impl IamAppServ {
             ctx,
         )
         .await?;
+        let app = Self::get_item(
+            id,
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_owned()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, ctx).await?;
+        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&app_admin_role_id, None, None, funs, ctx).await?;
+        let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         if let Some(admin_ids) = &modify_req.admin_ids {
             if !original_app_admin_account_ids.is_empty() {
                 // add new admins
@@ -265,9 +284,19 @@ impl IamAppServ {
                 }
             }
         }
+        if app.kind == IamAppKind::Project {
+            let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, &tenant_ctx).await?;
+            if let Some(admin_ids) = &modify_req.admin_ids {
+                // add new admins
+                for admin_id in admin_ids {
+                    if !original_app_admin_account_ids.contains(admin_id) {
+                        IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, &tenant_ctx).await?;
+                    }
+                }
+            }
+        }
         if modify_req.sync_apps_group.unwrap_or(true) {
             if let Some(set_cate_id) = &modify_req.set_cate_id {
-                let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
                 let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
                 let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
                 for set_item in set_items {

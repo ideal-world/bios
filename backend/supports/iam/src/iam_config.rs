@@ -274,6 +274,7 @@ pub struct BasicInfo {
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
     pub role_tenant_audit_id: String,
+    pub role_tenant_app_manager_id: String,
     pub role_app_admin_id: String,
     pub role_app_read_id: String,
 }
@@ -318,6 +319,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
     fn iam_basic_role_tenant_audit_id(&self) -> String;
+    fn iam_basic_role_tenant_app_manager_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
     fn iam_basic_role_app_read_id(&self) -> String;
 }
@@ -361,6 +363,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_tenant_audit_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_tenant_audit_id.clone())
+    }
+
+    fn iam_basic_role_tenant_app_manager_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_tenant_app_manager_id.clone())
     }
 
     fn iam_basic_role_app_admin_id(&self) -> String {
