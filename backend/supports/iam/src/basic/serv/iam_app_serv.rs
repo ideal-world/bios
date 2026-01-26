@@ -285,7 +285,7 @@ impl IamAppServ {
             }
         }
         if app.kind == IamAppKind::Project {
-            let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, tenant_ctx).await?;
+            let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, &tenant_ctx).await?;
             if let Some(admin_ids) = &modify_req.admin_ids {
                 // add new admins
                 for admin_id in admin_ids {
