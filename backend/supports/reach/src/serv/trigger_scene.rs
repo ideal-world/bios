@@ -60,6 +60,15 @@ impl
         if let Some(name) = &filter.name {
             query.and_where(trigger_scene::Column::Name.eq(name));
         }
+        if let Some(kinds) = &filter.kinds {
+            if !kinds.is_empty() {
+                let kind_strings: Vec<String> = kinds.iter().map(|k| k.as_str().to_string()).collect();
+                query.and_where(trigger_scene::Column::Kind.is_in(kind_strings));
+            }
+        }
+        if let Some(sort_asc) = filter.sort_asc {
+            query.order_by(trigger_scene::Column::Sort, if sort_asc { Order::Asc } else { Order::Desc });
+        }
         query.with_filter(Self::get_table_name(), &filter.base_filter.basic, is_detail, false, ctx);
         Ok(query)
     }

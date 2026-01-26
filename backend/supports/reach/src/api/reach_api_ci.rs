@@ -1,2 +1,4 @@
 mod reach_api_ci_message;
 pub use reach_api_ci_message::ReachMessageCiApi;
+mod reach_api_ci_trigger_instance;
+pub use reach_api_ci_trigger_instance::ReachTriggerInstanceConfigCiApi;

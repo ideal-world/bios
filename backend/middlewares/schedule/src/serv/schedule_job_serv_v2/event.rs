@@ -12,7 +12,7 @@ pub trait EventComponent: Send + Sync + Clone + 'static {
         self.notify_create(code);
     }
     fn notify_delete(&self, code: &str);
-    fn notify_execute_start(&self, code: &str);
+    fn notify_execute_start(&self, code: &str, ext: Value);
     fn notify_execute_end(&self, code: &str, message: String, ext: Value);
     fn create_event_stream() -> impl Stream<Item = ScheduleEvent> + Send;
 }

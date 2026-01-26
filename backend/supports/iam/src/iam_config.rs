@@ -102,17 +102,34 @@ pub struct IamConfig {
 pub struct IamLdapConfig {
     pub port: u16,
     pub dc: String,
+    pub base_dn: String,
     pub bind_dn: String,
     pub bind_password: String,
+    /// OU 名称：账号所在组织单位（DN 中 ou= 值）
+    pub ou_staff: String,
+    /// OU 名称：组织所在组织单位（DN 中 ou= 值）
+    pub ou_organization: String,
+    pub schema_dn: String,
+    /// Labor type translation map: code -> label
+    pub labor_type_map: Option<std::collections::HashMap<String, String>>,
+    /// Position translation map: code -> label
+    pub position_map: Option<std::collections::HashMap<String, String>>,
 }
 
 impl Default for IamLdapConfig {
     fn default() -> Self {
+        let dc = "bios".to_string();
         IamLdapConfig {
             port: 10389,
-            dc: "bios".to_string(),
+            dc: dc.clone(),
+            base_dn: format!("DC={}", dc),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
+            ou_staff: "staff".to_string(),
+            ou_organization: "organizations".to_string(),
+            schema_dn: "cn=Subschema".to_string(),
+            labor_type_map: None,
+            position_map: None,
         }
     }
 }
@@ -257,6 +274,7 @@ pub struct BasicInfo {
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
     pub role_tenant_audit_id: String,
+    pub role_tenant_app_manager_id: String,
     pub role_app_admin_id: String,
     pub role_app_read_id: String,
 }
@@ -301,6 +319,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
     fn iam_basic_role_tenant_audit_id(&self) -> String;
+    fn iam_basic_role_tenant_app_manager_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
     fn iam_basic_role_app_read_id(&self) -> String;
 }
@@ -344,6 +363,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_tenant_audit_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_tenant_audit_id.clone())
+    }
+
+    fn iam_basic_role_tenant_app_manager_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_tenant_app_manager_id.clone())
     }
 
     fn iam_basic_role_app_admin_id(&self) -> String {

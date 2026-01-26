@@ -1020,32 +1020,42 @@ fn package_rel_external_id_agg(
     }
     select.iter().for_each(|i| {
         if let Some(rel_external_id) = &i.rel_external_id {
-            rel_external_ids.insert(rel_external_id.clone());
+            rel_external_id.split(",").for_each(|id| {
+                rel_external_ids.insert(id.to_string());
+            });
         }
     });
     group.iter().for_each(|i| {
         if let Some(rel_external_id) = &i.rel_external_id {
-            rel_external_ids.insert(rel_external_id.clone());
+            rel_external_id.split(",").for_each(|id| {
+                rel_external_ids.insert(id.to_string());
+            });
         }
     });
     if let Some(orders) = group_order.as_ref() {
         orders.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
-                rel_external_ids.insert(rel_external_id.clone());
+                rel_external_id.split(",").for_each(|id| {
+                    rel_external_ids.insert(id.to_string());
+                });
             }
         })
     }
     if let Some(metrics_order) = &metrics_order {
         metrics_order.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
-                rel_external_ids.insert(rel_external_id.clone());
+                rel_external_id.split(",").for_each(|id| {
+                    rel_external_ids.insert(id.to_string());
+                });
             }
         });
     }
     if let Some(having) = &having {
         having.iter().for_each(|i| {
             if let Some(rel_external_id) = &i.rel_external_id {
-                rel_external_ids.insert(rel_external_id.clone());
+                rel_external_id.split(",").for_each(|id| {
+                    rel_external_ids.insert(id.to_string());
+                });
             }
         });
     }
@@ -1053,7 +1063,9 @@ fn package_rel_external_id_agg(
         or_wheres.iter().for_each(|and_wheres| {
             and_wheres.iter().for_each(|i| {
                 if let Some(rel_external_id) = &i.rel_external_id {
-                    rel_external_ids.insert(rel_external_id.clone());
+                    rel_external_id.split(",").for_each(|id| {
+                        rel_external_ids.insert(id.to_string());
+                    });
                 }
             });
         });

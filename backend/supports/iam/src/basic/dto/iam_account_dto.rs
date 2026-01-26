@@ -167,7 +167,7 @@ pub struct IamAccountSummaryResp {
     pub icon: String,
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountDetailResp {
     pub id: String,
     pub name: String,

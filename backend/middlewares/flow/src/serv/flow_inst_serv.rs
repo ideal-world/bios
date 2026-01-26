@@ -1029,6 +1029,34 @@ impl FlowInstServ {
                 }
             }
         }
+        if flow_inst_detail.main {
+            if let Some(rel_child_objs) = flow_inst_detail.artifacts.clone().map(|artifacts| artifacts.rel_child_objs.unwrap_or_default()) {
+                let child_main_insts = Self::find_items(
+                    &FlowInstFilterReq {
+                        rel_business_obj_ids: Some(rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
+                        main: Some(true),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for child_main_inst in child_main_insts {
+                    Self::modify_inst_artifacts(&child_main_inst.id, &FlowInstArtifactsModifyReq {
+                        state: Some(FlowInstStateKind::default()),
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: child_main_inst.tag.clone(),
+                        status: Some("".to_string()),
+                        rel_state: Some("".to_string()),
+                        rel_transition_state_name: Some("".to_string()),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -3509,7 +3537,7 @@ impl FlowInstServ {
                 .await?;
                 if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
                     let inst_detail = Self::get(&inst_id, funs, ctx).await?;
-                    Self::transfer(
+                    let tran_resp = Self::transfer(
                         &inst_detail,
                         &FlowInstTransferReq {
                             flow_transition_id: tran.id.clone(),
@@ -3523,6 +3551,14 @@ impl FlowInstServ {
                         funs,
                     )
                     .await?;
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: inst_detail.tag.to_string(),
+                        status: Some(tran_resp.new_flow_state_name.clone()),
+                        rel_state: Some("".to_string()),
+                        rel_transition_state_name: Some("".to_string()),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 }
             }
         }
@@ -3708,25 +3744,65 @@ impl FlowInstServ {
                     .filter(|old_obj| !new_rel_child_objs.contains(old_obj))
                     .cloned()
                     .collect();
-                for added_rel_child_obj in added_rel_child_objs {
+                let added_rel_child_main_insts = Self::find_items(
+                    &FlowInstFilterReq {
+                        rel_business_obj_ids: Some(added_rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
+                        main: Some(true),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for added_rel_child_main_inst in added_rel_child_main_insts {
+                    Self::modify_inst_artifacts(
+                        &added_rel_child_main_inst.id,
+                        &FlowInstArtifactsModifyReq {
+                            state: Some(FlowInstStateKind::Approval),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                        tag: added_rel_child_obj.tag.clone(),
+                        tag: added_rel_child_main_inst.tag.clone(),
                         status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
                         rel_state: Some(inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                         rel_transition_state_name: Some("".to_string()),
                         ..Default::default()
                     })?;
-                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &added_rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &added_rel_child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 }
-                for removed_rel_child_obj in removed_rel_child_objs {
+                let removed_rel_child_main_insts = Self::find_items(
+                    &FlowInstFilterReq {
+                        rel_business_obj_ids: Some(removed_rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
+                        main: Some(true),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for removed_rel_child_main_inst in removed_rel_child_main_insts {
+                    Self::modify_inst_artifacts(
+                        &removed_rel_child_main_inst.id,
+                        &FlowInstArtifactsModifyReq {
+                            state: Some(FlowInstStateKind::default()),
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                        tag: removed_rel_child_obj.tag.clone(),
+                        tag: removed_rel_child_main_inst.tag.clone(),
                         status: Some("".to_string()),
-                        rel_state: Some(inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
+                        rel_state: Some("".to_string()),
                         rel_transition_state_name: Some("".to_string()),
                         ..Default::default()
                     })?;
-                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &removed_rel_child_obj.obj_id, &modify_serach_ext, funs, ctx).await?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &removed_rel_child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 }
             }
         }
