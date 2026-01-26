@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemBasicFilterReq};
 use bios_basic::rbum::{dto::rbum_item_dto::RbumItemAddReq, serv::rbum_crud_serv::RbumCrudOperation};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -43,6 +44,14 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
 
     // retrieve all instance configs, group by group_code
     let filter = &ReachTriggerInstanceConfigFilterReq {
+        base_filter: RbumItemBasicFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                own_paths: Some(String::default()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         rel_reach_trigger_scene_id: Some(scene.id),
         rel_item_id: Some(send_req.rel_item_id.clone()),
         ..Default::default()

@@ -14,7 +14,7 @@ use tardis::{basic::result::TardisResult, web::web_server::TardisWebServer};
 
 use crate::reach_constants::DOMAIN_CODE;
 
-pub type ReachApi = (ReachCcApi, ReachCtApi, ReachCcApi, ReachCsApi, ReachMessageCiApi);
+pub type ReachApi = (ReachCcApi, ReachCtApi, ReachCcApi, ReachCsApi, ReachMessageCiApi, ReachTriggerInstanceConfigCiApi);
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server.add_module(DOMAIN_CODE, ReachApi::default()).await;
     Ok(())
