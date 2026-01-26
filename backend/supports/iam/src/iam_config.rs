@@ -104,6 +104,10 @@ pub struct IamLdapConfig {
     pub dc: String,
     pub bind_dn: String,
     pub bind_password: String,
+    /// Labor type translation map: code -> label
+    pub labor_type_map: Option<std::collections::HashMap<String, String>>,
+    /// Position translation map: code -> label
+    pub position_map: Option<std::collections::HashMap<String, String>>,
 }
 
 impl Default for IamLdapConfig {
@@ -113,6 +117,8 @@ impl Default for IamLdapConfig {
             dc: "bios".to_string(),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
+            labor_type_map: None,
+            position_map: None,
         }
     }
 }
@@ -257,6 +263,7 @@ pub struct BasicInfo {
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
     pub role_tenant_audit_id: String,
+    pub role_tenant_app_manager_id: String,
     pub role_app_admin_id: String,
     pub role_app_read_id: String,
 }
@@ -301,6 +308,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
     fn iam_basic_role_tenant_audit_id(&self) -> String;
+    fn iam_basic_role_tenant_app_manager_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
     fn iam_basic_role_app_read_id(&self) -> String;
 }
@@ -344,6 +352,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_tenant_audit_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_tenant_audit_id.clone())
+    }
+
+    fn iam_basic_role_tenant_app_manager_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_tenant_app_manager_id.clone())
     }
 
     fn iam_basic_role_app_admin_id(&self) -> String {
