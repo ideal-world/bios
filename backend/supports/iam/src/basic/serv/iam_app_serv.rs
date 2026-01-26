@@ -208,7 +208,7 @@ impl IamAppServ {
                 IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
                 IamRoleServ::add_rel_account(&app_admin_role_id, admin_id, None, funs, &app_ctx).await?;
                 if add_req.kind == Some(IamAppKind::Project) {
-                    IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, &app_ctx).await?;
+                    IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, tenant_ctx).await?;
                 }
             }
         }
@@ -236,6 +236,7 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
         Self::modify_item(
             id,
             &mut IamAppModifyReq {
@@ -289,14 +290,13 @@ impl IamAppServ {
                 // add new admins
                 for admin_id in admin_ids {
                     if !original_app_admin_account_ids.contains(admin_id) {
-                        IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, ctx).await?;
+                        IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, &tenant_ctx).await?;
                     }
                 }
             }
         }
         if modify_req.sync_apps_group.unwrap_or(true) {
             if let Some(set_cate_id) = &modify_req.set_cate_id {
-                let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
                 let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
                 let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
                 for set_item in set_items {
