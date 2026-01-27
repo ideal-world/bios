@@ -4654,8 +4654,15 @@ impl FlowInstServ {
                     .columns([flow_inst::Column::Code])
                     .from(flow_inst::Entity)
                     .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
-                    .and_where(Expr::col(flow_inst::Column::CreateTime).lt(inst.create_time.date_naive()))
-                    .and_where(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str())),
+                    .and_where(
+                        Expr::col(flow_inst::Column::CreateTime)
+                            .lt(inst.create_time.date_naive())
+                            .or(
+                                Expr::col(flow_inst::Column::CreateTime)
+                                    .eq(inst.create_time.date_naive())
+                                    .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
+                            )
+                    ),
             )
             .await?;
         let current_date = Utc::now();
