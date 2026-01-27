@@ -291,12 +291,13 @@ impl IamCiAppApi {
         let app_ids = ids.0.split(',').collect::<Vec<_>>();
         let account_ids = account_ids.0.split(',').collect::<Vec<_>>();
         for app_id in app_ids {
+            let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(app_id.to_string()))?;
             for account_id in account_ids.iter() {
-                let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(app_id.to_string()))?;
                 IamAppServ::delete_rel_account(app_id, account_id, &funs, &mock_app_ctx).await?;
             }
+            mock_app_ctx.execute_task().await?;
         }
-        
+
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
