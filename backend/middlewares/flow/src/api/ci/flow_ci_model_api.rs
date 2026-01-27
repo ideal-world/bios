@@ -240,8 +240,11 @@ impl FlowCiModelApi {
             }
         }
         
-        // 添加或修改审批配置
-        FlowConfigServ::add_or_modify_root_config(req.0.rel_template_id.clone().unwrap_or_default(), req.0.target_template_id.clone(), "review", &funs, &ctx.0).await?;
+        if req.0.op == FlowModelAssociativeOperationKind::Copy {
+            // 添加或修改审批配置
+            FlowConfigServ::add_or_modify_root_config(req.0.rel_template_id.clone().unwrap_or_default(), req.0.target_template_id.clone(), "review", &funs, &ctx.0).await?;
+        }
+
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

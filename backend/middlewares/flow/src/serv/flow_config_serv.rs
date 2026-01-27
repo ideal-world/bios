@@ -111,7 +111,14 @@ impl FlowConfigServ {
     }
 
     pub async fn add_or_modify_root_config(rel_template_id: String, target_template_id: Option<String>, root_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let source_key = Self::get_root_config_key(Some(rel_template_id), root_tag, ctx);
+        // 引用的模板，则向上获取根模板ID的配置
+        let mut template_id = rel_template_id;
+        while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id)
+        {
+            template_id = p_template_id;
+        }
+        let source_key = format!("__tag__:_:_:{}:{}_config", template_id, root_tag.to_ascii_lowercase());
+
         let config = SpiKvClient::get_item(source_key, None, funs, ctx).await?;
         if let Some(config) = config {
             let config = TardisFuns::json.json_to_obj::<Vec<FlowRootConfigResp>>(config.value)?;
