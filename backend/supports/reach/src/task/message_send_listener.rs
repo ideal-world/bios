@@ -1,4 +1,5 @@
 use std::{collections::HashSet, sync::Arc};
+use std::time::Duration;
 
 use crate::{domain::*, dto::*, reach_config::ReachConfig, reach_constants::*, reach_init::get_reach_send_channel_map, reach_send_channel::*, serv::*};
 use bios_basic::rbum::{helper::rbum_scope_helper, serv::rbum_crud_serv::RbumCrudOperation};
@@ -9,6 +10,7 @@ use tardis::{
     db::sea_orm::{sea_query::Query, *},
     log, tokio, TardisFunsInst,
 };
+use tardis::tokio::time::sleep;
 
 #[derive(Clone)]
 pub struct MessageSendListener {
@@ -109,14 +111,15 @@ impl MessageSendListener {
                     continue;
                 }
                 if let Ok(mut resp) = iam_client.get_account(account_id, &owner_path).await {
-                    let Some(res_id) = resp.certs.remove(cert_key) else {
+                    if let Some(res_id) = resp.certs.remove(cert_key) {
+                        to.insert(res_id);
+                    } else {
                         log::warn!(
                             "[Reach] Notify {chan} channel send error, missing [{cert_key}] parameters, resp: {resp:?}",
                             chan = message.rel_reach_channel
                         );
                         continue;
                     };
-                    to.insert(res_id);
                 } else {
                     log::warn!("[Reach] iam get account info error, account_id: {account_id}")
                 }
@@ -129,7 +132,10 @@ impl MessageSendListener {
                 }
             }
         }
-
+        if to.is_empty() {
+            log::warn!("[Reach] Notify channel send error, no valid receivers found, message id: {}", message.id);
+            return Err(TardisError::not_found("missing receivers", "404-reach-message-receivers-not-found"));
+        }
         let start_time = Utc::now();
         let result = match message.receive_kind {
             ReachReceiveKind::Account => {
@@ -189,6 +195,7 @@ impl MessageSendListener {
             if self.send_single_message(&send_task, &funs).await.is_err() {
                 send_task.update_status(ReachStatusKind::Fail).await?;
             }
+            sleep(Duration::from_millis(100)).await;
         }
         Ok(())
     }
