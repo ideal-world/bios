@@ -347,7 +347,7 @@ impl FlowInstServ {
         }
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
-            code: Set(None),
+            code: Set(Some("".to_string())),
             tag: Set(Some(start_req.tag.clone())),
             rel_flow_version_id: Set(current_version_id.clone()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.clone()),
@@ -398,7 +398,7 @@ impl FlowInstServ {
         // 更新业务的关联审批流节点名
         FlowSearchClient::refresh_business_obj_search(&start_req.rel_business_obj_id, &start_req.tag, funs, ctx).await?;
 
-        if child {
+        if !child {
             let ctx_clone = ctx.clone();
             let inst_id_cp = inst_id.clone();
             ctx.add_sync_task(Box::new(|| {
