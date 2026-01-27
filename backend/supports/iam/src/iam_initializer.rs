@@ -197,23 +197,23 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
 
     let domain_iam_id =
         RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found iam domain", ""))?;
-
+    let role_codes = vec![
+        iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER.to_string(),
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
+    ];
     let roles = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
-            codes: Some(vec![
-                iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER.to_string(),
-                iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
-            ]),
+            codes: Some(role_codes.clone()),
             rbum_kind_id: Some(kind_role_id.clone()),
             rbum_domain_id: Some(domain_iam_id.clone()),
             ..Default::default()
         },
         1,
-        5,
+        role_codes.len() as u32,
         Some(false),
         None,
         funs,

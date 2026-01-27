@@ -1287,7 +1287,7 @@ impl FlowModelServ {
             kind,
             rel_template_ids: rel_template_id.map(|r| vec![r]),
             data_source,
-            default: Some(true),
+            default: Some(false),
             template: kind != FlowModelKind::AsModel,
             ..rel_model.clone().into()
         };

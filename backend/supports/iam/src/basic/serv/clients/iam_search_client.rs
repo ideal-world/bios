@@ -2,30 +2,39 @@ use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetFilterReq, RbumSetItemFilterReq},
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::{RbumSetItemServ, RbumSetServ}},
+    serv::{
+        rbum_crud_serv::RbumCrudOperation,
+        rbum_item_serv::RbumItemCrudOperation,
+        rbum_set_serv::{RbumSetItemServ, RbumSetServ},
+    },
 };
 use bios_sdk_invoke::{
     clients::spi_search_client::SpiSearchClient,
-    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq},
+    dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemVisitKeysReq, SearchSaveItemReq},
 };
 use itertools::Itertools;
 
 use tardis::{
-    TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, serde_json::{self, Value, json}, tokio
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    serde_json::{self, json, Value},
+    tokio, TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     basic::{
         dto::{
-            iam_account_dto::IamAccountDetailAggResp, iam_app_dto::IamAppKind, iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq}
+            iam_account_dto::IamAccountDetailAggResp,
+            iam_app_dto::IamAppKind,
+            iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         },
         serv::{
-            clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ
+            clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ,
+            iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ,
         },
     },
     iam_config::IamConfig,
     iam_constants,
-    iam_enumeration::{IamRelKind, IamSetKind, IamCertKernelKind},
+    iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind},
 };
 pub struct IamSearchClient;
 
@@ -173,11 +182,14 @@ impl IamSearchClient {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, None, funs, &mock_ctx).await?;
             account_resp_dept_id.extend(set_items.iter().filter_map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
             for set_item in set_items {
-                account_resp_dept_map.insert(set_item.rel_rbum_set_cate_id.clone().unwrap_or_default(), json!({
-                    "name": set_item.rel_rbum_set_cate_name,
-                    "own_paths": set_item.own_paths,
-                    "scope_level": set_item.rel_rbum_item_scope_level,
-                }));
+                account_resp_dept_map.insert(
+                    set_item.rel_rbum_set_cate_id.clone().unwrap_or_default(),
+                    json!({
+                        "name": set_item.rel_rbum_set_cate_name,
+                        "own_paths": set_item.own_paths,
+                        "scope_level": set_item.rel_rbum_item_scope_level,
+                    }),
+                );
             }
         }
 
@@ -205,7 +217,7 @@ impl IamSearchClient {
             &mock_ctx,
         )
         .await?;
-        let account_app_ids =  raw_account_apps.iter().map(|app| app.id.clone()).collect_vec();
+        let account_app_ids = raw_account_apps.iter().map(|app| app.id.clone()).collect_vec();
         let account_contract_ids = raw_account_apps.iter().filter(|app| app.kind == IamAppKind::Project).map(|app| app.id.clone()).collect_vec();
         let raw_account_contract_map = raw_account_apps
             .iter()
@@ -276,42 +288,67 @@ impl IamSearchClient {
         // 产品组
         let mut raw_app_set_map = HashMap::new();
         let mut app_set = vec![];
-        let set_cate = RbumSetItemServ::find_detail_rbums(&RbumSetItemFilterReq {
-            basic: RbumBasicFilterReq {
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
+        let set_cate = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_ids: Some(vec![account_id.to_string()]),
                 ..Default::default()
             },
-            rel_rbum_item_ids: Some(vec![account_id.to_string()]),
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
-        let set_ids = RbumSetServ::find_id_rbums(&RbumSetFilterReq {
-            basic: RbumBasicFilterReq {
-                ids: Some(set_cate.iter().map(|cate| cate.rel_rbum_set_id.clone()).collect_vec()),
-                own_paths: Some("".to_string()),
-                with_sub_own_paths: true,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let set_ids = RbumSetServ::find_id_rbums(
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(set_cate.iter().map(|cate| cate.rel_rbum_set_id.clone()).collect_vec()),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamSetKind::Apps.to_string()),
                 ..Default::default()
             },
-            kind: Some(IamSetKind::Apps.to_string()),
-            ..Default::default()
-        }, None, None, funs, ctx).await?;
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for set_cate in set_cate {
             if set_ids.contains(&set_cate.rel_rbum_set_id.clone()) {
                 raw_app_set_map.insert(
-                    set_cate.rel_rbum_set_id.clone(), 
+                    set_cate.rel_rbum_set_id.clone(),
                     json!({
                         "name": set_cate.rel_rbum_set_cate_name,
                         "own_paths": set_cate.own_paths,
                         "scope_level": set_cate.rel_rbum_item_scope_level,
-                    })
+                    }),
                 );
                 app_set.push(set_cate.rel_rbum_set_cate_id);
             }
         }
         // 岗位
         let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
-        let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| if attr.value.is_empty() { vec![] } else {attr.value.clone().split(",").map(|a| a.to_string()).collect_vec()});
-        let standard_level = account_resp.exts.iter().find(|attr| attr.name == "standard_level").map(|attr| TardisFuns::json.str_to_obj::<HashMap<String,String>>(attr.value.as_str()).unwrap_or_default()).unwrap_or_default();
+        let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| {
+            if attr.value.is_empty() {
+                vec![]
+            } else {
+                attr.value.clone().split(",").map(|a| a.to_string()).collect_vec()
+            }
+        });
+        let standard_level = account_resp
+            .exts
+            .iter()
+            .find(|attr| attr.name == "standard_level")
+            .map(|attr| TardisFuns::json.str_to_obj::<HashMap<String, String>>(attr.value.as_str()).unwrap_or_default())
+            .unwrap_or_default();
         let standard_level_map = IamKvClient::get_item_value("__tag__:_:standardLevel", funs, ctx).await?.unwrap_or_default();
         let position_map = IamKvClient::get_item_value("__tag__:_:position:all", funs, ctx).await?.unwrap_or_default();
         let mut raw_primary_map = HashMap::new();
@@ -322,7 +359,7 @@ impl IamSearchClient {
                 json!({
                     "name": position_map.iter().find(|pos| pos.code == pri).map(|pos| pos.label.clone()).unwrap_or_default(),
                     "standard_level": standard_level_map.iter().find(|level| level.code == standard_level_code).map(|level| level.label.clone()).unwrap_or_default(),
-                })
+                }),
             );
         }
         let mut raw_secondary_map = HashMap::new();
@@ -334,7 +371,7 @@ impl IamSearchClient {
                     json!({
                         "name": position_map.iter().find(|pos| pos.code == s).map(|pos| pos.label.clone()).unwrap_or_default(),
                         "standard_level": standard_level_map.iter().find(|level| level.code == standard_level_code).map(|level| level.label.clone()).unwrap_or_default(),
-                    })
+                    }),
                 );
             }
         }
@@ -370,40 +407,14 @@ impl IamSearchClient {
             "app_set_id": app_set,
             "scope_level":account_resp.scope_level
         });
-        //add or modify search
-        if *is_modify {
-            let modify_req = SearchItemModifyReq {
+        // save search
+        SpiSearchClient::save(
+            &tag,
+            &SearchSaveItemReq {
                 kind: Some(funs.conf::<IamConfig>().spi.search_account_tag.clone()),
-                title: Some(account_resp.name.clone()),
-                name: Some(account_resp.name.clone()),
-                content: Some(format!("{},{:?}", account_resp.name, account_certs,)),
-                owner: Some(account_resp.owner),
-                own_paths: if !account_resp.own_paths.is_empty() {
-                    Some(account_resp.own_paths.clone())
-                } else {
-                    None
-                },
-                create_time: Some(account_resp.create_time),
-                update_time: Some(account_resp.update_time),
-                ext: Some(ext),
-                ext_override: Some(true),
-                visit_keys: Some(SearchItemVisitKeysReq {
-                    accounts: None,
-                    apps: Some(account_app_ids),
-                    tenants: Some([account_resp.own_paths].to_vec()),
-                    roles: Some(account_roles),
-                    groups: Some(account_resp_dept_id),
-                }),
-                kv_disable: Some(account_resp.disabled),
-            };
-            SpiSearchClient::modify_item_and_name(&tag, &key, &modify_req, funs, ctx).await?;
-        } else {
-            let add_req = SearchItemAddReq {
-                tag,
-                kind: funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 key: TrimString(key),
-                title: account_resp.name.clone(),
-                content: format!("{},{:?}", account_resp.name, account_certs,),
+                title: Some(account_resp.name.clone()),
+                content: Some(format!("{},{:?}", account_resp.name, account_certs,)),
                 data_source: None,
                 owner: Some(account_resp.owner),
                 own_paths: if !account_resp.own_paths.is_empty() {
@@ -421,10 +432,13 @@ impl IamSearchClient {
                     roles: Some(account_roles),
                     groups: Some(account_resp_dept_id),
                 }),
-                kv_disable: Some(account_resp.disabled),
-            };
-            SpiSearchClient::add_item_and_name(&add_req, Some(account_resp.name), funs, ctx).await?
-        }
+            },
+            Some(account_resp.name.clone()),
+            Some(account_resp.disabled),
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 
