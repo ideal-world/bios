@@ -397,6 +397,7 @@ impl IamCtRoleApi {
                 IamAppServ::add_rel_account(app_id, account_id, true, &funs, &mock_app_ctx).await?;
                 IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
             }
+            mock_app_ctx.execute_task().await?;
         }
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -425,6 +426,7 @@ impl IamCtRoleApi {
             for account_id in account_split.clone() {
                 IamRoleServ::delete_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
             }
+            mock_app_ctx.execute_task().await?;
         }
         funs.commit().await?;
         ctx.execute_task().await?;
