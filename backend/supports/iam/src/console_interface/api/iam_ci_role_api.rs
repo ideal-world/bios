@@ -291,6 +291,7 @@ impl IamCiRoleApi {
         app_id: Query<Option<String>>,
         in_base: Query<Option<bool>>,
         in_embed: Query<Option<bool>>,
+        ignore_scope: Query<Option<bool>>,
         extend_role_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -310,6 +311,7 @@ impl IamCiRoleApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     enabled: Some(true),
+                    ignore_scope: ignore_scope.0.unwrap_or(false),
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
