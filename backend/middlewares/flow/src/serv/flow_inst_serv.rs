@@ -2166,18 +2166,13 @@ impl FlowInstServ {
                 own_paths: curr_inst.own_paths.clone(),
                 ..ctx.clone()
             };
-            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                tag: curr_inst.tag.clone(),
-                current_state_color: Some(next_flow_state.color.clone()),
-                ..Default::default()
-            })?;
-            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &curr_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
             FlowExternalServ::do_notify_changes(
                 &curr_inst.tag,
                 &curr_inst.id,
                 &curr_inst.rel_business_obj_id,
                 next_flow_state.name.clone(),
                 next_flow_state.sys_state.clone(),
+                next_flow_state.color.clone(),
                 prev_flow_state.name.clone(),
                 prev_flow_state.sys_state.clone(),
                 next_transition_detail.name.clone(),
@@ -2202,6 +2197,7 @@ impl FlowInstServ {
                     Some(true),
                     None,
                     Some(next_flow_state.name.clone()),
+                    Some(next_flow_state.color.clone()),
                     Some(next_flow_state.sys_state.clone()),
                     Some(prev_flow_state.name.clone()),
                     Some(prev_flow_state.sys_state.clone()),
@@ -2745,6 +2741,7 @@ impl FlowInstServ {
                             &inst.rel_business_obj_id,
                             next_flow_state.name.clone(),
                             next_flow_state.sys_state,
+                            next_flow_state.color.clone(),
                             original_flow_state.name.clone(),
                             original_flow_state.sys_state,
                             "UPDATE".to_string(),
@@ -2886,6 +2883,7 @@ impl FlowInstServ {
                         &inst.rel_business_obj_id,
                         next_flow_state.name.clone(),
                         next_flow_state.sys_state.clone(),
+                        next_flow_state.color.clone(),
                         original_flow_state.name.clone(),
                         original_flow_state.sys_state.clone(),
                         "UPDATE".to_string(),
@@ -3337,6 +3335,7 @@ impl FlowInstServ {
                     None,
                     Some("审批通过".to_string()),
                     inst_detail.current_state_name.clone(),
+                    inst_detail.current_state_color.clone(),
                     inst_detail.current_state_sys_kind.clone(),
                     inst_detail.current_state_name.clone(),
                     inst_detail.current_state_sys_kind.clone(),
@@ -3534,6 +3533,7 @@ impl FlowInstServ {
                     None,
                     Some("审批通过".to_string()),
                     tran.to_flow_state_name.clone(),
+                    inst_detail.current_state_color.clone(),
                     inst_detail.current_state_sys_kind.clone(),
                     Some(tran.from_flow_state_name.clone()),
                     inst_detail.current_state_sys_kind.clone(),
