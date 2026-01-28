@@ -14,6 +14,11 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     tardis::tracing::debug!("[BIOS.Reach] input: {:?}", send_req);
     let err = |msg: &str| funs.err().not_found("reach", "event_listener", msg, "");
 
+    if send_req.replace.values().any(|v| v.is_none()) {
+        tardis::tracing::warn!("[BIOS.Reach] replace contains None values, skipping message send");
+        return Ok(());
+    }
+
     // if send_req.receives.is_empty() {
     //     return Err(err("receiver is empty"));
     // }
@@ -71,6 +76,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
 
 async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTriggerInstanceConfigDetailResp>, global_configs: HashMap<ReachChannelKind, ReachTriggerGlobalConfigDetailResp>,
     funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let replace = send_req.replace.iter().filter_map(|(k, v)| v.as_ref().map(|v| (k.clone(), v.clone()))).collect::<HashMap<String, String>>();
     let receive_group_code = send_req.receives.into_iter().fold(HashMap::<String, Vec<_>>::new(), |mut map, item| {
         map.entry(item.receive_group_code.clone()).or_default().push(item);
         map
@@ -122,7 +128,7 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
                         rel_reach_msg_signature_id: gc.rel_reach_msg_signature_id.clone(),
                         rel_reach_msg_template_id: gc.rel_reach_msg_template_id.clone(),
                         reach_status: ReachStatusKind::Pending,
-                        content_replace: tardis::serde_json::to_string(&send_req.replace).expect("convert from string:string map shouldn't fail"),
+                        content_replace: tardis::serde_json::to_string(&replace).expect("convert from string:string map shouldn't fail"),
                     },
                     funs,
                     ctx,

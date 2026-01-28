@@ -50,7 +50,7 @@ impl ReachTriggerInstanceConfigCiApi {
                     },
                     ..Default::default()
                 },
-                code: Some(scene_code),
+                codes: Some(vec![scene_code]),
                 ..Default::default()
             }, &funs, &ctx).await?;
             if let Some(scene) = scene {

@@ -9,7 +9,7 @@ pub struct ReachMsgSendReq {
     pub receives: Vec<ReachMsgReceive>,
     pub rel_item_id: String,
     #[oai(default)]
-    pub replace: HashMap<String, String>,
+    pub replace: HashMap<String, Option<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Clone)]
