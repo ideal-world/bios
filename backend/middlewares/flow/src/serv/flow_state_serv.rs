@@ -369,9 +369,14 @@ impl FlowStateServ {
                 flow_version_ids.extend(app_flow_version_ids);
             }
         }
-
-        let mut names = Self::find_id_name_items(
-            &FlowStateFilterReq {
+        let filter = if ids.is_none() && flow_version_ids.is_empty() {
+            FlowStateFilterReq {
+                tag: tag.clone(),
+                main: Some(main.unwrap_or(true)),
+                ..Default::default()
+            }
+        } else {
+            FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: ids.clone(),
                     own_paths: Some("".to_string()),
@@ -380,9 +385,12 @@ impl FlowStateServ {
                 },
                 tag: tag.clone(),
                 main: Some(main.unwrap_or(true)),
-                flow_version_ids: if flow_version_ids.is_empty() { None } else { Some(flow_version_ids) },
+                flow_version_ids: Some(flow_version_ids),
                 ..Default::default()
-            },
+            }
+        };
+        let mut names = Self::find_id_name_items(
+            &filter,
             None,
             None,
             funs,

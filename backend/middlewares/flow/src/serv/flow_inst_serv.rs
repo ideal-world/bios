@@ -15,18 +15,9 @@ use bios_sdk_invoke::dto::search_item_dto::{
 use itertools::Itertools;
 use serde_json::json;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    chrono::{DateTime, Datelike, Utc},
-    db::sea_orm::{
-        self,
-        sea_query::{Alias, Expr, Query, SelectStatement},
-        Order, Set,
-    },
-    futures_util::future::join_all,
-    log::{debug, error},
-    serde_json::Value,
-    web::web_resp::TardisPage,
-    TardisFuns, TardisFunsInst,
+    TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, chrono::{DateTime, Datelike, Utc}, db::sea_orm::{
+        self, Order, Set, sea_query::{Alias, Expr, Query, SelectStatement}
+    }, futures_util::future::join_all, log::{debug, error}, serde_json::Value, tokio, web::web_resp::TardisPage
 };
 
 use crate::{
@@ -356,7 +347,7 @@ impl FlowInstServ {
         }
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
-            code: Set(Some(if !child { Self::gen_inst_code(funs).await? } else { "".to_string() })),
+            code: Set(Some("".to_string())),
             tag: Set(Some(start_req.tag.clone())),
             rel_flow_version_id: Set(current_version_id.clone()),
             rel_business_obj_id: Set(start_req.rel_business_obj_id.clone()),
@@ -406,6 +397,22 @@ impl FlowInstServ {
         Self::auto_transfer(&inst.id, loop_check_helper::InstancesTransition::default(), funs, ctx).await?;
         // 更新业务的关联审批流节点名
         FlowSearchClient::refresh_business_obj_search(&start_req.rel_business_obj_id, &start_req.tag, funs, ctx).await?;
+
+        if !child {
+            let ctx_clone = ctx.clone();
+            let inst_id_cp = inst_id.clone();
+            ctx.add_sync_task(Box::new(|| {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = flow_constants::get_tardis_inst();
+                        let _ = Self::modify_inst_code(&inst_id_cp, &funs, &ctx_clone).await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
+            .await?;
+        }
 
         Ok(inst_id)
     }
@@ -2184,7 +2191,7 @@ impl FlowInstServ {
             .await?;
         }
         // notify modify vars
-        if let Some(vars) = &transfer_req.vars {
+        if let Some(_vars) = &transfer_req.vars {
             if !params.is_empty() && flow_inst_detail.main {
                 FlowExternalServ::do_async_modify_field(
                     &flow_inst_detail.tag,
@@ -4637,8 +4644,9 @@ impl FlowInstServ {
         Ok(comment_id)
     }
 
-    // 生成实例编码
-    async fn gen_inst_code(funs: &TardisFunsInst) -> TardisResult<String> {
+    // 修改实例编码
+    async fn modify_inst_code(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let inst = Self::get(inst_id, funs, ctx).await?;
         let count = funs
             .db()
             .count(
@@ -4646,11 +4654,27 @@ impl FlowInstServ {
                     .columns([flow_inst::Column::Code])
                     .from(flow_inst::Entity)
                     .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
-                    .and_where(Expr::col(flow_inst::Column::Code).ne("")),
+                    .and_where(
+                        Expr::col(flow_inst::Column::CreateTime)
+                            .lt(inst.create_time.date_naive())
+                            .or(
+                                Expr::col(flow_inst::Column::CreateTime)
+                                    .eq(inst.create_time.date_naive())
+                                    .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
+                            )
+                    ),
             )
             .await?;
         let current_date = Utc::now();
-        Ok(format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string())
+        let code = format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string();
+        let flow_inst = flow_inst::ActiveModel {
+            id: Set(inst_id.to_string()),
+            code: Set(Some(code)),
+            update_time: Set(Some(Utc::now())),
+            ..Default::default()
+        };
+        funs.db().update_one(flow_inst, ctx).await?;
+        Ok(())
     }
 
     // 获取需要更新的参数列表
