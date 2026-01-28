@@ -678,6 +678,33 @@ impl FlowInstServ {
         Ok(funs.db().find_dtos::<FlowInstIdsResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
     }
 
+    /// 查询所有 rel_inst_id 不为空的实例ID和tag
+    pub async fn find_ids_with_tag_by_rel_inst_id_not_null(
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<(String, String)>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstIdTagResult {
+            pub id: String,
+            pub tag: String,
+        }
+        let query = Query::select()
+            .columns([
+                (flow_inst::Entity, flow_inst::Column::Id),
+                (flow_inst::Entity, flow_inst::Column::Tag),
+            ])
+            .from(flow_inst::Entity)
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelInstId)).is_not_null())
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
+        Ok(funs
+            .db()
+            .find_dtos::<FlowInstIdTagResult>(&query)
+            .await?
+            .into_iter()
+            .map(|inst| (inst.id, inst.tag))
+            .collect_vec())
+    }
+
     pub async fn find_items(filter: &FlowInstFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowInstSummaryResult>> {
         #[derive(sea_orm::FromQueryResult)]
         pub struct StateNameResult {
