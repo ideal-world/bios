@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, vec};
 
-use bios_sdk_invoke::clients::{event_client::EventAttributeExt as _, spi_stats_client::SpiStatsClient};
+use bios_sdk_invoke::clients::spi_stats_client::SpiStatsClient;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     chrono::{DateTime, Utc},

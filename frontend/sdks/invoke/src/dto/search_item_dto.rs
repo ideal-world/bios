@@ -62,19 +62,6 @@ pub struct SearchItemVisitKeysReq {
     pub groups: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SearchEventItemModifyReq {
-    pub tag: String,
-    pub key: String,
-    pub item: SearchItemModifyReq,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SearchEventItemDeleteReq {
-    pub tag: String,
-    pub key: String,
-}
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchReq {
     #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
