@@ -286,23 +286,34 @@ impl FlowSearchClient {
             if let Some((table, _kind)) = tag_search_map.get(&tag) {
                 let mut batch_req = Vec::new();
                 for (rel_business_obj_id, req) in group_items {
+                    let mut req_cp = req.clone();
                     let mut ext = json!({});
-                    if let Some(status) = &req.status {
+                    // 获取当前对象的状态信息
+                    if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
+                        let inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
+                        if let Some(status) = &req_cp.status {
+                            if status.is_empty() {
+                                req_cp.status = inst.current_state_name.clone();
+                                req_cp.current_state_color = inst.current_state_color.clone();
+                            }
+                        }
+                    }
+                    if let Some(status) = &req_cp.status {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
                         }
                     }
-                    if let Some(rel_state) = &req.rel_state {
+                    if let Some(rel_state) = &req_cp.rel_state {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap_or_default());
                         }
                     }
-                    if let Some(rel_transition_state_name) = &req.rel_transition_state_name {
+                    if let Some(rel_transition_state_name) = &req_cp.rel_transition_state_name {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap_or_default());
                         }
                     }
-                    if let Some(current_state_color) = &req.current_state_color {
+                    if let Some(current_state_color) = &req_cp.current_state_color {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("current_state_color".to_string(), current_state_color.to_json().unwrap_or_default());
                         }
