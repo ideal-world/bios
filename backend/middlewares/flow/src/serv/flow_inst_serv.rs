@@ -75,11 +75,6 @@ impl FlowInstServ {
             if start_req.transition_id.is_none() {
                 let inst_id = Self::start_main_flow(start_req, &rel_model, current_state_name, funs, ctx).await?;
                 let main_inst = Self::get(&inst_id, funs, ctx).await?;
-                let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                    tag: main_inst.tag.clone(),
-                    ..Default::default()
-                })?;
-                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 if start_req.rel_child_objs.is_some() {
                     let rel_child_model = Self::find_rel_model(
                         start_req.rel_transition_id.clone(),
@@ -4654,12 +4649,13 @@ impl FlowInstServ {
                     .columns([flow_inst::Column::Code])
                     .from(flow_inst::Entity)
                     .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
+                    .and_where(Expr::col(flow_inst::Column::Main).eq(false))
                     .and_where(
                         Expr::col(flow_inst::Column::CreateTime)
-                            .lt(inst.create_time.date_naive())
+                            .lt(inst.create_time)
                             .or(
                                 Expr::col(flow_inst::Column::CreateTime)
-                                    .eq(inst.create_time.date_naive())
+                                    .lt(inst.create_time)
                                     .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
                             )
                     ),
