@@ -57,6 +57,11 @@ impl
         if let Some(code) = &filter.code {
             query.and_where(trigger_scene::Column::Code.starts_with(code));
         }
+        if let Some(codes) = &filter.codes {
+            if !codes.is_empty() {
+                query.and_where(trigger_scene::Column::Code.is_in(codes));
+            }
+        }
         if let Some(name) = &filter.name {
             query.and_where(trigger_scene::Column::Name.eq(name));
         }

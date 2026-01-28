@@ -5,7 +5,7 @@ use bios_sdk_invoke::{
     clients::spi_search_client::SpiSearchClient,
     dto::search_item_dto::{
         AdvSearchItemQueryReq, BasicQueryCondInfo, BasicQueryOpKind, SearchItemAddReq, SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq,
-        SearchItemSearchReq, SearchItemSearchResp, SearchItemVisitKeysReq,
+        SearchItemSearchReq, SearchItemSearchResp, SearchSaveItemReq, SearchItemVisitKeysReq,
     },
 };
 use itertools::Itertools;
@@ -269,6 +269,67 @@ impl FlowSearchClient {
         Ok(())
     }
 
+    pub async fn batch_modify_business_obj_search_ext(
+        items: &HashMap<String, ModifyObjSearchExtReq>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let tag_search_map = Self::get_tag_search_map();
+        // 按 tag 分组
+        let mut tag_groups: HashMap<String, HashMap<String, ModifyObjSearchExtReq>> = HashMap::new();
+        for (rel_business_obj_id, req) in items {
+            tag_groups.entry(req.tag.clone()).or_default().insert(rel_business_obj_id.clone(), req.clone());
+        }
+
+        // 对每个 tag 分组进行批量处理
+        for (tag, group_items) in tag_groups {
+            if let Some((table, _kind)) = tag_search_map.get(&tag) {
+                let mut batch_req = Vec::new();
+                for (rel_business_obj_id, req) in group_items {
+                    let mut ext = json!({});
+                    if let Some(status) = &req.status {
+                        if let Some(ext_mut) = ext.as_object_mut() {
+                            ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
+                        }
+                    }
+                    if let Some(rel_state) = &req.rel_state {
+                        if let Some(ext_mut) = ext.as_object_mut() {
+                            ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap_or_default());
+                        }
+                    }
+                    if let Some(rel_transition_state_name) = &req.rel_transition_state_name {
+                        if let Some(ext_mut) = ext.as_object_mut() {
+                            ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap_or_default());
+                        }
+                    }
+                    if let Some(current_state_color) = &req.current_state_color {
+                        if let Some(ext_mut) = ext.as_object_mut() {
+                            ext_mut.insert("current_state_color".to_string(), current_state_color.to_json().unwrap_or_default());
+                        }
+                    }
+                    batch_req.push(SearchSaveItemReq {
+                        kind: None,
+                        key: TrimString(rel_business_obj_id),
+                        title: None,
+                        content: None,
+                        data_source: None,
+                        owner: None,
+                        own_paths: None,
+                        create_time: None,
+                        update_time: None,
+                        ext: Some(ext),
+                        visit_keys: None,
+                    });
+                }
+                if !batch_req.is_empty() {
+                    SpiSearchClient::batch_save(table, &batch_req, funs, ctx).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn async_add_or_modify_model_search(model_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let mock_ctx = TardisContext {
@@ -525,6 +586,79 @@ impl FlowSearchClient {
             };
             SpiSearchClient::add_item_and_name(&add_req, inst_resp.title.clone(), funs, ctx).await?;
         }
+        Ok(())
+    }
+
+    /// 批量添加或修改实例搜索
+    pub async fn batch_add_or_modify_instance_search(inst_ids: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let mut batch_req = Vec::new();
+        
+        for inst_id in inst_ids {
+            let inst_resp = match FlowInstServ::get_search_item(inst_id, funs, &mock_ctx).await {
+                Ok(resp) => resp,
+                Err(e) => {
+                    tardis::log::warn!("Flow Instance {} get_search_item error:{:?}", inst_id, e);
+                    continue;
+                }
+            };
+            
+            // 跳过子审批流
+            if !inst_resp.rel_inst_id.clone().is_none_or(|id| id.is_empty()) {
+                continue;
+            }
+            
+            // 数据共享权限处理
+            let tenant = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &inst_resp.own_paths).unwrap_or_default();
+            let app = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &inst_resp.own_paths).unwrap_or_default();
+            let visit_tenants = vec![tenant.clone()];
+            let visit_apps = vec![app.clone()];
+            
+            batch_req.push(SearchSaveItemReq {
+                kind: Some(SEARCH_INSTANCE_TAG.to_string()),
+                key: TrimString(inst_id.clone()),
+                title: inst_resp.title.clone(),
+                content: inst_resp.content.clone(),
+                data_source: None,
+                owner: Some(inst_resp.owner.clone()),
+                own_paths: Some(inst_resp.own_paths.clone()),
+                create_time: inst_resp.create_time,
+                update_time: inst_resp.update_time,
+                ext: Some(json!({
+                    "code": inst_resp.code,
+                    "tag": inst_resp.tag,
+                    "current_state_id": inst_resp.current_state_id,
+                    "rel_business_obj_name": inst_resp.rel_business_obj_name,
+                    "current_state_name": inst_resp.current_state_name,
+                    "current_state_kind": inst_resp.current_state_kind,
+                    "rel_business_obj_id": inst_resp.rel_business_obj_id,
+                    "finish_time": inst_resp.finish_time,
+                    "op_time": inst_resp.update_time,
+                    "state": inst_resp.state,
+                    "rel_transition": inst_resp.rel_transition.clone().unwrap_or_default().to_string(),
+                    "his_operators": inst_resp.his_operators,
+                    "curr_operators": inst_resp.curr_operators,
+                    "curr_referral": inst_resp.curr_referral,
+                    "tenant_id": tenant.clone(),
+                    "app_id": app.clone(),
+                })),
+                visit_keys: Some(SearchItemVisitKeysReq {
+                    accounts: None,
+                    apps: Some(visit_apps),
+                    tenants: Some(visit_tenants),
+                    roles: None,
+                    groups: None,
+                }),
+            });
+        }
+        
+        if !batch_req.is_empty() {
+            SpiSearchClient::batch_save(SEARCH_INSTANCE_TAG, &batch_req, funs, ctx).await?;
+        }
+        
         Ok(())
     }
 

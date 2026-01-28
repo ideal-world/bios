@@ -153,6 +153,7 @@ pub struct ReachTriggerSceneFilterReq {
     #[oai(validator(max_length = "255"))]
     /// 编码
     pub code: Option<String>,
+    pub codes: Option<Vec<String>>,
     #[oai(validator(max_length = "255"))]
     /// 名称
     pub name: Option<String>,
