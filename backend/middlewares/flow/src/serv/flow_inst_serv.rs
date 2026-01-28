@@ -1045,6 +1045,9 @@ impl FlowInstServ {
                         ..Default::default()
                     })?;
                     FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+                    if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_main_inst.id, &modify_serach_ext, funs, ctx).await?;
+                    }
                 }
             }
         }
@@ -1975,6 +1978,7 @@ impl FlowInstServ {
                 ..Default::default()
             })?;
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst.id, &modify_serach_ext, funs, ctx).await?;
         }
 
         Ok(())
@@ -3244,6 +3248,7 @@ impl FlowInstServ {
                     ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst.id, &modify_serach_ext, funs, ctx).await?;
             }
         }
 
@@ -3271,26 +3276,28 @@ impl FlowInstServ {
         })?;
         let inst_detail = Self::get(&inst_id, funs, ctx).await?;
         // 流程结束时，更新对应的主审批流的search状态
-        if let Some(main_inst) = Self::find_detail_items(
-            &FlowInstFilterReq {
-                rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
-                main: Some(true),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        .pop()
-        {
-            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                tag: main_inst.tag.to_string(),
-                status: Some("".to_string()),
-                rel_state: Some("".to_string()),
-                rel_transition_state_name: Some("".to_string()),
-                ..Default::default()
-            })?;
-            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+        let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+            tag: inst_detail.tag.to_string(),
+            status: Some("".to_string()),
+            rel_state: Some("".to_string()),
+            rel_transition_state_name: Some("".to_string()),
+            ..Default::default()
+        })?;
+        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+        if let Some(root_inst_id) = root_inst_id.clone() {
+            if let Some(child_inst) = Self::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_inst_ids: Some(vec![root_inst_id]),
+                    main: Some(false),
+                    rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?.pop() {
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst.id, &modify_serach_ext, funs, ctx).await?;
+            }
         }
 
         match FlowModelRelTransitionKind::from(rel_transition) {
@@ -3522,7 +3529,7 @@ impl FlowInstServ {
                 .await?;
                 if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
                     let inst_detail = Self::get(&inst_id, funs, ctx).await?;
-                    let tran_resp = Self::transfer(
+                    Self::transfer(
                         &inst_detail,
                         &FlowInstTransferReq {
                             flow_transition_id: tran.id.clone(),
@@ -3536,14 +3543,6 @@ impl FlowInstServ {
                         funs,
                     )
                     .await?;
-                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
-                        tag: inst_detail.tag.to_string(),
-                        status: Some(tran_resp.new_flow_state_name.clone()),
-                        rel_state: Some("".to_string()),
-                        rel_transition_state_name: Some("".to_string()),
-                        ..Default::default()
-                    })?;
-                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 }
             }
         }
