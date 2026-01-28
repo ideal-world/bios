@@ -3,9 +3,6 @@ use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 
-#[cfg(feature = "event")]
-use bios_sdk_invoke::clients::event_client::{mq_error, EventAttributeExt, SPI_RPC_TOPIC};
-
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
@@ -30,7 +27,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
     AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp,
-    IamAccountDetailResp, IamAccountLogoutEvent, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
+    IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
@@ -207,17 +204,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await?;
         }
-        // add event
-        #[cfg(feature = "event")]
-        if funs.conf::<IamConfig>().in_event {
-            if let Some(event_node) = bios_sdk_invoke::clients::event_client::mq_client_node_opt() {
-                if modify_req.status == Some(IamAccountStatusKind::Logout) {
-                    event_node.send_event(SPI_RPC_TOPIC, IamAccountLogoutEvent { id: id.to_string() }.inject_context(funs, ctx).json()).await.map_err(mq_error)?;
-                    // warn!("send event message: logout accout,id: {:?}", id);
-                }
-            }
-        }
-
         // log
         let mut tasks = vec![];
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
