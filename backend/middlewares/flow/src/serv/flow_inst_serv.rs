@@ -688,18 +688,18 @@ impl FlowInstServ {
             pub id: String,
             pub tag: String,
         }
-        let query = Query::select()
-            .columns([
-                (flow_inst::Entity, flow_inst::Column::Id),
-                (flow_inst::Entity, flow_inst::Column::Tag),
-            ])
-            .from(flow_inst::Entity)
-            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelInstId)).is_not_null())
-            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
-        Ok(funs
+        let mut query = Query::select();
+        query.columns([
+            (flow_inst::Entity, flow_inst::Column::Id),
+            (flow_inst::Entity, flow_inst::Column::Tag),
+        ])
+        .from(flow_inst::Entity)
+        .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelInstId)).is_not_null())
+        .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
+        let result = funs
             .db()
-            .find_dtos::<FlowInstIdTagResult>(&query)
-            .await?
+            .find_dtos::<FlowInstIdTagResult>(&query).await?;
+        Ok(result
             .into_iter()
             .map(|inst| (inst.id, inst.tag))
             .collect_vec())
