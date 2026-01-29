@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemBasicFilterReq};
 use bios_basic::rbum::{dto::rbum_item_dto::RbumItemAddReq, serv::rbum_crud_serv::RbumCrudOperation};
@@ -176,4 +176,41 @@ async fn send_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTri
         .await?;
     }
     Ok(())
+}
+
+/// 去重批量发送请求
+/// 如果body中的rel_item_id、replace相同，并且receives的receive_ids中存在相同的数据，则去掉该数据
+/// 若去掉后该数组为空，则去掉这个receive。若去掉之后receives为空，则删除这个send_req
+pub(crate) fn deduplicate_send_requests(body: &mut Vec<ReachMsgSendReq>) {
+    let mut i = 0;
+    while i < body.len() {
+        let mut j = i + 1;
+        while j < body.len() {
+            // 检查rel_item_id和replace是否相同
+            if body[i].rel_item_id == body[j].rel_item_id && body[i].replace == body[j].replace {
+                // 去重receive_ids
+                let mut receive_ids_to_remove = HashSet::new();
+                
+                // 收集body[i]中所有的receive_ids
+                for receive in &body[i].receives {
+                    for receive_id in &receive.receive_ids {
+                        receive_ids_to_remove.insert(receive_id.clone());
+                    }
+                }
+                
+                // 从body[j]中移除重复的receive_ids
+                for receive in &mut body[j].receives {
+                    receive.receive_ids.retain(|id| !receive_ids_to_remove.contains(id));
+                }
+                
+                // 移除空的receives
+                body[j].receives.retain(|receive| !receive.receive_ids.is_empty());
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+    
+    // 移除空的send_req
+    body.retain(|send_req| !send_req.receives.is_empty());
 }
