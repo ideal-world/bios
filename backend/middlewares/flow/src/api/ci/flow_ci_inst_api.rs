@@ -134,11 +134,11 @@ impl FlowCiInstApi {
     /// Delete Instance By Business ID And Tag
     ///
     /// 根据业务ID和tag删除实例
-    #[oai(path = "/:tag/:rel_business_obj_id", method = "delete")]
+    #[oai(path = "/remove", method = "delete")]
     async fn delete_by_obj_id_and_tag(
         &self,
-        tag: Path<String>,
-        rel_business_obj_id: Path<String>,
+        tag: Query<String>,
+        rel_business_obj_id: Query<String>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {

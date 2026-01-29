@@ -4674,23 +4674,23 @@ impl FlowInstServ {
         let count = funs
             .db()
             .count(
-                Query::select()
-                    .columns([flow_inst::Column::Code])
-                    .from(flow_inst::Entity)
-                    .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
-                    .and_where(Expr::col(flow_inst::Column::Main).eq(false))
-                    .and_where(Expr::col(flow_inst::Column::RelInstId).is_null())
-                    .and_where(
-                        Expr::col(flow_inst::Column::CreateTime)
-                            .lt(inst.create_time)
-                            .or(
-                                Expr::col(flow_inst::Column::CreateTime)
-                                    .lt(inst.create_time)
-                                    .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
-                            )
-                    ),
-            )
-            .await?;
+            Query::select()
+                .columns([flow_inst::Column::Code])
+                .from(flow_inst::Entity)
+                .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
+                .and_where(Expr::col(flow_inst::Column::Main).eq(false))
+                .and_where(Expr::col(flow_inst::Column::RelInstId).is_null())
+                .and_where(
+                    Expr::col(flow_inst::Column::CreateTime)
+                        .lt(inst.create_time)
+                        .or(
+                            Expr::col(flow_inst::Column::CreateTime)
+                                .lt(inst.create_time)
+                                .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
+                        )
+                ),
+        )
+        .await?;
         let current_date = Utc::now();
         let code = format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string();
         let flow_inst = flow_inst::ActiveModel {

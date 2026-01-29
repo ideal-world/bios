@@ -355,6 +355,7 @@ impl FlowSearchClient {
         let mut batch_req = Vec::new();
         for (inst_id, req) in items {
             let mut req_cp = req.clone();
+            let mut kind = None;
             let mut ext = json!({});
             let mut title = None;
             let mut content = None;
@@ -375,11 +376,11 @@ impl FlowSearchClient {
             )
             .await?
             .pop() {
-                let (table, kind) = Self::get_tag_search_map().get(&req.tag).map(|(table, _kind)| (table.clone(), _kind.clone())).unwrap_or_default();
+                let (table, item_kind) = Self::get_tag_search_map().get(&req.tag).map(|(table, _kind)| (table.clone(), _kind.clone())).unwrap_or_default();
                 let result = Self::search_one(&SearchItemSearchReq {
                     tag: table.to_string(),
                     query: SearchItemQueryReq {
-                        kinds: Some(vec![kind.clone()]),
+                        kinds: Some(vec![item_kind.clone()]),
                         keys: Some(vec![TrimString(main_inst.rel_business_obj_id)]),
                         owners: None,
                         own_paths: None,
@@ -411,6 +412,7 @@ impl FlowSearchClient {
                     },
                 }, funs, ctx).await?;
                 if let Some(result) = result {
+                    kind = Some(result.kind);
                     ext = result.ext;
                     title = Some(result.title);
                     content = Some(result.content);
@@ -446,7 +448,7 @@ impl FlowSearchClient {
                     }
                 }
                 batch_req.push(SearchSaveItemReq {
-                    kind: Some(SEARCH_REVIEW_TAG.to_string()),
+                    kind: kind.clone(),
                     key: TrimString(inst_id),
                     title,
                     content,

@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_sdk_invoke::clients::{
     reach_client::{ReachClient, ReachMsgSendReq},
     spi_kv_client::SpiKvClient,
 };
+use bios_sdk_invoke::clients::reach_client::ReachMsgReceive;
 use bios_sdk_invoke::dto::reach_item_dto::ReachTriggerInstanceConfigSummaryResp;
 use itertools::Itertools;
 use tardis::{
@@ -30,42 +31,76 @@ impl FlowReachClient {
         ReachClient::batch_send_message(reqs, funs, ctx).await
     }
 
-    pub async fn send_approve_start_message(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn send_review_start_message(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
         let rel_item_id = ctx.own_paths.split(":").nth(2).unwrap_or_default();
-        let trigger_instance_config = Self::find_trigger_instance_config(rel_item_id, "SMS", Some(REACH_APPROVE_START_TAG), funs, ctx).await?;
+        let trigger_instance_config = Self::find_trigger_instance_config(rel_item_id, "SMS", Some(REACH_REVIEW_START_TAG), funs, ctx).await?;
         if let Some(trigger_instance_config) = trigger_instance_config {
             let mut reqs = Vec::new();
             for config in trigger_instance_config {
                 let mut replace = HashMap::new();
-                let username = FlowKvClient::get_account_name(&inst.create_ctx.owner, funs, ctx).await?;
                 let product_name = FlowKvClient::get_product_name(rel_item_id, funs, ctx).await?;
                 let create_vars = inst.create_vars.clone().unwrap_or_default();
                 let kind = create_vars.get("on_line").map(|v| if v.to_string() == "true" { "线上" } else { "线下" }).unwrap_or_default();
-                replace.insert("username".to_string(), username);
+
                 replace.insert("productName".to_string(), product_name);
                 replace.insert("feedName".to_string(), create_vars.get("name").map(|v| v.to_string()).unwrap_or_default());
                 replace.insert("time".to_string(), create_vars.get("review_start_time").map(|v| v.to_string()).unwrap_or_default());
                 replace.insert("kind".to_string(), kind.to_string());
 
                 if config.receive_group_code == "CREATOR" { // 创建人接收组
-                    // let mut req = ReachMsgSendReq {
-                    //     scene_code: config.scene_code,
-                    //     receives: vec![ReachMsgReceive {
-                    //         receive_group_code: config.receive_group_code,
-                    //         receive_kind: ReachReceiveKind::Account,
-                    //         receive_ids: config.receive_ids,
-                    //     }],
-                    //     rel_item_id: rel_item_id.to_string(),
-                    //     replace,
-                    // };
-                    // reqs.push(req);
+                    let receive_ids = vec![inst.create_ctx.owner.clone()];
+                    let username = FlowKvClient::get_account_name(&inst.create_ctx.owner, funs, ctx).await?;
+                    let mut replace_cp = replace.clone();
+                    replace_cp.insert("username".to_string(), username);
+                    let mut req = ReachMsgSendReq {
+                        scene_code: REACH_REVIEW_START_TAG.to_string(),
+                        receives: vec![ReachMsgReceive {
+                            receive_group_code: config.receive_group_code.clone(),
+                            receive_kind: "ACCOUNT".to_string(),
+                            receive_ids,
+                        }],
+                        rel_item_id: rel_item_id.to_string(),
+                        replace: replace_cp,
+                    };
+                    reqs.push(req);
                 }
                 if config.receive_group_code == "INITIATOR" { // 发起人接收组
-                    
+                    let receive_ids = vec![ctx.owner.clone()];
+                    let username = FlowKvClient::get_account_name(&ctx.owner, funs, ctx).await?;
+                    let mut replace_cp = replace.clone();
+                    replace_cp.insert("username".to_string(), username);
+                    let mut req = ReachMsgSendReq {
+                        scene_code: REACH_REVIEW_START_TAG.to_string(),
+                        receives: vec![ReachMsgReceive {
+                            receive_group_code: config.receive_group_code.clone(),
+                            receive_kind: "ACCOUNT".to_string(),
+                            receive_ids,
+                        }],
+                        rel_item_id: rel_item_id.to_string(),
+                        replace: replace_cp,
+                    };
+                    reqs.push(req);
                 }
-                if config.receive_group_code == "REVIEW_MEMBER" { // 发起人接收组
-                    
+                if config.receive_group_code == "REVIEW_MEMBER" { // 评审成员接收组
+                    let members: Vec<String> = inst.artifacts.clone().unwrap_or_default().operator_map.unwrap_or_default().values().flatten().collect::<HashSet<_>>().into_iter().cloned().collect_vec();
+                    for member in members {
+                        let receive_ids = vec![member.clone()];
+                        let username = FlowKvClient::get_account_name(&member, funs, ctx).await?;
+                        let mut replace_cp = replace.clone();
+                        replace_cp.insert("username".to_string(), username);
+                        let mut req = ReachMsgSendReq {
+                            scene_code: REACH_REVIEW_START_TAG.to_string(),
+                            receives: vec![ReachMsgReceive {
+                                receive_group_code: config.receive_group_code.clone(),
+                                receive_kind: "ACCOUNT".to_string(),
+                                receive_ids,
+                            }],
+                            rel_item_id: rel_item_id.to_string(),
+                            replace: replace_cp,
+                        };
+                        reqs.push(req);
+                    }
                 }
             }
             Self::batch_send_message(&reqs, funs, ctx).await?;
