@@ -928,6 +928,26 @@ impl FlowInstServ {
         Ok(result)
     }
 
+    /// Delete instances by business ID and tag
+    ///
+    /// 根据业务ID和tag删除实例
+    pub async fn delete_by_obj_id_and_tag(
+        tag: &str,
+        rel_business_obj_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        funs.db().execute(
+            Query::delete()
+                .from_table(flow_inst::Entity)
+                .and_where(Expr::col(flow_inst::Column::Tag).eq(tag.to_string()))
+                .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).eq(rel_business_obj_id.to_string()))
+                .and_where(Expr::col(flow_inst::Column::OwnPaths).like(format!("{}%", ctx.own_paths))),
+        )
+        .await?;
+        Ok(())
+    }
+
     #[async_recursion]
     pub async fn abort(flow_inst_id: &str, abort_req: &FlowInstAbortReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if funs

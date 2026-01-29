@@ -131,6 +131,27 @@ impl FlowCiInstApi {
         TardisResp::ok(Void {})
     }
 
+    /// Delete Instance By Business ID And Tag
+    ///
+    /// 根据业务ID和tag删除实例
+    #[oai(path = "/:tag/:rel_business_obj_id", method = "delete")]
+    async fn delete_by_obj_id_and_tag(
+        &self,
+        tag: Path<String>,
+        rel_business_obj_id: Path<String>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowInstServ::delete_by_obj_id_and_tag(&tag.0, &rel_business_obj_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Transfer State By State Id
     ///
     /// 流转
