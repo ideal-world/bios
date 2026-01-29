@@ -15,10 +15,10 @@ use tardis::{
 
 use crate::serv::{clients::kv_client::FlowKvClient, flow_inst_serv::FlowInstServ};
 
-const REACH_APPROVE_FINISH_TAG: &str = "flow_approve_finish";
-const REACH_APPROVE_START_TAG: &str = "flow_approve_start";
-const REACH_REVIEW_REMIND_TAG: &str = "flow_review_remind";
-const REACH_REVIEW_START_TAG: &str = "flow_review_start";
+const REACH_APPROVE_FINISH_TAG: &str = "flow_finish";
+const REACH_APPROVE_START_TAG: &str = "flow_create";
+const REACH_REVIEW_REMIND_TAG: &str = "app_feed_review_end";
+const REACH_REVIEW_START_TAG: &str = "app_feed_review_start";
 
 pub struct FlowReachClient;
 
@@ -29,6 +29,43 @@ impl FlowReachClient {
 
     async fn batch_send_message(reqs: &Vec<ReachMsgSendReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         ReachClient::batch_send_message(reqs, funs, ctx).await
+    }
+
+    pub async fn create_approve_instance(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
+        let rel_item_id = rbum_scope_helper::get_path_item(1, &inst.own_paths).unwrap_or_default();
+        let trigger_instance_config = Self::find_trigger_instance_config(&rel_item_id, "SMS", Some(REACH_APPROVE_START_TAG), funs, ctx).await?;
+        if let Some(trigger_instance_config) = trigger_instance_config {
+            let mut reqs = Vec::new();
+            for config in trigger_instance_config {
+                let mut replace = HashMap::new();
+                let create_vars = inst.create_vars.clone().unwrap_or_default();
+                replace.insert("feedName".to_string(), create_vars.get("name").map(|v| v.to_string()).unwrap_or_default());
+
+                if config.receive_group_code == "FLOW_HANDLER" { // 待办处理人接收组
+                    let members = inst.artifacts.clone().unwrap_or_default().curr_operators.unwrap_or_default();
+                    for member in members {
+                        let receive_ids = vec![member.clone()];
+                        let username = FlowKvClient::get_account_name(&member, funs, ctx).await?;
+                        let mut replace_cp = replace.clone();
+                        replace_cp.insert("username".to_string(), username);
+                        let req = ReachMsgSendReq {
+                            scene_code: REACH_APPROVE_START_TAG.to_string(),
+                            receives: vec![ReachMsgReceive {
+                                receive_group_code: config.receive_group_code.clone(),
+                                receive_kind: "ACCOUNT".to_string(),
+                                receive_ids,
+                            }],
+                            rel_item_id: rel_item_id.clone(),
+                            replace: replace_cp,
+                        };
+                        reqs.push(req);
+                    }
+                }
+            }
+            Self::batch_send_message(&reqs, funs, ctx).await?;
+        }
+        Ok(())
     }
 
     pub async fn send_review_start_message(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {

@@ -73,7 +73,7 @@ impl ReachClient {
     ) -> TardisResult<Option<Vec<ReachTriggerInstanceConfigSummaryResp>>> {
         let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        let mut url = format!("{reach_url}/ci/trigger/instance/config/?rel_item_id={rel_item_id}&channel={channel}");
+        let mut url = format!("{reach_url}/ci/trigger/instance/config?rel_item_id={rel_item_id}&channel={channel}");
         if let Some(scene_code) = scene_code {
             url = format!("{url}&scene_code={scene_code}");
         }

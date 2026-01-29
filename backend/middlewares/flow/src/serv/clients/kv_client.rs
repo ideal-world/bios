@@ -18,7 +18,7 @@ impl FlowKvClient {
     }
 
     pub async fn get_product_name(product_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let product_name = SpiKvClient::get_item(format!("__k_n__:app:{}", product_id), None, funs, ctx)
+        let product_name = SpiKvClient::get_item(format!("__k_n__:iam_app:{}", product_id), None, funs, ctx)
             .await?
             .map(|resp| resp.value.as_str().unwrap_or("").to_string())
             .unwrap_or_default();

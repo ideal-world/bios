@@ -35,6 +35,14 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
         .await?
         .ok_or_else(|| funs.err().not_found("reach", "event_listener", "cannot find scene", ""))?;
     let filter = &ReachTriggerGlobalConfigFilterReq {
+        base_filter: RbumItemBasicFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                own_paths: Some(String::default()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         rel_reach_trigger_scene_id: Some(scene.id.clone()),
         ..Default::default()
     };
@@ -109,7 +117,10 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
     );
     // 记录发送的receive_kind to_res_ids rel_reach_channel
     let mut send_records: Vec<(ReachReceiveKind, String, ReachChannelKind)> = vec![];
-
+    let global_ctx = TardisContext {
+        own_paths: vec![String::default()],
+        ..ctx.clone()
+    };
     for (_kind, gc) in global_configs {
         for ((receive_kind, rel_reach_channel), to_res_ids) in &other_receive_collect {
             if rel_reach_channel == &gc.rel_reach_channel && !gc.rel_reach_msg_signature_id.is_empty() && !gc.rel_reach_msg_template_id.is_empty() {
@@ -137,7 +148,7 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
                         content_replace: tardis::serde_json::to_string(&replace).expect("convert from string:string map shouldn't fail"),
                     },
                     funs,
-                    ctx,
+                    &global_ctx,
                 )
                 .await?;
                 send_records.push((*receive_kind, to_res_ids.join(";"), gc.rel_reach_channel));
