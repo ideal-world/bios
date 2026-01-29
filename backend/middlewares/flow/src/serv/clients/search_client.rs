@@ -356,6 +356,12 @@ impl FlowSearchClient {
         for (inst_id, req) in items {
             let mut req_cp = req.clone();
             let mut ext = json!({});
+            let mut title = None;
+            let mut content = None;
+            let mut owner = None;
+            let mut own_paths = None;
+            let mut create_time = None;
+            let mut update_time = None;
             // 获取当前对象的状态信息
             let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
             if let Some(main_inst) = FlowInstServ::find_detail_items(
@@ -374,7 +380,7 @@ impl FlowSearchClient {
                     tag: table.to_string(),
                     query: SearchItemQueryReq {
                         kinds: Some(vec![kind.clone()]),
-                        keys: Some(vec![TrimString(inst_id)]),
+                        keys: Some(vec![TrimString(main_inst.rel_business_obj_id)]),
                         owners: None,
                         own_paths: None,
                         rlike_own_paths: None,
@@ -406,6 +412,12 @@ impl FlowSearchClient {
                 }, funs, ctx).await?;
                 if let Some(result) = result {
                     ext = result.ext;
+                    title = Some(result.title);
+                    content = Some(result.content);
+                    owner = Some(result.owner);
+                    own_paths = Some(result.own_paths);
+                    create_time = Some(result.create_time);
+                    update_time = Some(result.update_time);
                 }
                 if let Some(status) = &req_cp.status {
                     if status.is_empty() {
@@ -436,13 +448,13 @@ impl FlowSearchClient {
                 batch_req.push(SearchSaveItemReq {
                     kind: Some(SEARCH_REVIEW_TAG.to_string()),
                     key: TrimString(inst_id),
-                    title: None,
-                    content: None,
+                    title,
+                    content,
                     data_source: None,
-                    owner: None,
-                    own_paths: None,
-                    create_time: None,
-                    update_time: None,
+                    owner,
+                    own_paths,
+                    create_time,
+                    update_time,
                     ext: Some(ext),
                     visit_keys: None,
                 });
