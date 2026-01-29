@@ -4673,28 +4673,52 @@ impl FlowInstServ {
     // 修改实例编码
     async fn modify_inst_code(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
-        let count = funs
-            .db()
-            .count(
-            Query::select()
-                .columns([flow_inst::Column::Code])
-                .from(flow_inst::Entity)
-                .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
-                .and_where(Expr::col(flow_inst::Column::Main).eq(false))
-                .and_where(Expr::col(flow_inst::Column::RelInstId).is_null())
-                .and_where(
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstCodeResult {
+            pub id: String,
+            pub code: String,
+        }
+        let mut query = Query::select();
+        query.columns([
+            (flow_inst::Entity, flow_inst::Column::Id),
+            (flow_inst::Entity, flow_inst::Column::Code),
+        ])
+        .from(flow_inst::Entity)
+        .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
+        .and_where(Expr::col(flow_inst::Column::Main).eq(false))
+        .and_where(Expr::col(flow_inst::Column::RelInstId).is_null())
+        .and_where(
+            Expr::col(flow_inst::Column::CreateTime)
+                .lt(inst.create_time)
+                .or(
                     Expr::col(flow_inst::Column::CreateTime)
                         .lt(inst.create_time)
-                        .or(
-                            Expr::col(flow_inst::Column::CreateTime)
-                                .lt(inst.create_time)
-                                .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
-                        )
-                ),
-        )
-        .await?;
+                        .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
+                )
+        );
+        query.order_by((flow_inst::Entity, flow_inst::Column::CreateTime), Order::Desc);
+        query.order_by((flow_inst::Entity, flow_inst::Column::Id), Order::Desc);
+        let result = funs
+            .db()
+            .find_dtos::<FlowInstCodeResult>(&query).await?;
+        let mut empty_code_len = 0;
+        let mut last_code = String::new();
+        for inst in result {
+            if inst.code.is_empty() {
+                empty_code_len += 1;
+            } else {
+                last_code = inst.code.clone();
+            }
+        }
+        let code_suffix_num: u32 = last_code
+            .get(last_code.len().saturating_sub(5)..)
+            .unwrap_or("")
+            .parse()
+            .unwrap_or(0);
+        let count = code_suffix_num + empty_code_len + 1;
         let current_date = Utc::now();
-        let code = format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string();
+        let code = format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count).to_string();
         let flow_inst = flow_inst::ActiveModel {
             id: Set(inst_id.to_string()),
             code: Set(Some(code)),
