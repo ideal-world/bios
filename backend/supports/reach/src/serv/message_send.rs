@@ -118,7 +118,7 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
     // 记录发送的receive_kind to_res_ids rel_reach_channel
     let mut send_records: Vec<(ReachReceiveKind, String, ReachChannelKind)> = vec![];
     let global_ctx = TardisContext {
-        own_paths: vec![String::default()],
+        own_paths: String::default(),
         ..ctx.clone()
     };
     for (_kind, gc) in global_configs {

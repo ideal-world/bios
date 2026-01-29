@@ -31,7 +31,7 @@ impl FlowReachClient {
         ReachClient::batch_send_message(reqs, funs, ctx).await
     }
 
-    pub async fn create_approve_instance(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn send_create_approve_instance(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
         let rel_item_id = rbum_scope_helper::get_path_item(1, &inst.own_paths).unwrap_or_default();
         let trigger_instance_config = Self::find_trigger_instance_config(&rel_item_id, "SMS", Some(REACH_APPROVE_START_TAG), funs, ctx).await?;
@@ -79,10 +79,18 @@ impl FlowReachClient {
                 let product_name = FlowKvClient::get_product_name(&rel_item_id, funs, ctx).await?;
                 let create_vars = inst.create_vars.clone().unwrap_or_default();
                 let kind = create_vars.get("on_line").map(|v| if v.to_string() == "true" { "线上" } else { "线下" }).unwrap_or_default();
-
+                // ISO 格式 "2026-01-29T00:00:00+08:00" 转为发送方要求 "2026-01-29 00:00:00"
+                let review_start_time = create_vars
+                    .get("review_start_time")
+                    .and_then(|v| v.as_str())
+                    .map(|s| {
+                        let s = s.replace('T', " ");
+                        s.chars().take(19).collect::<String>()
+                    })
+                    .unwrap_or_default();
                 replace.insert("productName".to_string(), product_name);
                 replace.insert("feedName".to_string(), create_vars.get("name").map(|v| v.to_string()).unwrap_or_default());
-                replace.insert("time".to_string(), create_vars.get("review_start_time").map(|v| v.to_string()).unwrap_or_default());
+                replace.insert("time".to_string(), review_start_time);
                 replace.insert("kind".to_string(), kind.to_string());
 
                 if config.receive_group_code == "CREATOR" { // 创建人接收组

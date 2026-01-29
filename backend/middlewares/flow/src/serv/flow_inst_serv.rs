@@ -3242,6 +3242,7 @@ impl FlowInstServ {
                         }
                     }
                 }
+                FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
             }
             FlowStateKind::Branch => {}
             FlowStateKind::Finish => {
