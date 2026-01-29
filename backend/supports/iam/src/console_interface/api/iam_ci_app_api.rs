@@ -17,6 +17,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use tardis::futures_util::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 
@@ -290,13 +291,40 @@ impl IamCiAppApi {
         funs.begin().await?;
         let app_ids = ids.0.split(',').collect::<Vec<_>>();
         let account_ids = account_ids.0.split(',').collect::<Vec<_>>();
-        for app_id in app_ids {
-            let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(app_id.to_string()))?;
-            for account_id in account_ids.iter() {
-                IamAppServ::delete_rel_account(app_id, account_id, &funs, &mock_app_ctx).await?;
+        
+        // 并发处理每个 app_id
+        let tasks = app_ids.into_iter().map(|app_id| {
+            let app_id = app_id.to_string();
+            let account_ids = account_ids.clone();
+            let ctx_clone = ctx.0.clone();
+            let funs_ref = &funs;
+            
+            async move {
+                let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx_clone, Some(app_id.clone()))?;
+                
+                // 并发处理每个 account_id 的删除操作
+                let delete_tasks: Vec<_> = account_ids
+                    .iter()
+                    .map(|account_id| {
+                        let app_id = app_id.clone();
+                        let account_id = account_id.to_string();
+                        let mock_app_ctx = &mock_app_ctx;
+                        let funs_ref = funs_ref;
+                        
+                        async move {
+                            IamAppServ::delete_rel_account(&app_id, &account_id, funs_ref, mock_app_ctx).await
+                        }
+                    })
+                    .collect();
+                
+                join_all(delete_tasks).await.into_iter().collect::<Result<Vec<_>, _>>()?;
+                mock_app_ctx.execute_task().await?;
+                
+                Ok::<(), tardis::basic::error::TardisError>(())
             }
-            mock_app_ctx.execute_task().await?;
-        }
+        });
+        
+        join_all(tasks).await.into_iter().collect::<Result<Vec<_>, _>>()?;
 
         funs.commit().await?;
         ctx.0.execute_task().await?;
