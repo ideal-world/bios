@@ -33,13 +33,13 @@ impl FlowReachClient {
 
     pub async fn send_review_start_message(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
-        let rel_item_id = ctx.own_paths.split(":").nth(2).unwrap_or_default();
-        let trigger_instance_config = Self::find_trigger_instance_config(rel_item_id, "SMS", Some(REACH_REVIEW_START_TAG), funs, ctx).await?;
+        let rel_item_id = rbum_scope_helper::get_path_item(2, &ctx.own_paths).unwrap_or_default();
+        let trigger_instance_config = Self::find_trigger_instance_config(&rel_item_id, "SMS", Some(REACH_REVIEW_START_TAG), funs, ctx).await?;
         if let Some(trigger_instance_config) = trigger_instance_config {
             let mut reqs = Vec::new();
             for config in trigger_instance_config {
                 let mut replace = HashMap::new();
-                let product_name = FlowKvClient::get_product_name(rel_item_id, funs, ctx).await?;
+                let product_name = FlowKvClient::get_product_name(&rel_item_id, funs, ctx).await?;
                 let create_vars = inst.create_vars.clone().unwrap_or_default();
                 let kind = create_vars.get("on_line").map(|v| if v.to_string() == "true" { "线上" } else { "线下" }).unwrap_or_default();
 
@@ -53,14 +53,14 @@ impl FlowReachClient {
                     let username = FlowKvClient::get_account_name(&inst.create_ctx.owner, funs, ctx).await?;
                     let mut replace_cp = replace.clone();
                     replace_cp.insert("username".to_string(), username);
-                    let mut req = ReachMsgSendReq {
+                    let req = ReachMsgSendReq {
                         scene_code: REACH_REVIEW_START_TAG.to_string(),
                         receives: vec![ReachMsgReceive {
                             receive_group_code: config.receive_group_code.clone(),
                             receive_kind: "ACCOUNT".to_string(),
                             receive_ids,
                         }],
-                        rel_item_id: rel_item_id.to_string(),
+                        rel_item_id: rel_item_id.clone(),
                         replace: replace_cp,
                     };
                     reqs.push(req);
@@ -70,14 +70,14 @@ impl FlowReachClient {
                     let username = FlowKvClient::get_account_name(&ctx.owner, funs, ctx).await?;
                     let mut replace_cp = replace.clone();
                     replace_cp.insert("username".to_string(), username);
-                    let mut req = ReachMsgSendReq {
+                    let req = ReachMsgSendReq {
                         scene_code: REACH_REVIEW_START_TAG.to_string(),
                         receives: vec![ReachMsgReceive {
                             receive_group_code: config.receive_group_code.clone(),
                             receive_kind: "ACCOUNT".to_string(),
                             receive_ids,
                         }],
-                        rel_item_id: rel_item_id.to_string(),
+                        rel_item_id: rel_item_id.clone(),
                         replace: replace_cp,
                     };
                     reqs.push(req);
@@ -89,14 +89,14 @@ impl FlowReachClient {
                         let username = FlowKvClient::get_account_name(&member, funs, ctx).await?;
                         let mut replace_cp = replace.clone();
                         replace_cp.insert("username".to_string(), username);
-                        let mut req = ReachMsgSendReq {
+                        let req = ReachMsgSendReq {
                             scene_code: REACH_REVIEW_START_TAG.to_string(),
                             receives: vec![ReachMsgReceive {
                                 receive_group_code: config.receive_group_code.clone(),
                                 receive_kind: "ACCOUNT".to_string(),
                                 receive_ids,
                             }],
-                            rel_item_id: rel_item_id.to_string(),
+                            rel_item_id: rel_item_id.clone(),
                             replace: replace_cp,
                         };
                         reqs.push(req);

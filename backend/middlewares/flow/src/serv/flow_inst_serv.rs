@@ -39,7 +39,7 @@ use crate::{
     },
     flow_constants,
     helper::{loop_check_helper, task_handler_helper},
-    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
+    serv::{clients::reach_client::FlowReachClient, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 use super::{
@@ -133,6 +133,7 @@ impl FlowInstServ {
                             .await?;
                         }
                     }
+                    FlowReachClient::send_review_start_message(&inst_id, ctx, funs).await?;
                 }
                 Ok(inst_id)
             } else {
