@@ -160,6 +160,10 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
 }
 
 async fn send_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTriggerInstanceConfigDetailResp>, global_config: ReachTriggerGlobalConfigDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let global_ctx = TardisContext {
+        own_paths: String::default(),
+        ..ctx.clone()
+    };
     if instances.iter().any(|i| i.rel_reach_channel == global_config.rel_reach_channel) && !global_config.rel_reach_msg_signature_id.is_empty() && !global_config.rel_reach_msg_template_id.is_empty() {
         ReachMessageServ::add_rbum(
             &mut ReachMessageAddReq {
@@ -182,7 +186,7 @@ async fn send_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTri
                 content_replace: tardis::serde_json::to_string(&send_req.replace).expect("convert from string:string map shouldn't fail"),
             },
             funs,
-            ctx,
+            &global_ctx,
         )
         .await?;
     }
