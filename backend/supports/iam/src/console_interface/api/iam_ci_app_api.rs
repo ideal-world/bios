@@ -293,26 +293,18 @@ impl IamCiAppApi {
         let app_ids = ids.0.split(',').map(|id| id.to_string()).collect::<Vec<_>>();
         let account_ids = account_ids.0.split(',').map(|id| id.to_string()).collect::<Vec<_>>();
         let ctx_clone = ctx.0.clone();
-        ctx.0.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let task_handle = tokio::spawn(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    for app_id in app_ids {
-                        if let Ok(mock_app_ctx) = IamCertServ::try_use_app_ctx(ctx_clone.clone(), Some(app_id.to_string())) {
-                            for account_id in account_ids.clone() {
-                                let _ = IamAppServ::delete_rel_account(&app_id, &account_id, &funs, &mock_app_ctx).await;
-                            }
-                        }
+        tardis::tokio::spawn(async move {
+            let funs = iam_constants::get_tardis_inst();
+            for app_id in app_ids {
+                if let Ok(mock_app_ctx) = IamCertServ::try_use_app_ctx(ctx_clone.clone(), Some(app_id.to_string())) {
+                    for account_id in account_ids.clone() {
+                        let _ = IamAppServ::delete_rel_account(&app_id, &account_id, &funs, &mock_app_ctx).await;
+                        mock_app_ctx.execute_task().await.unwrap_or_default();
                     }
-                });
-                match task_handle.await {
-                    Ok(_) => {}
-                    Err(e) => tardis::log::error!("Batch delete App Rel Account error:{:?}", e),
                 }
-                Ok(())
-            })
-        }))
-        .await?;
+            }
+            ctx_clone.execute_task().await.unwrap_or_default();
+        });
 
         funs.commit().await?;
         ctx.0.execute_task().await?;
