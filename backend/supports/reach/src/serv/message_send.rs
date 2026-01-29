@@ -107,10 +107,15 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
             other_receive_collect
         },
     );
+    // 记录发送的receive_kind to_res_ids rel_reach_channel
+    let mut send_records: Vec<(ReachReceiveKind, String, ReachChannelKind)> = vec![];
 
     for (_kind, gc) in global_configs {
         for ((receive_kind, rel_reach_channel), to_res_ids) in &other_receive_collect {
             if rel_reach_channel == &gc.rel_reach_channel && !gc.rel_reach_msg_signature_id.is_empty() && !gc.rel_reach_msg_template_id.is_empty() {
+                if send_records.contains(&(*receive_kind, to_res_ids.join(";"), gc.rel_reach_channel)) {
+                    continue;
+                }
                 ReachMessageServ::add_rbum(
                     &mut ReachMessageAddReq {
                         rbum_item_add_req: RbumItemAddReq {
@@ -135,6 +140,7 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
                     ctx,
                 )
                 .await?;
+                send_records.push((*receive_kind, to_res_ids.join(";"), gc.rel_reach_channel));
             }
         }
     }
