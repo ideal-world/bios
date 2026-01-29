@@ -19,13 +19,14 @@ use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
-    FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+    FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq,
 };
 use crate::dto::flow_model_version_dto::FlowModelVersionFilterReq;
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
+use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_event_serv::FlowEventServ;
 use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_model_version_serv::FlowModelVersionServ;
@@ -560,5 +561,46 @@ impl FlowCiInstApi {
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// 批量执行评审实例搜索扩展修改脚本（脚本）
+    ///
+    /// 搜索所有 rel_inst_id 不为空的实例，按200个分页，执行 batch_modify_review_obj_search_ext
+    #[oai(path = "/batch_modify_review_obj_search_ext_script", method = "post")]
+    async fn batch_modify_review_obj_search_ext_script(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u32> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        
+        // 查询所有 rel_inst_id 不为空的实例ID和tag
+        let inst_id_tag_pairs = FlowInstServ::find_ids_with_tag_by_rel_inst_id_not_null(&funs, &ctx.0).await?;
+        
+        // 按200个分页处理
+        const PAGE_SIZE: usize = 200;
+        let mut processed_count = 0u32;
+        
+        for chunk in inst_id_tag_pairs.chunks(PAGE_SIZE) {
+            // 构建 batch_modify_review_obj_search_ext 需要的 HashMap
+            let mut items = HashMap::new();
+            for (inst_id, tag) in chunk {
+                items.insert(
+                    inst_id.clone(),
+                    ModifyObjSearchExtReq {
+                        tag: tag.clone(),
+                        status: None,
+                        rel_state: None,
+                        rel_transition_state_name: None,
+                        current_state_color: None,
+                    },
+                );
+            }
+            
+            // 执行批量修改
+            FlowSearchClient::batch_modify_review_obj_search_ext(&items, &funs, &ctx.0).await?;
+            processed_count += chunk.len() as u32;
+        }
+        
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(processed_count)
     }
 }

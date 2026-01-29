@@ -15,6 +15,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
     let err = |msg: &str| funs.err().not_found("reach", "event_listener", msg, "");
 
     if send_req.replace.values().any(|v| v.is_none()) {
+        tardis::log::warn!("[BIOS.Reach] replace contains None values, skipping message send ({:?})", send_req.replace);
         tardis::tracing::warn!("[BIOS.Reach] replace contains None values, skipping message send");
         return Ok(());
     }

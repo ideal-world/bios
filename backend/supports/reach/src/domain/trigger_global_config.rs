@@ -73,7 +73,6 @@ impl From<&ReachTriggerGlobalConfigModifyReq> for ActiveModel {
             rel_reach_msg_signature_id,
             rel_reach_msg_template_id,
         } model);
-        model.receive_group_codes = Set(value.receive_group_codes.as_ref().map(ToString::to_string).unwrap_or_default());
         model
     }
 }
