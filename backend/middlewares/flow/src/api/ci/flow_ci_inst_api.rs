@@ -26,6 +26,7 @@ use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
+use crate::serv::clients::reach_client::FlowReachClient;
 use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_event_serv::FlowEventServ;
 use crate::serv::flow_inst_serv::FlowInstServ;
@@ -161,6 +162,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let insts = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
+                with_sub: Some(true),
                 current_state_sys_kind: Some(FlowSysStateKind::Progress),
                 tags: Some(vec!["REVIEW".to_string()]),
                 main: Some(true),
@@ -192,7 +194,7 @@ impl FlowCiInstApi {
             let review_end_time_utc = review_end_time.with_timezone(&Utc);
             let remaining = review_end_time_utc - now;
             if remaining <= threshold && remaining > Duration::zero() {
-                // TODO: 发送评审到期提醒
+                FlowReachClient::send_remind_approve_finish(&inst.id, &ctx.0, &funs).await?;
             }
         }
         task_handler_helper::execute_async_task(&ctx.0).await?;

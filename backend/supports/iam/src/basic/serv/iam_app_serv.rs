@@ -289,9 +289,7 @@ impl IamAppServ {
             if let Some(admin_ids) = &modify_req.admin_ids {
                 // add new admins
                 for admin_id in admin_ids {
-                    if !original_app_admin_account_ids.contains(admin_id) {
-                        IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, &tenant_ctx).await?;
-                    }
+                    IamRoleServ::add_rel_account(&tenant_app_manager_role_id, admin_id, None, funs, &tenant_ctx).await?;
                 }
             }
         }

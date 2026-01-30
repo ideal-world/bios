@@ -368,6 +368,7 @@ impl FlowSearchClient {
             if let Some(main_inst) = FlowInstServ::find_detail_items(
                 &FlowInstFilterReq {
                     rel_business_obj_ids: Some(vec![inst.rel_business_obj_id.clone()]),
+                    with_sub: Some(true),
                     main: Some(true),
                     ..Default::default()
                 },
@@ -610,6 +611,31 @@ impl FlowSearchClient {
         Ok(())
     }
 
+    pub async fn async_delete_instance_search(inst_id: &str, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let inst_id_cp = inst_id.to_string();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let inst_id_cp2 = inst_id_cp.clone();
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    let _ = Self::delete_instance_search(&inst_id_cp, &funs, &ctx_clone).await;
+                });
+                match task_handle.await {
+                    Ok(_) => {}
+                    Err(e) => tardis::log::error!("Flow model {} async_delete_instance_search error:{:?}", inst_id_cp2, e),
+                }
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    async fn delete_instance_search(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        SpiSearchClient::delete_item_and_name(SEARCH_INSTANCE_TAG, inst_id, funs, ctx).await?;
+        Ok(())
+    }
+
     pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let inst_id_cp = inst_id.to_string();
@@ -737,6 +763,7 @@ impl FlowSearchClient {
         let mut batch_req = Vec::new();
         
         for inst_id in inst_ids {
+            let inst = FlowInstServ::get(inst_id, funs, &mock_ctx).await?;
             let inst_resp = match FlowInstServ::get_search_item(inst_id, funs, &mock_ctx).await {
                 Ok(resp) => resp,
                 Err(e) => {
@@ -746,7 +773,7 @@ impl FlowSearchClient {
             };
             
             // 跳过子审批流
-            if !inst_resp.rel_inst_id.clone().is_none_or(|id| id.is_empty()) {
+            if !inst.rel_inst_id.clone().is_none_or(|id| id.is_empty()) {
                 continue;
             }
             

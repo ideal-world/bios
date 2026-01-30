@@ -405,6 +405,7 @@ impl FlowInstServ {
                     let task_handle = tokio::spawn(async move {
                         let funs = flow_constants::get_tardis_inst();
                         let _ = Self::modify_inst_code(&inst_id_cp, &funs, &ctx_clone).await;
+                        let _ = FlowSearchClient::async_add_or_modify_instance_search(&inst_id_cp, Box::new(true), &funs, &ctx_clone).await;
                     });
                     task_handle.await.unwrap();
                     Ok(())
@@ -938,6 +939,12 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let approve_inst_ids = Self::find_ids(
+            &FlowInstFilterReq {
+            rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+            main: Some(false),
+            ..Default::default()
+        }, funs, ctx).await?;
         funs.db().execute(
             Query::delete()
                 .from_table(flow_inst::Entity)
@@ -946,6 +953,10 @@ impl FlowInstServ {
                 .and_where(Expr::col(flow_inst::Column::OwnPaths).like(format!("{}%", ctx.own_paths))),
         )
         .await?;
+        for approve_inst_id in approve_inst_ids {
+            FlowSearchClient::async_delete_instance_search(&approve_inst_id, funs, ctx).await?;
+        }
+
         Ok(())
     }
 
@@ -994,6 +1005,7 @@ impl FlowInstServ {
             FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
+                FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
             }
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
@@ -3180,6 +3192,9 @@ impl FlowInstServ {
                         }
                     }
                 }
+                if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                }
             }
             FlowStateKind::Approval => {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
@@ -3262,6 +3277,7 @@ impl FlowInstServ {
                     )
                     .await?;
                     FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
+                    FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             _ => {}
@@ -3382,7 +3398,20 @@ impl FlowInstServ {
                 .await?;
             }
             FlowModelRelTransitionKind::Delete => {
-                FlowExternalServ::do_delete_rel_obj(tag, rel_business_obj_id, &inst_id, ctx, funs).await?;
+                let ctx_clone = ctx.clone();
+                let tag_cp = tag.to_string();
+                let rel_business_obj_id_cp = rel_business_obj_id.to_string();
+                ctx.add_sync_task(Box::new(|| {
+                    Box::pin(async move {
+                        let task_handle = tokio::spawn(async move {
+                            let funs = flow_constants::get_tardis_inst();
+                            let _ = FlowExternalServ::do_delete_rel_obj(&tag_cp, &rel_business_obj_id_cp, &inst_id, &ctx_clone, &funs).await;
+                        });
+                        task_handle.await.unwrap();
+                        Ok(())
+                    })
+                }))
+                .await?;
             }
             FlowModelRelTransitionKind::Related => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);
@@ -4673,7 +4702,7 @@ impl FlowInstServ {
     }
 
     // 修改实例编码
-    async fn modify_inst_code(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_inst_code(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
 
         #[derive(sea_orm::FromQueryResult)]
@@ -4711,6 +4740,7 @@ impl FlowInstServ {
                 empty_code_len += 1;
             } else {
                 last_code = inst.code.clone();
+                break;
             }
         }
         let code_suffix_num: u32 = last_code
