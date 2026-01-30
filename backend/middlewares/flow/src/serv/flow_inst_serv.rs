@@ -3242,7 +3242,9 @@ impl FlowInstServ {
                         }
                     }
                 }
-                FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                }
             }
             FlowStateKind::Branch => {}
             FlowStateKind::Finish => {

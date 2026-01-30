@@ -31,6 +31,40 @@ impl FlowReachClient {
         ReachClient::batch_send_message(reqs, funs, ctx).await
     }
 
+    pub async fn send_finish_approve_instance(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
+        let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
+        let rel_item_id = rbum_scope_helper::get_path_item(1, &inst.own_paths).unwrap_or_default();
+        let trigger_instance_config = Self::find_trigger_instance_config(&rel_item_id, "SMS", Some(REACH_APPROVE_FINISH_TAG), funs, ctx).await?;
+        if let Some(trigger_instance_config) = trigger_instance_config {
+            let mut reqs = Vec::new();
+            for config in trigger_instance_config {
+                let mut replace = HashMap::new();
+                let create_vars = inst.create_vars.clone().unwrap_or_default();
+                replace.insert("feedName".to_string(), create_vars.get("name").map(|v| v.to_string()).unwrap_or_default());
+
+                if config.receive_group_code == "INITIATOR" { // 发起人接收组
+                    let receive_ids = vec![inst.create_ctx.owner.clone()];
+                    let username = FlowKvClient::get_account_name(&inst.create_ctx.owner, funs, ctx).await?;
+                    let mut replace_cp = replace.clone();
+                    replace_cp.insert("username".to_string(), username);
+                    let req = ReachMsgSendReq {
+                        scene_code: REACH_APPROVE_FINISH_TAG.to_string(),
+                        receives: vec![ReachMsgReceive {
+                            receive_group_code: config.receive_group_code.clone(),
+                            receive_kind: "ACCOUNT".to_string(),
+                            receive_ids,
+                        }],
+                        rel_item_id: rel_item_id.clone(),
+                        replace: replace_cp,
+                    };
+                    reqs.push(req);
+                }
+            }
+            Self::batch_send_message(&reqs, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     pub async fn send_create_approve_instance(inst_id: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<()> {
         let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
         let rel_item_id = rbum_scope_helper::get_path_item(1, &inst.own_paths).unwrap_or_default();

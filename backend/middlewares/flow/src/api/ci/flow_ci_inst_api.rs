@@ -5,7 +5,7 @@ use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
-use tardis::chrono::Utc;
+use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::log::{debug, warn};
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -147,6 +147,54 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::delete_by_obj_id_and_tag(&tag.0, &rel_business_obj_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Review Expiry Remind
+    ///
+    /// 评审到期提醒：获取 sys_state=Progress、tag=REVIEW、main=true 的实例，若 create_vars.review_end_time 距当前不足 24 小时则发送提醒
+    #[oai(path = "/review_expiry_remind", method = "post")]
+    async fn review_expiry_remind(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let insts = FlowInstServ::find_detail_items(
+            &FlowInstFilterReq {
+                current_state_sys_kind: Some(FlowSysStateKind::Progress),
+                tags: Some(vec!["REVIEW".to_string()]),
+                main: Some(true),
+                finish: Some(false),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let now = Utc::now();
+        let threshold = Duration::hours(24);
+        for inst in insts {
+            let Some(create_vars) = inst.create_vars.as_ref() else {
+                continue;
+            };
+            let Some(review_end_time_val) = create_vars.get("review_end_time") else {
+                continue;
+            };
+            let review_end_time_str = match review_end_time_val.as_str() {
+                Some(s) => s,
+                None => continue,
+            };
+            // 实际存储格式示例: "2026-01-30T00:00:00+08:00" (RFC3339)
+            let Ok(review_end_time) = DateTime::parse_from_rfc3339(review_end_time_str) else {
+                warn!("review_end_time parse failed: inst_id={}, value={}", inst.id, review_end_time_str);
+                continue;
+            };
+            let review_end_time_utc = review_end_time.with_timezone(&Utc);
+            let remaining = review_end_time_utc - now;
+            if remaining <= threshold && remaining > Duration::zero() {
+                // TODO: 发送评审到期提醒
+            }
+        }
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
