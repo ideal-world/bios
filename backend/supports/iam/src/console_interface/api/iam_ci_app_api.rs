@@ -299,8 +299,8 @@ impl IamCiAppApi {
                 if let Ok(mock_app_ctx) = IamCertServ::try_use_app_ctx(ctx_clone.clone(), Some(app_id.to_string())) {
                     for account_id in account_ids.clone() {
                         let _ = IamAppServ::delete_rel_account(&app_id, &account_id, &funs, &mock_app_ctx).await;
-                        mock_app_ctx.execute_task().await.unwrap_or_default();
                     }
+                    mock_app_ctx.execute_task().await.unwrap_or_default();
                 }
             }
             ctx_clone.execute_task().await.unwrap_or_default();
