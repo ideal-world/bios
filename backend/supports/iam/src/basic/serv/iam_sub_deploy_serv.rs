@@ -979,8 +979,10 @@ impl IamSubDeployServ {
     }
 
     pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // todo 把所有方法的事物独立出来,保证每个方法的幂等性
         let _ = Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await;
         let _ = Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await;
+        // todo 同步合同是否应该在同步用户之后,或者把用户关联关系等剥离出来统一在 import_account 方法中处理,尽量保证每个方法的独立性以及完整性
         let _ = Self::import_project(
             import_req.projects.clone(),
             import_req.account_projects.clone(),
