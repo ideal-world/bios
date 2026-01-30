@@ -30,6 +30,7 @@ use crate::{
 
 const SEARCH_MODEL_TAG: &str = "flow_model";
 const SEARCH_INSTANCE_TAG: &str = "flow_approve_inst";
+const SEARCH_REVIEW_TAG: &str = "flow_review_inst";
 
 /// 日志任务类型
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -40,6 +41,8 @@ pub enum FlowSearchTaskKind {
     AddInstance,
     /// 修改工作流实例
     ModifyInstance,
+    /// 添加或修改评审实例
+    ModifyReviewInstance,
     /// 添加或修改工作流模型
     ModifyModel,
     /// 删除工作流模型
@@ -52,6 +55,7 @@ impl Display for FlowSearchTaskKind {
             FlowSearchTaskKind::ModifyBusinessObj => write!(f, "ModifyBusinessObj"),
             FlowSearchTaskKind::AddInstance => write!(f, "AddInstance"),
             FlowSearchTaskKind::ModifyInstance => write!(f, "ModifyInstance"),
+            FlowSearchTaskKind::ModifyReviewInstance => write!(f, "ModifyReviewInstance"),
             FlowSearchTaskKind::ModifyModel => write!(f, "ModifyModel"),
             FlowSearchTaskKind::DeleteModel => write!(f, "DeleteModel"),
         }
@@ -66,6 +70,7 @@ impl FromStr for FlowSearchTaskKind {
             "ModifyBusinessObj" => Ok(Self::ModifyBusinessObj),
             "AddInstance" => Ok(Self::AddInstance),
             "ModifyInstance" => Ok(Self::ModifyInstance),
+            "ModifyReviewInstance" => Ok(Self::ModifyReviewInstance),
             "ModifyModel" => Ok(Self::ModifyModel),
             "DeleteModel" => Ok(Self::DeleteModel),
             _ => Err(TardisError::bad_request(&format!("invalid FlowSearchTaskKind: {}", s), "400-operator-invalid-param")),
@@ -83,7 +88,7 @@ impl FlowSearchClient {
             FlowSearchTaskKind::AddInstance => val.to_string(),
             FlowSearchTaskKind::ModifyModel => val.to_string(),
             FlowSearchTaskKind::DeleteModel => val.to_string(),
-            FlowSearchTaskKind::ModifyBusinessObj => {
+            FlowSearchTaskKind::ModifyBusinessObj | FlowSearchTaskKind::ModifyReviewInstance => {
                 let mut req = ctx.get_ext(&task_key).await?.map_or(ModifyObjSearchExtReq::default(), |s| TardisFuns::json.str_to_obj(&s).unwrap_or_default());
                 let modify_req = TardisFuns::json.str_to_obj::<ModifyObjSearchExtReq>(val)?;
                 req.tag = modify_req.tag;
@@ -117,6 +122,7 @@ impl FlowSearchClient {
             FlowSearchTaskKind::ModifyInstance => {
                 Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
             }
+            FlowSearchTaskKind::ModifyReviewInstance => {}
             FlowSearchTaskKind::ModifyModel => {
                 Self::async_add_or_modify_model_search(id, Box::new(true), &funs, ctx).await?;
             }
@@ -286,23 +292,34 @@ impl FlowSearchClient {
             if let Some((table, _kind)) = tag_search_map.get(&tag) {
                 let mut batch_req = Vec::new();
                 for (rel_business_obj_id, req) in group_items {
+                    let mut req_cp = req.clone();
                     let mut ext = json!({});
-                    if let Some(status) = &req.status {
+                    // 获取当前对象的状态信息
+                    if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
+                        let inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
+                        if let Some(status) = &req_cp.status {
+                            if status.is_empty() {
+                                req_cp.status = inst.current_state_name.clone();
+                                req_cp.current_state_color = inst.current_state_color.clone();
+                            }
+                        }
+                    }
+                    if let Some(status) = &req_cp.status {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
                         }
                     }
-                    if let Some(rel_state) = &req.rel_state {
+                    if let Some(rel_state) = &req_cp.rel_state {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap_or_default());
                         }
                     }
-                    if let Some(rel_transition_state_name) = &req.rel_transition_state_name {
+                    if let Some(rel_transition_state_name) = &req_cp.rel_transition_state_name {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap_or_default());
                         }
                     }
-                    if let Some(current_state_color) = &req.current_state_color {
+                    if let Some(current_state_color) = &req_cp.current_state_color {
                         if let Some(ext_mut) = ext.as_object_mut() {
                             ext_mut.insert("current_state_color".to_string(), current_state_color.to_json().unwrap_or_default());
                         }
@@ -325,6 +342,126 @@ impl FlowSearchClient {
                     SpiSearchClient::batch_save(table, &batch_req, funs, ctx).await?;
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    pub async fn batch_modify_review_obj_search_ext(
+        items: &HashMap<String, ModifyObjSearchExtReq>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mut batch_req = Vec::new();
+        for (inst_id, req) in items {
+            let mut req_cp = req.clone();
+            let mut ext = json!({});
+            let mut title = None;
+            let mut content = None;
+            let mut owner = None;
+            let mut own_paths = None;
+            let mut create_time = None;
+            let mut update_time = None;
+            // 获取当前对象的状态信息
+            let inst = FlowInstServ::get(inst_id, funs, ctx).await?;
+            if let Some(main_inst) = FlowInstServ::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_business_obj_ids: Some(vec![inst.rel_business_obj_id.clone()]),
+                    main: Some(true),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .pop() {
+                let (table, kind) = Self::get_tag_search_map().get(&req.tag).map(|(table, _kind)| (table.clone(), _kind.clone())).unwrap_or_default();
+                let result = Self::search_one(&SearchItemSearchReq {
+                    tag: table.to_string(),
+                    query: SearchItemQueryReq {
+                        kinds: Some(vec![kind.clone()]),
+                        keys: Some(vec![TrimString(main_inst.rel_business_obj_id)]),
+                        owners: None,
+                        own_paths: None,
+                        rlike_own_paths: None,
+                        create_time_start: None,
+                        create_time_end: None,
+                        update_time_start: None,
+                        update_time_end: None,
+                        in_q_content: Some(true),
+                        q: None,
+                        q_scope: None,
+                        ext: None,
+                    },
+                    ctx: SearchItemSearchCtxReq {
+                        accounts: None,
+                        apps: None,
+                        tenants: None,
+                        roles: None,
+                        groups: None,
+                        cond_by_or: None,
+                    },
+                    adv_by_or: None,
+                    adv_query: None,
+                    sort: None,
+                    page: SearchItemSearchPageReq {
+                        number: 1,
+                        size: 1,
+                        fetch_total: false,
+                    },
+                }, funs, ctx).await?;
+                if let Some(result) = result {
+                    ext = result.ext;
+                    title = Some(result.title);
+                    content = Some(result.content);
+                    owner = Some(result.owner);
+                    own_paths = Some(result.own_paths);
+                    create_time = Some(result.create_time);
+                    update_time = Some(result.update_time);
+                }
+                if let Some(status) = &req_cp.status {
+                    if status.is_empty() {
+                        req_cp.status = main_inst.current_state_name.clone();
+                        req_cp.current_state_color = main_inst.current_state_color.clone();
+                    }
+                }
+                if let Some(status) = &req_cp.status {
+                    if let Some(ext_mut) = ext.as_object_mut() {
+                        ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
+                    }
+                }
+                if let Some(rel_state) = &req_cp.rel_state {
+                    if let Some(ext_mut) = ext.as_object_mut() {
+                        ext_mut.insert("rel_state".to_string(), rel_state.to_json().unwrap_or_default());
+                    }
+                }
+                if let Some(rel_transition_state_name) = &req_cp.rel_transition_state_name {
+                    if let Some(ext_mut) = ext.as_object_mut() {
+                        ext_mut.insert("rel_transition_state_name".to_string(), rel_transition_state_name.to_json().unwrap_or_default());
+                    }
+                }
+                if let Some(current_state_color) = &req_cp.current_state_color {
+                    if let Some(ext_mut) = ext.as_object_mut() {
+                        ext_mut.insert("current_state_color".to_string(), current_state_color.to_json().unwrap_or_default());
+                    }
+                }
+                batch_req.push(SearchSaveItemReq {
+                    kind: Some(SEARCH_REVIEW_TAG.to_string()),
+                    key: TrimString(inst_id),
+                    title,
+                    content,
+                    data_source: None,
+                    owner,
+                    own_paths,
+                    create_time,
+                    update_time,
+                    ext: Some(ext),
+                    visit_keys: None,
+                });
+            }
+        }
+        if !batch_req.is_empty() {
+            SpiSearchClient::batch_save(SEARCH_REVIEW_TAG, &batch_req, funs, ctx).await?;
         }
 
         Ok(())
@@ -664,6 +801,14 @@ impl FlowSearchClient {
 
     pub async fn search(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<TardisPage<SearchItemSearchResp>>> {
         SpiSearchClient::search(search_req, funs, ctx).await
+    }
+
+    pub async fn search_one(search_req: &SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<SearchItemSearchResp>> {
+        let result = SpiSearchClient::search(search_req, funs, ctx).await?;
+        if let Some(page) = result {
+            return Ok(page.records.into_iter().next());
+        }
+        Ok(None)
     }
 
     pub async fn search_guard_accounts(guard_conf: &FlowGuardConf, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {

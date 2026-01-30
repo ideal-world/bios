@@ -7,7 +7,7 @@ use crate::{
     flow_constants,
     serv::clients::{
         log_client::{self, TASK_LOGV2_EXT_KEY, TASK_LOG_EXT_KEY},
-        search_client::{self, FlowSearchClient, FlowSearchTaskKind},
+        search_client::{FlowSearchClient, FlowSearchTaskKind},
     },
 };
 
@@ -57,6 +57,7 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
     // 分离不同类型的任务
     let mut instance_ids: Vec<String> = Vec::new();
     let mut business_obj_items: HashMap<String, ModifyObjSearchExtReq> = HashMap::new();
+    let mut review_instance_items: HashMap<String, ModifyObjSearchExtReq> = HashMap::new();
     let mut other_tasks: Vec<(String, String)> = Vec::new();
     
     for (search_key, val) in search_tasks {
@@ -89,6 +90,30 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
                 }
                 business_obj_items.insert(id.to_string(), req);
             }
+            Ok(FlowSearchTaskKind::ModifyReviewInstance) => {
+                // 解析 ModifyObjSearchExtReq，如果同一个 id 有多个任务需要合并（参考 add_search_task 中的处理）
+                let modify_req = match TardisFuns::json.str_to_obj::<ModifyObjSearchExtReq>(&val) {
+                    Ok(r) => r,
+                    Err(_) => continue, // 如果解析失败，跳过这个任务
+                };
+                let mut req = business_obj_items
+                    .remove(id)
+                    .unwrap_or_default();
+                req.tag = modify_req.tag;
+                if modify_req.status.is_some() {
+                    req.status = modify_req.status;
+                }
+                if modify_req.rel_state.is_some() {
+                    req.rel_state = modify_req.rel_state;
+                }
+                if modify_req.rel_transition_state_name.is_some() {
+                    req.rel_transition_state_name = modify_req.rel_transition_state_name;
+                }
+                if modify_req.current_state_color.is_some() {
+                    req.current_state_color = modify_req.current_state_color;
+                }
+                review_instance_items.insert(id.to_string(), req);
+            }
             _ => {
                 other_tasks.push((search_key, val));
             }
@@ -110,6 +135,12 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
     // 单独处理其他任务
     for (search_key, val) in other_tasks {
         FlowSearchClient::execute_async_task(&search_key, &val, ctx).await?;
+    }
+
+    // 批量处理实例任务
+    if !instance_ids.is_empty() {
+        let funs = flow_constants::get_tardis_inst();
+        FlowSearchClient::batch_modify_review_obj_search_ext(&review_instance_items, &funs, ctx).await?;
     }
     
     Ok(())
