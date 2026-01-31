@@ -3,6 +3,7 @@ use std::{collections::HashMap, vec};
 use async_recursion::async_recursion;
 
 use bios_basic::rbum::{
+    domain::rbum_item,
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
@@ -18,7 +19,7 @@ use bios_sdk_invoke::dto::search_item_dto::{
 use itertools::Itertools;
 use serde_json::Value;
 use tardis::{
-    TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, db::sea_orm::{
+    TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, chrono::Utc, db::sea_orm::{
         self, EntityName, Iden, Set, sea_query::{Alias, Cond, Expr, Query, SelectStatement}
     }, futures::future::join_all, log::{debug, error}, serde_json::json, tokio, web::web_resp::TardisPage
 };
@@ -437,6 +438,17 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
     }
 
     async fn before_modify_item(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // 不论请求参数如何，触发了 modify 就更新 kernel 表的 update_time 为当前时间
+        funs.db()
+            .update_one(
+                rbum_item::ActiveModel {
+                    id: Set(flow_model_id.to_string()),
+                    update_time: Set(Utc::now()),
+                    ..Default::default()
+                },
+                ctx,
+            )
+            .await?;
         let current_model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
