@@ -39,7 +39,7 @@ impl FlowLogServ {
     }
 
     // 添加审批流发起日志
-    async fn add_start_log(
+    pub async fn add_start_log(
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
@@ -122,7 +122,7 @@ impl FlowLogServ {
     }
 
     // 添加审批流发起动态日志
-    async fn add_start_dynamic_log(
+    pub async fn add_start_dynamic_log(
         start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         create_vars: &HashMap<String, Value>,
@@ -206,7 +206,7 @@ impl FlowLogServ {
     }
 
     // 添加审批流发起业务日志
-    async fn add_start_business_log(
+    pub async fn add_start_business_log(
         _start_req: &FlowInstStartReq,
         flow_inst_detail: &FlowInstDetailResp,
         _create_vars: &HashMap<String, Value>,
