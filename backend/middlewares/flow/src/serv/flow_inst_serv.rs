@@ -3360,14 +3360,21 @@ impl FlowInstServ {
         })?;
         let inst_detail = Self::get(&inst_id, funs, ctx).await?;
         // 流程结束时，更新对应的主审批流的search状态
-        let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+        let mut modify_serach_ext = ModifyObjSearchExtReq {
             tag: inst_detail.tag.to_string(),
             status: Some("".to_string()),
             rel_state: Some("".to_string()),
             rel_transition_state_name: Some("".to_string()),
             ..Default::default()
-        })?;
-        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+        };
+        match FlowModelRelTransitionKind::from(rel_transition.clone()) {
+            FlowModelRelTransitionKind::Transfer(_) => {
+                modify_serach_ext.status = None;
+            },
+            _ => {}
+        }
+        let modify_serach_ext_str = TardisFuns::json.obj_to_string(&modify_serach_ext)?;
+        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, rel_business_obj_id, &modify_serach_ext_str, funs, ctx).await?;
         if let Some(root_inst_id) = root_inst_id.clone() {
             if let Some(child_inst) = Self::find_detail_items(
                 &FlowInstFilterReq {
@@ -3380,7 +3387,7 @@ impl FlowInstServ {
                 ctx,
             )
             .await?.pop() {
-                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst.id, &modify_serach_ext, funs, ctx).await?;
+                FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst.id, &modify_serach_ext_str, funs, ctx).await?;
             }
         }
 
@@ -3606,7 +3613,7 @@ impl FlowInstServ {
                         ..Default::default()
                     })
                     .collect_vec();
-                FlowExternalServ::do_modify_field(
+                FlowExternalServ::do_async_modify_field(
                     tag,
                     None,
                     rel_business_obj_id,
