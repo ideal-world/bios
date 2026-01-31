@@ -266,6 +266,8 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowModelServ::copy_models_by_template_id(&from_template_id.0, &to_template_id.0, &funs, &ctx.0).await?;
+        // 添加或修改审批配置
+        FlowConfigServ::add_or_modify_root_config(from_template_id.0.clone(), Some(to_template_id.0.clone()), "review", &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

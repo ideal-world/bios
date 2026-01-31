@@ -39,7 +39,7 @@ use crate::{
     },
     flow_constants,
     helper::{loop_check_helper, task_handler_helper},
-    serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
+    serv::{clients::reach_client::FlowReachClient, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
 
 use super::{
@@ -133,6 +133,7 @@ impl FlowInstServ {
                             .await?;
                         }
                     }
+                    FlowReachClient::send_review_start_message(&inst_id, ctx, funs).await?;
                 }
                 Ok(inst_id)
             } else {
@@ -404,6 +405,7 @@ impl FlowInstServ {
                     let task_handle = tokio::spawn(async move {
                         let funs = flow_constants::get_tardis_inst();
                         let _ = Self::modify_inst_code(&inst_id_cp, &funs, &ctx_clone).await;
+                        let _ = FlowSearchClient::async_add_or_modify_instance_search(&inst_id_cp, Box::new(true), &funs, &ctx_clone).await;
                     });
                     task_handle.await.unwrap();
                     Ok(())
@@ -928,6 +930,36 @@ impl FlowInstServ {
         Ok(result)
     }
 
+    /// Delete instances by business ID and tag
+    ///
+    /// 根据业务ID和tag删除实例
+    pub async fn delete_by_obj_id_and_tag(
+        tag: &str,
+        rel_business_obj_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let approve_inst_ids = Self::find_ids(
+            &FlowInstFilterReq {
+            rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+            main: Some(false),
+            ..Default::default()
+        }, funs, ctx).await?;
+        funs.db().execute(
+            Query::delete()
+                .from_table(flow_inst::Entity)
+                .and_where(Expr::col(flow_inst::Column::Tag).eq(tag.to_string()))
+                .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).eq(rel_business_obj_id.to_string()))
+                .and_where(Expr::col(flow_inst::Column::OwnPaths).like(format!("{}%", ctx.own_paths))),
+        )
+        .await?;
+        for approve_inst_id in approve_inst_ids {
+            FlowSearchClient::async_delete_instance_search(&approve_inst_id, funs, ctx).await?;
+        }
+
+        Ok(())
+    }
+
     #[async_recursion]
     pub async fn abort(flow_inst_id: &str, abort_req: &FlowInstAbortReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if funs
@@ -973,6 +1005,7 @@ impl FlowInstServ {
             FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
+                FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
             }
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
@@ -3159,6 +3192,9 @@ impl FlowInstServ {
                         }
                     }
                 }
+                if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                }
             }
             FlowStateKind::Approval => {
                 let mut modify_req = FlowInstArtifactsModifyReq { ..Default::default() };
@@ -3221,6 +3257,9 @@ impl FlowInstServ {
                         }
                     }
                 }
+                if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                }
             }
             FlowStateKind::Branch => {}
             FlowStateKind::Finish => {
@@ -3238,6 +3277,7 @@ impl FlowInstServ {
                     )
                     .await?;
                     FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
+                    FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             _ => {}
@@ -3358,7 +3398,20 @@ impl FlowInstServ {
                 .await?;
             }
             FlowModelRelTransitionKind::Delete => {
-                FlowExternalServ::do_delete_rel_obj(tag, rel_business_obj_id, &inst_id, ctx, funs).await?;
+                let ctx_clone = ctx.clone();
+                let tag_cp = tag.to_string();
+                let rel_business_obj_id_cp = rel_business_obj_id.to_string();
+                ctx.add_sync_task(Box::new(|| {
+                    Box::pin(async move {
+                        let task_handle = tokio::spawn(async move {
+                            let funs = flow_constants::get_tardis_inst();
+                            let _ = FlowExternalServ::do_delete_rel_obj(&tag_cp, &rel_business_obj_id_cp, &inst_id, &ctx_clone, &funs).await;
+                        });
+                        task_handle.await.unwrap();
+                        Ok(())
+                    })
+                }))
+                .await?;
             }
             FlowModelRelTransitionKind::Related => {
                 let vars_collect = Self::get_modify_vars(artifacts, state_ids);
@@ -4649,30 +4702,55 @@ impl FlowInstServ {
     }
 
     // 修改实例编码
-    async fn modify_inst_code(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_inst_code(inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let inst = Self::get(inst_id, funs, ctx).await?;
-        let count = funs
+
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstCodeResult {
+            pub id: String,
+            pub code: String,
+        }
+        let mut query = Query::select();
+        query.columns([
+            (flow_inst::Entity, flow_inst::Column::Id),
+            (flow_inst::Entity, flow_inst::Column::Code),
+        ])
+        .from(flow_inst::Entity)
+        .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
+        .and_where(Expr::col(flow_inst::Column::Main).eq(false))
+        .and_where(Expr::col(flow_inst::Column::RelInstId).is_null())
+        .and_where(
+            Expr::col(flow_inst::Column::CreateTime)
+                .lt(inst.create_time)
+                .or(
+                    Expr::col(flow_inst::Column::CreateTime)
+                        .lt(inst.create_time)
+                        .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
+                )
+        );
+        query.order_by((flow_inst::Entity, flow_inst::Column::CreateTime), Order::Desc);
+        query.order_by((flow_inst::Entity, flow_inst::Column::Id), Order::Desc);
+        let result = funs
             .db()
-            .count(
-                Query::select()
-                    .columns([flow_inst::Column::Code])
-                    .from(flow_inst::Entity)
-                    .and_where(Expr::col(flow_inst::Column::CreateTime).gt(Utc::now().date_naive()))
-                    .and_where(Expr::col(flow_inst::Column::Main).eq(false))
-                    .and_where(Expr::col(flow_inst::Column::RelInstId).is_null())
-                    .and_where(
-                        Expr::col(flow_inst::Column::CreateTime)
-                            .lt(inst.create_time)
-                            .or(
-                                Expr::col(flow_inst::Column::CreateTime)
-                                    .lt(inst.create_time)
-                                    .and(Expr::col(flow_inst::Column::Id).lt(inst.id.as_str()))
-                            )
-                    ),
-            )
-            .await?;
+            .find_dtos::<FlowInstCodeResult>(&query).await?;
+        let mut empty_code_len = 0;
+        let mut last_code = String::new();
+        for inst in result {
+            if inst.code.is_empty() {
+                empty_code_len += 1;
+            } else {
+                last_code = inst.code.clone();
+                break;
+            }
+        }
+        let code_suffix_num: u32 = last_code
+            .get(last_code.len().saturating_sub(5)..)
+            .unwrap_or("")
+            .parse()
+            .unwrap_or(0);
+        let count = code_suffix_num + empty_code_len + 1;
         let current_date = Utc::now();
-        let code = format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count + 1).to_string();
+        let code = format!("SP{}{:0>2}{:0>2}{:0>5}", current_date.year(), current_date.month(), current_date.day(), count).to_string();
         let flow_inst = flow_inst::ActiveModel {
             id: Set(inst_id.to_string()),
             code: Set(Some(code)),
