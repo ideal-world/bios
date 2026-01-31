@@ -382,9 +382,6 @@ impl FlowInstServ {
         )
         .await?;
         let inst = Self::get(&inst_id, funs, ctx).await?;
-        FlowLogServ::add_start_log_async_task(start_req, &inst, &create_vars, funs, ctx).await?;
-        FlowLogServ::add_start_dynamic_log_async_task(start_req, &inst, &create_vars, funs, ctx).await?;
-        FlowLogServ::add_start_business_log_async_task(start_req, &inst, &create_vars, funs, ctx).await?;
 
         Self::when_enter_state(&inst, &flow_model.init_state_id, &flow_model.id, funs, ctx).await?;
         Self::do_request_webhook(
@@ -413,6 +410,26 @@ impl FlowInstServ {
             }))
             .await?;
         }
+
+        let ctx_clone = ctx.clone();
+        let inst_id_cp = inst_id.clone();
+        let start_req_cp = start_req.clone();
+        let create_vars_cp = create_vars.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    if let Ok(curr_inst) = Self::get(&inst_id_cp, &funs, &ctx_clone).await {
+                        let _ = FlowLogServ::add_start_log(&start_req_cp, &curr_inst, &create_vars_cp, false, &funs, &ctx_clone).await;
+                        let _ = FlowLogServ::add_start_dynamic_log(&start_req_cp, &curr_inst, &create_vars_cp, false, &funs, &ctx_clone).await;
+                        let _ = FlowLogServ::add_start_business_log(&start_req_cp, &curr_inst, &create_vars_cp, false, &funs, &ctx_clone).await;
+                    }
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await?;
 
         Ok(inst_id)
     }
@@ -3589,7 +3606,7 @@ impl FlowInstServ {
                         ..Default::default()
                     })
                     .collect_vec();
-                FlowExternalServ::do_async_modify_field(
+                FlowExternalServ::do_modify_field(
                     tag,
                     None,
                     rel_business_obj_id,

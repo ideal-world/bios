@@ -5,13 +5,10 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde_json::{json, Value};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
-    chrono::{Local, SecondsFormat},
-    db::sea_orm::{
+    TardisFunsInst, basic::{dto::TardisContext, result::TardisResult}, chrono::{Local, SecondsFormat, Utc}, db::sea_orm::{
         self,
         sea_query::{Expr, Query},
-    },
-    TardisFunsInst,
+    }
 };
 
 use crate::{
@@ -219,6 +216,7 @@ impl FlowEventServ {
             .iter()
             .find(|trans| trans.id == flow_transition_id)
             .ok_or_else(|| funs.err().not_found("flow_inst", "transfer", "no transferable state", "404-flow-inst-transfer-state-not-found"))?;
+        let new_inst = FlowInstServ::get(&flow_inst_detail.id, funs, ctx).await?;
         let prev_flow_state = FlowStateServ::get_item(
             &next_flow_transition.from_flow_state_id,
             &FlowStateFilterReq {
@@ -233,7 +231,7 @@ impl FlowEventServ {
         )
         .await?;
         let next_flow_state = FlowStateServ::get_item(
-            &next_flow_transition.to_flow_state_id,
+            &new_inst.current_state_id,
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
