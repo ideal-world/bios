@@ -21,6 +21,8 @@ pub struct ObjectInitiateMultipartUploadReq {
     // 指定桶，当且仅当使用自定义服务ID时该参数有效。
     // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
     pub bucket: Option<String>,
+
+    pub obj_exp: Option<u32>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -37,6 +39,8 @@ pub struct ObjectBatchBuildCreatePresignUrlReq {
     // 指定桶，当且仅当使用自定义服务ID时该参数有效。
     // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
     pub bucket: Option<String>,
+
+    pub obj_exp: Option<u32>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -52,6 +56,8 @@ pub struct ObjectCompleteMultipartUploadReq {
     // 指定桶，当且仅当使用自定义服务ID时该参数有效。
     // Specifies the bucket. This parameter is valid when and only when a custom service ID is used.
     pub bucket: Option<String>,
+
+    pub obj_exp: Option<u32>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

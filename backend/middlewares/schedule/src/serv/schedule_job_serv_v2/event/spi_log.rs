@@ -5,7 +5,7 @@ use tardis::{
     basic::dto::TardisContext,
     chrono::Utc,
     futures::Stream,
-    log::{self as tracing, debug, error, instrument},
+    log::{debug, error, instrument},
     tokio, TardisFuns, TardisFunsInst,
 };
 
@@ -79,7 +79,7 @@ impl EventComponent for SpiLog {
     }
 
     #[instrument(skip(self))]
-    fn notify_execute_start(&self, code: &str) {
+    fn notify_execute_start(&self, code: &str, ext: tardis::serde_json::Value) {
         let funs = self.funs.clone();
         let ctx = self.ctx.clone();
         let code = code.to_string();
@@ -88,6 +88,7 @@ impl EventComponent for SpiLog {
                 LogItemAddV2Req {
                     tag: TASK_TAG.to_string(),
                     content: tardis::serde_json::Value::Null,
+                    ext: Some(ext),
                     key: Some(code.to_string()),
                     op: Some(OP_EXECUTE_START.to_string()),
                     ts: Some(Utc::now()),

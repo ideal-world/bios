@@ -15,7 +15,6 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     info!("[BIOS.KV] Module initializing");
     let mut funs = crate::get_tardis_inst();
-    crate::event::handle_events().await?;
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<KvConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;

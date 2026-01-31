@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
-use tardis::chrono::Utc;
+use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::log::{debug, warn};
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -15,16 +17,20 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_external_dto::FlowExternalCallbackOp;
 use crate::dto::flow_inst_dto::{
-    FlowInstAbortReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
+    FlowInstAbortReq, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstBindReq, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionsReq,
     FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstModifyAssignedReq, FlowInstModifyCurrentVarsReq, FlowInstOperateReq, FlowInstStartReq,
-    FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
+    FlowInstStatcountReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq,
 };
+use crate::dto::flow_model_version_dto::FlowModelVersionFilterReq;
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
+use crate::serv::clients::reach_client::FlowReachClient;
+use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_event_serv::FlowEventServ;
 use crate::serv::flow_inst_serv::FlowInstServ;
+use crate::serv::flow_model_version_serv::FlowModelVersionServ;
 use crate::serv::flow_transition_serv::FlowTransitionServ;
 #[derive(Clone)]
 pub struct FlowCiInstApi;
@@ -121,6 +127,76 @@ impl FlowCiInstApi {
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Instance By Business ID And Tag
+    ///
+    /// 根据业务ID和tag删除实例
+    #[oai(path = "/remove", method = "delete")]
+    async fn delete_by_obj_id_and_tag(
+        &self,
+        tag: Query<String>,
+        rel_business_obj_id: Query<String>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowInstServ::delete_by_obj_id_and_tag(&tag.0, &rel_business_obj_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Review Expiry Remind
+    ///
+    /// 评审到期提醒：获取 sys_state=Progress、tag=REVIEW、main=true 的实例，若 create_vars.review_end_time 距当前不足 24 小时则发送提醒
+    #[oai(path = "/review_expiry_remind", method = "post")]
+    async fn review_expiry_remind(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let insts = FlowInstServ::find_detail_items(
+            &FlowInstFilterReq {
+                with_sub: Some(true),
+                current_state_sys_kind: Some(FlowSysStateKind::Progress),
+                tags: Some(vec!["REVIEW".to_string()]),
+                main: Some(true),
+                finish: Some(false),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        let now = Utc::now();
+        let threshold = Duration::hours(24);
+        for inst in insts {
+            let Some(create_vars) = inst.create_vars.as_ref() else {
+                continue;
+            };
+            let Some(review_end_time_val) = create_vars.get("review_end_time") else {
+                continue;
+            };
+            let review_end_time_str = match review_end_time_val.as_str() {
+                Some(s) => s,
+                None => continue,
+            };
+            // 实际存储格式示例: "2026-01-30T00:00:00+08:00" (RFC3339)
+            let Ok(review_end_time) = DateTime::parse_from_rfc3339(review_end_time_str) else {
+                warn!("review_end_time parse failed: inst_id={}, value={}", inst.id, review_end_time_str);
+                continue;
+            };
+            let review_end_time_utc = review_end_time.with_timezone(&Utc);
+            let remaining = review_end_time_utc - now;
+            if remaining <= threshold && remaining > Duration::zero() {
+                FlowReachClient::send_remind_approve_finish(&inst.id, &ctx.0, &funs).await?;
+            }
+        }
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -535,5 +611,67 @@ impl FlowCiInstApi {
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Modify Instance Artifacts
+    ///
+    /// 修改实例的数据对象
+    #[oai(path = "/:flow_inst_id/artifacts", method = "patch")]
+    async fn modify_inst_artifacts(
+        &self,
+        flow_inst_id: Path<String>,
+        modify_req: Json<FlowInstArtifactsModifyApiReq>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        funs.begin().await?;
+        FlowInstServ::modify_inst_artifacts_with_validation(&flow_inst_id.0, &modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// 批量执行评审实例搜索扩展修改脚本（脚本）
+    ///
+    /// 搜索所有 rel_inst_id 不为空的实例，按200个分页，执行 batch_modify_review_obj_search_ext
+    #[oai(path = "/batch_modify_review_obj_search_ext_script", method = "post")]
+    async fn batch_modify_review_obj_search_ext_script(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u32> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        
+        // 查询所有 rel_inst_id 不为空的实例ID和tag
+        let inst_id_tag_pairs = FlowInstServ::find_ids_with_tag_by_rel_inst_id_not_null(&funs, &ctx.0).await?;
+        
+        // 按200个分页处理
+        const PAGE_SIZE: usize = 200;
+        let mut processed_count = 0u32;
+        
+        for chunk in inst_id_tag_pairs.chunks(PAGE_SIZE) {
+            // 构建 batch_modify_review_obj_search_ext 需要的 HashMap
+            let mut items = HashMap::new();
+            for (inst_id, tag) in chunk {
+                items.insert(
+                    inst_id.clone(),
+                    ModifyObjSearchExtReq {
+                        tag: tag.clone(),
+                        status: None,
+                        rel_state: None,
+                        rel_transition_state_name: None,
+                        current_state_color: None,
+                    },
+                );
+            }
+            
+            // 执行批量修改
+            FlowSearchClient::batch_modify_review_obj_search_ext(&items, &funs, &ctx.0).await?;
+            processed_count += chunk.len() as u32;
+        }
+        
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(processed_count)
     }
 }

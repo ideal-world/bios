@@ -197,22 +197,23 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
 
     let domain_iam_id =
         RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found iam domain", ""))?;
-
+    let role_codes = vec![
+        iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER.to_string(),
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
+    ];
     let roles = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
-            codes: Some(vec![
-                iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
-                iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
-            ]),
+            codes: Some(role_codes.clone()),
             rbum_kind_id: Some(kind_role_id.clone()),
             rbum_domain_id: Some(domain_iam_id.clone()),
             ..Default::default()
         },
         1,
-        5,
+        role_codes.len() as u32,
         Some(false),
         None,
         funs,
@@ -239,6 +240,12 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant audit admin role", ""))?;
 
+    let role_tenant_app_manager_id = roles
+        .iter()
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER)
+        .map(|r| r.id.clone())
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant audit admin role", ""))?;
+
     let role_app_admin_id = roles
         .iter()
         .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
@@ -261,6 +268,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         role_sys_admin_id,
         role_tenant_audit_id,
         role_tenant_admin_id,
+        role_tenant_app_manager_id,
         role_app_admin_id,
         kind_sub_deploy_id,
         role_app_read_id,
@@ -299,6 +307,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_sys_admin_id: "".to_string(),
         role_tenant_audit_id: "".to_string(),
         role_tenant_admin_id: "".to_string(),
+        role_tenant_app_manager_id: "".to_string(),
         role_app_admin_id: "".to_string(),
         role_app_read_id: "".to_string(),
         kind_sub_deploy_id: kind_sub_deploy_id.to_string(),
@@ -451,6 +460,17 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
+    let role_tenant_app_manager_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER,
+        iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        &IamRoleKind::Tenant,
+        &init_res_item_ids,
+        funs,
+        &ctx,
+    )
+    .await?;
+
     let role_app_admin_id = add_role(
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE,
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE,
@@ -525,6 +545,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_sys_admin_id: role_sys_admin_id.clone(),
         role_tenant_admin_id,
         role_tenant_audit_id,
+        role_tenant_app_manager_id,
         role_app_admin_id,
         role_app_read_id,
         kind_sub_deploy_id,

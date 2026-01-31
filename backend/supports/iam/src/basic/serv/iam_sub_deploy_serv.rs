@@ -312,7 +312,13 @@ impl IamSubDeployServ {
         )
         .await?;
         let account_ids = accounts.iter().map(|account| account.id.clone()).collect::<Vec<_>>();
-
+        // todo 临时方案 如果 others_id 为空，则使用账户 id 填充
+        let mut accounts = accounts;
+        for account in &mut accounts {
+            if account.others_id.is_empty() {
+                account.others_id = account.id.clone();
+            }
+        }
         let (orgs_set, orgs_set_cate) = Self::export_orgs(id, funs, ctx).await?;
         let (apps_set, apps_set_cate) = Self::export_apps(id, funs, ctx).await?;
         let (res_set, res_set_cate, res_items, res_set_item, res_api_map, res_role_map) = Self::export_res(funs, ctx).await?;
@@ -973,8 +979,10 @@ impl IamSubDeployServ {
     }
 
     pub(crate) async fn sub_deploy_import(import_req: IamSubDeployTowImportReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // todo 把所有方法的事物独立出来,保证每个方法的幂等性
         let _ = Self::import_org(import_req.org_set.clone(), import_req.org_set_cate, funs, ctx).await;
         let _ = Self::import_apps(import_req.apps_set.clone(), import_req.apps_set_cate, funs, ctx).await;
+        // todo 同步合同是否应该在同步用户之后,或者把用户关联关系等剥离出来统一在 import_account 方法中处理,尽量保证每个方法的独立性以及完整性
         let _ = Self::import_project(
             import_req.projects.clone(),
             import_req.account_projects.clone(),

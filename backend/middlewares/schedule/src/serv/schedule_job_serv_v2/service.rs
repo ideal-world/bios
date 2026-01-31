@@ -211,11 +211,20 @@ where
                     Ok(true) => {
                         // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
                         let Ok(()) = cache_client.expire(&lock_key, distributed_lock_expire_sec as i64).await else {
+                            let _ = cache_client.del(&lock_key).await;
                             return;
                         };
+                        let execution_id = TardisFuns::field.nanoid();
                         trace!("executing schedule task {code}");
                         // 1. write log exec start
-                        event.notify_execute_start(&code);
+                        event.notify_execute_start(
+                            &code,
+                            serde_json::json! {
+                                {
+                                    "execution_id": execution_id
+                                }
+                            },
+                        );
                         // 2. request webhook
                         match TardisFuns::web_client().raw().execute(callback_req).await {
                             Ok(resp) => {
@@ -233,7 +242,8 @@ where
                                     {
                                         "remote_addr": remote_addr,
                                         "status_code": status_code.to_string(),
-                                        "headers": response_header
+                                        "headers": response_header,
+                                        "execution_id": execution_id
                                     }
                                 };
                                 let content = resp.text().await.unwrap_or_default();
@@ -241,7 +251,15 @@ where
                                 event.notify_execute_end(&code, content, ext);
                             }
                             Err(e) => {
-                                event.notify_execute_end(&code, e.to_string(), serde_json::Value::Null);
+                                event.notify_execute_end(
+                                    &code,
+                                    e.to_string(),
+                                    serde_json::json! {
+                                        {
+                                            "execution_id": execution_id
+                                        }
+                                    },
+                                );
                             }
                         }
                         trace!("executed schedule task {code}");

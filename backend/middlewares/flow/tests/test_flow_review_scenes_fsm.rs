@@ -16,8 +16,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq,
-    FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp,
+    FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelCopyOrReferenceReq, FlowModelDetailResp, FlowModelKind, FlowModelModifyReq, FlowModelStatus, FlowModelSummaryResp
 };
 use bios_mw_flow::dto::flow_model_version_dto::{
     FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState, FlowModelVesionState,
@@ -157,6 +156,23 @@ pub async fn test(
                 tag: "REQ".to_string(),
                 rel_business_obj_id: req_b_obj_id.clone(),
                 ..Default::default()
+            },
+        )
+        .await;
+    // 创建并复制评审审批流
+    let review_approval_flow: FlowModelAggResp = flow_client
+        .post(
+            "/cc/model/add_and_copy",
+            &FlowModelAddAndCopyModelReq {
+                name: "评审审批流".into(),
+                info: Some("xxx".to_string()),
+                scope_level: Some(RbumScopeLevelKind::L1),
+                tag: "REVIEW".to_string(),
+                kind: FlowModelKind::AsTemplate,
+                rel_model_id: None,
+                update_states: None,
+                icon: None,
+                rel_template_ids: None,
             },
         )
         .await;

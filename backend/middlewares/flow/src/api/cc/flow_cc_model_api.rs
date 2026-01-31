@@ -4,6 +4,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
+use tardis::basic::error::TardisError;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -12,9 +13,7 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{
-    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq,
-    FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp,
-    FlowModelUnbindStateReq,
+    FlowModelAddReq, FlowModelAggResp, FlowModelBindStateReq, FlowModelCopyOrReferenceCiReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelModifyReq, FlowModelAddAndCopyModelReq, FlowModelSortStatesReq, FlowModelStatus, FlowModelSummaryResp, FlowModelUnbindStateReq
 };
 use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionModifyReq, FlowModelVersionModifyState};
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
@@ -156,6 +155,7 @@ impl FlowCcModelApi {
         rel_template_id: Query<Option<String>>,
         main: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
+        is_parent_show: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -164,23 +164,36 @@ impl FlowCcModelApi {
         _request: &Request,
     ) -> TardisApiResult<TardisPage<FlowModelDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::paginate_detail_items(
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: flow_model_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
-                    own_paths: if rel_template_id.0.is_some() { Some("".to_string()) } else { None },
-                    name: name.0,
-                    with_sub_own_paths: with_sub.0.unwrap_or(false),
-                    enabled: enabled.0,
-                    ..Default::default()
-                },
-                main: main.0,
-                rel_template_id: rel_template_id.0,
-                tags: tag.0.map(|tag| vec![tag]),
-                status: status.0,
-                kinds: kind.0.map(|s| vec![s]),
+        let mut filter = FlowModelFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: flow_model_ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
+                own_paths: if rel_template_id.0.is_some() { Some("".to_string()) } else { None },
+                name: name.0,
+                with_sub_own_paths: with_sub.0.unwrap_or(false),
+                enabled: enabled.0,
                 ..Default::default()
             },
+            main: main.0,
+            rel_template_id: rel_template_id.0,
+            tags: tag.0.map(|tag| vec![tag]),
+            status: status.0,
+            kinds: kind.0.map(|s| vec![s]),
+            ..Default::default()
+        };
+        // 此处特殊处理，只展示父类已启用的模板
+        if is_parent_show.0.unwrap_or(false) {
+            let models = FlowModelServ::find_items(
+                &filter,
+                None,
+                None,
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            filter.basic.ids = Some(models.into_iter().filter(|m| m.rel_model_id.is_empty() || (!m.rel_model_id.is_empty() && m.status == FlowModelStatus::Enabled)).map(|m| m.id).collect_vec())
+        }
+        let result = FlowModelServ::paginate_detail_items(
+            &filter,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -522,6 +535,25 @@ impl FlowCcModelApi {
             )
             .await?;
         }
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Creating and copy model
+    ///
+    /// 创建并复制模型配置
+    #[oai(path = "/add_and_copy", method = "post")]
+    async fn add_and_copy(
+        &self,
+        req: Json<FlowModelAddAndCopyModelReq>,
+        ctx: TardisContextExtractor,
+        _request: &Request,
+    ) -> TardisApiResult<FlowModelAggResp> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowModelServ::add_and_copy(&req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

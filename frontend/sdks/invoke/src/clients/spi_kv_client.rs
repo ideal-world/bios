@@ -10,31 +10,6 @@ use tardis::TardisFunsInst;
 use crate::invoke_enumeration::InvokeModuleKind;
 
 use super::base_spi_client::BaseSpiClient;
-#[cfg(feature = "event")]
-pub mod event {
-    use asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject};
-    use tardis::chrono::{Duration, Utc};
-    impl EventAttribute for super::KvItemAddOrModifyReq {
-        const SUBJECT: Subject = Subject::const_new("kv/add");
-        fn durable_config() -> Option<MessageDurableConfig> {
-            Some(MessageDurableConfig {
-                // 两个月后过期
-                expire: Utc::now() + Duration::days(60),
-                max_receiver: Some(1),
-            })
-        }
-    }
-    impl EventAttribute for super::KvItemDeleteReq {
-        const SUBJECT: Subject = Subject::const_new("kv/delete");
-        fn durable_config() -> Option<MessageDurableConfig> {
-            Some(MessageDurableConfig {
-                // 两个月后过期
-                expire: Utc::now() + Duration::days(60),
-                max_receiver: Some(1),
-            })
-        }
-    }
-}
 #[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
 

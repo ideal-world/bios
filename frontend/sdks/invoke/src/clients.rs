@@ -29,8 +29,6 @@ pub mod spi_stats_client;
 #[cfg(feature = "iam")]
 pub mod iam_client;
 
-#[cfg(feature = "event")]
-pub mod event_client;
 pub mod flow_client;
 
 #[cfg(feature = "reach")]

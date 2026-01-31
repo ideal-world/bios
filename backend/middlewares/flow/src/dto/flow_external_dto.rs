@@ -39,6 +39,10 @@ pub struct FlowExternalReq {
     ///
     /// 修改后的状态ID
     pub target_state: Option<String>,
+    /// Modified State ID
+    ///
+    /// 修改后的状态ID
+    pub target_state_color: Option<String>,
     /// Associated [enum](super::flow_state_dto::FlowSysStateKind)
     ///
     /// 关联的[枚举](super::flow_state_dto::FlowSysStateKind)
