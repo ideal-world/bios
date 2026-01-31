@@ -6,7 +6,7 @@ use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde_json::{json, Value};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    chrono::{SecondsFormat, Utc},
+    chrono::{Local, SecondsFormat},
     db::sea_orm::{
         self,
         sea_query::{Expr, Query},
@@ -151,7 +151,7 @@ impl FlowEventServ {
                 if let Some(left_value) = current_vars.get(&condition.left_value) {
                     Ok(condition.relevance_relation.check_conform(
                         left_value.as_str().unwrap_or(left_value.to_string().as_str()).to_string(),
-                        Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
+                        Local::now().to_rfc3339_opts(SecondsFormat::Millis, true),
                     ))
                 } else {
                     Ok(false)
@@ -377,7 +377,7 @@ impl FlowEventServ {
         if let Some(changed_kind) = &result.changed_kind {
             match changed_kind {
                 FlowTransitionActionByVarChangeInfoChangedKind::AutoGetOperateTime => {
-                    result.changed_val = Some(json!(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
+                    result.changed_val = Some(json!(Local::now().to_rfc3339_opts(SecondsFormat::Millis, true)));
                     result.changed_kind = Some(FlowTransitionActionByVarChangeInfoChangedKind::ChangeContent);
                 }
                 FlowTransitionActionByVarChangeInfoChangedKind::AddOrSub => {
