@@ -36,7 +36,7 @@ bios-spi-stats = {version = "0.2.0", path = "../../spi/spi-stats"}
 bios-mw-flow = {version = "0.2.0", path = "../../middlewares/flow"}
 bios-mw-schedule = {version = "0.2.0", path = "../../middlewares/schedule"}
 # bios-mw-event = { version = "0.2.0", path = "../../middlewares/event" }
-bios-mw-event-client = {version = "0.2.0", path = "../../middlewares/event-client"}
+# bios-mw-event-client = {version = "0.2.0", path = "../../middlewares/event-client"}
 
 # clients
 

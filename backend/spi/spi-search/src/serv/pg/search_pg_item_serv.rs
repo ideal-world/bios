@@ -95,17 +95,6 @@ VALUES
 pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
-
-    if let Some(ext) = modify_req.ext.clone() {
-        if !modify_req.ext_override.unwrap_or(false) {
-            let mut storage_ext = get_ext(tag, key, &table_name, &conn, funs, inst).await?;
-            merge(&mut storage_ext, ext);
-            modify_req.ext = Some(storage_ext);
-        } else {
-            modify_req.ext = Some(ext);
-        }
-    };
-
     conn.begin().await?;
     self::do_modify(key, modify_req, funs, &conn, &table_name).await?;
     conn.commit().await?;
@@ -156,7 +145,11 @@ async fn do_modify(key: &str, modify_req: &mut SearchItemModifyReq, funs: &Tardi
         params.push(Value::from(update_time));
     };
     if let Some(ext) = &modify_req.ext {
-        sql_sets.push(format!("ext = ${}", params.len() + 1));
+        if !modify_req.ext_override.unwrap_or(false) {
+            sql_sets.push(format!("ext = ext || ${}", params.len() + 1));
+        } else {
+            sql_sets.push(format!("ext = ${}", params.len() + 1));
+        }
         params.push(Value::from(ext.clone()));
     };
     if let Some(visit_keys) = &modify_req.visit_keys {
@@ -220,8 +213,7 @@ async fn do_save(
     conn: &TardisRelDBlConnection,
     table_name: &str,
 ) -> TardisResult<()> {
-    if let Some(item) = exists_item
-    {
+    if exists_item.is_some() {
         let mut modify_req = SearchItemModifyReq {
             kind: save_req.kind.clone(),
             title: save_req.title.clone(),
@@ -232,13 +224,8 @@ async fn do_save(
             update_time: save_req.update_time,
             ext: save_req.ext.clone(),
             visit_keys: save_req.visit_keys.clone(),
-            ext_override: None,
+            ext_override: Some(false),
         };
-        if let Some(ext) = modify_req.ext.clone() {
-            let mut storage_ext = item.ext.clone();
-            merge(&mut storage_ext, ext);
-            modify_req.ext = Some(storage_ext);
-        }
         self::do_modify(&save_req.key, &mut modify_req, funs, conn, table_name).await?;
     } else {
         let mut add_req = SearchItemAddReq {

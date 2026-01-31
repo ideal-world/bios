@@ -470,7 +470,7 @@ impl FlowCcInstApi {
     #[oai(path = "/rel_model", method = "post")]
     async fn get_rel_model(&self, req: Json<FlowInstFindRelModelReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Option<FlowModelDetailResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::find_rel_model(req.transition_id.clone(), &req.tag, &req.vars, &funs, &ctx.0).await?;
+        let result = FlowInstServ::find_rel_model(req.0.transition_id.clone(), &req.0.tag, req.0.vars.clone(), &funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

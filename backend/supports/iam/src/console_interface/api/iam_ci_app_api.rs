@@ -17,6 +17,8 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use tardis::futures_util::future::join_all;
+use tardis::tokio;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 
@@ -275,6 +277,35 @@ impl IamCiAppApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         IamAppServ::add_rel_account(&id.0, &account_id.0, false, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch Delete App Rel Account
+    /// 批量删除应用关联账号
+    #[oai(path = "/:ids/account/batch/:account_ids", method = "delete")]
+    async fn batch_delete_rel_account(&self, ids: Path<String>, account_ids: Path<String>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        let app_ids = ids.0.split(',').map(|id| id.to_string()).collect::<Vec<_>>();
+        let account_ids = account_ids.0.split(',').map(|id| id.to_string()).collect::<Vec<_>>();
+        let ctx_clone = ctx.0.clone();
+        tardis::tokio::spawn(async move {
+            let funs = iam_constants::get_tardis_inst();
+            for app_id in app_ids {
+                if let Ok(mock_app_ctx) = IamCertServ::try_use_app_ctx(ctx_clone.clone(), Some(app_id.to_string())) {
+                    for account_id in account_ids.clone() {
+                        let _ = IamAppServ::delete_rel_account(&app_id, &account_id, &funs, &mock_app_ctx).await;
+                    }
+                    mock_app_ctx.execute_task().await.unwrap_or_default();
+                }
+            }
+            ctx_clone.execute_task().await.unwrap_or_default();
+        });
+
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

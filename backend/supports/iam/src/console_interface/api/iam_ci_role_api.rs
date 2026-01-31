@@ -1,5 +1,6 @@
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleRelAccountCertResp, IamRoleSummaryResp};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::iam_enumeration::IamRoleKind;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -7,6 +8,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use itertools::Itertools;
 use tardis::log::error;
 
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
@@ -113,7 +115,7 @@ impl IamCiRoleApi {
         funs.begin().await?;
         let split = account_ids.0.split(',').collect::<Vec<_>>();
         for s in split {
-            IamRoleServ::delete_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+            IamRoleServ::delete_rel_account(&id.0, s, None, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         ctx.0.execute_task().await?;
@@ -128,7 +130,7 @@ impl IamCiRoleApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
-        IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
+        IamRoleServ::delete_rel_account(&id.0, &account_id.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -166,6 +168,7 @@ impl IamCiRoleApi {
                             let _ = IamAppServ::add_rel_account(app_id, account_id, true, &funs, &mock_app_ctx).await;
                             let _ = IamRoleServ::add_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await;
                         }
+                        let _ = mock_app_ctx.execute_task().await;
                     }
                     if let Err(err) = funs.commit().await {
                         error!("[IAM] batch_add_apps_rel_account commit error: {:?}", err);
@@ -205,8 +208,9 @@ impl IamCiRoleApi {
         for app_id in apps_split {
             let mock_app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.to_string()))?;
             for account_id in account_split.clone() {
-                IamRoleServ::delete_rel_account(&id.0, account_id, Some(RBUM_SCOPE_LEVEL_APP), &funs, &mock_app_ctx).await?;
+                IamRoleServ::delete_rel_account(&id.0, account_id, None, &funs, &mock_app_ctx).await?;
             }
+            mock_app_ctx.execute_task().await?;
         }
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -250,10 +254,25 @@ impl IamCiRoleApi {
         .into_iter()
         .map(|r| (r.rel_rbum_id, r.rel_rbum_cert_conf_name.unwrap_or_default(), r.ak))
         .collect_vec();
+        let accounts = IamAccountServ::find_detail_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(account_ids.clone()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         let result = account_ids
             .iter()
             .map(|account_id| IamRoleRelAccountCertResp {
                 account_id: account_id.clone(),
+                account: accounts.iter().find(|account| &account.id == account_id).cloned(),
                 certs: certs.iter().filter(|cert| &cert.0 == account_id).map(|r| (r.1.clone(), r.2.clone())).collect(),
             })
             .collect_vec();
@@ -272,6 +291,7 @@ impl IamCiRoleApi {
         app_id: Query<Option<String>>,
         in_base: Query<Option<bool>>,
         in_embed: Query<Option<bool>>,
+        ignore_scope: Query<Option<bool>>,
         extend_role_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -291,6 +311,7 @@ impl IamCiRoleApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     enabled: Some(true),
+                    ignore_scope: ignore_scope.0.unwrap_or(false),
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },

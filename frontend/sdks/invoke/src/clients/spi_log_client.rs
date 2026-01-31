@@ -1,10 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "event")]
-use crate::invoke_config::InvokeConfigApi as _;
 use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
-#[cfg(feature = "event")]
-use tardis::futures::TryFutureExt as _;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -16,26 +12,8 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-#[cfg(feature = "event")]
-use super::event_client::{mq_client_node_opt, mq_error, EventAttributeExt, SPI_RPC_TOPIC};
 use super::iam_client::IamClient;
 
-#[cfg(feature = "event")]
-pub mod event {
-    use asteroid_mq_sdk::model::{event::EventAttribute, MessageDurableConfig, Subject};
-    use tardis::chrono::{Duration, Utc};
-
-    impl EventAttribute for super::LogItemAddV2Req {
-        const SUBJECT: Subject = Subject::const_new("log/add");
-        fn durable_config() -> Option<MessageDurableConfig> {
-            Some(MessageDurableConfig {
-                // 两个月后过期
-                expire: Utc::now() + Duration::days(60),
-                max_receiver: Some(1),
-            })
-        }
-    }
-}
 #[derive(Debug, Default, Clone)]
 pub struct SpiLogClient;
 
@@ -222,13 +200,6 @@ impl SpiLogClient {
 
     pub async fn addv2(mut req: LogItemAddV2Req, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         req.make_valid();
-        #[cfg(feature = "event")]
-        if funs.invoke_conf_in_event(InvokeModuleKind::Log) {
-            if let Some(node) = mq_client_node_opt() {
-                node.send_event(SPI_RPC_TOPIC, req.inject_context(funs, ctx).json()).map_err(mq_error).await?;
-                return Ok(());
-            }
-        }
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/v2/item"), &req, headers.clone()).await?;

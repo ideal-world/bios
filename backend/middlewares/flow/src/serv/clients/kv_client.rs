@@ -17,6 +17,14 @@ impl FlowKvClient {
         Ok(account_name)
     }
 
+    pub async fn get_product_name(product_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let product_name = SpiKvClient::get_item(format!("__k_n__:iam_app:{}", product_id), None, funs, ctx)
+            .await?
+            .map(|resp| resp.value.as_str().unwrap_or("").to_string())
+            .unwrap_or_default();
+        Ok(product_name)
+    }
+
     pub async fn get_role_id(original_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut role_id = "".to_string();
         if let Some(role_id_prefix) = original_id.split(':').collect_vec().first() {

@@ -5,6 +5,7 @@ use crate::dto::flow_model_dto::{
 };
 use crate::flow_constants;
 use crate::helper::task_handler_helper;
+use crate::serv::flow_config_serv::FlowConfigServ;
 use crate::serv::flow_log_serv::FlowLogServ;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -238,6 +239,12 @@ impl FlowCiModelApi {
                 }
             }
         }
+        
+        if req.0.op == FlowModelAssociativeOperationKind::Copy {
+            // 添加或修改审批配置
+            FlowConfigServ::add_or_modify_root_config(req.0.rel_template_id.clone().unwrap_or_default(), req.0.target_template_id.clone(), "review", &funs, &ctx.0).await?;
+        }
+
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -259,6 +266,8 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowModelServ::copy_models_by_template_id(&from_template_id.0, &to_template_id.0, &funs, &ctx.0).await?;
+        // 添加或修改审批配置
+        FlowConfigServ::add_or_modify_root_config(from_template_id.0.clone(), Some(to_template_id.0.clone()), "review", &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;

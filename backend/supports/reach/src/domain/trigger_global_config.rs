@@ -38,6 +38,9 @@ pub struct Model {
     /// 用户触达消息模板Id
     #[tardis_entity(custom_type = "string", custom_len = "255")]
     pub rel_reach_msg_template_id: String,
+    #[tardis_entity(custom_type = "string", custom_len = "2000")]
+    /// 接收方组编码集合
+    pub receive_group_codes: String,
 }
 
 impl From<&ReachTriggerGlobalConfigAddReq> for ActiveModel {
@@ -53,6 +56,7 @@ impl From<&ReachTriggerGlobalConfigAddReq> for ActiveModel {
             rel_reach_msg_signature_id,
             rel_reach_msg_template_id,
         } model);
+        model.receive_group_codes = Set(value.receive_group_codes.as_ref().map(ToString::to_string).unwrap_or_default());
         model
     }
 }
