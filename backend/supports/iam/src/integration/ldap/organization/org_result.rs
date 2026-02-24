@@ -3,13 +3,35 @@
 //! 负责组装LDAP搜索响应结果，将IAM组织数据转换为LDAP协议格式
 
 use ldap3_proto::simple::*;
+use tardis::chrono::{DateTime, Utc};
 
 use crate::iam_config::IamLdapConfig;
 use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapBaseDnLevel, LdapSearchQuery};
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeNodeResp;
+
+/// LDAP属性构建所需的组织字段
+///
+/// 该结构体包含了构建LDAP属性所需的所有组织字段，
+/// 用于从 `RbumSetTreeNodeResp` 中提取必要信息。
+#[derive(Debug, Clone)]
+pub struct LdapOrgFields {
+    /// 组织ID（作为CN的fallback）
+    pub id: String,
+    /// 组织名称
+    pub name: String,
+    /// 系统编码
+    pub sys_code: String,
+    /// 业务编码（可选）
+    pub bus_code: Option<String>,
+    /// 图标（可选）
+    pub icon: Option<String>,
+    /// 创建时间
+    pub create_time: DateTime<Utc>,
+    /// 更新时间
+    pub update_time: DateTime<Utc>,
+}
 
 /// 构建LDAP组织搜索响应
-pub fn build_org_search_response(req: &SearchRequest, query: &LdapSearchQuery, orgs: Vec<RbumSetTreeNodeResp>, config: &IamLdapConfig) -> Vec<LdapMsg> {
+pub fn build_org_search_response(req: &SearchRequest, query: &LdapSearchQuery, orgs: Vec<LdapOrgFields>, config: &IamLdapConfig) -> Vec<LdapMsg> {
     let mut results = Vec::new();
 
     // 如果没有组织，返回空结果
@@ -42,23 +64,25 @@ pub fn build_org_search_response(req: &SearchRequest, query: &LdapSearchQuery, o
 }
 
 /// 从组织信息中提取CN
-fn extract_cn_from_org(org: &RbumSetTreeNodeResp, base: &str, _config: &IamLdapConfig) -> String {
+fn extract_cn_from_org(org: &LdapOrgFields, base: &str, _config: &IamLdapConfig) -> String {
     // 优先从base DN中提取CN
     if let Some(cn) = extract_cn_from_base(base) {
         return cn;
     }
 
-    // 优先使用name，如果没有则使用sys_code
+    // 优先使用id，如果没有则使用name
+    if !org.id.is_empty() {
+        return org.id.clone();
+    }
+
     if !org.name.is_empty() {
         return org.name.clone();
     }
 
-    if !org.sys_code.is_empty() {
-        return org.sys_code.clone();
-    }
+    
 
     // 最后使用ID
-    org.id.clone()
+    org.sys_code.clone()
 }
 
 /// 根据请求的属性列表过滤属性
@@ -79,9 +103,9 @@ fn filter_attributes_by_request(all_attributes: &[LdapPartialAttribute], request
 }
 
 /// 构建LDAP属性列表
-fn build_ldap_attributes(org: &RbumSetTreeNodeResp, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
+fn build_ldap_attributes(org: &LdapOrgFields, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
     // 使用name作为CN，如果没有则使用sys_code
-    let cn = if !org.name.is_empty() { org.name.clone() } else { org.sys_code.clone() };
+    let cn = org.id.clone();
 
     // 构建属性列表
     let mut attributes = vec![
@@ -105,42 +129,26 @@ fn build_ldap_attributes(org: &RbumSetTreeNodeResp, config: &IamLdapConfig) -> V
             atype: "sysCode".to_string(),
             vals: vec![org.sys_code.clone().into()],
         },
-        LdapPartialAttribute {
-            atype: "description".to_string(),
-            vals: vec![org.ext.clone().into()],
-        },
     ];
 
     // 添加业务编码（如果有）
-    if !org.bus_code.is_empty() {
-        attributes.push(LdapPartialAttribute {
-            atype: "busCode".to_string(),
-            vals: vec![org.bus_code.clone().into()],
-        });
+    if let Some(ref bus_code) = org.bus_code {
+        if !bus_code.is_empty() {
+            attributes.push(LdapPartialAttribute {
+                atype: "busCode".to_string(),
+                vals: vec![bus_code.clone().into()],
+            });
+        }
     }
 
     // 添加图标（如果有）
-    if !org.icon.is_empty() {
-        attributes.push(LdapPartialAttribute {
-            atype: "icon".to_string(),
-            vals: vec![org.icon.clone().into()],
-        });
-    }
-
-    // 添加父节点ID（如果有）
-    if let Some(pid) = &org.pid {
-        attributes.push(LdapPartialAttribute {
-            atype: "parentId".to_string(),
-            vals: vec![pid.clone().into()],
-        });
-    }
-
-    // 添加关联对象ID（如果有）
-    if let Some(rel) = &org.rel {
-        attributes.push(LdapPartialAttribute {
-            atype: "relId".to_string(),
-            vals: vec![rel.clone().into()],
-        });
+    if let Some(ref icon) = org.icon {
+        if !icon.is_empty() {
+            attributes.push(LdapPartialAttribute {
+                atype: "icon".to_string(),
+                vals: vec![icon.clone().into()],
+            });
+        }
     }
 
     attributes

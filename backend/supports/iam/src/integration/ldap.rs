@@ -1,6 +1,7 @@
 pub mod ldap_auth;
 pub mod ldap_entity;
 pub mod ldap_parser;
+pub mod ldap_query;
 pub mod ldap_server;
 
 // 账号相关模块
