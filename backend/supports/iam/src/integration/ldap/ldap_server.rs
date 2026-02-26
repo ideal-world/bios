@@ -172,7 +172,14 @@ impl LdapSession {
                                 results.push(req.gen_success());
                                 return results;
                             } else if ou.to_lowercase() == config.ou_organization.to_lowercase() {
-                                return vec![req.gen_success()]; // 组织查询（保留代码逻辑，但不返回结果）
+                                let orgs = match org_query::execute_ldap_org_search(&query, config).await {
+                                    Ok(orgs) => orgs,
+                                    Err(_) => {
+                                        return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
+                                    }
+                                };
+                                results.append(&mut org_result::build_org_search_response(req, &query, orgs, config));
+                                return results;
                             } else {
                                 return build_error_response(req, LdapResultCode::InvalidDNSyntax, "Invalid base DN".to_string());
                             }
@@ -203,7 +210,13 @@ impl LdapSession {
                     results.append(&mut account_result::build_account_search_response(req, &query, accounts, None, config));
                 }
                 if org_result::should_return_org_level_in_search(base_dn_level.clone(), query.scope.clone(), config) {
-                    // 组织查询先忽略，后续实现
+                    let orgs = match org_query::execute_ldap_org_search(&query, config).await {
+                        Ok(orgs) => orgs,
+                        Err(_) => {
+                            return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
+                        }
+                    };
+                    results.append(&mut org_result::build_org_search_response(req, &query, orgs, config));
                 }
                 results.push(req.gen_success());
                 results

@@ -2,182 +2,130 @@
 //!
 //! 负责与IAM数据交互，执行组织查询操作
 
-use std::collections::HashMap;
-
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetTreeFilterReq};
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeNodeResp;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
-use lazy_static::lazy_static;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
-use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamLdapConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
-use crate::integration::ldap::ldap_parser;
-
-// LDAP 属性名 -> 组织字段 映射
-lazy_static! {
-    static ref LDAP_ATTR_TO_ORG_FIELD: HashMap<&'static str, &'static str> = {
-        let mut m = HashMap::new();
-        m.insert("cn", "name");
-        m.insert("ou", "name");
-        m.insert("name", "name");
-        m.insert("syscode", "sys_code");
-        m.insert("sys_code", "sys_code");
-        m.insert("buscode", "bus_code");
-        m.insert("bus_code", "bus_code");
-        m.insert("description", "ext");
-        m.insert("ext", "ext");
-        m
-    };
-}
+use crate::integration::ldap::ldap_parser::{self, LdapQueryType};
+use crate::integration::ldap::ldap_query::LdapSqlWhereBuilder;
+use crate::integration::ldap::organization::org_result::LdapOrgFields;
 
 /// 执行LDAP组织搜索查询
-pub async fn execute_ldap_org_search(query: &ldap_parser::LdapSearchQuery, config: &IamLdapConfig) -> TardisResult<Vec<RbumSetTreeNodeResp>> {
+pub async fn execute_ldap_org_search(query: &ldap_parser::LdapSearchQuery, config: &IamLdapConfig) -> TardisResult<Vec<LdapOrgFields>> {
     let funs = iam_constants::get_tardis_inst();
     let ctx = TardisContext::default();
 
-    // 获取组织Set ID
-    let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-
-    // 构建查询过滤器
-    let mut filter = RbumSetTreeFilterReq {
-        fetch_cate_item: false,
-        hide_item_with_disabled: true,
-        ..Default::default()
-    };
-
-    // 根据LDAP查询条件设置过滤器
-    apply_ldap_query_to_filter(&query.query_type, &mut filter, config)?;
-
-    // 查询组织树
-    let tree_result = IamSetServ::get_tree(&set_id, &mut filter, &funs, &ctx).await?;
-
-    // 过滤结果
-    let mut orgs = tree_result.main;
-
-    // 如果查询条件不是全量查询，需要进一步过滤
-    if !ldap_parser::is_full_query(query) {
-        orgs = filter_orgs_by_query(&orgs, &query.query_type, config)?;
+    // 处理简单存在性查询（从base DN提取CN）
+    if ldap_parser::is_simple_present_query(query) {
+        if let Some(cn) = ldap_parser::extract_cn_from_base(&query.base) {
+            let mut simple_query = query.clone();
+            simple_query.query_type = LdapQueryType::Equality { attribute: "cn".to_string(), value: cn };
+            let orgs = build_and_execute_org_sql_query(&simple_query, config, &funs, &ctx).await?;
+            return Ok(orgs);
+        } else {
+            return Ok(vec![]);
+        }
     }
+
+    // 使用原生SQL查询方式（参考 account 逻辑）
+    let orgs = build_and_execute_org_sql_query(query, config, &funs, &ctx).await?;
 
     Ok(orgs)
 }
 
-/// 将LDAP查询条件应用到组织树过滤器
-fn apply_ldap_query_to_filter(query_type: &ldap_parser::LdapQueryType, filter: &mut RbumSetTreeFilterReq, _config: &IamLdapConfig) -> TardisResult<()> {
-    match query_type {
-        ldap_parser::LdapQueryType::Equality { attribute, value } => {
-            // 如果是 sys_code 查询，可以优化查询
-            if attribute.to_lowercase() == "syscode" || attribute.to_lowercase() == "sys_code" {
-                filter.sys_codes = Some(vec![value.clone()]);
-                filter.sys_code_query_kind = Some(RbumSetCateLevelQueryKind::CurrentAndSub);
+/// 根据LDAP查询参数构建SQL并执行，返回符合条件的组织列表
+async fn build_and_execute_org_sql_query(
+    query: &ldap_parser::LdapSearchQuery,
+    config: &IamLdapConfig,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<Vec<LdapOrgFields>> {
+    // 构建SQL WHERE条件（参考 account 逻辑）
+    let (join, where_clause) = if ldap_parser::is_full_query(query) {
+        ("", "".to_string())
+    } else {
+        ("AND", build_sql_where_clause(&query.query_type, config)?)
+    };
+
+    // 获取组织Set ID
+    let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
+
+    let sql = format!(
+        r#"
+        SELECT
+            rbum_set_cate.id,
+            rbum_set_cate.sys_code,
+            rbum_set_cate.bus_code,
+            rbum_set_cate.name,
+            rbum_set_cate.icon,
+            rbum_set_cate.owner,
+            rbum_set_cate.create_time,
+            rbum_set_cate.update_time
+        FROM
+            rbum_set_cate
+            INNER JOIN rbum_set ON rbum_set_cate.rel_rbum_set_id = rbum_set.id
+        WHERE
+            rbum_set_cate.rel_rbum_set_id = '{}'
+            AND rbum_set.kind = 'Org'
+            AND rbum_set_cate.own_paths = '' {} {}
+        "#,
+        set_id, join, where_clause
+    );
+
+    let result = funs.db().query_all(&sql, vec![]).await?;
+
+    // 将 rows 映射为 Vec<LdapOrgFields>
+    let mut orgs: Vec<LdapOrgFields> = result
+        .into_iter()
+        .map(|row| {
+            let id = row.try_get::<String>("", "id").unwrap_or_default();
+            let sys_code = row.try_get::<String>("", "sys_code").unwrap_or_default();
+            let bus_code = row.try_get::<String>("", "bus_code").unwrap_or_default();
+            let name = row.try_get::<String>("", "name").unwrap_or_default();
+            let icon = row.try_get::<String>("", "icon").unwrap_or_default();
+            LdapOrgFields {
+                id: id.clone(),
+                name,
+                sys_code: sys_code.clone(),
+                bus_code: if bus_code.is_empty() { None } else { Some(bus_code) },
+                icon: if icon.is_empty() { None } else { Some(icon) },
+                create_time: row.try_get("", "create_time").unwrap_or_default(),
+                update_time: row.try_get("", "update_time").unwrap_or_default(),
             }
-        }
-        ldap_parser::LdapQueryType::Substring { attribute, substrings } => {
-            // 如果是 sys_code 子串查询，可以优化查询
-            if attribute.to_lowercase() == "syscode" || attribute.to_lowercase() == "sys_code" {
-                if let Some(initial) = &substrings.initial {
-                    filter.sys_codes = Some(vec![initial.clone()]);
-                    filter.sys_code_query_kind = Some(RbumSetCateLevelQueryKind::Sub);
-                }
-            }
-        }
-        _ => {
-            // 其他查询类型，使用全量查询然后过滤
-        }
-    }
-    Ok(())
+        })
+        .collect();
+
+    // 按 sys_code 排序（与 get_tree 一致）
+    orgs.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
+
+    Ok(orgs)
 }
 
-/// 根据LDAP查询条件过滤组织列表
-fn filter_orgs_by_query(orgs: &[RbumSetTreeNodeResp], query_type: &ldap_parser::LdapQueryType, _config: &IamLdapConfig) -> TardisResult<Vec<RbumSetTreeNodeResp>> {
-    let mut filtered = Vec::new();
-
-    for org in orgs {
-        if matches_ldap_query(org, query_type, _config)? {
-            filtered.push(org.clone());
-        }
-    }
-
-    Ok(filtered)
+/// 根据LDAP查询类型构建SQL WHERE条件
+fn build_sql_where_clause(query_type: &ldap_parser::LdapQueryType, config: &IamLdapConfig) -> TardisResult<String> {
+    OrgLdapSqlWhereBuilder::build_sql_where_clause(query_type, config)
 }
 
-/// 检查组织是否匹配LDAP查询条件
-fn matches_ldap_query(org: &RbumSetTreeNodeResp, query_type: &ldap_parser::LdapQueryType, _config: &IamLdapConfig) -> TardisResult<bool> {
-    match query_type {
-        ldap_parser::LdapQueryType::Equality { attribute, value } => {
-            let field = get_org_field(attribute)?;
-            let org_value = get_org_field_value(org, field);
-            Ok(org_value.to_lowercase() == value.to_lowercase())
-        }
-        ldap_parser::LdapQueryType::Present { attribute } => {
-            let field = get_org_field(attribute)?;
-            let org_value = get_org_field_value(org, field);
-            Ok(!org_value.is_empty())
-        }
-        ldap_parser::LdapQueryType::Substring { attribute, substrings } => {
-            let field = get_org_field(attribute)?;
-            let org_value = get_org_field_value(org, field).to_lowercase();
+/// 组织查询专用的 LDAP SQL WHERE 构建器
+struct OrgLdapSqlWhereBuilder;
 
-            let mut matches = true;
-            if let Some(initial) = &substrings.initial {
-                if !org_value.starts_with(&initial.to_lowercase()) {
-                    matches = false;
-                }
-            }
-            for any_part in &substrings.any {
-                if !org_value.contains(&any_part.to_lowercase()) {
-                    matches = false;
-                }
-            }
-            if let Some(final_part) = &substrings.final_ {
-                if !org_value.ends_with(&final_part.to_lowercase()) {
-                    matches = false;
-                }
-            }
-            Ok(matches)
-        }
-        ldap_parser::LdapQueryType::And { filters } => {
-            for filter in filters {
-                if !matches_ldap_query(org, filter, _config)? {
-                    return Ok(false);
-                }
-            }
-            Ok(true)
-        }
-        ldap_parser::LdapQueryType::Or { filters } => {
-            for filter in filters {
-                if matches_ldap_query(org, filter, _config)? {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
-        }
-        ldap_parser::LdapQueryType::Not { filter } => Ok(!matches_ldap_query(org, filter, _config)?),
-        _ => Ok(true), // 其他查询类型默认匹配
-    }
-}
+impl LdapSqlWhereBuilder for OrgLdapSqlWhereBuilder {
+    /// objectClass 的固定值列表
+    const OBJECT_CLASS_VALUES: &'static [&'static str] = &["organizationalUnit", "top"];
 
-/// 根据 LDAP 属性名获取对应的组织字段
-fn get_org_field(attr: &str) -> TardisResult<&'static str> {
-    LDAP_ATTR_TO_ORG_FIELD
-        .get(attr.to_lowercase().as_str())
-        .copied()
-        .ok_or_else(|| tardis::basic::error::TardisError::format_error(&format!("Unsupported LDAP attribute for organization: {}", attr), "406-iam-ldap-unsupported-org-attribute"))
-}
-
-/// 获取组织的字段值
-fn get_org_field_value(org: &RbumSetTreeNodeResp, field: &str) -> String {
-    match field {
-        "name" => org.name.clone(),
-        "sys_code" => org.sys_code.clone(),
-        "bus_code" => org.bus_code.clone(),
-        "ext" => org.ext.clone(),
-        _ => String::new(),
-    }
+    /// LDAP 属性名 -> 数据库查询字段 映射表 (attr, db_field)
+    const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[
+        ("cn", "rbum_set_cate.id"),
+        ("name", "rbum_set_cate.name"),
+        ("syscode", "rbum_set_cate.sys_code"),
+        ("sys_code", "rbum_set_cate.sys_code"),
+        ("buscode", "rbum_set_cate.bus_code"),
+        ("bus_code", "rbum_set_cate.bus_code"),
+        ("description", "rbum_set_cate.ext"),
+        ("ext", "rbum_set_cate.ext"),
+    ];
 }
