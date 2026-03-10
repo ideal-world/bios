@@ -245,9 +245,9 @@ impl BasicQueryCondInfo {
                                 !check_val_arr.contains(&cond.value)
                             }
                         }
-                        BasicQueryOpKind::IsNull => false,
-                        BasicQueryOpKind::IsNotNull => true,
-                        BasicQueryOpKind::IsNullOrEmpty => false,
+                        BasicQueryOpKind::IsNull => check_val.as_str().unwrap_or("").is_empty(),
+                        BasicQueryOpKind::IsNotNull => !check_val.as_str().unwrap_or("").is_empty(),
+                        BasicQueryOpKind::IsNullOrEmpty => check_val.as_str().unwrap_or("").is_empty(),
                     },
                     None => cond.op == BasicQueryOpKind::IsNullOrEmpty || cond.op == BasicQueryOpKind::IsNull,
                 }
