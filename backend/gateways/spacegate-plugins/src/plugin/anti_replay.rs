@@ -89,8 +89,8 @@ async fn set_status(md5: &str, cache_key: &str, status: bool, cache_client: &Red
     let split1 = u128::from_str_radix(split1, 16)? as u32;
     let split2 = u128::from_str_radix(split2, 16)? as u32;
     let mut conn = cache_client.get_conn().await;
-    conn.setbit(&format!("{cache_key}:1"), split1 as usize, status).await?;
-    conn.setbit(&format!("{cache_key}:2"), split2 as usize, status).await?;
+    conn.setbit::<_, ()>(&format!("{cache_key}:1"), split1 as usize, status).await?;
+    conn.setbit::<_, ()>(&format!("{cache_key}:2"), split2 as usize, status).await?;
     Ok(())
 }
 
