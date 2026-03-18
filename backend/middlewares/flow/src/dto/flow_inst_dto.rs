@@ -466,6 +466,8 @@ pub struct FlowInstFindStateAndTransitionsReq {
     pub flow_inst_id: String,
     /// 参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 状态类型
+    pub sys_states: Option<Vec<FlowSysStateKind>>,
 }
 
 /// 实例状态及流转信息
