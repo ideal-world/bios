@@ -73,11 +73,16 @@ impl FlowCiModelApi {
         &self,
         tag: Query<String>,
         rel_template_id: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<FlowModelFindRelStateResp>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        if let (Some(tenant_id), Some(app_id)) = (tenant_id.0, app_id.0) {
+            ctx.0.own_paths = format!("{}/{}", tenant_id, app_id);
+        }
         let result = FlowModelServ::find_rel_states(tag.0.split(',').collect(), rel_template_id.0, &funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
