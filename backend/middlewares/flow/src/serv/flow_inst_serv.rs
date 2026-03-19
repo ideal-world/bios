@@ -1748,7 +1748,11 @@ impl FlowInstServ {
                             {
                                 vec![]
                             } else {
-                                resp.next_flow_transitions
+                                if let Some(sys_states) = &req.sys_states {
+                                    resp.next_flow_transitions.into_iter().filter(|tran| sys_states.contains(&tran.next_flow_state_sys_state)).collect_vec()
+                                } else {
+                                    resp.next_flow_transitions
+                                }
                             },
                             rel_flow_versions,
                         })
