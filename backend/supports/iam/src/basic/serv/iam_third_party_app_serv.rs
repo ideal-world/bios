@@ -10,7 +10,7 @@ use tardis::TardisFunsInst;
 
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamThirdPartyAppStatusKind};
 use crate::basic::{
     domain::iam_third_party_app,
     dto::{
@@ -67,10 +67,11 @@ impl RbumItemCrudOperation<
     ) -> TardisResult<iam_third_party_app::ActiveModel> {
         Ok(iam_third_party_app::ActiveModel {
             id: Set(id.to_string()),
+            external_id: Set(add_req.external_id.clone()),
             description: Set(add_req.description.clone()),
             icon: Set(add_req.icon.clone().unwrap_or_default()),
             link_url: Set(add_req.link_url.to_string()),
-            status: Set(add_req.status.unwrap_or(0)),
+            status: Set(add_req.status.as_ref().map_or(0, |s| s.to_int())),
             sort: Set(add_req.sort.unwrap_or(0)),
             ..Default::default()
         })
@@ -100,6 +101,7 @@ impl RbumItemCrudOperation<
         _: &TardisContext,
     ) -> TardisResult<Option<iam_third_party_app::ActiveModel>> {
         if modify_req.description.is_none()
+            && modify_req.external_id.is_none()
             && modify_req.icon.is_none()
             && modify_req.link_url.is_none()
             && modify_req.status.is_none()
@@ -114,6 +116,9 @@ impl RbumItemCrudOperation<
         if let Some(description) = &modify_req.description {
             model.description = Set(Some(description.clone()));
         }
+        if modify_req.external_id.is_some() {
+            model.external_id = Set(modify_req.external_id.clone());
+        }
         if let Some(icon) = &modify_req.icon {
             model.icon = Set(icon.clone());
         }
@@ -121,7 +126,7 @@ impl RbumItemCrudOperation<
             model.link_url = Set(link_url.to_string());
         }
         if let Some(status) = &modify_req.status {
-            model.status = Set(*status);
+            model.status = Set(status.to_int());
         }
         if let Some(sort) = &modify_req.sort {
             model.sort = Set(*sort);
@@ -136,13 +141,17 @@ impl RbumItemCrudOperation<
         _: &TardisFunsInst,
         _: &TardisContext,
     ) -> TardisResult<()> {
+        query.column((iam_third_party_app::Entity, iam_third_party_app::Column::ExternalId));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::Description));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::Icon));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::LinkUrl));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::Status));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::Sort));
+        if let Some(external_id) = &filter.external_id {
+            query.and_where(Expr::col((iam_third_party_app::Entity, iam_third_party_app::Column::ExternalId)).eq(external_id.as_str()));
+        }
         if let Some(status) = &filter.status {
-            query.and_where(Expr::col((iam_third_party_app::Entity, iam_third_party_app::Column::Status)).eq(*status));
+            query.and_where(Expr::col((iam_third_party_app::Entity, iam_third_party_app::Column::Status)).eq(status.to_int()));
         }
         if let Some(sort) = &filter.sort {
             query.and_where(Expr::col((iam_third_party_app::Entity, iam_third_party_app::Column::Sort)).eq(*sort));
@@ -152,6 +161,45 @@ impl RbumItemCrudOperation<
 }
 
 impl IamThirdPartyAppServ {
+    /// 根据外部ID获取第三方应用
+    pub async fn get_item_by_external_id(
+        external_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Option<IamThirdPartyAppDetailResp>> {
+        let page = Self::paginate_items(
+            &IamThirdPartyAppFilterReq {
+                external_id: Some(external_id.to_string()),
+                ..Default::default()
+            },
+            1,
+            1,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(summary) = page.records.into_iter().next() {
+            let detail = Self::get_item(&summary.id, &IamThirdPartyAppFilterReq::default(), funs, ctx).await?;
+            Ok(Some(detail))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// 根据外部ID删除第三方应用
+    pub async fn delete_item_by_external_id(
+        external_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        if let Some(item) = Self::get_item_by_external_id(external_id, funs, ctx).await? {
+            Self::delete_item_with_all_rels(&item.id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
     /// 绑定账号到第三方应用
     pub async fn add_rel_account(
         third_party_app_id: &str,

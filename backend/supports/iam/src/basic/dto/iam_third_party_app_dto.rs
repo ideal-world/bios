@@ -1,5 +1,7 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
+
+use crate::iam_enumeration::IamThirdPartyAppStatusKind;
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
@@ -12,6 +14,8 @@ pub struct IamThirdPartyAppAddReq {
     pub id: Option<TrimString>,
     #[oai(validator(min_length = "1", max_length = "255"))]
     pub name: TrimString,
+    #[oai(validator(max_length = "255"))]
+    pub external_id: Option<String>,
     pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(max_length = "1000"))]
     pub description: Option<String>,
@@ -19,7 +23,7 @@ pub struct IamThirdPartyAppAddReq {
     pub icon: Option<String>,
     #[oai(validator(min_length = "1", max_length = "2000"))]
     pub link_url: TrimString,
-    pub status: Option<i16>,
+    pub status: Option<IamThirdPartyAppStatusKind>,
     pub sort: Option<i64>,
 }
 
@@ -28,6 +32,8 @@ pub struct IamThirdPartyAppAddReq {
 pub struct IamThirdPartyAppModifyReq {
     #[oai(validator(min_length = "1", max_length = "255"))]
     pub name: Option<TrimString>,
+    #[oai(validator(max_length = "255"))]
+    pub external_id: Option<String>,
     pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(max_length = "1000"))]
     pub description: Option<String>,
@@ -35,7 +41,7 @@ pub struct IamThirdPartyAppModifyReq {
     pub icon: Option<String>,
     #[oai(validator(max_length = "2000"))]
     pub link_url: Option<String>,
-    pub status: Option<i16>,
+    pub status: Option<IamThirdPartyAppStatusKind>,
     pub sort: Option<i64>,
 }
 
@@ -44,11 +50,12 @@ pub struct IamThirdPartyAppModifyReq {
 pub struct IamThirdPartyAppSummaryResp {
     pub id: String,
     pub name: String,
+    pub external_id: Option<String>,
     pub scope_level: RbumScopeLevelKind,
     pub description: Option<String>,
     pub icon: String,
     pub link_url: String,
-    pub status: i16,
+    pub status: IamThirdPartyAppStatusKind,
     pub sort: i64,
     pub own_paths: String,
     pub owner: String,
@@ -61,11 +68,12 @@ pub struct IamThirdPartyAppSummaryResp {
 pub struct IamThirdPartyAppDetailResp {
     pub id: String,
     pub name: String,
+    pub external_id: Option<String>,
     pub scope_level: RbumScopeLevelKind,
     pub description: Option<String>,
     pub icon: String,
     pub link_url: String,
-    pub status: i16,
+    pub status: IamThirdPartyAppStatusKind,
     pub sort: i64,
     pub own_paths: String,
     pub owner: String,
