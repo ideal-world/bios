@@ -106,11 +106,16 @@ impl FlowCiInstApi {
     async fn find_state_and_next_transitions(
         &self,
         find_req: Json<Vec<FlowInstFindStateAndTransitionsReq>>,
+        tenant_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        if let (Some(tenant_id), Some(app_id)) = (tenant_id.0, app_id.0) {
+            ctx.0.own_paths = format!("{}/{}", tenant_id, app_id);
+        }
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -210,11 +215,16 @@ impl FlowCiInstApi {
         &self,
         flow_inst_id: Path<String>,
         transfer_req: Json<FlowInstTransferReq>,
+        tenant_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<FlowInstTransferResp> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        if let (Some(tenant_id), Some(app_id)) = (tenant_id.0, app_id.0) {
+            ctx.0.own_paths = format!("{}/{}", tenant_id, app_id);
+        }
         let mut transfer = transfer_req.0;
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
