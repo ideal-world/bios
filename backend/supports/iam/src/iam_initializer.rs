@@ -46,7 +46,7 @@ use crate::console_system::api::{
 };
 use crate::console_tenant::api::{
     iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_cert_manage_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api,
-    iam_ct_sub_deploy_api, iam_ct_tenant_api,
+    iam_ct_sub_deploy_api, iam_ct_tenant_api, iam_ct_third_party_app_api,
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
@@ -121,6 +121,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ct_sub_deploy_api::IamCtSubDeployApi,
                     iam_ct_sub_deploy_api::IamCtSubDeployHostApi,
                     iam_ct_sub_deploy_api::IamCtSubDeployLicenseApi,
+                    iam_ct_third_party_app_api::IamCtThirdPartyAppApi,
                 ),
                 (
                     iam_ca_account_api::IamCaAccountApi,

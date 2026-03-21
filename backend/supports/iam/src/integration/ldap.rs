@@ -10,5 +10,8 @@ pub mod account;
 // 组织相关模块
 pub mod organization;
 
+// 应用相关模块
+pub mod app;
+
 // 系统查询相关模块（根查询和Schema查询）
 pub mod system;

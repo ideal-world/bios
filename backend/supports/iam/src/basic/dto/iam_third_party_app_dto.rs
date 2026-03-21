@@ -63,6 +63,23 @@ pub struct IamThirdPartyAppSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
+/// 批量修改第三方应用展示状态请求项
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamThirdPartyAppDisplayModifyItem {
+    /// 第三方应用ID
+    #[oai(validator(min_length = "1", max_length = "255"))]
+    pub app_id: String,
+    /// 是否展示：true 为展示，false 为隐藏
+    pub visible: bool,
+}
+
+/// 批量修改当前账号关联的第三方应用展示状态请求
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamThirdPartyAppBatchModifyDisplayReq {
+    /// 待修改的展示状态列表
+    pub items: Vec<IamThirdPartyAppDisplayModifyItem>,
+}
+
 /// 第三方应用详情响应
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
 pub struct IamThirdPartyAppDetailResp {

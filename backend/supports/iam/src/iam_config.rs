@@ -109,6 +109,8 @@ pub struct IamLdapConfig {
     pub ou_staff: String,
     /// OU 名称：组织所在组织单位（DN 中 ou= 值）
     pub ou_organization: String,
+    /// OU 名称：应用所在组织单位（DN 中 ou= 值）
+    pub ou_app: String,
     pub schema_dn: String,
     /// Labor type translation map: code -> label
     pub labor_type_map: Option<std::collections::HashMap<String, String>>,
@@ -127,6 +129,7 @@ impl Default for IamLdapConfig {
             bind_password: "KDi234!ds".to_string(),
             ou_staff: "staff".to_string(),
             ou_organization: "organizations".to_string(),
+            ou_app: "app".to_string(),
             schema_dn: "cn=Subschema".to_string(),
             labor_type_map: None,
             position_map: None,

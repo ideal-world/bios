@@ -1,7 +1,12 @@
 use async_trait::async_trait;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelModifyReq, RbumRelSimpleFindReq};
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use tardis::serde_json::{json, Value as JsonValue};
 use tardis::basic::{dto::TardisContext, result::TardisResult};
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
@@ -10,7 +15,7 @@ use tardis::TardisFunsInst;
 
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
-use crate::iam_enumeration::{IamRelKind, IamThirdPartyAppStatusKind};
+use crate::iam_enumeration::IamRelKind;
 use crate::basic::{
     domain::iam_third_party_app,
     dto::{
@@ -272,5 +277,112 @@ impl IamThirdPartyAppServ {
             ctx,
         )
         .await
+    }
+
+    /// 查询账号关联的所有第三方应用
+    /// visible: None-不筛选；Some(true)-筛选ext.visible为true或ext为null；Some(false)-筛选ext.visible为false
+    pub async fn find_rel_third_party_app(
+        account_id: &str,
+        visible: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamThirdPartyAppSummaryResp>> {
+        let rels = IamRelServ::find_from_simple_rels(
+            &IamRelKind::IamThirdPartyAppAccount,
+            false,
+            account_id,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let app_ids: Vec<String> = rels
+            .into_iter()
+            .filter(|r| {
+                match visible {
+                    None => true,
+                    Some(true) => {
+                        // 筛选 ext.visible 为 true 或 ext 为 null/空
+                        r.ext.is_empty()
+                            || tardis::serde_json::from_str::<JsonValue>(&r.ext)
+                                .ok()
+                                .and_then(|v| v.get("visible").and_then(|x| x.as_bool()))
+                                .unwrap_or(true) // ext 中无 visible 时视为可见
+                    }
+                    Some(false) => {
+                        // 筛选 ext.visible 为 false
+                        tardis::serde_json::from_str::<JsonValue>(&r.ext)
+                            .ok()
+                            .and_then(|v| v.get("visible").and_then(|x| x.as_bool()))
+                            == Some(false)
+                    }
+                }
+            })
+            .map(|r| r.rel_id)
+            .collect();
+        let len = app_ids.len();
+        if len == 0 {
+            return Ok(vec![]);
+        }
+        let page = Self::paginate_items(
+            &IamThirdPartyAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(app_ids),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            1,
+            len as u32,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(page.records)
+    }
+
+    /// 批量修改当前账号关联的第三方应用是否展示
+    /// 通过 rel 表的 ext 字段存储：true 为展示，false 为隐藏
+    pub async fn batch_modify_rel_display(
+        account_id: &str,
+        items: &[crate::basic::dto::iam_third_party_app_dto::IamThirdPartyAppDisplayModifyItem],
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        for item in items {
+            let rel_ids = RbumRelServ::find_rel_ids(
+                &RbumRelSimpleFindReq {
+                    tag: Some(IamRelKind::IamThirdPartyAppAccount.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    from_rbum_id: Some(account_id.to_string()),
+                    to_rbum_item_id: Some(item.app_id.clone()),
+                    from_own_paths: None,
+                    to_rbum_own_paths: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            if let Some(rel_id) = rel_ids.into_iter().next() {
+                let ext = json!({ "visible": item.visible }).to_string();
+                RbumRelServ::modify_rbum(
+                    &rel_id,
+                    &mut RbumRelModifyReq {
+                        tag: None,
+                        note: None,
+                        ext: Some(ext),
+                        disabled: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+        }
+        Ok(())
     }
 }
