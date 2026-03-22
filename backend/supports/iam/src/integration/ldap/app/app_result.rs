@@ -3,7 +3,6 @@
 //! 负责组装LDAP搜索响应结果，将IAM应用数据转换为LDAP协议格式
 
 use ldap3_proto::simple::*;
-use tardis::chrono::{DateTime, Utc};
 
 use crate::iam_config::IamLdapConfig;
 use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapBaseDnLevel, LdapSearchQuery};
@@ -20,6 +19,8 @@ pub struct LdapAppFields {
     pub businessCategory: String,
     /// 排序
     pub sort: i64,
+    /// 关联手机号
+    pub phones: Vec<String>,
 }
 
 /// 构建LDAP应用搜索响应
@@ -88,7 +89,7 @@ fn build_ldap_attributes(app: &LdapAppFields, config: &IamLdapConfig) -> Vec<Lda
     let cn = app.id.clone();
 
     // 构建属性列表
-    let mut attributes = vec![
+    let attributes = vec![
         LdapPartialAttribute {
             atype: "cn".to_string(),
             vals: vec![cn.clone().into()],

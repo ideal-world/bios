@@ -2,14 +2,16 @@
 //!
 //! 负责与IAM数据交互，执行应用查询操作
 
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamLdapConfig;
 use crate::iam_constants;
-use crate::iam_enumeration::IamSetKind;
+use crate::iam_enumeration::{IamCertKernelKind, IamSetKind};
 use crate::integration::ldap::app::app_result::LdapAppFields;
 use crate::integration::ldap::ldap_parser::{self, LdapQueryType};
 use crate::integration::ldap::ldap_query::LdapSqlWhereBuilder;
@@ -44,6 +46,8 @@ async fn build_and_execute_app_sql_query(
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<Vec<LdapAppFields>> {
+    let phone_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some("".to_string()), funs).await?;
+
     // 构建SQL WHERE条件（参考 account 逻辑）
     let (join, where_clause) = if ldap_parser::is_full_query(query) {
         ("", "".to_string())
@@ -70,18 +74,24 @@ async fn build_and_execute_app_sql_query(
         r#"
         SELECT
             iam_third_party_app.external_id,
-            rbum_item.name,
+            rbum_rel_account.to_rbum_item_id,
+            phone_vcode_cert.ak as phone,
             iam_third_party_app.sort
         FROM
             iam_third_party_app
-            INNER JOIN rbum_item ON iam_third_party_app.id = rbum_item.id
+            LEFT JOIN rbum_rel AS rbum_rel_account ON iam_third_party_app.id = rbum_rel_account.from_rbum_id AND rbum_rel_account.tag = 'iam_third_party_app'
+            LEFT JOIN rbum_cert AS phone_vcode_cert ON phone_vcode_cert.rel_rbum_id = rbum_rel_account.to_rbum_item_id
+            AND phone_vcode_cert.rel_rbum_kind = 0
+            AND phone_vcode_cert.status = 1
+            AND phone_vcode_cert.rel_rbum_cert_conf_id = '{}'
         WHERE
-            1 = 1 {} {}
+            1 = 1
         "#,
-        join, where_clause
+        phone_vcode_conf_id
     );
 
     let result = funs.db().query_all(&sql, vec![]).await?;
+    let rel_result = funs.db().query_all(&rel_sql, vec![]).await?;
 
     // 将 rows 映射为 Vec<LdapAppFields>
     let mut apps: Vec<LdapAppFields> = result
@@ -90,10 +100,15 @@ async fn build_and_execute_app_sql_query(
             let id = row.try_get::<String>("", "external_id").unwrap_or_default();
             let name = row.try_get::<String>("", "name").unwrap_or_default();
             let sort = row.try_get::<i64>("", "sort").unwrap_or_default();
+            let rel_phones = rel_result
+            .iter()
+            .filter(|r| r.try_get::<String>("", "external_id").unwrap_or_default() == id)
+            .map(|r| r.try_get::<String>("", "phone").unwrap_or_default()).collect_vec();
             LdapAppFields {
                 id: id.clone(),
                 businessCategory: name.clone(),
                 sort,
+                phones: rel_phones,
             }
         })
         .collect();
