@@ -16,7 +16,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, chrono::{DateTime, Datelike, Utc}, db::sea_orm::{
-        self, Order, Set, sea_query::{Alias, Expr, Query, SelectStatement}
+        self, Iden, Order, Set, sea_query::{Alias, Expr, Query, SelectStatement}
     }, futures_util::future::join_all, log::{debug, error}, serde_json::Value, tokio, web::web_resp::TardisPage
 };
 
@@ -24,7 +24,7 @@ use crate::{
     domain::{flow_inst, flow_model_version, flow_state},
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
-        flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
+        flow_external_dto::{FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
             FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstQueryResult, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq
         },
@@ -409,6 +409,7 @@ impl FlowInstServ {
                 })
             }))
             .await?;
+            FlowExternalServ::do_approve_notify_changes(tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), flow_model.init_state_id.clone(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
         }
 
         let ctx_clone = ctx.clone();
@@ -1096,6 +1097,8 @@ impl FlowInstServ {
                     }
                 }
             }
+            // 通知工作项审批驳回
+            FlowExternalServ::do_approve_notify_changes(&flow_inst_detail.tag, &flow_inst_detail.id, &flow_inst_detail.rel_business_obj_id, "".to_string(), "".to_string(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
         }
         if flow_inst_detail.main {
             if let Some(rel_child_objs) = flow_inst_detail.artifacts.clone().map(|artifacts| artifacts.rel_child_objs.unwrap_or_default()) {
@@ -3299,6 +3302,7 @@ impl FlowInstServ {
                     .await?;
                     FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
                     FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    FlowExternalServ::do_approve_notify_changes(&flow_inst_detail.tag, &flow_inst_detail.id, &flow_inst_detail.rel_business_obj_id, "".to_string(), "".to_string(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
                 }
             }
             _ => {}

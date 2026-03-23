@@ -931,7 +931,7 @@ impl FlowSearchClient {
             ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
             ("TS".to_string(), ("idp_test".to_string(), "idp_test_stage".to_string())),
             ("TC".to_string(), ("idp_test".to_string(), "idp_test_case".to_string())),
-            ("REVIEW".to_string(), ("idp_product".to_string(), "idp_feed_review".to_string())),
+            ("REVIEW".to_string(), ("idp_cicd".to_string(), "idp_release_version".to_string())),
         ])
     }
 }
