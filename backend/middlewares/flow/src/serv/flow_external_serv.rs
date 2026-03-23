@@ -442,7 +442,7 @@ impl FlowExternalServ {
         let header = Self::headers(None, funs, ctx).await?;
         let body = FlowExternalReq {
             kind: FlowExternalKind::ApproveStatusChange,
-            approve_op: Some(approve_op),
+            idp_approve_operation_enum: Some(approve_op),
             inst_id: inst_id.to_string(),
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),

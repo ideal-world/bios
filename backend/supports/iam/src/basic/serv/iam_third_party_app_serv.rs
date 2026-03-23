@@ -287,14 +287,18 @@ impl IamThirdPartyAppServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<IamThirdPartyAppSummaryResp>> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(), // 查询所有关联的第三方应用，不受租户/部门等维度限制
+            ..ctx.clone()
+        };
         let rels = IamRelServ::find_from_simple_rels(
             &IamRelKind::IamThirdPartyAppAccount,
-            false,
+            true,
             account_id,
             None,
             None,
             funs,
-            ctx,
+            &global_ctx,
         )
         .await?;
         let app_ids: Vec<String> = rels

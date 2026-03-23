@@ -26,7 +26,7 @@ pub struct FlowExternalReq {
     /// Associated [enum](FlowExternalCallbackOp)
     ///
     /// 关联的[枚举](FlowExternalCallbackOp)
-    pub approve_op: Option<FlowExternalApproveOp>,
+    pub idp_approve_operation_enum: Option<FlowExternalApproveOp>,
     /// The tag corresponding to the current business
     ///
     /// 当前业务对应的 tag
