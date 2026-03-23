@@ -409,7 +409,7 @@ impl FlowInstServ {
                 })
             }))
             .await?;
-            FlowExternalServ::do_approve_notify_changes(tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), flow_model.init_state_id.clone(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+            FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), flow_model.init_state_id.clone(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
         }
 
         let ctx_clone = ctx.clone();
@@ -2417,9 +2417,9 @@ impl FlowInstServ {
                         ctx.roles
                             .clone()
                             .into_iter()
-                            .map(|ctx_role_id| ctx_role_id.split(':').collect_vec().first().unwrap_or(&"").to_string())
+                            .map(|ctx_role_id| ctx_role_id.split(':').collect_vec().first().cloned().unwrap_or("").to_string())
                             .collect_vec()
-                            .contains(&role_id.split(':').collect_vec().first().unwrap_or(&"").to_string())
+                            .contains(&role_id.split(':').collect_vec().first().cloned().unwrap_or("").to_string())
                     })
                 {
                     return true;
