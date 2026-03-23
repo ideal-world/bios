@@ -29,7 +29,7 @@ use crate::{
         },
         serv::{
             clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ,
-            iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ,
+            iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ, iam_third_party_app_serv::IamThirdPartyAppServ,
         },
     },
     iam_config::IamConfig,
@@ -334,6 +334,9 @@ impl IamSearchClient {
                 app_set.push(set_cate.rel_rbum_set_cate_id);
             }
         }
+        // 关联的三方应用
+        let third_party_apps = IamThirdPartyAppServ::find_rel_third_party_app(account_id, None, funs, ctx).await?;
+        let third_party_app_ids = third_party_apps.iter().map(|app| app.id.clone()).collect_vec();
         // 岗位
         let primary_code = account_resp.exts.iter().find(|attr| attr.name == "primary").map(|attr| attr.value.clone());
         let secondary_code = account_resp.exts.iter().find(|attr| attr.name == "secondary").map(|attr| {
@@ -405,6 +408,7 @@ impl IamSearchClient {
             "secondary_map": raw_secondary_map,
             "app_set": raw_app_set_map,
             "app_set_id": app_set,
+            "third_party_app_ids": third_party_app_ids,
             "scope_level":account_resp.scope_level
         });
         // save search

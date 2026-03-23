@@ -224,7 +224,9 @@ impl IamThirdPartyAppServ {
             funs,
             ctx,
         )
-        .await
+        .await?;
+        IamSearchClient::sync_add_or_modify_account_search(account_id, Box::new(true), "", funs, ctx).await?;
+        Ok(())
     }
 
     /// 解绑账号与第三方应用
