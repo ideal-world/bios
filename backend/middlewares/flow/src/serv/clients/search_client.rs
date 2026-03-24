@@ -382,7 +382,7 @@ impl FlowSearchClient {
                     tag: table.to_string(),
                     query: SearchItemQueryReq {
                         kinds: Some(vec![item_kind.clone()]),
-                        keys: Some(vec![TrimString(main_inst.rel_business_obj_id)]),
+                        keys: Some(vec![TrimString(main_inst.rel_business_obj_id.clone())]),
                         owners: None,
                         own_paths: None,
                         rlike_own_paths: None,
@@ -421,6 +421,9 @@ impl FlowSearchClient {
                     own_paths = Some(result.own_paths);
                     create_time = Some(result.create_time);
                     update_time = Some(result.update_time);
+                }
+                if let Some(ext_mut) = ext.as_object_mut() {
+                    ext_mut.insert("rel_business_obj_id".to_string(), main_inst.rel_business_obj_id.to_json().unwrap_or_default());
                 }
                 if let Some(status) = &req_cp.status {
                     if status.is_empty() {

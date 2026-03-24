@@ -14,3 +14,4 @@ pub mod iam_sub_deploy_dto;
 pub mod iam_sub_deploy_host_dto;
 pub mod iam_sub_deploy_license_dto;
 pub mod iam_tenant_dto;
+pub mod iam_third_party_app_dto;

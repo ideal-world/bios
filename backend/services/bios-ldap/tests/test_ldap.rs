@@ -1,14 +1,19 @@
 use std::env;
 use std::time::Duration;
 
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertModifyReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::test::init_test_container;
 use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
+use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::iam_constants;
 use bios_iam::iam_initializer;
+use bios_iam::iam_enumeration::IamCertKernelKind;
 use bios_iam::integration::ldap::ldap_server;
 use ldap3::{LdapConnAsync, LdapConnSettings, Scope, SearchEntry};
 use tardis::basic::field::TrimString;
@@ -84,6 +89,29 @@ async fn test_ldap_account() -> TardisResult<()> {
 
         created_accounts.push((username, password, account_id.clone()));
         info!("[Test] Test account created: {} with ID: {}", username, account_id);
+    }
+
+    // 仅测试场景：将新建账号的邮件凭证状态改为 Enabled，以便 LDAP 搜索能查到 mail 属性（业务默认 Pending）
+    for (_, _, account_id) in &created_accounts {
+        if let Ok(mail_cert) = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::MailVCode, &funs, &system_admin_context).await {
+            let _ = RbumCertServ::modify_rbum(
+                &mail_cert.id,
+                &mut RbumCertModifyReq {
+                    ak: None,
+                    sk: None,
+                    sk_invisible: None,
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: Some(RbumCertStatusKind::Enabled),
+                    ignore_check_sk: false,
+                },
+                &funs,
+                &system_admin_context,
+            )
+            .await;
+        }
     }
 
     // 使用第一个账号进行后续的单个用户测试

@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
-use crate::basic::domain::{iam_account, iam_app, iam_config, iam_res, iam_role, iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license, iam_tenant};
+use crate::basic::domain::{iam_account, iam_app, iam_config, iam_res, iam_role, iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license, iam_tenant, iam_third_party_app};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, InitResItemIds, JsonMenu};
@@ -33,7 +33,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_cert_manage_api, iam_ca_res_api, iam_ca_role_api};
 use crate::console_common::api::{
     iam_cc_account_api, iam_cc_account_task_api, iam_cc_app_api, iam_cc_app_set_api, iam_cc_config_api, iam_cc_org_api, iam_cc_org_task_api, iam_cc_res_api, iam_cc_role_api,
-    iam_cc_sub_deploy_api, iam_cc_system_api, iam_cc_tenant_api,
+    iam_cc_sub_deploy_api, iam_cc_system_api, iam_cc_tenant_api, iam_cc_third_party_app_api,
 };
 use crate::console_interface::api::{
     iam_ci_account_api, iam_ci_app_api, iam_ci_app_set_api, iam_ci_cert_api, iam_ci_open_api, iam_ci_org_api, iam_ci_res_api, iam_ci_role_api, iam_ci_sub_deploy_api,
@@ -79,6 +79,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cc_sub_deploy_api::IamCcSubDeployApi,
                     iam_cc_system_api::IamCcSystemApi,
                     iam_cc_tenant_api::IamCcTenantApi,
+                    iam_cc_third_party_app_api::IamCcThirdPartyAppApi,
                 ),
                 (
                     iam_cp_account_api::IamCpAccountApi,
@@ -166,6 +167,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
         funs.db().init(iam_account::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(iam_res::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(iam_config::ActiveModel::init(db_kind, None, compatible_type)).await?;
+        funs.db().init(iam_third_party_app::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(iam_sub_deploy::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(iam_sub_deploy_host::ActiveModel::init(db_kind, None, compatible_type)).await?;
         funs.db().init(iam_sub_deploy_license::ActiveModel::init(db_kind, None, compatible_type)).await?;
@@ -194,6 +196,10 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
     let kind_sub_deploy_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_SUB_DEPLOY, funs)
         .await?
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found sub deploy kind", ""))?;
+
+    let kind_third_party_app_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_THIRD_PARTY_APP, funs)
+        .await?
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found third party app kind", ""))?;
 
     let domain_iam_id =
         RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found iam domain", ""))?;
@@ -271,6 +277,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         role_tenant_app_manager_id,
         role_app_admin_id,
         kind_sub_deploy_id,
+        kind_third_party_app_id,
         role_app_read_id,
     })?;
     Ok(())
@@ -294,6 +301,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let kind_account_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::RBUM_EXT_TABLE_IAM_ACCOUNT, funs, &ctx).await?;
     let kind_res_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_RES, iam_constants::RBUM_EXT_TABLE_IAM_RES, funs, &ctx).await?;
     let kind_sub_deploy_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_SUB_DEPLOY, iam_constants::RBUM_EXT_TABLE_IAM_SUB_DEPLOY, funs, &ctx).await?;
+    let kind_third_party_app_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_THIRD_PARTY_APP, iam_constants::RBUM_EXT_TABLE_IAM_THIRD_PARTY_APP, funs, &ctx).await?;
 
     let domain_iam_id = add_domain(funs, &ctx).await?;
 
@@ -311,6 +319,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_app_admin_id: "".to_string(),
         role_app_read_id: "".to_string(),
         kind_sub_deploy_id: kind_sub_deploy_id.to_string(),
+        kind_third_party_app_id: kind_third_party_app_id.to_string(),
     })?;
 
     // Init resources
@@ -549,6 +558,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_app_admin_id,
         role_app_read_id,
         kind_sub_deploy_id,
+        kind_third_party_app_id,
     })?;
 
     info!(

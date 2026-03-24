@@ -224,7 +224,7 @@ impl AuthPlugin {
 
         let req_id = TardisFuns::crypto.key.rand_16_hex();
         req.headers_mut().insert(self.header_is_same_req.clone(), HeaderValue::from_str(&req_id)?);
-        conn.set_ex(format!("{}{}", self.cache_key_is_same_req, req_id), "", self.cache_same_req_timeout_sec).await?;
+        conn.set_ex::<_, _, ()>(format!("{}{}", self.cache_key_is_same_req, req_id), "", self.cache_same_req_timeout_sec).await?;
         Ok(false)
     }
 

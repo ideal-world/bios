@@ -138,7 +138,7 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
     }
 
     // 批量处理实例任务
-    if !instance_ids.is_empty() {
+    if !review_instance_items.is_empty() {
         let funs = flow_constants::get_tardis_inst();
         FlowSearchClient::batch_modify_review_obj_search_ext(&review_instance_items, &funs, ctx).await?;
     }

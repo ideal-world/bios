@@ -118,6 +118,9 @@ pub enum IamRelKind {
     IamSubDeployApps,
     IamSubDeployApp,
     IamSubDeployRel,
+
+    /// 第三方应用与账号绑定
+    IamThirdPartyAppAccount,
 }
 
 #[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
