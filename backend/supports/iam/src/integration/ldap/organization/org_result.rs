@@ -6,7 +6,7 @@ use ldap3_proto::simple::*;
 use tardis::chrono::{DateTime, Utc};
 
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapBaseDnLevel, LdapSearchQuery};
+use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery};
 
 /// LDAP属性构建所需的组织字段
 ///
@@ -64,12 +64,7 @@ pub fn build_org_search_response(req: &SearchRequest, query: &LdapSearchQuery, o
 }
 
 /// 从组织信息中提取CN
-fn extract_cn_from_org(org: &LdapOrgFields, base: &str, _config: &IamLdapConfig) -> String {
-    // 优先从base DN中提取CN
-    if let Some(cn) = extract_cn_from_base(base) {
-        return cn;
-    }
-
+fn extract_cn_from_org(org: &LdapOrgFields, _base: &str, _config: &IamLdapConfig) -> String {
     // 优先使用id，如果没有则使用name
     if !org.id.is_empty() {
         return org.id.clone();

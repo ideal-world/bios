@@ -8,10 +8,9 @@ use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamLdapConfig;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertKernelKind, IamSetKind};
+use crate::iam_enumeration::IamCertKernelKind;
 use crate::integration::ldap::app::app_result::LdapAppFields;
 use crate::integration::ldap::ldap_parser::{self, LdapQueryType};
 use crate::integration::ldap::ldap_query::LdapSqlWhereBuilder;
@@ -44,7 +43,7 @@ async fn build_and_execute_app_sql_query(
     query: &ldap_parser::LdapSearchQuery,
     config: &IamLdapConfig,
     funs: &TardisFunsInst,
-    ctx: &TardisContext,
+    _ctx: &TardisContext,
 ) -> TardisResult<Vec<LdapAppFields>> {
     let phone_vcode_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some("".to_string()), funs).await?;
 
@@ -79,13 +78,14 @@ async fn build_and_execute_app_sql_query(
             iam_third_party_app.sort
         FROM
             iam_third_party_app
-            LEFT JOIN rbum_rel AS rbum_rel_account ON iam_third_party_app.id = rbum_rel_account.from_rbum_id AND rbum_rel_account.tag = 'iam_third_party_app'
-            LEFT JOIN rbum_cert AS phone_vcode_cert ON phone_vcode_cert.rel_rbum_id = rbum_rel_account.to_rbum_item_id
+        LEFT JOIN rbum_rel AS rbum_rel_account ON iam_third_party_app.id = rbum_rel_account.to_rbum_item_id
+            AND rbum_rel_account.tag = 'IamThirdPartyAppAccount'
+            INNER JOIN rbum_cert AS phone_vcode_cert ON phone_vcode_cert.rel_rbum_id = rbum_rel_account.from_rbum_id
             AND phone_vcode_cert.rel_rbum_kind = 0
             AND phone_vcode_cert.status = 1
             AND phone_vcode_cert.rel_rbum_cert_conf_id = '{}'
         WHERE
-            1 = 1
+        1 = 1
         "#,
         phone_vcode_conf_id
     );
@@ -106,7 +106,7 @@ async fn build_and_execute_app_sql_query(
             .map(|r| r.try_get::<String>("", "phone").unwrap_or_default()).collect_vec();
             LdapAppFields {
                 id: id.clone(),
-                businessCategory: name.clone(),
+                business_category: name.clone(),
                 sort,
                 phones: rel_phones,
             }
@@ -133,13 +133,8 @@ impl LdapSqlWhereBuilder for AppLdapSqlWhereBuilder {
 
     /// LDAP 属性名 -> 数据库查询字段 映射表 (attr, db_field)
     const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[
-        ("cn", "rbum_set_cate.id"),
-        ("name", "rbum_set_cate.name"),
-        ("syscode", "rbum_set_cate.sys_code"),
-        ("sys_code", "rbum_set_cate.sys_code"),
-        ("buscode", "rbum_set_cate.bus_code"),
-        ("bus_code", "rbum_set_cate.bus_code"),
-        ("description", "rbum_set_cate.ext"),
-        ("ext", "rbum_set_cate.ext"),
+        ("cn", "iam_third_party_app.external_id"),
+        ("name", "rbum_item.name"),
+        ("id", "rbum_item.id"),
     ];
 }

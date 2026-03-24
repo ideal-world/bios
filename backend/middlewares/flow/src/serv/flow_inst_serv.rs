@@ -338,6 +338,20 @@ impl FlowInstServ {
             .await?;
             return Err(funs.err().internal_error("flow_inst", "start_secondary_flow", "The process is automatically terminated", "500-flow-inst-auto-finish"));
         }
+        let init_state = FlowStateServ::get_item(
+            &flow_model.init_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let inst_id = TardisFuns::field.nanoid();
         let create_vars = Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.to_string(), funs, ctx).await?;
         let mut current_vars = create_vars.clone();
@@ -409,7 +423,19 @@ impl FlowInstServ {
                 })
             }))
             .await?;
-            FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), flow_model.init_state_id.clone(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+            if let Some(main_inst) = Self::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
+                    main: Some(true),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .pop() {
+                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+            }
         }
 
         let ctx_clone = ctx.clone();
@@ -1057,6 +1083,8 @@ impl FlowInstServ {
                     ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+                // 通知工作项审批驳回
+                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_name.clone().unwrap_or_default(), flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
             }
         }
         // 携带子审批流的审批流
@@ -1097,8 +1125,6 @@ impl FlowInstServ {
                     }
                 }
             }
-            // 通知工作项审批驳回
-            FlowExternalServ::do_approve_notify_changes(&flow_inst_detail.tag, &flow_inst_detail.id, &flow_inst_detail.rel_business_obj_id, "".to_string(), "".to_string(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
         }
         if flow_inst_detail.main {
             if let Some(rel_child_objs) = flow_inst_detail.artifacts.clone().map(|artifacts| artifacts.rel_child_objs.unwrap_or_default()) {
@@ -3302,7 +3328,6 @@ impl FlowInstServ {
                     .await?;
                     FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
                     FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
-                    FlowExternalServ::do_approve_notify_changes(&flow_inst_detail.tag, &flow_inst_detail.id, &flow_inst_detail.rel_business_obj_id, "".to_string(), "".to_string(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
                 }
             }
             _ => {}
@@ -3639,24 +3664,25 @@ impl FlowInstServ {
                     funs,
                 )
                 .await?;
-                if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
-                    let inst_detail = Self::get(&inst_id, funs, ctx).await?;
-                    Self::transfer(
-                        &inst_detail,
-                        &FlowInstTransferReq {
-                            flow_transition_id: tran.id.clone(),
-                            message: None,
-                            vars: None,
-                        },
-                        true,
-                        FlowExternalCallbackOp::Default,
-                        loop_check_helper::InstancesTransition::default(),
-                        ctx,
-                        funs,
-                    )
-                    .await?;
-                }
+                Self::transfer(
+                    &inst_detail,
+                    &FlowInstTransferReq {
+                        flow_transition_id: tran.id.clone(),
+                        message: None,
+                        vars: None,
+                    },
+                    true,
+                    FlowExternalCallbackOp::Default,
+                    loop_check_helper::InstancesTransition::default(),
+                    ctx,
+                    funs,
+                )
+                .await?;
             }
+        }
+        if inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            let new_inst_detail = Self::get(&inst_detail.id, funs, ctx).await?;
+            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_name.clone().unwrap_or_default(), flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
         }
         Ok(())
     }

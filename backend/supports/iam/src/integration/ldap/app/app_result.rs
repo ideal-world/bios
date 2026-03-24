@@ -2,10 +2,11 @@
 //!
 //! 负责组装LDAP搜索响应结果，将IAM应用数据转换为LDAP协议格式
 
+use itertools::Itertools;
 use ldap3_proto::simple::*;
 
 use crate::iam_config::IamLdapConfig;
-use crate::integration::ldap::ldap_parser::{extract_cn_from_base, LdapBaseDnLevel, LdapSearchQuery};
+use crate::integration::ldap::ldap_parser::{LdapBaseDnLevel, LdapSearchQuery};
 
 /// LDAP属性构建所需的应用字段
 ///
@@ -16,7 +17,7 @@ pub struct LdapAppFields {
     /// 应用ID（作为CN的fallback）
     pub id: String,
     /// 应用名称
-    pub businessCategory: String,
+    pub business_category: String,
     /// 排序
     pub sort: i64,
     /// 关联手机号
@@ -57,12 +58,7 @@ pub fn build_app_search_response(req: &SearchRequest, query: &LdapSearchQuery, a
 }
 
 /// 从应用信息中提取CN
-fn extract_cn_from_app(app: &LdapAppFields, base: &str, _config: &IamLdapConfig) -> String {
-    // 优先从base DN中提取CN
-    if let Some(cn) = extract_cn_from_base(base) {
-        return cn;
-    }
-
+fn extract_cn_from_app(app: &LdapAppFields, _base: &str, _config: &IamLdapConfig) -> String {
     app.id.clone()
 }
 
@@ -87,7 +83,7 @@ fn filter_attributes_by_request(all_attributes: &[LdapPartialAttribute], request
 fn build_ldap_attributes(app: &LdapAppFields, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
     // 使用name作为CN，如果没有则使用sys_code
     let cn = app.id.clone();
-
+    let unique_member = app.phones.clone().into_iter().map(|p| format!("cn={},ou={},{}", p, config.ou_staff, config.base_dn)).collect_vec();
     // 构建属性列表
     let attributes = vec![
         LdapPartialAttribute {
@@ -104,7 +100,11 @@ fn build_ldap_attributes(app: &LdapAppFields, config: &IamLdapConfig) -> Vec<Lda
         },
         LdapPartialAttribute {
             atype: "businessCategory".to_string(),
-            vals: vec![app.businessCategory.clone().into()],
+            vals: vec![app.business_category.clone().into()],
+        },
+        LdapPartialAttribute {
+            atype: "uniqueMember".to_string(),
+            vals: unique_member.into_iter().map(|p| p.into()).collect_vec(),
         },
     ];
 
