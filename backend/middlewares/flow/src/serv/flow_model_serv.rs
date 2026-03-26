@@ -29,7 +29,7 @@ use crate::{
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_model_dto::{
-            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
+            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -2834,5 +2834,81 @@ impl FlowModelServ {
         add_req.set_edit_state(true); // 复制的模板所有配置项皆可编辑
         let new_model_id = Self::add_item(&mut add_req, funs, ctx).await?;
         Self::get_item_detail_aggs(&new_model_id, false, funs, ctx).await
+    }
+
+    // 初始化复制模型（脚本）
+    pub async fn init_copy_model(req: &FlowModelInitCopyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_main_model = Self::find_one_detail_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![req.rel_model_id.clone()]),
+                    enabled: Some(true),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?.ok_or_else(|| {
+            funs.err().not_found(
+                &Self::get_obj_name(),
+                "init_copy_model",
+                "flow model is not found",
+                "404-model-not-found",
+            )
+        })?;
+        for rel_template_id in &req.rel_template_ids {
+            let new_model = FlowModelServ::copy_or_reference_main_model(
+                &rel_main_model.id,
+                &FlowModelAssociativeOperationKind::ReferenceOrCopy,
+                FlowModelKind::AsTemplateAndAsModel,
+                None,
+                &None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            FlowRelServ::add_simple_rel(
+                &FlowRelKind::FlowModelTemplate,
+                &new_model.id,
+                RbumRelFromKind::Item,
+                rel_template_id,
+                None,
+                None,
+                false,
+                true,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            if req.sync_inst {
+                let mut update_states = HashMap::new();
+                for state in rel_main_model.states() {
+                    update_states.insert(state.id.clone(), state.id.clone());
+                }
+                FlowInstServ::batch_update_when_switch_model(&new_model, &Some(update_states), funs, ctx).await?;
+            }
+        }
+        for own_path in &req.own_path {
+            let mock_ctx = TardisContext {
+                own_paths: own_path.clone(),
+                ..ctx.clone()
+            };
+            let new_model = FlowModelServ::copy_or_reference_main_model(&rel_main_model.id, &FlowModelAssociativeOperationKind::Copy, FlowModelKind::AsModel, None, &None, None, funs, &mock_ctx).await?;
+            if req.sync_inst {
+                let mut update_states = HashMap::new();
+                for state in rel_main_model.states() {
+                    update_states.insert(state.id.clone(), state.id.clone());
+                }
+                FlowInstServ::batch_update_when_switch_model(&new_model, &Some(update_states), funs, &mock_ctx).await?;
+            }
+        }
+        Ok(())
     }
 }
