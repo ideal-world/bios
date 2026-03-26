@@ -70,6 +70,7 @@ impl FlowCtModelApi {
             )
             .await?;
             result.insert(rel_model_id.clone(), new_model);
+            FlowModelServ::batch_disable_model(None, Some(false), Some(vec![tag.clone()]), &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;

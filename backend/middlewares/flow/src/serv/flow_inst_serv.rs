@@ -198,7 +198,7 @@ impl FlowInstServ {
             {
                 Self::abort(&unfinished_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
             }
-            Self::start_secondary_flow(
+            let child_inst_id = Self::start_secondary_flow(
                 &FlowInstStartReq {
                     rel_business_obj_id: rel_child_obj.obj_id.clone(),
                     tag: rel_child_obj.tag.clone(),
@@ -214,6 +214,14 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
+            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                tag: rel_child_obj.tag.clone(),
+                status: Some("".to_string()),
+                rel_state: Some("".to_string()),
+                rel_transition_state_name: Some("".to_string()),
+                ..Default::default()
+            })?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst_id, &modify_serach_ext, funs, ctx).await?;
         }
         Ok(())
     }
@@ -1152,7 +1160,7 @@ impl FlowInstServ {
                     })?;
                     FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                     if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_main_inst.id, &modify_serach_ext, funs, ctx).await?;
+                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &flow_inst_detail.id, &modify_serach_ext, funs, ctx).await?;
                     }
                 }
             }
@@ -2745,7 +2753,7 @@ impl FlowInstServ {
         let insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 main: Some(false),
-                finish_abort: Some(false),
+                finish: Some(false),
                 flow_version_id: Some(rel_flow_version_id.to_string()),
                 ..Default::default()
             },

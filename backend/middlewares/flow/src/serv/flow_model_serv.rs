@@ -1793,7 +1793,7 @@ impl FlowModelServ {
 
     // 批量关闭模型
     #[async_recursion]
-    pub async fn batch_disable_model(rel_template_id: Option<String>, main: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn batch_disable_model(rel_template_id: Option<String>, main: Option<bool>, tags: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let models = Self::find_items(
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -1802,6 +1802,7 @@ impl FlowModelServ {
                 },
                 rel_template_id,
                 main,
+                tags: tags.clone(),
                 ..Default::default()
             },
             None,
@@ -1810,23 +1811,27 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        // clean non-main flow model
-        for model in models {
-            // abort instances with current ctx
-            let rel_version_ids = FlowModelVersionServ::find_id_items(
-                &FlowModelVersionFilterReq {
-                    rel_model_ids: Some(vec![model.id.clone()]),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for rel_version_id in rel_version_ids {
-                FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
+        if !main.unwrap_or(true) {
+            // clean non-main flow model
+            for model in &models {
+                // abort instances with current ctx
+                let rel_version_ids = FlowModelVersionServ::find_id_items(
+                    &FlowModelVersionFilterReq {
+                        rel_model_ids: Some(vec![model.id.clone()]),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for rel_version_id in rel_version_ids {
+                    FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
+                }
             }
+        }
+        for model in models {
             Self::modify_model(
                 &model.id,
                 &mut FlowModelModifyReq {
@@ -1860,7 +1865,7 @@ impl FlowModelServ {
                     own_paths: child_model.own_paths.clone(),
                     ..Default::default()
                 };
-                Self::batch_disable_model(child_model.rel_template_ids.first().cloned(), Some(child_model.main), funs, &mock_ctx).await?;
+                Self::batch_disable_model(child_model.rel_template_ids.first().cloned(), Some(child_model.main), tags.clone(), funs, &mock_ctx).await?;
                 child_own_paths.push(child_model.own_paths.clone());
             }
         }
