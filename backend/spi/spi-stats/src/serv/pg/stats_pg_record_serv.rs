@@ -156,7 +156,7 @@ pub(crate) async fn fact_record_load(
     fields_values.insert("key".to_string(), Value::from(fact_record_key));
     fields_values.insert("own_paths".to_string(), Value::from(add_req.own_paths));
     fields_values.insert("ct".to_string(), Value::from(add_req.ct));
-    fields_values.insert("idempotent_id".to_string(), Value::from(add_req.idempotent_id.clone().unwrap_or_default()));
+    fields_values.insert("idempotent_id".to_string(), Value::from(add_req.idempotent_id.clone().unwrap_or(format!("{}-{}", fact_record_key, add_req.ct.timestamp()))));
     let req_data = add_req.data.as_object().ok_or_else(|| {
         funs.err().bad_request(
             "fact_record",
@@ -427,7 +427,7 @@ pub(crate) async fn fact_records_load(
                 TardisFuns::json.str_to_json("{}")?
             }),
             Value::from(add_req.ct),
-            Value::from(add_req.idempotent_id.unwrap_or(TardisFuns::field.nanoid())),
+            Value::from(add_req.idempotent_id.unwrap_or(format!("{}-{}", add_req.key, add_req.ct.timestamp()))),
         ];
         // Because Dimension and Measure may share the same field
         // Existing fields are not stored in duplicate
