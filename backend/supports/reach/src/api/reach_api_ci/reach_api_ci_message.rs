@@ -53,4 +53,12 @@ impl ReachMessageCiApi {
         }
         TardisResp::ok(VOID)
     }
+
+    /// add send task
+    /// 添加发送任务
+    #[oai(method = "put", path = "/task/add")]
+    #[tardis::log::instrument(skip_all, fields(module = "reach"))]
+    pub async fn add_send_task(&self, body: Json<ReachMessageAddReq>, request: &Request, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        add_send_task(&mut add_req, &funs, &ctx.0).await?
+    }
 }

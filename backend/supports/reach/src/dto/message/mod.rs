@@ -44,7 +44,7 @@ pub struct ReachMessageAddReq {
     #[oai(default)]
     /// 触达状态
     pub reach_status: ReachStatusKind,
-    /// 触达状态
+    /// 变量替换
     pub content_replace: String,
 }
 
