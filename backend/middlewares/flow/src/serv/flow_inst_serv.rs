@@ -2272,23 +2272,46 @@ impl FlowInstServ {
                 own_paths: curr_inst.own_paths.clone(),
                 ..ctx.clone()
             };
-            FlowExternalServ::do_notify_changes(
-                &curr_inst.tag,
-                &curr_inst.id,
-                &curr_inst.rel_business_obj_id,
-                next_flow_state.name.clone(),
-                next_flow_state.sys_state.clone(),
-                next_flow_state.color.clone(),
-                prev_flow_state.name.clone(),
-                prev_flow_state.sys_state.clone(),
-                next_transition_detail.name.clone(),
-                next_transition_detail.is_notify,
-                Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
-                Some(callback_kind),
-                params.clone(),
-                &inst_ctx,
-                funs,
-            )
+            let tag_cp = curr_inst.tag.clone();
+            let id_cp = curr_inst.id.clone();
+            let rel_business_obj_id_cp = curr_inst.rel_business_obj_id.clone();
+            let target_state = next_flow_state.name.clone();
+            let target_sys_state = next_flow_state.sys_state.clone();
+            let target_state_color = next_flow_state.color.clone();
+            let original_state = prev_flow_state.name.clone();
+            let original_sys_state = prev_flow_state.sys_state.clone();
+            let transition_name = next_transition_detail.name.clone();
+            let is_notify = next_transition_detail.is_notify;
+            let manual_op = Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger));
+            let callback_op = Some(callback_kind);
+            let params_cp = params.clone();
+            ctx.add_sync_task(Box::new(move || {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = flow_constants::get_tardis_inst();
+                        let _ = FlowExternalServ::do_notify_changes(
+                            &tag_cp,
+                            &id_cp,
+                            &rel_business_obj_id_cp,
+                            target_state,
+                            target_sys_state,
+                            target_state_color,
+                            original_state,
+                            original_sys_state,
+                            transition_name,
+                            is_notify,
+                            manual_op,
+                            callback_op,
+                            params_cp,
+                            &inst_ctx,
+                            &funs,
+                        )
+                        .await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
             .await?;
         }
         // notify modify vars
