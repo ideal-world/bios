@@ -8,13 +8,15 @@ use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    /// 外部ID（用于与外部系统关联）
+    pub external_id: Option<String>,
     /// 描述
     pub description: Option<String>,
     /// 图标
     pub icon: String,
     /// 链接地址
     pub link_url: String,
-    /// 状态
+    /// 状态（数值存储，参见 [`crate::iam_enumeration::IamThirdPartyAppStatusKind`]）
     pub status: i16,
     /// 排序
     pub sort: i64,

@@ -23,6 +23,10 @@ pub struct FlowExternalReq {
     ///
     /// 关联的[枚举](FlowExternalCallbackOp)
     pub callback_op: Option<FlowExternalCallbackOp>,
+    /// Associated [enum](FlowExternalCallbackOp)
+    ///
+    /// 关联的[枚举](FlowExternalCallbackOp)
+    pub idp_approve_operation_enum: Option<FlowExternalApproveOp>,
     /// The tag corresponding to the current business
     ///
     /// 当前业务对应的 tag
@@ -108,6 +112,8 @@ pub enum FlowExternalKind {
     FetchAuthAccount,
     /// 更新关联关系
     UpdateRelationship,
+    /// 审批过程中的状态变更
+    ApproveStatusChange,
 }
 
 /// When kind is ModifyField, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
@@ -125,6 +131,19 @@ pub enum FlowExternalCallbackOp {
     ConditionalTrigger,
     /// 自动流转
     Auto,
+}
+
+/// When kind is ApproveStatusChange, the field is modified in a specific way, for example: validate the content, post action, precondition trigger ...
+///
+/// 当 kind 为 ApproveStatusChange 时，字段被修改的具体操作方式，例：验证内容，后置动作，前置条件触发..
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum FlowExternalApproveOp {
+    /// 审批发起
+    ApproveStart,
+    /// 审批通过
+    ApprovePass,
+    /// 审批驳回
+    ApproveRejection,
 }
 
 /// 扩展字段

@@ -72,6 +72,7 @@ use crate::integration::ldap::ldap_entity;
 use crate::integration::ldap::ldap_parser;
 use crate::integration::ldap::ldap_parser::LdapBaseDnLevel;
 use crate::integration::ldap::organization::{org_query, org_result};
+use crate::integration::ldap::app::{app_query, app_result};
 use crate::integration::ldap::system::system_result;
 
 /// LDAP会话管理
@@ -180,6 +181,15 @@ impl LdapSession {
                                 };
                                 results.append(&mut org_result::build_org_search_response(req, &query, orgs, config));
                                 return results;
+                            } else if ou.to_lowercase() == config.ou_app.to_lowercase() {
+                                let apps = match app_query::execute_ldap_app_search(&query, config).await {
+                                    Ok(apps) => apps,
+                                    Err(_) => {
+                                        return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
+                                    }
+                                };
+                                results.append(&mut app_result::build_app_search_response(req, &query, apps, config));
+                                return results;
                             } else {
                                 return build_error_response(req, LdapResultCode::InvalidDNSyntax, "Invalid base DN".to_string());
                             }
@@ -196,6 +206,7 @@ impl LdapSession {
                     let entrys = vec![
                         ldap_entity::LdapEntity::build_ou_node(config.ou_staff.as_str(), config).entry,
                         ldap_entity::LdapEntity::build_ou_node(config.ou_organization.as_str(), config).entry,
+                        ldap_entity::LdapEntity::build_ou_node(config.ou_app.as_str(), config).entry,
                     ];
                     let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
                     results.append(&mut filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect());
@@ -217,6 +228,15 @@ impl LdapSession {
                         }
                     };
                     results.append(&mut org_result::build_org_search_response(req, &query, orgs, config));
+                }
+                if app_result::should_return_app_level_in_search(base_dn_level.clone(), query.scope.clone(), config) {
+                    let apps = match app_query::execute_ldap_app_search(&query, config).await {
+                        Ok(apps) => apps,
+                        Err(_) => {
+                            return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
+                        }
+                    };
+                    results.append(&mut app_result::build_app_search_response(req, &query, apps, config));
                 }
                 results.push(req.gen_success());
                 results

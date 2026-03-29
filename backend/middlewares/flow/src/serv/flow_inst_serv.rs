@@ -16,7 +16,7 @@ use itertools::Itertools;
 use serde_json::json;
 use tardis::{
     TardisFuns, TardisFunsInst, basic::{dto::TardisContext, field::TrimString, result::TardisResult}, chrono::{DateTime, Datelike, Utc}, db::sea_orm::{
-        self, Order, Set, sea_query::{Alias, Expr, Query, SelectStatement}
+        self, Iden, Order, Set, sea_query::{Alias, Expr, Query, SelectStatement}
     }, futures_util::future::join_all, log::{debug, error}, serde_json::Value, tokio, web::web_resp::TardisPage
 };
 
@@ -24,7 +24,7 @@ use crate::{
     domain::{flow_inst, flow_model_version, flow_state},
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
-        flow_external_dto::{FlowExternalCallbackOp, FlowExternalParams},
+        flow_external_dto::{FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalParams},
         flow_inst_dto::{
             FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstQueryResult, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq
         },
@@ -198,7 +198,7 @@ impl FlowInstServ {
             {
                 Self::abort(&unfinished_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
             }
-            Self::start_secondary_flow(
+            let child_inst_id = Self::start_secondary_flow(
                 &FlowInstStartReq {
                     rel_business_obj_id: rel_child_obj.obj_id.clone(),
                     tag: rel_child_obj.tag.clone(),
@@ -214,6 +214,14 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
+            let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                tag: rel_child_obj.tag.clone(),
+                status: Some("".to_string()),
+                rel_state: Some("".to_string()),
+                rel_transition_state_name: Some("".to_string()),
+                ..Default::default()
+            })?;
+            FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_inst_id, &modify_serach_ext, funs, ctx).await?;
         }
         Ok(())
     }
@@ -338,6 +346,20 @@ impl FlowInstServ {
             .await?;
             return Err(funs.err().internal_error("flow_inst", "start_secondary_flow", "The process is automatically terminated", "500-flow-inst-auto-finish"));
         }
+        let init_state = FlowStateServ::get_item(
+            &flow_model.init_state_id,
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let inst_id = TardisFuns::field.nanoid();
         let create_vars = Self::get_new_vars(&start_req.tag, start_req.rel_business_obj_id.to_string(), funs, ctx).await?;
         let mut current_vars = create_vars.clone();
@@ -409,6 +431,19 @@ impl FlowInstServ {
                 })
             }))
             .await?;
+            if let Some(main_inst) = Self::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
+                    main: Some(true),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .pop() {
+                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+            }
         }
 
         let ctx_clone = ctx.clone();
@@ -1056,6 +1091,8 @@ impl FlowInstServ {
                     ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+                // 通知工作项审批驳回
+                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_name.clone().unwrap_or_default(), flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
             }
         }
         // 携带子审批流的审批流
@@ -1123,7 +1160,7 @@ impl FlowInstServ {
                     })?;
                     FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                     if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_main_inst.id, &modify_serach_ext, funs, ctx).await?;
+                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &flow_inst_detail.id, &modify_serach_ext, funs, ctx).await?;
                     }
                 }
             }
@@ -1748,7 +1785,11 @@ impl FlowInstServ {
                             {
                                 vec![]
                             } else {
-                                resp.next_flow_transitions
+                                if let Some(sys_states) = &req.sys_states {
+                                    resp.next_flow_transitions.into_iter().filter(|tran| sys_states.contains(&tran.next_flow_state_sys_state)).collect_vec()
+                                } else {
+                                    resp.next_flow_transitions
+                                }
                             },
                             rel_flow_versions,
                         })
@@ -2231,23 +2272,46 @@ impl FlowInstServ {
                 own_paths: curr_inst.own_paths.clone(),
                 ..ctx.clone()
             };
-            FlowExternalServ::do_notify_changes(
-                &curr_inst.tag,
-                &curr_inst.id,
-                &curr_inst.rel_business_obj_id,
-                next_flow_state.name.clone(),
-                next_flow_state.sys_state.clone(),
-                next_flow_state.color.clone(),
-                prev_flow_state.name.clone(),
-                prev_flow_state.sys_state.clone(),
-                next_transition_detail.name.clone(),
-                next_transition_detail.is_notify,
-                Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger)),
-                Some(callback_kind),
-                params.clone(),
-                &inst_ctx,
-                funs,
-            )
+            let tag_cp = curr_inst.tag.clone();
+            let id_cp = curr_inst.id.clone();
+            let rel_business_obj_id_cp = curr_inst.rel_business_obj_id.clone();
+            let target_state = next_flow_state.name.clone();
+            let target_sys_state = next_flow_state.sys_state.clone();
+            let target_state_color = next_flow_state.color.clone();
+            let original_state = prev_flow_state.name.clone();
+            let original_sys_state = prev_flow_state.sys_state.clone();
+            let transition_name = next_transition_detail.name.clone();
+            let is_notify = next_transition_detail.is_notify;
+            let manual_op = Some(!(callback_kind == FlowExternalCallbackOp::PostAction || callback_kind == FlowExternalCallbackOp::ConditionalTrigger));
+            let callback_op = Some(callback_kind);
+            let params_cp = params.clone();
+            ctx.add_sync_task(Box::new(move || {
+                Box::pin(async move {
+                    let task_handle = tokio::spawn(async move {
+                        let funs = flow_constants::get_tardis_inst();
+                        let _ = FlowExternalServ::do_notify_changes(
+                            &tag_cp,
+                            &id_cp,
+                            &rel_business_obj_id_cp,
+                            target_state,
+                            target_sys_state,
+                            target_state_color,
+                            original_state,
+                            original_sys_state,
+                            transition_name,
+                            is_notify,
+                            manual_op,
+                            callback_op,
+                            params_cp,
+                            &inst_ctx,
+                            &funs,
+                        )
+                        .await;
+                    });
+                    task_handle.await.unwrap();
+                    Ok(())
+                })
+            }))
             .await?;
         }
         // notify modify vars
@@ -2410,9 +2474,9 @@ impl FlowInstServ {
                         ctx.roles
                             .clone()
                             .into_iter()
-                            .map(|ctx_role_id| ctx_role_id.split(':').collect_vec().first().unwrap_or(&"").to_string())
+                            .map(|ctx_role_id| ctx_role_id.split(':').collect_vec().first().cloned().unwrap_or("").to_string())
                             .collect_vec()
-                            .contains(&role_id.split(':').collect_vec().first().unwrap_or(&"").to_string())
+                            .contains(&role_id.split(':').collect_vec().first().cloned().unwrap_or("").to_string())
                     })
                 {
                     return true;
@@ -2712,7 +2776,7 @@ impl FlowInstServ {
         let insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 main: Some(false),
-                finish_abort: Some(false),
+                finish: Some(false),
                 flow_version_id: Some(rel_flow_version_id.to_string()),
                 ..Default::default()
             },
@@ -3631,24 +3695,25 @@ impl FlowInstServ {
                     funs,
                 )
                 .await?;
-                if let Some(inst_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
-                    let inst_detail = Self::get(&inst_id, funs, ctx).await?;
-                    Self::transfer(
-                        &inst_detail,
-                        &FlowInstTransferReq {
-                            flow_transition_id: tran.id.clone(),
-                            message: None,
-                            vars: None,
-                        },
-                        true,
-                        FlowExternalCallbackOp::Default,
-                        loop_check_helper::InstancesTransition::default(),
-                        ctx,
-                        funs,
-                    )
-                    .await?;
-                }
+                Self::transfer(
+                    &inst_detail,
+                    &FlowInstTransferReq {
+                        flow_transition_id: tran.id.clone(),
+                        message: None,
+                        vars: None,
+                    },
+                    true,
+                    FlowExternalCallbackOp::Default,
+                    loop_check_helper::InstancesTransition::default(),
+                    ctx,
+                    funs,
+                )
+                .await?;
             }
+        }
+        if inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            let new_inst_detail = Self::get(&inst_detail.id, funs, ctx).await?;
+            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_name.clone().unwrap_or_default(), flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
         }
         Ok(())
     }

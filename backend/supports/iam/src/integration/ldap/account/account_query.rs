@@ -173,6 +173,8 @@ async fn build_and_execute_sql_query(
             AND phone_vcode_cert.rel_rbum_cert_conf_id = '{}'
             LEFT JOIN rbum_item_attr AS rbum_ext ON rbum_ext.rel_rbum_item_id = iam_account.id
             AND rbum_ext.rel_rbum_kind_attr_id = '{}'
+            LEFT JOIN rbum_rel AS rel_third_app ON rel_third_app.tag = 'IamThirdPartyAppAccount' AND rel_third_app.from_rbum_id = iam_account.id
+            LEFT JOIN iam_third_party_app as third_party_app ON third_party_app.id = rel_third_app.to_rbum_item_id
         WHERE
             rbum_item.disabled = false
             AND rbum_item.scope_level = 0
@@ -224,5 +226,6 @@ impl LdapSqlWhereBuilder for AccountLdapSqlWhereBuilder {
         ("displayname", "rbum_item.name"),
         ("givenname", "rbum_item.name"),
         ("sn", "rbum_item.name"),
+        ("memberOf", "third_party_app.external_id"),
     ];
 }

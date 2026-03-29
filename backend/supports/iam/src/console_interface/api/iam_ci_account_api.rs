@@ -368,6 +368,71 @@ impl IamCiAccountApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
+    /// Find Account By Ak
+    /// 通过Ak查找帐户
+    ///
+    /// if kind is none,query default kind(UserPwd)
+    /// 如果kind为空，则查询默认kind(UserPwd)
+    #[oai(path = "/ak/:ak", method = "get")]
+    async fn find_account_by_ak_improve(
+        &self,
+        ak: Path<String>,
+        kind: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        supplier: Query<Option<String>>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Option<IamAccountDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let supplier = supplier.0.unwrap_or_default();
+        let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
+        let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
+
+        let result = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0.clone(), &funs).await {
+            if let Some(cert) = RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: if let Some(tenant_id) = tenant_id.0 { Some(tenant_id) } else { Some("".to_string()) },
+                        ..Default::default()
+                    },
+                    ak: Some(ak.0),
+                    rel_rbum_cert_conf_ids: Some(vec![conf_id]),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx,
+            )
+            .await?
+            {
+                Some(
+                    IamAccountServ::get_item(
+                        &cert.rel_rbum_id,
+                        &IamAccountFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        &funs,
+                        &ctx,
+                    )
+                    .await?,
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
 
     /// Find Account By Ak
     /// 通过Ak查找帐户

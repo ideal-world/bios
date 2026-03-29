@@ -85,7 +85,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
 
 async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTriggerInstanceConfigDetailResp>, global_configs: HashMap<ReachChannelKind, ReachTriggerGlobalConfigDetailResp>,
     funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let replace = send_req.replace.iter().filter_map(|(k, v)| v.as_ref().map(|v| (k.clone(), v.clone()))).collect::<HashMap<String, String>>();
+    let replace = send_req.replace.clone();
     let receive_group_code = send_req.receives.into_iter().fold(HashMap::<String, Vec<_>>::new(), |mut map, item| {
         map.entry(item.receive_group_code.clone()).or_default().push(item);
         map
@@ -122,30 +122,15 @@ async fn send_non_webhook_message(send_req: ReachMsgSendReq, instances: Vec<Reac
     for (_kind, gc) in global_configs {
         for ((receive_kind, rel_reach_channel), to_res_ids) in &other_receive_collect {
             if rel_reach_channel == &gc.rel_reach_channel && !gc.rel_reach_msg_signature_id.is_empty() && !gc.rel_reach_msg_template_id.is_empty() {
-                ReachMessageServ::add_rbum(
-                    &mut ReachMessageAddReq {
-                        rbum_item_add_req: RbumItemAddReq {
-                            id: Default::default(),
-                            code: Default::default(),
-                            name: "".into(),
-                            rel_rbum_kind_id: RBUM_KIND_CODE_REACH_MESSAGE.into(),
-                            rel_rbum_domain_id: DOMAIN_CODE.into(),
-                            scope_level: Default::default(),
-                            disabled: Default::default(),
-                        },
-                        from_res: Default::default(),
-                        rel_reach_channel: gc.rel_reach_channel,
-                        receive_kind: *receive_kind,
-                        to_res_ids: to_res_ids.join(";"),
-                        rel_reach_msg_signature_id: gc.rel_reach_msg_signature_id.clone(),
-                        rel_reach_msg_template_id: gc.rel_reach_msg_template_id.clone(),
-                        reach_status: ReachStatusKind::Pending,
-                        content_replace: tardis::serde_json::to_string(&replace).expect("convert from string:string map shouldn't fail"),
-                    },
-                    funs,
-                    &global_ctx,
-                )
-                .await?;
+                let mut add_req = ReachMessageAddSendTaskReq {
+                    rel_reach_channel: gc.rel_reach_channel,
+                    receive_kind: *receive_kind,
+                    to_res_ids: to_res_ids.clone(),
+                    rel_reach_msg_signature_id: gc.rel_reach_msg_signature_id.clone(),
+                    rel_reach_msg_template_id: gc.rel_reach_msg_template_id.clone(),
+                    replace: replace.clone(),
+                };
+                add_send_task(&mut add_req, funs, &global_ctx).await?;
             }
         }
     }
@@ -159,31 +144,40 @@ async fn send_webhook_message(send_req: ReachMsgSendReq, instances: Vec<ReachTri
         ..ctx.clone()
     };
     if instances.iter().any(|i| i.rel_reach_channel == global_config.rel_reach_channel) && !global_config.rel_reach_msg_signature_id.is_empty() && !global_config.rel_reach_msg_template_id.is_empty() {
-        ReachMessageServ::add_rbum(
-            &mut ReachMessageAddReq {
-                rbum_item_add_req: RbumItemAddReq {
-                    id: Default::default(),
-                    code: Default::default(),
-                    name: "".into(),
-                    rel_rbum_kind_id: RBUM_KIND_CODE_REACH_MESSAGE.into(),
-                    rel_rbum_domain_id: DOMAIN_CODE.into(),
-                    scope_level: Default::default(),
-                    disabled: Default::default(),
-                },
-                from_res: Default::default(),
-                rel_reach_channel: global_config.rel_reach_channel,
-                receive_kind: ReachReceiveKind::Account,
-                to_res_ids: "".to_string(),
-                rel_reach_msg_signature_id: global_config.rel_reach_msg_signature_id.clone(),
-                rel_reach_msg_template_id: global_config.rel_reach_msg_template_id.clone(),
-                reach_status: ReachStatusKind::Pending,
-                content_replace: tardis::serde_json::to_string(&send_req.replace).expect("convert from string:string map shouldn't fail"),
-            },
-            funs,
-            &global_ctx,
-        )
-        .await?;
+        let mut add_req = ReachMessageAddSendTaskReq {
+            rel_reach_channel: global_config.rel_reach_channel,
+            receive_kind: ReachReceiveKind::Account,
+            to_res_ids: vec![],
+            rel_reach_msg_signature_id: global_config.rel_reach_msg_signature_id.clone(),
+            rel_reach_msg_template_id: global_config.rel_reach_msg_template_id.clone(),
+            replace: send_req.replace.clone(),
+        };
+        add_send_task(&mut add_req, funs, &global_ctx).await?;
     }
+    Ok(())
+}
+
+pub async fn add_send_task(req: &mut ReachMessageAddSendTaskReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let mut add_req = ReachMessageAddReq {
+        rbum_item_add_req: RbumItemAddReq {
+            id: Default::default(),
+            code: Default::default(),
+            name: "".into(),
+            rel_rbum_kind_id: RBUM_KIND_CODE_REACH_MESSAGE.into(),
+            rel_rbum_domain_id: DOMAIN_CODE.into(),
+            scope_level: Default::default(),
+            disabled: Default::default(),
+        },
+        from_res: Default::default(),
+        rel_reach_channel: req.rel_reach_channel,
+        receive_kind: req.receive_kind,
+        to_res_ids: req.to_res_ids.join(";"),
+        rel_reach_msg_signature_id: req.rel_reach_msg_signature_id.clone(),
+        rel_reach_msg_template_id: req.rel_reach_msg_template_id.clone(),
+        reach_status: ReachStatusKind::Pending,
+        content_replace: tardis::serde_json::to_string(&req.replace).expect("convert from string:string map shouldn't fail"),
+    };
+    ReachMessageServ::add_rbum(&mut add_req, funs, ctx).await?;
     Ok(())
 }
 

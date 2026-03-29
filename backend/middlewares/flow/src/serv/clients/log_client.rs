@@ -355,6 +355,7 @@ impl FlowLogClient {
             ("TS", "测试阶段"),
             ("TC", "用例"),
             ("REVIEW", "评审"),
+            ("VERSION", "版本"),
         ]);
         flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }
@@ -373,6 +374,7 @@ impl FlowLogClient {
             ("FLOW", "flow_approval_edit"),
             ("TC", "idp_test_case"),
             ("REVIEW", "idp_feed_review"),
+            ("VERSION", "idp_release_version"),
         ]);
         flow_tag_map.get(tag).map_or("".to_string(), |val| val.to_string())
     }

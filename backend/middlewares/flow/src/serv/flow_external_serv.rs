@@ -13,8 +13,7 @@ use tardis::{
 use crate::{
     dto::{
         flow_external_dto::{
-            FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp,
-            FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp, FlowExternalUpdateRelationshipResp,
+            FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp, FlowExternalUpdateRelationshipResp
         },
         flow_state_dto::{FlowGuardConf, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
@@ -421,6 +420,47 @@ impl FlowExternalServ {
             Ok(data)
         } else {
             Err(funs.err().internal_error("flow_external", "do_fetch_auth_account", "illegal response", "500-external-illegal-response"))
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn do_approve_notify_changes(
+        tag: &str,
+        inst_id: &str,
+        rel_business_obj_id: &str,
+        target_state: String,
+        original_state: String,
+        approve_op: FlowExternalApproveOp,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<FlowExternalNotifyChangesResp> {
+        let external_url = Self::get_external_url(tag, ctx, funs).await?;
+        if external_url.is_empty() {
+            return Ok(FlowExternalNotifyChangesResp {});
+        }
+
+        let header = Self::headers(None, funs, ctx).await?;
+        let body = FlowExternalReq {
+            kind: FlowExternalKind::ApproveStatusChange,
+            idp_approve_operation_enum: Some(approve_op),
+            inst_id: inst_id.to_string(),
+            curr_tag: tag.to_string(),
+            curr_bus_obj_id: rel_business_obj_id.to_string(),
+            target_state: Some(target_state),
+            original_state: Some(original_state),
+            sys_time: Some(Utc::now().timestamp_millis()),
+            ..Default::default()
+        };
+        let original_resp = funs.web_client().post(&external_url, &body, header).await?;
+        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> =
+            original_resp.body.ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
+        if resp.code != *"200" {
+            return Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"));
+        }
+        if let Some(data) = resp.body {
+            Ok(data)
+        } else {
+            Ok(FlowExternalNotifyChangesResp::default())
         }
     }
 

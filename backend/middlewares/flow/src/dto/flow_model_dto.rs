@@ -915,4 +915,5 @@ pub struct FlowModelMergeDataReq {
 pub struct FlowModelBatchDisableReq {
     pub rel_template_id: Option<String>,
     pub main: Option<bool>,
+    pub tags: Option<Vec<String>>,
 }
