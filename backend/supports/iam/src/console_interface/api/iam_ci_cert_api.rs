@@ -2,11 +2,14 @@ use std::collections::HashMap;
 
 use crate::basic::dto::iam_account_dto::IamAccountExtSysResp;
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
-use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamCertDecodeRequest, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq};
+use crate::basic::dto::iam_cert_dto::{
+    IamCertAkSkAddReq, IamCertAkSkResp, IamCertDecodeRequest, IamCiLdapBootstrapUserPwdResp, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq,
+};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_interface::serv::iam_ci_cert_aksk_serv::IamCiCertAkSkServ;
+use crate::console_interface::serv::iam_ci_cert_ldap_userpwd_script_serv::IamCiCertLdapUserPwdScriptServ;
 use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkServ;
 use crate::iam_constants;
 use crate::iam_enumeration::Oauth2GrantType;
@@ -83,6 +86,27 @@ impl IamCiCertManageApi {
         let funs = iam_constants::get_tardis_inst();
         let resp = IamCiOauth2AkSkServ::generate_token(grant_type, &client_id.0, &client_secret.0, scope.0, funs).await?;
         TardisResp::ok(resp)
+    }
+
+    /// [临时脚本] 为仅有 LDAP 凭证、无 UserPwd 的账号生成随机默认 UserPwd
+    ///
+    /// 返回账号 rbum_item 的 name、UserPwd 的 ak 与明文密码。
+    #[oai(path = "/script/ldap-bootstrap-userpwd", method = "post")]
+    async fn ldap_bootstrap_userpwd(
+        &self,
+        tenant_id: Query<Option<String>>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<IamCiLdapBootstrapUserPwdResp> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        funs.begin().await?;
+        let items = IamCiCertLdapUserPwdScriptServ::bootstrap_userpwd_for_ldap_accounts_without(&funs, &ctx).await?;
+        funs.commit().await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(IamCiLdapBootstrapUserPwdResp { items })
     }
 }
 
