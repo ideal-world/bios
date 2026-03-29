@@ -95,6 +95,7 @@ impl IamCiCertManageApi {
     async fn ldap_bootstrap_userpwd(
         &self,
         tenant_id: Query<Option<String>>,
+        account_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<IamCiLdapBootstrapUserPwdResp> {
@@ -103,7 +104,7 @@ impl IamCiCertManageApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         funs.begin().await?;
-        let items = IamCiCertLdapUserPwdScriptServ::bootstrap_userpwd_for_ldap_accounts_without(&funs, &ctx).await?;
+        let items = IamCiCertLdapUserPwdScriptServ::bootstrap_userpwd_for_ldap_accounts_without(account_id.0, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(IamCiLdapBootstrapUserPwdResp { items })

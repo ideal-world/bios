@@ -1,6 +1,6 @@
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-use bios_sdk_invoke::clients::reach_client::{ReachClient, ReachMessageAddReq};
+use bios_sdk_invoke::clients::reach_client::{ReachClient, ReachMessageAddSendTaskReq};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::{tokio, TardisFuns, TardisFunsInst};
@@ -76,7 +76,7 @@ impl SmsClient {
     }
 
     /// 添加发送任务（委托 `bios_sdk_invoke::ReachClient::add_send_task`）
-    pub async fn add_send_task(req: &ReachMessageAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_send_task(req: &ReachMessageAddSendTaskReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         ReachClient::add_send_task(req, funs, ctx).await
     }
 }

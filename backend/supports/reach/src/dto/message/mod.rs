@@ -1,4 +1,6 @@
 mod log;
+use std::collections::HashMap;
+
 pub use log::*;
 mod send_req;
 pub use send_req::*;
@@ -126,4 +128,23 @@ pub struct ReachMessageDetailResp {
     pub content_replace: String,
     pub template_content: String,
     pub template_name: String,
+}
+
+#[derive(Debug, poem_openapi::Object, Deserialize, Serialize)]
+pub struct ReachMessageAddSendTaskReq {
+    /// 关联的触达通道
+    pub rel_reach_channel: ReachChannelKind,
+    /// 用户触达接收类型
+    pub receive_kind: ReachReceiveKind,
+    #[oai(validator(max_length = "2000"))]
+    /// 接收主体，分号分隔
+    pub to_res_ids: Vec<String>,
+    #[oai(validator(max_length = "255"))]
+    /// 用户触达签名Id
+    pub rel_reach_msg_signature_id: String,
+    #[oai(validator(max_length = "255"))]
+    /// 用户触达模板Id
+    pub rel_reach_msg_template_id: String,
+    /// 变量替换
+    pub replace: HashMap<String, Option<String>>,
 }
