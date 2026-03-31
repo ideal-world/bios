@@ -175,6 +175,7 @@ async fn build_and_execute_sql_query(
             AND rbum_ext.rel_rbum_kind_attr_id = '{}'
             LEFT JOIN rbum_rel AS rel_third_app ON rel_third_app.tag = 'IamThirdPartyAppAccount' AND rel_third_app.from_rbum_id = iam_account.id
             LEFT JOIN iam_third_party_app as third_party_app ON third_party_app.id = rel_third_app.to_rbum_item_id
+            AND third_party_app.status = 1
         WHERE
             rbum_item.disabled = false
             AND rbum_item.scope_level = 0
@@ -218,7 +219,7 @@ impl LdapSqlWhereBuilder for AccountLdapSqlWhereBuilder {
 
     /// LDAP 属性名 -> 数据库查询字段 映射表 (attr, db_field)
     const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[
-        ("cn", "phone_vcode_cert.ak"),
+        ("cn", "user_pwd_cert.ak"),
         ("uid", "user_pwd_cert.ak"),
         ("samaccountname", "user_pwd_cert.ak"),
         ("mail", "mail_vcode_cert.ak"),

@@ -67,6 +67,7 @@ pub struct ReachTriggerGlobalConfigFilterReq {
 
     /// 关联的触达通道
     pub rel_reach_channel: Option<ReachChannelKind>,
+    pub rel_reach_channels: Option<Vec<ReachChannelKind>>,
 
     #[oai(validator(max_length = "255"))]
     /// 用户触达消息签名Id

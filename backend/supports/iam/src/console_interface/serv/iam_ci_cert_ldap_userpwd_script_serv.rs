@@ -86,7 +86,7 @@ impl IamCiCertLdapUserPwdScriptServ {
             let phone = IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx)
                 .await
                 .map(|cert| cert.ak);
-            if phone.is_ok() {
+            if phone.is_err() {
                 continue;
             }
 
@@ -123,9 +123,9 @@ impl IamCiCertLdapUserPwdScriptServ {
             SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
                 rel_reach_channel: "SMS".to_string(),
                 receive_kind: "ACCOUNT".to_string(),
-                to_res_ids: vec![phone.unwrap_or_default()],
-                rel_reach_msg_signature_id: "d28ebe9f89020277c929e1edc685d804".to_string(),
-                rel_reach_msg_template_id: "SMS_495020261".to_string(),
+                to_res_ids: vec![account_id.clone()],
+                rel_reach_msg_signature_id: "3l_KVlGmhIcVd-aZT9yze".to_string(),
+                rel_reach_msg_template_id: "Xq-qkmUYpZl8L3RbH3si6".to_string(),
                 replace: replace,
             }, funs, ctx).await?;
         }

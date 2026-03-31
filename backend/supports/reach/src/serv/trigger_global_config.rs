@@ -98,6 +98,7 @@ impl
         query
             .and_where_option(filter.rel_reach_trigger_scene_id.as_ref().map(|v| trigger_global_config::Column::RelReachTriggerSceneId.eq(v)))
             .and_where_option(filter.rel_reach_channel.map(|v| trigger_global_config::Column::RelReachChannel.eq(v)))
+            .and_where_option(filter.rel_reach_channels.as_ref().map(|v| trigger_global_config::Column::RelReachChannel.is_in(v)))
             .and_where_option(filter.rel_reach_msg_signature_id.as_ref().map(|v| trigger_global_config::Column::RelReachMsgSignatureId.eq(v)))
             .and_where_option(filter.rel_reach_msg_template_id.as_ref().map(|v| trigger_global_config::Column::RelReachMsgTemplateId.eq(v)))
             .and_where(trigger_global_config::Column::RelReachChannel.is_not_in(&filter.not_ids));

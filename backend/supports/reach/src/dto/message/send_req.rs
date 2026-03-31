@@ -10,6 +10,8 @@ pub struct ReachMsgSendReq {
     pub rel_item_id: String,
     #[oai(default)]
     pub replace: HashMap<String, Option<String>>,
+    /// 关联的触达通道
+    pub rel_reach_channels: Option<Vec<ReachChannelKind>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, poem_openapi::Object, Clone)]
