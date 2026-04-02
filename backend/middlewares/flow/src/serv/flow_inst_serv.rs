@@ -2791,7 +2791,10 @@ impl FlowInstServ {
                 .iter()
                 .map(|inst| async {
                     let ctx_cp = ctx.clone();
-                    let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, &ctx_cp).await;
+                    let mut inst_funs = flow_constants::get_tardis_inst();
+                    inst_funs.begin().await.unwrap_or_default();
+                    let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, &inst_funs, &ctx_cp).await;
+                    inst_funs.commit().await.unwrap_or_default();
                     match task_handler_helper::execute_async_task(&ctx_cp).await {
                         Ok(_) => {}
                         Err(e) => error!("flow Instance {} add search task error:{:?}", inst.id, e),
