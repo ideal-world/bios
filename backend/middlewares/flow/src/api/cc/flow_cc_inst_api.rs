@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde_json::Value;
+use tardis::basic::result::TardisResult;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -18,6 +19,7 @@ use crate::dto::flow_model_dto::FlowModelDetailResp;
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
+use crate::serv::clients::cache_client::{CacheSpinLockConfig, FlowCacheClient};
 use crate::serv::flow_inst_serv::FlowInstServ;
 #[derive(Clone)]
 pub struct FlowCcInstApi;
@@ -45,9 +47,23 @@ impl FlowCcInstApi {
     #[oai(path = "/try", method = "post")]
     async fn try_start(&self, add_req: Json<FlowInstStartReq>, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        let result = FlowInstServ::try_start(&add_req.0, None, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        let lock_key = format!(
+            "flow:spin:try_start:{}:{}:{}",
+            ctx.0.own_paths,
+            add_req.0.rel_business_obj_id,
+            add_req.0.tag
+        );
+        let token = FlowCacheClient::spin_lock_acquire(&lock_key, &funs, &CacheSpinLockConfig::default()).await?;
+        let try_result: TardisResult<String> = {
+            funs.begin().await?;
+            let result = FlowInstServ::try_start(&add_req.0, None, &funs, &ctx.0).await?;
+            funs.commit().await?;
+            Ok(result)
+        };
+        // `commit` consumes `funs`; use a fresh inst for cache unlock (same domain / Redis config).
+        let funs_cache = flow_constants::get_tardis_inst();
+        let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, &funs_cache).await;
+        let result = try_result?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
