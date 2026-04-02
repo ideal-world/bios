@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelModifyReq, RbumRelSimpleFindReq};
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -246,8 +247,8 @@ impl IamThirdPartyAppServ {
         third_party_app_id: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_to_simple_rels(
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        IamRelServ::find_to_rels(
             &IamRelKind::IamThirdPartyAppAccount,
             third_party_app_id,
             None,

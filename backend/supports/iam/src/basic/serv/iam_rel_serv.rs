@@ -717,6 +717,17 @@ impl IamRelServ {
         RbumRelServ::find_to_simple_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
+    pub async fn find_to_rels(
+        rel_kind: &IamRelKind,
+        to_iam_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        RbumRelServ::find_to_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
     pub async fn find_simple_rels(
         filter: &RbumRelFilterReq,
         desc_sort_by_create: Option<bool>,

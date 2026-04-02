@@ -1,5 +1,6 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
@@ -260,7 +261,7 @@ impl IamCcThirdPartyAppApi {
         id: Path<String>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamThirdPartyAppServ::find_rel_account(&id.0, &funs, &ctx.0).await?;
