@@ -126,10 +126,12 @@ impl IamCcThirdPartyAppApi {
         ids: Query<Option<String>>,
         name: Query<Option<String>>,
         external_id: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
         status: Query<Option<IamThirdPartyAppStatusKind>>,
         scope_level: Query<Option<bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
+        with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
@@ -140,20 +142,24 @@ impl IamCcThirdPartyAppApi {
         let ids = id.0
             .map(|id| vec![id])
             .or_else(|| ids.0.map(|s| s.split(',').map(str::to_string).collect::<Vec<String>>()));
-
-        let result = IamThirdPartyAppServ::paginate_items(
-            &IamThirdPartyAppFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids,
-                    name: name.0,
-                    scope_level: scope_level.0,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                external_id: external_id.0,
-                status: status.0,
+        let mut filter = IamThirdPartyAppFilterReq {
+            basic: RbumBasicFilterReq {
+                ids,
+                name: name.0,
+                scope_level: scope_level.0,
+                with_sub_own_paths: with_sub.0.unwrap_or(false),
                 ..Default::default()
             },
+            external_id: external_id.0,
+            status: status.0,
+            ..Default::default()
+        };
+        if let Some(tenant_id) = tenant_id.0 {
+            filter.basic.own_paths = Some(tenant_id);
+            filter.basic.ignore_scope = true;
+        }
+        let result = IamThirdPartyAppServ::paginate_items(
+            &filter,
             page_number.0,
             page_size.0,
             desc_by_create.0,
