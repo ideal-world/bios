@@ -57,7 +57,7 @@ async fn build_and_execute_app_sql_query(
     let sql = format!(
         r#"
         SELECT
-            iam_third_party_app.external_id,
+            iam_third_party_app.id,
             rbum_item.name,
             iam_third_party_app.sort
         FROM
@@ -72,7 +72,7 @@ async fn build_and_execute_app_sql_query(
     let rel_sql = format!(
         r#"
         SELECT
-            iam_third_party_app.external_id,
+            iam_third_party_app.id,
             rbum_rel_account.to_rbum_item_id,
             phone_vcode_cert.ak as phone,
             iam_third_party_app.sort
@@ -97,12 +97,12 @@ async fn build_and_execute_app_sql_query(
     let mut apps: Vec<LdapAppFields> = result
         .into_iter()
         .map(|row| {
-            let id = row.try_get::<String>("", "external_id").unwrap_or_default();
+            let id = row.try_get::<String>("", "id").unwrap_or_default();
             let name = row.try_get::<String>("", "name").unwrap_or_default();
             let sort = row.try_get::<i64>("", "sort").unwrap_or_default();
             let rel_phones = rel_result
             .iter()
-            .filter(|r| r.try_get::<String>("", "external_id").unwrap_or_default() == id)
+            .filter(|r| r.try_get::<String>("", "id").unwrap_or_default() == id)
             .map(|r| r.try_get::<String>("", "phone").unwrap_or_default()).collect_vec();
             LdapAppFields {
                 id: id.clone(),
@@ -133,7 +133,7 @@ impl LdapSqlWhereBuilder for AppLdapSqlWhereBuilder {
 
     /// LDAP 属性名 -> 数据库查询字段 映射表 (attr, db_field)
     const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[
-        ("cn", "iam_third_party_app.external_id"),
+        ("cn", "iam_third_party_app.id"),
         ("name", "rbum_item.name"),
         ("id", "rbum_item.id"),
     ];

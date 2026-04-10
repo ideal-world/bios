@@ -227,6 +227,25 @@ impl LdapSqlWhereBuilder for AccountLdapSqlWhereBuilder {
         ("displayname", "rbum_item.name"),
         ("givenname", "rbum_item.name"),
         ("sn", "rbum_item.name"),
-        ("memberOf", "third_party_app.external_id"),
+        ("memberOf", "third_party_app.id"),
     ];
+
+    /// memberOf 过滤器中的值与 LDAP 返回一致，为应用条目的完整 DN（`cn=<id>,ou=...`），需解析出 CN 再与 `third_party_app.id` 比较。
+    fn build_equality_where_clause(attribute: &str, value: &str) -> TardisResult<String> {
+        if Self::is_object_class(attribute) {
+            if Self::is_valid_object_class_value(value) {
+                return Ok("1=1".to_string());
+            } else {
+                return Ok("1=0".to_string());
+            }
+        }
+        let value_for_sql = if attribute.eq_ignore_ascii_case("memberOf") {
+            ldap_parser::extract_cn_from_dn(value).filter(|s| !s.is_empty()).unwrap_or_else(|| value.to_string())
+        } else {
+            value.to_string()
+        };
+        let escaped_value = value_for_sql.replace("'", "''");
+        let field = Self::get_db_field(attribute)?;
+        Ok(format!("{} = '{}'", field, escaped_value))
+    }
 }
