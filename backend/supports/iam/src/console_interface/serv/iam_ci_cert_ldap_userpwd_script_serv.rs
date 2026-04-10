@@ -65,8 +65,12 @@ impl IamCiCertLdapUserPwdScriptServ {
         let mut results = vec![];
         for (account_id, ldap_ak) in account_to_ldap_ak {
             let account_ctx = IamAccountServ::is_global_account_context(account_id.as_str(), funs, ctx).await?;
-            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await.is_ok() {
-                continue;
+            if let Ok(pwd_cert)= IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await {
+                if pwd_cert.status == RbumCertStatusKind::Pending {
+                    IamCertServ::delete_cert(&pwd_cert.id, funs, ctx).await?;
+                } else {
+                    continue;
+                }
             }
             let account = IamAccountServ::get_item(
                 account_id.as_str(),
@@ -119,13 +123,14 @@ impl IamCiCertLdapUserPwdScriptServ {
             });
 
             let mut replace = HashMap::new();
+            replace.insert("ak".to_string(), Some(ak.to_string()));
             replace.insert("pwd".to_string(), Some(pwd_plain));
             SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
                 rel_reach_channel: "SMS".to_string(),
                 receive_kind: "ACCOUNT".to_string(),
                 to_res_ids: vec![account_id.clone()],
-                rel_reach_msg_signature_id: "3l_KVlGmhIcVd-aZT9yze".to_string(),
-                rel_reach_msg_template_id: "Xq-qkmUYpZl8L3RbH3si6".to_string(),
+                rel_reach_msg_signature_id: "99a5480d20aa72efefa8d789ad37276c".to_string(),
+                rel_reach_msg_template_id: "U4ug5JXininM9CkwR-cqt".to_string(),
                 replace: replace,
             }, funs, ctx).await?;
         }

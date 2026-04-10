@@ -1813,26 +1813,6 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        if !main.unwrap_or(true) {
-            // clean non-main flow model
-            for model in &models {
-                // abort instances with current ctx
-                let rel_version_ids = FlowModelVersionServ::find_id_items(
-                    &FlowModelVersionFilterReq {
-                        rel_model_ids: Some(vec![model.id.clone()]),
-                        ..Default::default()
-                    },
-                    None,
-                    None,
-                    funs,
-                    ctx,
-                )
-                .await?;
-                for rel_version_id in rel_version_ids {
-                    FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
-                }
-            }
-        }
         for model in models {
             Self::modify_model(
                 &model.id,
