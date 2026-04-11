@@ -20,7 +20,7 @@ use crate::basic::serv::clients::sms_client::SmsClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use crate::iam_config::IamBasicConfigApi;
+use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 use crate::integration::ldap::ldap_parser::extract_cn_from_dn;
 
@@ -125,13 +125,14 @@ impl IamCiCertLdapUserPwdScriptServ {
             let mut replace = HashMap::new();
             replace.insert("ak".to_string(), Some(ak.to_string()));
             replace.insert("pwd".to_string(), Some(pwd_plain));
+            let iam_conf = funs.conf::<IamConfig>();
             SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
                 rel_reach_channel: "SMS".to_string(),
                 receive_kind: "ACCOUNT".to_string(),
                 to_res_ids: vec![account_id.clone()],
-                rel_reach_msg_signature_id: "99a5480d20aa72efefa8d789ad37276c".to_string(),
-                rel_reach_msg_template_id: "U4ug5JXininM9CkwR-cqt".to_string(),
-                replace: replace,
+                rel_reach_msg_signature_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_signature_id.clone(),
+                rel_reach_msg_template_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_template_id.clone(),
+                replace,
             }, funs, ctx).await?;
         }
 
