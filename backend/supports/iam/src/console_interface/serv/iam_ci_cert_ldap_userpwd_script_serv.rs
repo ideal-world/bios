@@ -11,7 +11,6 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use tardis::db::sea_orm::Iden;
 
 use crate::basic::dto::iam_cert_dto::{IamCertUserPwdAddReq, IamCiLdapBootstrapUserPwdItemResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
@@ -65,19 +64,13 @@ impl IamCiCertLdapUserPwdScriptServ {
         let mut results = vec![];
         for (account_id, ldap_ak) in account_to_ldap_ak {
             let account_ctx = IamAccountServ::is_global_account_context(account_id.as_str(), funs, ctx).await?;
-            if let Ok(pwd_cert)= IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await {
-                if pwd_cert.status == RbumCertStatusKind::Pending {
-                    IamCertServ::delete_cert(&pwd_cert.id, funs, ctx).await?;
-                } else {
-                    continue;
-                }
-            }
-            let account = IamAccountServ::get_item(
-                account_id.as_str(),
+            let Some(account) = IamAccountServ::find_one_item(
                 &IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
                         own_paths: Some("".to_string()),
+                        ids: Some(vec![account_id.clone()]),
+                        enabled: Some(true),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -85,7 +78,17 @@ impl IamCiCertLdapUserPwdScriptServ {
                 funs,
                 &account_ctx,
             )
-            .await?;
+            .await?
+            else {
+                continue;
+            };
+            if let Ok(pwd_cert)= IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await {
+                if pwd_cert.status == RbumCertStatusKind::Pending {
+                    IamCertServ::delete_cert(&pwd_cert.id, funs, ctx).await?;
+                } else {
+                    continue;
+                }
+            }
 
             let pwd_plain = IamCertServ::get_new_pwd();
             let ak_source = extract_cn_from_dn(ldap_ak.as_str()).unwrap_or_else(|| ldap_ak.clone());
