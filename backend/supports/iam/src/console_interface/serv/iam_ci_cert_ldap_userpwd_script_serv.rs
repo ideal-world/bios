@@ -86,13 +86,6 @@ impl IamCiCertLdapUserPwdScriptServ {
                 &account_ctx,
             )
             .await?;
-            // 获取账号绑定的手机号
-            let phone = IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx)
-                .await
-                .map(|cert| cert.ak);
-            if phone.is_err() {
-                continue;
-            }
 
             let pwd_plain = IamCertServ::get_new_pwd();
             let ak_source = extract_cn_from_dn(ldap_ak.as_str()).unwrap_or_else(|| ldap_ak.clone());
@@ -121,19 +114,20 @@ impl IamCiCertLdapUserPwdScriptServ {
                 ak: ak.to_string(),
                 password_plain: pwd_plain.clone(),
             });
-
-            let mut replace = HashMap::new();
-            replace.insert("ak".to_string(), Some(ak.to_string()));
-            replace.insert("pwd".to_string(), Some(pwd_plain));
-            let iam_conf = funs.conf::<IamConfig>();
-            SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
-                rel_reach_channel: "SMS".to_string(),
-                receive_kind: "ACCOUNT".to_string(),
-                to_res_ids: vec![account_id.clone()],
-                rel_reach_msg_signature_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_signature_id.clone(),
-                rel_reach_msg_template_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_template_id.clone(),
-                replace,
-            }, funs, ctx).await?;
+            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx).await.is_ok() {
+                let mut replace = HashMap::new();
+                replace.insert("ak".to_string(), Some(ak.to_string()));
+                replace.insert("pwd".to_string(), Some(pwd_plain));
+                let iam_conf = funs.conf::<IamConfig>();
+                SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
+                    rel_reach_channel: "SMS".to_string(),
+                    receive_kind: "ACCOUNT".to_string(),
+                    to_res_ids: vec![account_id.clone()],
+                    rel_reach_msg_signature_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_signature_id.clone(),
+                    rel_reach_msg_template_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_template_id.clone(),
+                    replace,
+                }, funs, ctx).await?;
+            }
         }
 
         Ok(results)
