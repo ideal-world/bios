@@ -29,6 +29,6 @@ COPY config/locale ./config/locale/
 COPY ./bios-serv-ldap ./bios-serv-ldap
 
 # LDAP 端口
-EXPOSE 30389
+EXPOSE 10389
 
 CMD ["./bios-serv-ldap"]
