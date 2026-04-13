@@ -101,7 +101,7 @@ pub struct IamConfig {
 #[serde(default)]
 pub struct IamLdapConfig {
     pub port: u16,
-    pub dc: String,
+    pub dc: Vec<String>,
     pub base_dn: String,
     pub bind_dn: String,
     pub bind_password: String,
@@ -124,11 +124,11 @@ pub struct IamLdapConfig {
 
 impl Default for IamLdapConfig {
     fn default() -> Self {
-        let dc = "bios".to_string();
+        let dc = vec!["bios".to_string()];
         IamLdapConfig {
             port: 10389,
             dc: dc.clone(),
-            base_dn: format!("DC={}", dc),
+            base_dn: format!("DC={}", dc[0]),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
             ou_staff: "staff".to_string(),
