@@ -2790,16 +2790,7 @@ impl FlowInstServ {
             insts
                 .iter()
                 .map(|inst| async {
-                    let ctx_cp = ctx.clone();
-                    let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, &ctx_cp).await;
-                    match task_handler_helper::execute_async_task(&ctx_cp).await {
-                        Ok(_) => {}
-                        Err(e) => error!("flow Instance {} add search task error:{:?}", inst.id, e),
-                    }
-                    match ctx_cp.execute_task().await {
-                        Ok(_) => {}
-                        Err(e) => error!("flow Instance {} execute_task error:{:?}", inst.id, e),
-                    }
+                    let result = Self::abort(&inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await;
                     result
                 })
                 .collect_vec(),
@@ -4775,6 +4766,8 @@ impl FlowInstServ {
         comments.push(FlowInstCommentInfo {
             id: Some(comment_id.clone()),
             output_message: add_comment.output_message.clone(),
+            attachments: add_comment.attachments.clone(),
+            images: add_comment.images.clone(),
             owner: ctx.owner.clone(),
             parent_comment_id: add_comment.parent_comment_id.clone(),
             parent_owner: add_comment.parent_owner.clone(),

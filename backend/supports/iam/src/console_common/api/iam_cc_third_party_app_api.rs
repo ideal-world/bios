@@ -1,5 +1,6 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
@@ -125,10 +126,12 @@ impl IamCcThirdPartyAppApi {
         ids: Query<Option<String>>,
         name: Query<Option<String>>,
         external_id: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
         status: Query<Option<IamThirdPartyAppStatusKind>>,
         scope_level: Query<Option<bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
+        with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
@@ -139,20 +142,24 @@ impl IamCcThirdPartyAppApi {
         let ids = id.0
             .map(|id| vec![id])
             .or_else(|| ids.0.map(|s| s.split(',').map(str::to_string).collect::<Vec<String>>()));
-
-        let result = IamThirdPartyAppServ::paginate_items(
-            &IamThirdPartyAppFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids,
-                    name: name.0,
-                    scope_level: scope_level.0,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                external_id: external_id.0,
-                status: status.0,
+        let mut filter = IamThirdPartyAppFilterReq {
+            basic: RbumBasicFilterReq {
+                ids,
+                name: name.0,
+                scope_level: scope_level.0,
+                with_sub_own_paths: with_sub.0.unwrap_or(false),
                 ..Default::default()
             },
+            external_id: external_id.0,
+            status: status.0,
+            ..Default::default()
+        };
+        if let Some(tenant_id) = tenant_id.0 {
+            filter.basic.own_paths = Some(tenant_id);
+            filter.basic.ignore_scope = true;
+        }
+        let result = IamThirdPartyAppServ::paginate_items(
+            &filter,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -260,10 +267,28 @@ impl IamCcThirdPartyAppApi {
         id: Path<String>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamThirdPartyAppServ::find_rel_account(&id.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Third Party Apps Bound To Account
+    /// 获取账号所关联的所有第三方应用
+    #[oai(path = "/by_account/:account_id", method = "get")]
+    async fn find_rel_third_party_app(
+        &self,
+        account_id: Path<String>,
+        /// 是否可见：true-筛选ext.visible为true或ext为null；false-筛选ext.visible为false；不传则忽略
+        visible: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamThirdPartyAppSummaryResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamThirdPartyAppServ::find_rel_third_party_app(&account_id.0, visible.0, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

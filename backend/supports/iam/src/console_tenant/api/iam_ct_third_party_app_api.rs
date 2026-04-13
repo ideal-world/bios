@@ -1,5 +1,6 @@
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
@@ -170,7 +171,7 @@ impl IamCtThirdPartyAppApi {
         id: Path<String>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamThirdPartyAppServ::find_rel_account(&id.0, &funs, &ctx.0).await?;
@@ -200,24 +201,6 @@ impl IamCtThirdPartyAppApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
-    }
-
-    /// Find Third Party Apps Bound To Account
-    /// 获取账号所关联的所有第三方应用
-    #[oai(path = "/by_account/:account_id", method = "get")]
-    async fn find_rel_third_party_app(
-        &self,
-        account_id: Path<String>,
-        /// 是否可见：true-筛选ext.visible为true或ext为null；false-筛选ext.visible为false；不传则忽略
-        visible: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Vec<IamThirdPartyAppSummaryResp>> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
-        let result = IamThirdPartyAppServ::find_rel_third_party_app(&account_id.0, visible.0, &funs, &ctx.0).await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
     }
 
     /// Paginate Accounts Bound To Third Party App

@@ -11,7 +11,6 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use tardis::db::sea_orm::Iden;
 
 use crate::basic::dto::iam_cert_dto::{IamCertUserPwdAddReq, IamCiLdapBootstrapUserPwdItemResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
@@ -20,7 +19,7 @@ use crate::basic::serv::clients::sms_client::SmsClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use crate::iam_config::IamBasicConfigApi;
+use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 use crate::integration::ldap::ldap_parser::extract_cn_from_dn;
 
@@ -65,15 +64,13 @@ impl IamCiCertLdapUserPwdScriptServ {
         let mut results = vec![];
         for (account_id, ldap_ak) in account_to_ldap_ak {
             let account_ctx = IamAccountServ::is_global_account_context(account_id.as_str(), funs, ctx).await?;
-            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await.is_ok() {
-                continue;
-            }
-            let account = IamAccountServ::get_item(
-                account_id.as_str(),
+            let Some(account) = IamAccountServ::find_one_item(
                 &IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
                         own_paths: Some("".to_string()),
+                        ids: Some(vec![account_id.clone()]),
+                        enabled: Some(true),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -81,13 +78,16 @@ impl IamCiCertLdapUserPwdScriptServ {
                 funs,
                 &account_ctx,
             )
-            .await?;
-            // 获取账号绑定的手机号
-            let phone = IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx)
-                .await
-                .map(|cert| cert.ak);
-            if phone.is_ok() {
+            .await?
+            else {
                 continue;
+            };
+            if let Ok(pwd_cert)= IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await {
+                if pwd_cert.status == RbumCertStatusKind::Pending {
+                    IamCertServ::delete_cert(&pwd_cert.id, funs, ctx).await?;
+                } else {
+                    continue;
+                }
             }
 
             let pwd_plain = IamCertServ::get_new_pwd();
@@ -117,17 +117,20 @@ impl IamCiCertLdapUserPwdScriptServ {
                 ak: ak.to_string(),
                 password_plain: pwd_plain.clone(),
             });
-
-            let mut replace = HashMap::new();
-            replace.insert("pwd".to_string(), Some(pwd_plain));
-            SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
-                rel_reach_channel: "SMS".to_string(),
-                receive_kind: "ACCOUNT".to_string(),
-                to_res_ids: vec![phone.unwrap_or_default()],
-                rel_reach_msg_signature_id: "d28ebe9f89020277c929e1edc685d804".to_string(),
-                rel_reach_msg_template_id: "SMS_495020261".to_string(),
-                replace: replace,
-            }, funs, ctx).await?;
+            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx).await.is_ok() {
+                let mut replace = HashMap::new();
+                replace.insert("ak".to_string(), Some(ak.to_string()));
+                replace.insert("pwd".to_string(), Some(pwd_plain));
+                let iam_conf = funs.conf::<IamConfig>();
+                SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
+                    rel_reach_channel: "SMS".to_string(),
+                    receive_kind: "ACCOUNT".to_string(),
+                    to_res_ids: vec![account_id.clone()],
+                    rel_reach_msg_signature_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_signature_id.clone(),
+                    rel_reach_msg_template_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_template_id.clone(),
+                    replace,
+                }, funs, ctx).await?;
+            }
         }
 
         Ok(results)

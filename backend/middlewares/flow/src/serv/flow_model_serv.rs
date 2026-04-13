@@ -1326,6 +1326,7 @@ impl FlowModelServ {
             rel_template_ids: rel_template_id.map(|r| vec![r]),
             template: kind != FlowModelKind::AsModel,
             data_source,
+            default: Some(false),
             ..rel_model.clone().into()
         };
         add_req.set_edit_state(false);
@@ -1380,6 +1381,7 @@ impl FlowModelServ {
             rel_template_ids: rel_template_id.clone().map(|r| vec![r]),
             template: kind != FlowModelKind::AsModel,
             data_source,
+            default: Some(false),
             ..rel_model.clone().into()
         };
         if kind == FlowModelKind::AsModel {
@@ -1811,26 +1813,6 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        if !main.unwrap_or(true) {
-            // clean non-main flow model
-            for model in &models {
-                // abort instances with current ctx
-                let rel_version_ids = FlowModelVersionServ::find_id_items(
-                    &FlowModelVersionFilterReq {
-                        rel_model_ids: Some(vec![model.id.clone()]),
-                        ..Default::default()
-                    },
-                    None,
-                    None,
-                    funs,
-                    ctx,
-                )
-                .await?;
-                for rel_version_id in rel_version_ids {
-                    FlowInstServ::unsafe_abort_inst(&rel_version_id, funs, ctx).await?;
-                }
-            }
-        }
         for model in models {
             Self::modify_model(
                 &model.id,
@@ -2861,30 +2843,20 @@ impl FlowModelServ {
                 "404-model-not-found",
             )
         })?;
-        for rel_template_id in &req.rel_template_ids {
+        for (rel_template_id, own_paths) in &req.rel_template_ids {
+            let mock_ctx = TardisContext {
+                own_paths: own_paths.clone(),
+                ..ctx.clone()
+            };
             let new_model = FlowModelServ::copy_or_reference_main_model(
                 &rel_main_model.id,
                 &FlowModelAssociativeOperationKind::ReferenceOrCopy,
                 FlowModelKind::AsTemplateAndAsModel,
-                None,
+                Some(rel_template_id.clone()),
                 &None,
                 None,
                 funs,
-                ctx,
-            )
-            .await?;
-            FlowRelServ::add_simple_rel(
-                &FlowRelKind::FlowModelTemplate,
-                &new_model.id,
-                RbumRelFromKind::Item,
-                rel_template_id,
-                None,
-                None,
-                false,
-                true,
-                None,
-                funs,
-                ctx,
+                &mock_ctx,
             )
             .await?;
             if req.sync_inst {

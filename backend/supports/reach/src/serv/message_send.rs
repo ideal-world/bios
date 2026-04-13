@@ -43,6 +43,7 @@ pub async fn message_send(send_req: ReachMsgSendReq, funs: &TardisFunsInst, ctx:
             },
             ..Default::default()
         },
+        rel_reach_channels: send_req.rel_reach_channels.clone(),
         rel_reach_trigger_scene_id: Some(scene.id.clone()),
         ..Default::default()
     };

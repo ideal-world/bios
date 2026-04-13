@@ -101,7 +101,7 @@ pub struct IamConfig {
 #[serde(default)]
 pub struct IamLdapConfig {
     pub port: u16,
-    pub dc: String,
+    pub dc: Vec<String>,
     pub base_dn: String,
     pub bind_dn: String,
     pub bind_password: String,
@@ -116,15 +116,19 @@ pub struct IamLdapConfig {
     pub labor_type_map: Option<std::collections::HashMap<String, String>>,
     /// Position translation map: code -> label
     pub position_map: Option<std::collections::HashMap<String, String>>,
+    /// Reach 短信签名 ID：为仅有 LDAP 凭证的账号补全 UserPwd 时发送初始密码短信
+    pub ldap_bootstrap_userpwd_reach_msg_signature_id: String,
+    /// Reach 短信模板 ID：同上
+    pub ldap_bootstrap_userpwd_reach_msg_template_id: String,
 }
 
 impl Default for IamLdapConfig {
     fn default() -> Self {
-        let dc = "bios".to_string();
+        let dc = vec!["bios".to_string()];
         IamLdapConfig {
             port: 10389,
             dc: dc.clone(),
-            base_dn: format!("DC={}", dc),
+            base_dn: format!("DC={}", dc[0]),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
             ou_staff: "staff".to_string(),
@@ -133,6 +137,8 @@ impl Default for IamLdapConfig {
             schema_dn: "cn=Subschema".to_string(),
             labor_type_map: None,
             position_map: None,
+            ldap_bootstrap_userpwd_reach_msg_signature_id: "".to_string(),
+            ldap_bootstrap_userpwd_reach_msg_template_id: "".to_string(),
         }
     }
 }

@@ -208,7 +208,7 @@ pub fn identify_entity_type(req: &SearchRequest, config: &IamLdapConfig) -> Ldap
     LdapEntityType::Entry
 }
 
-pub fn parse_base_dn_components(base: &str, config: &IamLdapConfig) -> (Option<String>, Option<String>, Option<String>) {
+pub fn parse_base_dn_components(base: &str, config: &IamLdapConfig) -> (Option<String>, Option<String>, Option<Vec<String>>) {
     let mut cn = None;
     let mut ou = None;
     let mut dc = None;

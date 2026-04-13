@@ -21,18 +21,20 @@ impl LdapEntity {
     /// DC 节点的 DN 格式为 DC={dc}，父 DN 为 空字符串（根节点）
     pub fn build_dc_node(config: &IamLdapConfig) -> Self {
         let dn = config.base_dn.clone();
-        let attributes = vec![
-            // dc: 域组件
-            LdapPartialAttribute {
-                atype: "dc".to_string(),
-                vals: vec![config.dc.clone().into()],
-            },
+        let mut attributes = vec![
             // objectClass: 对象类
             LdapPartialAttribute {
                 atype: "objectClass".to_string(),
                 vals: vec!["top".to_string().into(), "domain".to_string().into()],
             },
         ];
+        for dc in config.dc.clone() {
+            attributes.push(LdapPartialAttribute {
+                atype: "dc".to_string(),
+                vals: vec![dc.into()],
+            });
+        }
+        
         Self {
             entry: LdapSearchResultEntry { dn, attributes },
             parent_dn: "".to_string(),

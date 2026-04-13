@@ -132,7 +132,7 @@ impl MessageSendListener {
                 }
             }
         }
-        if to.is_empty() {
+        if to.is_empty() && cert_key.is_some() {
             log::warn!("[Reach] Notify channel send error, no valid receivers found, message id: {}", message.id);
             return Err(TardisError::not_found("missing receivers", "404-reach-message-receivers-not-found"));
         }

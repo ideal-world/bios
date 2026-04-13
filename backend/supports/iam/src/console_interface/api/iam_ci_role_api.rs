@@ -86,6 +86,22 @@ impl IamCiRoleApi {
         TardisResp::ok(verify_tenant_admin)
     }
 
+    /// Get verify role read
+    /// 验证角色只读角色
+    #[oai(path = "/verify/read/admin", method = "get")]
+    async fn get_verify_role_read(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut verify_read_admin = false;
+        for role in &ctx.0.roles {
+            if role.contains(&funs.iam_basic_role_app_read_id()) {
+                verify_read_admin = true;
+            }
+        }
+        TardisResp::ok(verify_read_admin)
+    }
+
     /// Batch add Role Rel Account
     /// 批量添加角色关联账号
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
