@@ -78,6 +78,11 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
             atype: "objectClass".to_string(),
             vals: vec!["top".to_string().into(), "extensibleObject".to_string().into()],
         },
+        // structuralObjectClass: 条目的结构对象类（Root DSE 与 extensibleObject 组合时取 extensibleObject）
+        LdapPartialAttribute {
+            atype: "structuralObjectClass".to_string(),
+            vals: vec!["extensibleObject".to_string().into()],
+        },
         // namingContexts: 命名上下文（base DN）
         LdapPartialAttribute {
             atype: "namingContexts".to_string(),
@@ -93,20 +98,71 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
             atype: "supportedLDAPVersion".to_string(),
             vals: vec!["3".to_string().into()],
         },
-        // supportedSASLMechanisms: 支持的 SASL 机制
+        // supportedSASLMechanisms: 与参考环境对齐（联调/测试）；实际绑定能力仍以 ldap_server 为准
         LdapPartialAttribute {
             atype: "supportedSASLMechanisms".to_string(),
-            vals: vec!["PLAIN".to_string().into()],
+            vals: [
+                "SCRAM-SHA-1",
+                "SCRAM-SHA-256",
+                "GS2-IAKERB",
+                "GS2-KRB5",
+                "GSSAPI",
+                "GSS-SPNEGO",
+                "DIGEST-MD5",
+                "OTP",
+                "CRAM-MD5",
+                "NTLM",
+            ]
+            .into_iter()
+            .map(|s| s.into())
+            .collect(),
         },
-        // supportedControl: 支持的 LDAP 控制（OID）；当前未对控制做专门处理，列表为空
+        // supportedControl: 与常见 OpenLDAP 等 Root DSE 对齐（用于联调/测试）；服务端未必实现全部控制语义
         LdapPartialAttribute {
             atype: "supportedControl".to_string(),
-            vals: vec![],
+            vals: [
+                "1.3.6.1.4.1.4203.1.9.1.1",     // LDAP Content Sync (RFC 4533)
+                "2.16.840.1.113730.3.4.18",     // Proxy Authorization
+                "2.16.840.1.113730.3.4.2",      // ManageDsaIT (RFC 3296)
+                "1.3.6.1.4.1.4203.1.10.1",      // Subentry Request (RFC 3672)
+                "1.3.6.1.1.22",                 // Don't Use Copy (RFC 6171)
+                "1.2.840.113556.1.4.319",       // Simple Paged Results (RFC 2696)
+                "1.2.826.0.1.3344810.2.3",      // Matched Values (RFC 3876)
+                "1.3.6.1.1.13.2",               // Post-read (RFC 4527)
+                "1.3.6.1.1.13.1",               // Pre-read (RFC 4527)
+                "1.3.6.1.1.12",                 // Assertion (RFC 4528)
+            ]
+            .into_iter()
+            .map(|s| s.into())
+            .collect(),
         },
-        // supportedExtension: 支持的扩展操作（OID）；Who Am I（RFC 4532）见 ldap_server::do_whoami
+        // supportedExtension: 与常见 OpenLDAP 等对齐（联调/测试）；未必均已实现
         LdapPartialAttribute {
             atype: "supportedExtension".to_string(),
-            vals: vec!["1.3.6.1.4.1.4203.1.11.3".to_string().into()],
+            vals: [
+                "1.3.6.1.4.1.1466.20037", // StartTLS (RFC 4511 / 2830)
+                "1.3.6.1.4.1.4203.1.11.1", // Password Modify (RFC 3062)
+                "1.3.6.1.4.1.4203.1.11.3", // Who Am I (RFC 4532) — ldap_server::do_whoami
+                "1.3.6.1.1.8",            // Cancel (RFC 3909)
+            ]
+            .into_iter()
+            .map(|s| s.into())
+            .collect(),
+        },
+        // supportedFeatures: LDAP 特性 OID（RFC 4512 / OpenLDAP 常用集合）
+        LdapPartialAttribute {
+            atype: "supportedFeatures".to_string(),
+            vals: [
+                "1.3.6.1.1.14",           // RFC 4512: All Op Attrs
+                "1.3.6.1.4.1.4203.1.5.1", // OpenLDAP: modifyName
+                "1.3.6.1.4.1.4203.1.5.2", // OpenLDAP: True/False filters
+                "1.3.6.1.4.1.4203.1.5.3", // OpenLDAP: language tag options
+                "1.3.6.1.4.1.4203.1.5.4", // OpenLDAP: language range options
+                "1.3.6.1.4.1.4203.1.5.5", // OpenLDAP: absolute LDAP v3
+            ]
+            .into_iter()
+            .map(|s| s.into())
+            .collect(),
         },
         // vendorName: 供应商名称
         LdapPartialAttribute {
@@ -140,6 +196,11 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         LdapPartialAttribute {
             atype: "objectClass".to_string(),
             vals: vec!["subschema".to_string().into(), "top".to_string().into()],
+        },
+        // structuralObjectClass: subschema 为条目结构类（RFC 4512 subschema 子条目）
+        LdapPartialAttribute {
+            atype: "structuralObjectClass".to_string(),
+            vals: vec!["subschema".to_string().into()],
         },
     ];
 
