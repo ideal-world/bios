@@ -73,6 +73,11 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
     }
     // 构建所有可用的 RootDSE 属性
     let all_attributes = vec![
+        // objectClass: Root DSE 条目类（top + extensibleObject 为常见组合）
+        LdapPartialAttribute {
+            atype: "objectClass".to_string(),
+            vals: vec!["top".to_string().into(), "extensibleObject".to_string().into()],
+        },
         // namingContexts: 命名上下文（base DN）
         LdapPartialAttribute {
             atype: "namingContexts".to_string(),
@@ -92,6 +97,16 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
         LdapPartialAttribute {
             atype: "supportedSASLMechanisms".to_string(),
             vals: vec!["PLAIN".to_string().into()],
+        },
+        // supportedControl: 支持的 LDAP 控制（OID）；当前未对控制做专门处理，列表为空
+        LdapPartialAttribute {
+            atype: "supportedControl".to_string(),
+            vals: vec![],
+        },
+        // supportedExtension: 支持的扩展操作（OID）；Who Am I（RFC 4532）见 ldap_server::do_whoami
+        LdapPartialAttribute {
+            atype: "supportedExtension".to_string(),
+            vals: vec!["1.3.6.1.4.1.4203.1.11.3".to_string().into()],
         },
         // vendorName: 供应商名称
         LdapPartialAttribute {
