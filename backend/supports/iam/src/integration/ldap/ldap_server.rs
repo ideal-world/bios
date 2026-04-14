@@ -58,6 +58,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::futures::SinkExt;
 use tardis::futures::StreamExt;
+use tardis::log::warn;
 use tardis::log::{error, info, trace};
 
 use tardis::tokio::net::{TcpListener, TcpStream};
@@ -262,7 +263,7 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
 
     while let Some(msg) = reqs.next().await {
         let server_op = match msg.map_err(|_e| ()).and_then(|msg| {
-            trace!("[TardisLdapServer] Received message:{:?}", msg);
+            warn!("[TardisLdapServer] Received message:{:?}", msg);
             ServerOps::try_from(msg)
         }) {
             Ok(v) => v,
@@ -272,7 +273,7 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
                 return;
             }
         };
-
+        warn!("[TardisLdapServer] Received server_op:{:?}", server_op);
         let result = match server_op {
             ServerOps::SimpleBind(req) => vec![session.do_bind(&req, config).await],
             ServerOps::Search(req) => session.do_search(&req, config).await,
