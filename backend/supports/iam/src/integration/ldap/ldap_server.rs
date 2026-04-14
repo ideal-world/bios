@@ -273,7 +273,7 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
                 return;
             }
         };
-        warn!("[TardisLdapServer] Received server_op:{:?}", server_op);
+        let request_debug = format!("{:?}", &server_op);
         let result = match server_op {
             ServerOps::SimpleBind(req) => vec![session.do_bind(&req, config).await],
             ServerOps::Search(req) => session.do_search(&req, config).await,
@@ -288,6 +288,12 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
             }
         };
 
+        warn!(
+            "[TardisLdapServer] ldap request command={}, response ({} message(s)): {:?}",
+            request_debug,
+            result.len(),
+            result
+        );
         for rmsg in result.into_iter() {
             if resp.send(rmsg).await.is_err() {
                 return;
