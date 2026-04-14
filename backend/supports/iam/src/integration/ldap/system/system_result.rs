@@ -128,15 +128,18 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         },
     ];
 
-    // objectClasses: 对象类定义（我们支持的对象类）
+    // objectClasses: 与 ldap_entity / account_result / app_result / org_result 中实际返回的 objectClass 一致
+    // （域根 domain+top、OU organizationalUnit+top、账户 inetOrgPerson+uidObject+top、应用组 groupOfUniqueNames+top）
     let object_classes = vec![
+        "( 2.5.6.0 NAME 'top' ABSTRACT MUST objectClass )",
         "( 2.5.6.6 NAME 'person' SUP top STRUCTURAL MUST ( sn $ cn ) MAY ( userPassword $ telephoneNumber $ seeAlso $ description ) )",
         "( 2.5.6.7 NAME 'organizationalPerson' SUP person STRUCTURAL MAY ( title $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ telephoneNumber $ internationaliSDNNumber $ facsimileTelephoneNumber $ street $ postOfficeBox $ postalCode $ postalAddress $ physicalDeliveryOfficeName $ ou $ st $ l ) )",
-        "( 2.5.6.8 NAME 'organizationalUnit' SUP top STRUCTURAL MUST ou MAY ( businessCategory $ description $ destinationIndicator $ facsimileTelephoneNumber $ internationaliSDNNumber $ l $ physicalDeliveryOfficeName $ postOfficeBox $ postalAddress $ postalCode $ preferredDeliveryMethod $ registeredAddress $ searchGuide $ seeAlso $ st $ street $ telephoneNumber $ teletexTerminalIdentifier $ telexNumber $ userPassword $ x121Address ) )",
-        "( 1.3.6.1.4.1.1466.344 NAME 'dcObject' SUP top AUXILIARY MUST dc )",
-        "( 2.5.6.0 NAME 'top' ABSTRACT MUST objectClass )",
-        "( 1.3.6.1.1.3.1 NAME 'uidObject' SUP top AUXILIARY MAY uid )",
         "( 2.16.840.1.113730.3.2.2 NAME 'inetOrgPerson' SUP organizationalPerson STRUCTURAL MAY ( audio $ businessCategory $ carLicense $ departmentNumber $ displayName $ employeeNumber $ employeeType $ givenName $ homePhone $ homePostalAddress $ initials $ jpegPhoto $ labeledURI $ mail $ manager $ mobile $ o $ pager $ photo $ roomNumber $ secretary $ uid $ userCertificate $ x500uniqueIdentifier $ preferredLanguage $ userSMIMECertificate $ userPKCS12 ) )",
+        "( 2.5.6.8 NAME 'organizationalUnit' SUP top STRUCTURAL MUST ou MAY ( businessCategory $ description $ destinationIndicator $ facsimileTelephoneNumber $ internationaliSDNNumber $ l $ physicalDeliveryOfficeName $ postOfficeBox $ postalAddress $ postalCode $ preferredDeliveryMethod $ registeredAddress $ searchGuide $ seeAlso $ st $ street $ telephoneNumber $ teletexTerminalIdentifier $ telexNumber $ userPassword $ x121Address ) )",
+        "( 1.2.840.113556.1.5.9 NAME 'domain' SUP top STRUCTURAL MUST dc )",
+        "( 1.3.6.1.4.1.1466.344 NAME 'dcObject' SUP top AUXILIARY MUST dc )",
+        "( 1.3.6.1.1.3.1 NAME 'uidObject' SUP top AUXILIARY MAY uid )",
+        "( 2.5.6.18 NAME 'groupOfUniqueNames' SUP top STRUCTURAL MUST ( cn $ uniqueMember ) MAY ( businessCategory $ seeAlso $ owner $ ou $ o $ description ) )",
     ];
     all_attributes.push(LdapPartialAttribute {
         atype: "objectClasses".to_string(),
@@ -161,6 +164,7 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         "( 2.5.4.25 NAME 'postalCode' )",
         "( 2.5.4.26 NAME 'postalAddress' )",
         "( 2.5.4.31 NAME 'member' )",
+        "( 2.5.4.50 NAME 'uniqueMember' EQUALITY uniqueMemberMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.34 )",
         "( 2.5.4.41 NAME 'name' )",
         "( 2.5.4.42 NAME ( 'givenName' 'gn' ) SUP name )",
         "( 2.5.4.43 NAME 'initials' SUP name )",
