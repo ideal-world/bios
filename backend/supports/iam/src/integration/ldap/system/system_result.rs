@@ -223,7 +223,17 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
     });
 
     // attributeTypes: RFC 4512 AttributeTypeDescription（RFC 4519 / 2798 等）
+    // 先列出 subschema 元属性与条目中出现的操作属性（RFC 4512 §3.3 / §3.4 / §4.2），再列业务属性
     let attribute_types = vec![
+        "( 2.5.4.0 NAME 'objectClass' EQUALITY objectIdentifierMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )",
+        "( 2.5.21.9 NAME 'structuralObjectClass' EQUALITY objectIdentifierMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
+        "( 2.5.21.6 NAME 'objectClasses' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.37 USAGE directoryOperation )",
+        "( 2.5.21.5 NAME 'attributeTypes' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.3 USAGE directoryOperation )",
+        "( 2.5.21.4 NAME 'matchingRules' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.30 USAGE directoryOperation )",
+        "( 2.5.21.8 NAME 'matchingRuleUse' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.31 USAGE directoryOperation )",
+        "( 1.3.6.1.4.1.1466.101.120.16 NAME 'ldapSyntaxes' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.54 USAGE directoryOperation )",
+        "( 2.5.18.1 NAME 'createTimestamp' EQUALITY generalizedTimeMatch ORDERING generalizedTimeOrderingMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.24 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
+        "( 2.5.18.2 NAME 'modifyTimestamp' EQUALITY generalizedTimeMatch ORDERING generalizedTimeOrderingMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.24 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
         "( 2.5.4.3 NAME 'cn' SUP name )",
         "( 2.5.4.4 NAME 'sn' SUP name )",
         "( 2.5.4.5 NAME 'serialNumber' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 )",
@@ -306,6 +316,7 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
 
     // matchingRules: RFC 4517 MatchingRuleDescription（X.521 OID 编号与 RFC 2252 不同）
     let matching_rules = vec![
+        "( 2.5.13.0 NAME 'objectIdentifierMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )",
         "( 2.5.13.1 NAME 'distinguishedNameMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )",
         "( 2.5.13.2 NAME 'caseIgnoreMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 2.5.13.3 NAME 'caseIgnoreOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
@@ -340,6 +351,8 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
 
     // matchingRuleUse: MatchingRuleUseDescription（规则 OID 须与 matchingRules 一致；APPLIES 仅含本段 attributeTypes）
     let matching_rule_use = vec![
+        "( 2.5.13.0 APPLIES ( objectClass $ structuralObjectClass ) )",
+        "( 2.5.13.30 APPLIES ( attributeTypes $ objectClasses $ matchingRules $ matchingRuleUse $ ldapSyntaxes ) )",
         "( 2.5.13.1 APPLIES ( member ) )",
         "( 2.5.13.2 APPLIES ( cn $ sn $ c $ l $ st $ street $ o $ ou $ title $ description $ businessCategory $ postalCode $ name $ givenName $ initials $ generationQualifier $ houseIdentifier $ uid $ sAMAccountName $ displayName $ employeeNumber $ employeeType $ serialNumber ) )",
         "( 2.5.13.3 APPLIES ( dnQualifier ) )",
