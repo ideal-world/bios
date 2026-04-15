@@ -151,7 +151,7 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         "( 2.5.6.0 NAME 'top' ABSTRACT MUST objectClass )",
         "( 2.5.6.6 NAME 'person' SUP top STRUCTURAL MUST ( sn $ cn ) MAY ( userPassword $ telephoneNumber $ seeAlso $ description ) )",
         "( 2.5.6.7 NAME 'organizationalPerson' SUP person STRUCTURAL MAY ( title $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ telephoneNumber $ internationalISDNNumber $ facsimileTelephoneNumber $ street $ postOfficeBox $ postalCode $ postalAddress $ physicalDeliveryOfficeName $ ou $ st $ l ) )",
-        "( 2.16.840.1.113730.3.2.2 NAME 'inetOrgPerson' SUP organizationalPerson STRUCTURAL MAY ( audio $ businessCategory $ carLicense $ departmentNumber $ displayName $ employeeNumber $ employeeType $ givenName $ homePhone $ homePostalAddress $ initials $ jpegPhoto $ labeledURI $ mail $ manager $ mobile $ o $ pager $ photo $ roomNumber $ secretary $ uid $ userCertificate $ x500uniqueIdentifier $ preferredLanguage $ userSMIMECertificate $ userPKCS12 ) )",
+        "( 2.16.840.1.113730.3.2.2 NAME 'inetOrgPerson' SUP organizationalPerson STRUCTURAL MAY ( audio $ businessCategory $ carLicense $ departmentNumber $ displayName $ employeeNumber $ employeeType $ givenName $ homePhone $ homePostalAddress $ initials $ jpegPhoto $ labeledURI $ mail $ manager $ memberOf $ mobile $ o $ pager $ photo $ roomNumber $ secretary $ uid $ userCertificate $ x500uniqueIdentifier $ preferredLanguage $ userSMIMECertificate $ userPKCS12 ) )",
         "( 2.5.6.5 NAME 'organizationalUnit' SUP top STRUCTURAL MUST ou MAY ( businessCategory $ description $ destinationIndicator $ facsimileTelephoneNumber $ internationalISDNNumber $ l $ physicalDeliveryOfficeName $ postalAddress $ postalCode $ postOfficeBox $ preferredDeliveryMethod $ registeredAddress $ searchGuide $ seeAlso $ st $ street $ telephoneNumber $ teletexTerminalIdentifier $ telexNumber $ userPassword $ x121Address ) )",
         "( 0.9.2342.19200300.100.4.13 NAME 'domain' SUP top STRUCTURAL MUST dc MAY ( userPassword $ searchGuide $ seeAlso $ businessCategory $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ telephoneNumber $ internationaliSDNNumber $ facsimileTelephoneNumber $ street $ postOfficeBox $ postalCode $ postalAddress $ physicalDeliveryOfficeName $ st $ l $ description $ o $ associatedName ) )",
         "( 1.3.6.1.4.1.1466.344 NAME 'dcObject' SUP top AUXILIARY MUST dc )",
@@ -191,6 +191,8 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         "( 2.5.4.17 NAME 'postalCode' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 2.5.4.16 NAME 'postalAddress' EQUALITY caseIgnoreListMatch SUBSTR caseIgnoreListSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.41 )",
         "( 2.5.4.31 NAME 'member' SUP distinguishedName )",
+        // memberOf：组成员关系（虚拟/操作属性，与 account 搜索中返回的 memberOf 及过滤器一致；JumpServer 等会校验 subschema）
+        "( 1.2.840.113556.1.4.31 NAME 'memberOf' EQUALITY distinguishedNameMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 USAGE directoryOperation )",
         "( 2.5.4.50 NAME 'uniqueMember' EQUALITY uniqueMemberMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.34 )",
         "( 2.5.4.41 NAME 'name' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 2.5.4.42 NAME 'givenName' SUP name )",
@@ -294,7 +296,7 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
     let matching_rule_use = vec![
         "( 2.5.13.0 APPLIES ( objectClass $ structuralObjectClass ) )",
         "( 2.5.13.30 APPLIES ( attributeTypes $ objectClasses $ matchingRules $ matchingRuleUse $ ldapSyntaxes ) )",
-        "( 2.5.13.1 APPLIES ( member ) )",
+        "( 2.5.13.1 APPLIES ( member $ memberOf ) )",
         "( 2.5.13.2 APPLIES ( cn $ sn $ c $ l $ st $ street $ o $ ou $ title $ description $ businessCategory $ postalCode $ name $ givenName $ initials $ generationQualifier $ houseIdentifier $ uid $ sAMAccountName $ displayName $ employeeNumber $ employeeType $ serialNumber ) )",
         "( 2.5.13.3 APPLIES ( dnQualifier ) )",
         "( 2.5.13.4 APPLIES ( cn $ sn $ c $ l $ st $ street $ o $ ou $ title $ description $ businessCategory $ postalCode $ name $ givenName $ initials $ generationQualifier $ dnQualifier $ houseIdentifier $ uid $ sAMAccountName $ displayName $ employeeNumber $ employeeType $ serialNumber ) )",
