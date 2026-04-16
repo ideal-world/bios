@@ -73,6 +73,16 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
     }
     // 构建所有可用的 RootDSE 属性
     let all_attributes = vec![
+        // objectClass: Root DSE 条目类（top + extensibleObject 为常见组合）
+        LdapPartialAttribute {
+            atype: "objectClass".to_string(),
+            vals: vec!["top".to_string().into(), "extensibleObject".to_string().into()],
+        },
+        // structuralObjectClass: 条目的结构对象类（Root DSE 与 extensibleObject 组合时取 extensibleObject）
+        LdapPartialAttribute {
+            atype: "structuralObjectClass".to_string(),
+            vals: vec!["extensibleObject".to_string().into()],
+        },
         // namingContexts: 命名上下文（base DN）
         LdapPartialAttribute {
             atype: "namingContexts".to_string(),
@@ -88,10 +98,12 @@ fn build_root_dse_attributes(config: &IamLdapConfig, query: &LdapSearchQuery) ->
             atype: "supportedLDAPVersion".to_string(),
             vals: vec!["3".to_string().into()],
         },
-        // supportedSASLMechanisms: 支持的 SASL 机制
+        // supportedExtension: 仅声明 ldap_server 中已实现并路由的扩展操作（见 ServerOps::Whoami / do_whoami）
+        // 未实现：SASL、StartTLS、Password Modify、Cancel；故不列出 supportedSASLMechanisms；
+        // 搜索请求未解析/实现 LDAP 控制，故不列出 supportedControl；无 RFC 4512 特性位实现，故不列出 supportedFeatures。
         LdapPartialAttribute {
-            atype: "supportedSASLMechanisms".to_string(),
-            vals: vec!["PLAIN".to_string().into()],
+            atype: "supportedExtension".to_string(),
+            vals: vec!["1.3.6.1.4.1.4203.1.11.3".into()], // Who Am I (RFC 4532)
         },
         // vendorName: 供应商名称
         LdapPartialAttribute {
@@ -126,137 +138,152 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
             atype: "objectClass".to_string(),
             vals: vec!["subschema".to_string().into(), "top".to_string().into()],
         },
+        // structuralObjectClass: subschema 为条目结构类（RFC 4512 subschema 子条目）
+        LdapPartialAttribute {
+            atype: "structuralObjectClass".to_string(),
+            vals: vec!["subschema".to_string().into()],
+        },
     ];
 
-    // objectClasses: 对象类定义（我们支持的对象类）
+    // objectClasses: 与 ldap_entity / account_result / app_result / org_result 中实际返回的 objectClass 一致
+    // （域根 domain+top、OU organizationalUnit+top、账户 inetOrgPerson+uidObject+top、应用组 groupOfUniqueNames+top）
     let object_classes = vec![
-        "( 2.5.6.6 NAME 'person' SUP top STRUCTURAL MUST ( sn $ cn ) MAY ( userPassword $ telephoneNumber $ seeAlso $ description ) )",
-        "( 2.5.6.7 NAME 'organizationalPerson' SUP person STRUCTURAL MAY ( title $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ telephoneNumber $ internationaliSDNNumber $ facsimileTelephoneNumber $ street $ postOfficeBox $ postalCode $ postalAddress $ physicalDeliveryOfficeName $ ou $ st $ l ) )",
-        "( 2.5.6.8 NAME 'organizationalUnit' SUP top STRUCTURAL MUST ou MAY ( businessCategory $ description $ destinationIndicator $ facsimileTelephoneNumber $ internationaliSDNNumber $ l $ physicalDeliveryOfficeName $ postOfficeBox $ postalAddress $ postalCode $ preferredDeliveryMethod $ registeredAddress $ searchGuide $ seeAlso $ st $ street $ telephoneNumber $ teletexTerminalIdentifier $ telexNumber $ userPassword $ x121Address ) )",
-        "( 1.3.6.1.4.1.1466.344 NAME 'dcObject' SUP top AUXILIARY MUST dc )",
         "( 2.5.6.0 NAME 'top' ABSTRACT MUST objectClass )",
-        "( 1.3.6.1.1.3.1 NAME 'uidObject' SUP top AUXILIARY MAY uid )",
-        "( 2.16.840.1.113730.3.2.2 NAME 'inetOrgPerson' SUP organizationalPerson STRUCTURAL MAY ( audio $ businessCategory $ carLicense $ departmentNumber $ displayName $ employeeNumber $ employeeType $ givenName $ homePhone $ homePostalAddress $ initials $ jpegPhoto $ labeledURI $ mail $ manager $ mobile $ o $ pager $ photo $ roomNumber $ secretary $ uid $ userCertificate $ x500uniqueIdentifier $ preferredLanguage $ userSMIMECertificate $ userPKCS12 ) )",
+        "( 2.5.6.6 NAME 'person' SUP top STRUCTURAL MUST ( sn $ cn ) MAY ( userPassword $ telephoneNumber $ seeAlso $ description ) )",
+        "( 2.5.6.7 NAME 'organizationalPerson' SUP person STRUCTURAL MAY ( title $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ telephoneNumber $ internationalISDNNumber $ facsimileTelephoneNumber $ street $ postOfficeBox $ postalCode $ postalAddress $ physicalDeliveryOfficeName $ ou $ st $ l ) )",
+        "( 2.16.840.1.113730.3.2.2 NAME 'inetOrgPerson' SUP organizationalPerson STRUCTURAL MAY ( audio $ businessCategory $ carLicense $ departmentNumber $ displayName $ employeeNumber $ employeeType $ givenName $ homePhone $ homePostalAddress $ initials $ jpegPhoto $ labeledURI $ mail $ manager $ memberOf $ mobile $ o $ pager $ photo $ roomNumber $ secretary $ uid $ userCertificate $ x500uniqueIdentifier $ preferredLanguage $ userSMIMECertificate $ userPKCS12 ) )",
+        "( 2.5.6.5 NAME 'organizationalUnit' SUP top STRUCTURAL MUST ou MAY ( businessCategory $ description $ destinationIndicator $ facsimileTelephoneNumber $ internationalISDNNumber $ l $ physicalDeliveryOfficeName $ postalAddress $ postalCode $ postOfficeBox $ preferredDeliveryMethod $ registeredAddress $ searchGuide $ seeAlso $ st $ street $ telephoneNumber $ teletexTerminalIdentifier $ telexNumber $ userPassword $ x121Address ) )",
+        "( 0.9.2342.19200300.100.4.13 NAME 'domain' SUP top STRUCTURAL MUST dc MAY ( userPassword $ searchGuide $ seeAlso $ businessCategory $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ telephoneNumber $ internationalISDNNumber $ facsimileTelephoneNumber $ street $ postOfficeBox $ postalCode $ postalAddress $ physicalDeliveryOfficeName $ st $ l $ description $ o $ associatedName ) )",
+        "( 1.3.6.1.4.1.1466.344 NAME 'dcObject' SUP top AUXILIARY MUST dc )",
+        "( 1.3.6.1.1.3.1 NAME 'uidObject' SUP top AUXILIARY MUST uid )",
+        "( 2.5.6.17 NAME 'groupOfUniqueNames' SUP top STRUCTURAL MUST ( uniqueMember $ cn ) MAY ( businessCategory $ seeAlso $ owner $ ou $ o $ description ) )",
     ];
     all_attributes.push(LdapPartialAttribute {
         atype: "objectClasses".to_string(),
         vals: object_classes.into_iter().map(|s| s.into()).collect(),
     });
 
-    // attributeTypes: 属性类型定义（我们支持的属性）
+    // attributeTypes: RFC 4512 AttributeTypeDescription（RFC 4519 / 2798 等）
+    // 先列出 subschema 元属性与条目中出现的操作属性（RFC 4512 §3.3 / §3.4 / §4.2），再列业务属性
     let attribute_types = vec![
-        "( 2.5.4.3 NAME ( 'cn' 'commonName' ) SUP name )",
-        "( 2.5.4.4 NAME ( 'sn' 'surname' ) SUP name )",
-        "( 2.5.4.5 NAME 'serialNumber' )",
-        "( 2.5.4.6 NAME 'c' SUP name SINGLE-VALUE )",
-        "( 2.5.4.7 NAME ( 'l' 'localityName' ) SUP name )",
-        "( 2.5.4.8 NAME ( 'st' 'stateOrProvinceName' ) SUP name )",
-        "( 2.5.4.9 NAME ( 'street' 'streetAddress' ) SUP name )",
+        "( 2.5.4.0 NAME 'objectClass' EQUALITY objectIdentifierMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )",
+        "( 2.5.21.9 NAME 'structuralObjectClass' EQUALITY objectIdentifierMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
+        "( 2.5.21.6 NAME 'objectClasses' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.37 USAGE directoryOperation )",
+        "( 2.5.21.5 NAME 'attributeTypes' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.3 USAGE directoryOperation )",
+        "( 2.5.21.4 NAME 'matchingRules' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.30 USAGE directoryOperation )",
+        "( 2.5.21.8 NAME 'matchingRuleUse' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.31 USAGE directoryOperation )",
+        "( 1.3.6.1.4.1.1466.101.120.16 NAME 'ldapSyntaxes' EQUALITY objectIdentifierFirstComponentMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.54 USAGE directoryOperation )",
+        "( 2.5.18.1 NAME 'createTimestamp' EQUALITY generalizedTimeMatch ORDERING generalizedTimeOrderingMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.24 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
+        "( 2.5.18.2 NAME 'modifyTimestamp' EQUALITY generalizedTimeMatch ORDERING generalizedTimeOrderingMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.24 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
+        // hasSubordinates：账户条目返回（account_result），JumpServer 等会按 subschema 校验
+        "( 2.5.18.13 NAME 'hasSubordinates' EQUALITY booleanMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 SINGLE-VALUE NO-USER-MODIFICATION USAGE directoryOperation )",
+        // 组织扩展属性（org_result：sysCode / busCode / icon）
+        "( 1.3.6.1.4.1.59207.1.1 NAME 'sysCode' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )",
+        "( 1.3.6.1.4.1.59207.1.2 NAME 'busCode' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )",
+        "( 1.3.6.1.4.1.59207.1.3 NAME 'icon' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )",
+        "( 2.5.4.3 NAME 'cn' SUP name )",
+        "( 2.5.4.4 NAME 'sn' SUP name )",
+        "( 2.5.4.5 NAME 'serialNumber' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 )",
+        "( 2.5.4.6 NAME 'c' SUP name SYNTAX 1.3.6.1.4.1.1466.115.121.1.11 SINGLE-VALUE )",
+        "( 2.5.4.7 NAME 'l' SUP name )",
+        "( 2.5.4.8 NAME 'st' SUP name )",
+        "( 2.5.4.9 NAME 'street' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 2.5.4.10 NAME 'o' SUP name )",
-        "( 2.5.4.11 NAME ( 'ou' 'organizationalUnitName' ) SUP name )",
-        "( 2.5.4.12 NAME 'title' )",
-        "( 2.5.4.13 NAME 'description' )",
-        "( 2.5.4.15 NAME 'businessCategory' )",
-        "( 2.5.4.20 NAME 'telephoneNumber' )",
-        "( 2.5.4.25 NAME 'postalCode' )",
-        "( 2.5.4.26 NAME 'postalAddress' )",
-        "( 2.5.4.31 NAME 'member' )",
-        "( 2.5.4.41 NAME 'name' )",
-        "( 2.5.4.42 NAME ( 'givenName' 'gn' ) SUP name )",
+        "( 2.5.4.11 NAME 'ou' SUP name )",
+        "( 2.5.4.12 NAME 'title' SUP name )",
+        "( 2.5.4.13 NAME 'description' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.4.15 NAME 'businessCategory' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.4.20 NAME 'telephoneNumber' EQUALITY telephoneNumberMatch SUBSTR telephoneNumberSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.50 )",
+        "( 2.5.4.17 NAME 'postalCode' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.4.16 NAME 'postalAddress' EQUALITY caseIgnoreListMatch SUBSTR caseIgnoreListSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.41 )",
+        "( 2.5.4.31 NAME 'member' SUP distinguishedName )",
+        // memberOf：组成员关系（虚拟/操作属性，与 account 搜索中返回的 memberOf 及过滤器一致；JumpServer 等会校验 subschema）
+        "( 1.2.840.113556.1.4.31 NAME 'memberOf' EQUALITY distinguishedNameMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 USAGE directoryOperation )",
+        "( 2.5.4.50 NAME 'uniqueMember' EQUALITY uniqueMemberMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.34 )",
+        "( 2.5.4.41 NAME 'name' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.4.42 NAME 'givenName' SUP name )",
         "( 2.5.4.43 NAME 'initials' SUP name )",
         "( 2.5.4.44 NAME 'generationQualifier' SUP name )",
-        "( 2.5.4.46 NAME 'dnQualifier' )",
-        "( 2.5.4.51 NAME 'houseIdentifier' )",
-        "( 0.9.2342.19200300.100.1.1 NAME ( 'uid' 'userid' ) )",
-        "( 0.9.2342.19200300.100.1.3 NAME ( 'mail' 'rfc822Mailbox' ) EQUALITY caseIgnoreIA5Match SUBSTR caseIgnoreIA5SubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{256} )",
-        "( 0.9.2342.19200300.100.1.25 NAME 'dc' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 )",
-        "( 1.2.840.113556.1.4.221 NAME 'sAMAccountName' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{256} )",
-        "( 2.16.840.1.113730.3.1.241 NAME 'displayName' )",
-        "( 2.16.840.1.113730.3.1.3 NAME 'employeeNumber' )",
-        "( 2.16.840.1.113730.3.1.4 NAME 'employeeType' )",
+        "( 2.5.4.46 NAME 'dnQualifier' EQUALITY caseIgnoreMatch ORDERING caseIgnoreOrderingMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 )",
+        "( 2.5.4.51 NAME 'houseIdentifier' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 0.9.2342.19200300.100.1.1 NAME 'uid' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 0.9.2342.19200300.100.1.3 NAME 'mail' EQUALITY caseIgnoreIA5Match SUBSTR caseIgnoreIA5SubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{256} )",
+        "( 0.9.2342.19200300.100.1.25 NAME 'dc' EQUALITY caseIgnoreIA5Match SUBSTR caseIgnoreIA5SubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )",
+        "( 1.2.840.113556.1.4.221 NAME 'sAMAccountName' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{256} SINGLE-VALUE )",
+        "( 2.16.840.1.113730.3.1.241 NAME 'displayName' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )",
+        "( 2.16.840.1.113730.3.1.3 NAME 'employeeNumber' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )",
+        "( 2.16.840.1.113730.3.1.4 NAME 'employeeType' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 0.9.2342.19200300.100.1.60 NAME 'jpegPhoto' SYNTAX 1.3.6.1.4.1.1466.115.121.1.28 )",
-        "( 2.16.840.1.113730.3.1.39 NAME 'mobile' EQUALITY telephoneNumberMatch SUBSTR telephoneNumberSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.50 )",
+        "( 0.9.2342.19200300.100.1.41 NAME 'mobile' EQUALITY telephoneNumberMatch SUBSTR telephoneNumberSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.50 )",
     ];
     all_attributes.push(LdapPartialAttribute {
         atype: "attributeTypes".to_string(),
         vals: attribute_types.into_iter().map(|s| s.into()).collect(),
     });
 
-    // ldapSyntaxes: LDAP 语法定义（常用的语法）
+    // ldapSyntaxes: RFC 4517 Appendix A（SyntaxDescription 语法值）
     let ldap_syntaxes = vec![
         "( 1.3.6.1.4.1.1466.115.121.1.3 DESC 'Attribute Type Description' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.5 DESC 'Binary' )",
         "( 1.3.6.1.4.1.1466.115.121.1.6 DESC 'Bit String' )",
         "( 1.3.6.1.4.1.1466.115.121.1.7 DESC 'Boolean' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.8 DESC 'Certificate' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.9 DESC 'Certificate List' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.10 DESC 'Certificate Pair' )",
         "( 1.3.6.1.4.1.1466.115.121.1.11 DESC 'Country String' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.12 DESC 'Distinguished Name' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.13 DESC 'Data Quality' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.12 DESC 'DN' )",
         "( 1.3.6.1.4.1.1466.115.121.1.14 DESC 'Delivery Method' )",
         "( 1.3.6.1.4.1.1466.115.121.1.15 DESC 'Directory String' )",
         "( 1.3.6.1.4.1.1466.115.121.1.16 DESC 'DIT Content Rule Description' )",
         "( 1.3.6.1.4.1.1466.115.121.1.17 DESC 'DIT Structure Rule Description' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.18 DESC 'DL Submit Permission' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.19 DESC 'DSA Quality' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.20 DESC 'DSE Type' )",
         "( 1.3.6.1.4.1.1466.115.121.1.21 DESC 'Enhanced Guide' )",
         "( 1.3.6.1.4.1.1466.115.121.1.22 DESC 'Facsimile Telephone Number' )",
         "( 1.3.6.1.4.1.1466.115.121.1.23 DESC 'Fax' )",
         "( 1.3.6.1.4.1.1466.115.121.1.24 DESC 'Generalized Time' )",
         "( 1.3.6.1.4.1.1466.115.121.1.25 DESC 'Guide' )",
         "( 1.3.6.1.4.1.1466.115.121.1.26 DESC 'IA5 String' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.27 DESC 'Integer' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.27 DESC 'INTEGER' )",
         "( 1.3.6.1.4.1.1466.115.121.1.28 DESC 'JPEG' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.29 DESC 'Master And Shadow Access Points' )",
         "( 1.3.6.1.4.1.1466.115.121.1.30 DESC 'Matching Rule Description' )",
         "( 1.3.6.1.4.1.1466.115.121.1.31 DESC 'Matching Rule Use Description' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.32 DESC 'Mail Preference' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.33 DESC 'Name And Optional UID' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.34 DESC 'Name Form Description' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.35 DESC 'Numeric String' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.36 DESC 'Object Class Description' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.37 DESC 'OID' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.38 DESC 'Other Mailbox' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.39 DESC 'Postal Address' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.40 DESC 'Protocol Information' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.41 DESC 'Presentation Address' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.42 DESC 'Printable String' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.43 DESC 'Substring Assertion' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.44 DESC 'Subtree Specification' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.45 DESC 'Supplier Information' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.46 DESC 'Supplier Or Consumer' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.47 DESC 'Supplier And Consumer' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.48 DESC 'Supported Algorithm' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.49 DESC 'Telephone Number' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.50 DESC 'Teletex Terminal Identifier' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.51 DESC 'Telex Number' )",
-        "( 1.3.6.1.4.1.1466.115.121.1.52 DESC 'UTC Time' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.34 DESC 'Name And Optional UID' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.35 DESC 'Name Form Description' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.36 DESC 'Numeric String' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.37 DESC 'Object Class Description' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.38 DESC 'OID' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.39 DESC 'Other Mailbox' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.40 DESC 'Octet String' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.41 DESC 'Postal Address' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.44 DESC 'Printable String' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.50 DESC 'Telephone Number' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.51 DESC 'Teletex Terminal Identifier' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.52 DESC 'Telex Number' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.53 DESC 'UTC Time' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.54 DESC 'LDAP Syntax Description' )",
+        "( 1.3.6.1.4.1.1466.115.121.1.58 DESC 'Substring Assertion' )",
     ];
     all_attributes.push(LdapPartialAttribute {
         atype: "ldapSyntaxes".to_string(),
         vals: ldap_syntaxes.into_iter().map(|s| s.into()).collect(),
     });
 
-    // matchingRules: 匹配规则定义
+    // matchingRules: RFC 4517 MatchingRuleDescription（X.521 OID 编号与 RFC 2252 不同）
     let matching_rules = vec![
+        "( 2.5.13.0 NAME 'objectIdentifierMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )",
+        "( 2.5.13.1 NAME 'distinguishedNameMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )",
         "( 2.5.13.2 NAME 'caseIgnoreMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
-        "( 2.5.13.4 NAME 'caseIgnoreOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
-        "( 2.5.13.5 NAME 'caseIgnoreSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
-        "( 2.5.13.11 NAME 'integerMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )",
-        "( 2.5.13.12 NAME 'integerOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )",
-        "( 2.5.13.13 NAME 'numericStringMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.36 )",
-        "( 2.5.13.14 NAME 'numericStringOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.36 )",
-        "( 2.5.13.15 NAME 'numericStringSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
-        "( 2.5.13.16 NAME 'caseExactMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
-        "( 2.5.13.17 NAME 'caseExactOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
-        "( 2.5.13.18 NAME 'caseExactSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
+        "( 2.5.13.3 NAME 'caseIgnoreOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.13.4 NAME 'caseIgnoreSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
+        "( 2.5.13.5 NAME 'caseExactMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.13.6 NAME 'caseExactOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
+        "( 2.5.13.7 NAME 'caseExactSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
+        "( 2.5.13.8 NAME 'numericStringMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.36 )",
+        "( 2.5.13.9 NAME 'numericStringOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.36 )",
+        "( 2.5.13.10 NAME 'numericStringSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
+        "( 2.5.13.11 NAME 'caseIgnoreListMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.41 )",
+        "( 2.5.13.12 NAME 'caseIgnoreListSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
+        "( 2.5.13.13 NAME 'booleanMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 )",
+        "( 2.5.13.14 NAME 'integerMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )",
+        "( 2.5.13.15 NAME 'integerOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )",
         "( 2.5.13.20 NAME 'telephoneNumberMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.50 )",
         "( 2.5.13.21 NAME 'telephoneNumberSubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
-        "( 2.5.13.22 NAME 'presentationAddressMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.43 )",
         "( 2.5.13.23 NAME 'uniqueMemberMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.34 )",
-        "( 2.5.13.24 NAME 'protocolInformationMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.42 )",
         "( 2.5.13.27 NAME 'generalizedTimeMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.24 )",
         "( 2.5.13.28 NAME 'generalizedTimeOrderingMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.24 )",
         "( 2.5.13.29 NAME 'integerFirstComponentMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )",
@@ -264,33 +291,30 @@ fn build_subschema_attributes(_config: &IamLdapConfig, query: &LdapSearchQuery) 
         "( 2.5.13.31 NAME 'directoryStringFirstComponentMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 2.5.13.32 NAME 'wordMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
         "( 2.5.13.33 NAME 'keywordMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )",
-        "( 1.3.6.1.4.1.1466.109.114.1 NAME 'caseIgnoreIA5Match' SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )",
-        "( 1.3.6.1.4.1.1466.109.114.2 NAME 'caseIgnoreIA5SubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
+        "( 1.3.6.1.4.1.1466.109.114.2 NAME 'caseIgnoreIA5Match' SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )",
+        "( 1.3.6.1.4.1.1466.109.114.3 NAME 'caseIgnoreIA5SubstringsMatch' SYNTAX 1.3.6.1.4.1.1466.115.121.1.58 )",
     ];
     all_attributes.push(LdapPartialAttribute {
         atype: "matchingRules".to_string(),
         vals: matching_rules.into_iter().map(|s| s.into()).collect(),
     });
 
-    // matchingRuleUse: 匹配规则使用定义
+    // matchingRuleUse: MatchingRuleUseDescription（规则 OID 须与 matchingRules 一致；APPLIES 仅含本段 attributeTypes）
     let matching_rule_use = vec![
-        "( 2.5.13.2 APPLIES ( cn $ description $ name $ o $ ou $ sn $ st $ l $ street $ title $ givenName $ initials $ generationQualifier $ dnQualifier $ displayName $ businessCategory $ postalCode $ postalAddress $ telephoneNumber $ facsimileTelephoneNumber $ seeAlso $ member $ owner $ roleOccupant $ secretary $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ internationaliSDNNumber $ physicalDeliveryOfficeName $ streetAddress $ postOfficeBox $ st $ l $ postalCode $ postalAddress $ userPassword $ searchGuide $ teletexTerminalIdentifier $ facsimileTelephoneNumber $ x121Address $ internationaliSDNNumber $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ physicalDeliveryOfficeName $ streetAddress $ postOfficeBox $ st $ l $ postalCode $ postalAddress $ userPassword $ searchGuide $ seeAlso $ businessCategory $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ internationaliSDNNumber $ facsimileTelephoneNumber $ physicalDeliveryOfficeName $ streetAddress $ postOfficeBox $ st $ l $ postalCode $ postalAddress $ userPassword $ searchGuide $ seeAlso $ businessCategory $ x121Address $ registeredAddress $ destinationIndicator $ preferredDeliveryMethod $ telexNumber $ teletexTerminalIdentifier $ internationaliSDNNumber $ facsimileTelephoneNumber $ physicalDeliveryOfficeName $ streetAddress $ postOfficeBox $ st $ l $ postalCode $ postalAddress $ userPassword $ searchGuide $ seeAlso $ businessCategory ) )",
-        "( 2.5.13.4 APPLIES ( cn $ description $ name $ o $ ou $ sn $ st $ l $ street $ title $ givenName $ initials $ generationQualifier $ dnQualifier $ displayName $ businessCategory $ postalCode $ postalAddress $ telephoneNumber $ facsimileTelephoneNumber $ seeAlso $ member $ owner $ roleOccupant $ secretary ) )",
-        "( 2.5.13.5 APPLIES ( cn $ description $ name $ o $ ou $ sn $ st $ l $ street $ title $ givenName $ initials $ generationQualifier $ dnQualifier $ displayName $ businessCategory $ postalCode $ postalAddress $ telephoneNumber $ facsimileTelephoneNumber $ seeAlso $ member $ owner $ roleOccupant $ secretary ) )",
-        "( 2.5.13.11 APPLIES ( uidNumber $ gidNumber ) )",
-        "( 2.5.13.12 APPLIES ( uidNumber $ gidNumber ) )",
-        "( 2.5.13.13 APPLIES ( telephoneNumber $ facsimileTelephoneNumber ) )",
-        "( 2.5.13.14 APPLIES ( telephoneNumber $ facsimileTelephoneNumber ) )",
-        "( 2.5.13.15 APPLIES ( telephoneNumber $ facsimileTelephoneNumber ) )",
-        "( 2.5.13.16 APPLIES ( serialNumber ) )",
-        "( 2.5.13.17 APPLIES ( serialNumber ) )",
-        "( 2.5.13.18 APPLIES ( serialNumber ) )",
-        "( 2.5.13.20 APPLIES ( telephoneNumber $ facsimileTelephoneNumber ) )",
-        "( 2.5.13.21 APPLIES ( telephoneNumber $ facsimileTelephoneNumber ) )",
-        "( 2.5.13.27 APPLIES ( createTimestamp $ modifyTimestamp ) )",
-        "( 2.5.13.28 APPLIES ( createTimestamp $ modifyTimestamp ) )",
-        "( 1.3.6.1.4.1.1466.109.114.1 APPLIES ( mail $ rfc822Mailbox ) )",
-        "( 1.3.6.1.4.1.1466.109.114.2 APPLIES ( mail $ rfc822Mailbox ) )",
+        "( 2.5.13.0 APPLIES ( objectClass $ structuralObjectClass ) )",
+        "( 2.5.13.30 APPLIES ( attributeTypes $ objectClasses $ matchingRules $ matchingRuleUse $ ldapSyntaxes ) )",
+        "( 2.5.13.13 APPLIES hasSubordinates )",
+        "( 2.5.13.1 APPLIES ( member $ memberOf ) )",
+        "( 2.5.13.2 APPLIES ( cn $ sn $ c $ l $ st $ street $ o $ ou $ title $ description $ businessCategory $ postalCode $ name $ givenName $ initials $ generationQualifier $ houseIdentifier $ uid $ sAMAccountName $ displayName $ employeeNumber $ employeeType $ serialNumber $ sysCode $ busCode $ icon ) )",
+        "( 2.5.13.3 APPLIES ( dnQualifier ) )",
+        "( 2.5.13.4 APPLIES ( cn $ sn $ c $ l $ st $ street $ o $ ou $ title $ description $ businessCategory $ postalCode $ name $ givenName $ initials $ generationQualifier $ dnQualifier $ houseIdentifier $ uid $ sAMAccountName $ displayName $ employeeNumber $ employeeType $ serialNumber $ sysCode $ busCode $ icon ) )",
+        "( 2.5.13.11 APPLIES ( postalAddress ) )",
+        "( 2.5.13.12 APPLIES ( postalAddress ) )",
+        "( 2.5.13.20 APPLIES ( telephoneNumber $ mobile ) )",
+        "( 2.5.13.21 APPLIES ( telephoneNumber $ mobile ) )",
+        "( 2.5.13.23 APPLIES ( uniqueMember ) )",
+        "( 1.3.6.1.4.1.1466.109.114.2 APPLIES ( mail $ dc ) )",
+        "( 1.3.6.1.4.1.1466.109.114.3 APPLIES ( mail $ dc ) )",
     ];
     all_attributes.push(LdapPartialAttribute {
         atype: "matchingRuleUse".to_string(),
