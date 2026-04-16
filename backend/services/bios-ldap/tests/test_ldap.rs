@@ -136,11 +136,11 @@ async fn test_ldap_account() -> TardisResult<()> {
     let bind_password = ldap_config.bind_password.clone();
 
     info!("[Test] LDAP server running on port: {}", ldap_port);
-    info!("[Test] LDAP DC: {}", ldap_dc);
+    info!("[Test] LDAP DC: {:?}", &ldap_dc);
 
     // 使用 LDAP 客户端连接
     let ldap_url = format!("ldap://127.0.0.1:{}", ldap_port);
-    let base_dn = format!("DC={}", ldap_dc);
+    let base_dn = format!("DC={}", &ldap_dc.join(","));
 
     info!("[Test] Connecting to LDAP server: {}", ldap_url);
 
@@ -163,7 +163,7 @@ async fn test_ldap_account() -> TardisResult<()> {
     info!("[Test] Admin bind successful");
 
     // 测试 2: 使用测试用户账户绑定
-    let test_user_dn = format!("CN={},DC={}", test_username, ldap_dc);
+    let test_user_dn = format!("CN={},DC={}", test_username, &ldap_dc.join(","));
     info!("[Test] Test 2: Binding with test user DN: {}", test_user_dn);
 
     let user_bind_result = ldap
@@ -1850,7 +1850,7 @@ async fn test_ldap_account() -> TardisResult<()> {
 
     // 测试 4.6: 测试不同的 Scope - Base scope（只搜索 base DN 本身）
     info!("[Test] Test 4.6: Testing Base scope - searching specific user DN");
-    let specific_user_dn = format!("CN={},ou=staff,DC={}", test_username, ldap_dc);
+    let specific_user_dn = format!("CN={},ou=staff,DC={}", test_username, &ldap_dc.join(","));
     let (rs_base, _res_base) = ldap
         .search(&specific_user_dn, Scope::Base, "(objectClass=*)", vec!["sAMAccountName", "cn"])
         .await
