@@ -58,6 +58,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::futures::SinkExt;
 use tardis::futures::StreamExt;
+use tardis::log::warn;
 use tardis::log::{error, info, trace};
 
 use tardis::tokio::net::{TcpListener, TcpStream};
@@ -143,24 +144,28 @@ impl LdapSession {
                     }
                 };
                 // 首先判断scope是否是base，如果确定是base，则直接按当前dn查询并筛选返回
-                if query.scope == LdapSearchScope::Base {
+                if query.scope == LdapSearchScope::Base  || query.scope == LdapSearchScope::Subtree {
                     match base_dn_level {
                         LdapBaseDnLevel::Domain => {
                             let entrys = vec![ldap_entity::LdapEntity::build_dc_node(config).entry];
                             let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
                             results = filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect();
-                            results.push(req.gen_success());
-                            return results;
+                            if query.scope == LdapSearchScope::Base {
+                                results.push(req.gen_success());
+                                return results;
+                            }
                         }
-                        LdapBaseDnLevel::Ou(ou) => {
+                        LdapBaseDnLevel::Ou(ref ou) => {
                             // ou 值已经包含在枚举中
-                            let entrys = vec![ldap_entity::LdapEntity::build_ou_node(&ou, config).entry];
+                            let entrys = vec![ldap_entity::LdapEntity::build_ou_node(ou, config).entry];
                             let filtered_entrys = ldap_parser::filter_entries_by_query(&entrys, &query.query_type);
                             results = filtered_entrys.into_iter().map(|entry| req.gen_result_entry(entry)).collect();
-                            results.push(req.gen_success());
-                            return results;
+                            if query.scope == LdapSearchScope::Base {
+                                results.push(req.gen_success());
+                                return results;
+                            }
                         }
-                        LdapBaseDnLevel::Item(ou, cn) => {
+                        LdapBaseDnLevel::Item(ref ou, ref cn) => {
                             // Item 中第一个值存放的是 ou，第二个值存放的是 cn
                             if ou.to_lowercase() == config.ou_staff.to_lowercase() {
                                 let accounts = match account_query::execute_ldap_account_search(&query, config).await {
@@ -169,7 +174,7 @@ impl LdapSession {
                                         return build_error_response(req, LdapResultCode::Unavailable, "Service internal error".to_string());
                                     }
                                 };
-                                results = account_result::build_account_search_response(req, &query, accounts, Some(cn), config);
+                                results = account_result::build_account_search_response(req, &query, accounts, Some(cn.clone()), config);
                                 results.push(req.gen_success());
                                 return results;
                             } else if ou.to_lowercase() == config.ou_organization.to_lowercase() {
@@ -180,6 +185,7 @@ impl LdapSession {
                                     }
                                 };
                                 results.append(&mut org_result::build_org_search_response(req, &query, orgs, config));
+                                results.push(req.gen_success());
                                 return results;
                             } else if ou.to_lowercase() == config.ou_app.to_lowercase() {
                                 let apps = match app_query::execute_ldap_app_search(&query, config).await {
@@ -189,6 +195,7 @@ impl LdapSession {
                                     }
                                 };
                                 results.append(&mut app_result::build_app_search_response(req, &query, apps, config));
+                                results.push(req.gen_success());
                                 return results;
                             } else {
                                 return build_error_response(req, LdapResultCode::InvalidDNSyntax, "Invalid base DN".to_string());
@@ -262,7 +269,7 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
 
     while let Some(msg) = reqs.next().await {
         let server_op = match msg.map_err(|_e| ()).and_then(|msg| {
-            trace!("[TardisLdapServer] Received message:{:?}", msg);
+            warn!("[TardisLdapServer] Received message:{:?}", msg);
             ServerOps::try_from(msg)
         }) {
             Ok(v) => v,
@@ -272,7 +279,7 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
                 return;
             }
         };
-
+        let request_debug = format!("{:?}", &server_op);
         let result = match server_op {
             ServerOps::SimpleBind(req) => vec![session.do_bind(&req, config).await],
             ServerOps::Search(req) => session.do_search(&req, config).await,
@@ -287,6 +294,12 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: Arc<Ia
             }
         };
 
+        warn!(
+            "[TardisLdapServer] ldap request command={}, response ({} message(s)): {:?}",
+            request_debug,
+            result.len(),
+            result
+        );
         for rmsg in result.into_iter() {
             if resp.send(rmsg).await.is_err() {
                 return;
