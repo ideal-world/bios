@@ -231,7 +231,9 @@ impl FlowSearchClient {
             let mut ext = json!({});
             if let Some(status) = &req.status {
                 if let Some(ext_mut) = ext.as_object_mut() {
-                    ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
+                    if let Some(status_key) = Self::get_search_status_map().get(&req.tag) {
+                        ext_mut.insert(status_key.clone(), status.to_json().unwrap_or_default());
+                    }
                 }
             }
             if let Some(rel_state) = &req.rel_state {
@@ -306,7 +308,9 @@ impl FlowSearchClient {
                     }
                     if let Some(status) = &req_cp.status {
                         if let Some(ext_mut) = ext.as_object_mut() {
-                            ext_mut.insert("status".to_string(), status.to_json().unwrap_or_default());
+                            if let Some(status_key) = Self::get_search_status_map().get(&tag) {
+                                ext_mut.insert(status_key.clone(), status.to_json().unwrap_or_default());
+                            }
                         }
                     }
                     if let Some(rel_state) = &req_cp.rel_state {
@@ -931,7 +935,26 @@ impl FlowSearchClient {
             ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
             ("TS".to_string(), ("idp_test".to_string(), "idp_test_stage".to_string())),
             ("TC".to_string(), ("idp_test".to_string(), "idp_test_case".to_string())),
-            ("REVIEW".to_string(), ("idp_product".to_string(), "idp_feed_review".to_string())),
+            ("VERSION".to_string(), ("idp_cicd".to_string(), "idp_release_version".to_string())),
+        ])
+    }
+
+    pub fn get_search_status_map() -> HashMap<String, String> {
+        HashMap::from([
+            ("CTS".to_string(), "status".to_string()),
+            ("ISSUE".to_string(), "status".to_string()),
+            ("ITER".to_string(), "status".to_string()),
+            ("MS".to_string(), "status".to_string()),
+            ("PRODUCT".to_string(), "status".to_string()),
+            ("PROJECT_MS".to_string(), "status".to_string()),
+            ("PROJ".to_string(), "status".to_string()),
+            ("REQ".to_string(), "status".to_string()),
+            ("TASK".to_string(), "status".to_string()),
+            ("TICKET".to_string(), "status".to_string()),
+            ("TP".to_string(), "status".to_string()),
+            ("TS".to_string(), "status".to_string()),
+            ("TC".to_string(), "status".to_string()),
+            ("VERSION".to_string(), "lock_status".to_string()),
         ])
     }
 }

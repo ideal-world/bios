@@ -48,18 +48,17 @@ impl IamCiAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        // funs.begin().await?;
-        // let mock_ctx = TardisContext {
-        //     owner: TardisFuns::field.nanoid(),
-        //     ..ctx.0.clone()
-        // };
-        // add_req.0.id = Some(mock_ctx.owner.clone().into());
-        // let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &mock_ctx).await?;
-        // IamSearchClient::async_add_or_modify_account_search(&result, Box::new(false), "", &funs, &mock_ctx).await?;
-        // funs.commit().await?;
-        // ctx.0.execute_task().await?;
-        // TardisResp::ok(result)
-        TardisResp::ok(TardisFuns::field.nanoid())
+        funs.begin().await?;
+        let mock_ctx = TardisContext {
+            owner: TardisFuns::field.nanoid(),
+            ..ctx.0.clone()
+        };
+        add_req.0.id = Some(mock_ctx.owner.clone().into());
+        let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &mock_ctx).await?;
+        IamSearchClient::async_add_or_modify_account_search(&result, Box::new(false), "", &funs, &mock_ctx).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// Modify Account
@@ -69,20 +68,20 @@ impl IamCiAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        // funs.begin().await?;
-        // if let Some(account) = IamAccountServ::find_one_item(&IamAccountFilterReq {
-        //     basic: RbumBasicFilterReq {
-        //         with_sub_own_paths: true,
-        //         ..Default::default()
-        //     },
-        //     others_id: Some(others_id.0),
-        //     ..Default::default()
-        // }, &funs, &ctx.0).await? {
-        //     IamAccountServ::modify_account_agg(&account.id, &modify_req.0, &funs, &ctx.0).await?;
-        //     IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx.0).await?;
-        // }
-        // funs.commit().await?;
-        // ctx.0.execute_task().await?;
+        funs.begin().await?;
+        if let Some(account) = IamAccountServ::find_one_item(&IamAccountFilterReq {
+            basic: RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            others_id: Some(others_id.0),
+            ..Default::default()
+        }, &funs, &ctx.0).await? {
+            IamAccountServ::modify_account_agg(&account.id, &modify_req.0, &funs, &ctx.0).await?;
+            IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -93,32 +92,32 @@ impl IamCiAccountApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        // let ctx_clone = ctx.0.clone();
+        let ctx_clone = ctx.0.clone();
         
-        // join_all(batch_add_req.0.into_iter().map(|mut add_req| {
-        //     let mock_ctx = TardisContext {
-        //         owner: TardisFuns::field.nanoid(),
-        //         ..ctx_clone.clone()
-        //     };
-        //     add_req.id = Some(mock_ctx.owner.clone().into());
-        //     async move {
-        //         let mut funs_cp = iam_constants::get_tardis_inst();
-        //         let others_id = add_req.others_id.clone();
-        //         funs_cp.begin().await.unwrap_or_default();
-        //         match IamAccountServ::add_account_agg(&add_req, false, &funs_cp, &mock_ctx).await {
-        //             Ok(result) => {
-        //                 let _ = IamSearchClient::async_add_or_modify_account_search(&result, Box::new(false), "", &funs_cp, &mock_ctx).await;
-        //                 funs_cp.commit().await.unwrap_or_default();
-        //             },
-        //             Err(err) => {
-        //                 funs_cp.rollback().await.unwrap_or_default();
-        //                 log::error!("[IAM] batch_add_account_agg error: others_id {:?} error: {:?}", others_id, err);
-        //             }
-        //         }
-        //     }
-        // }).collect::<Vec<_>>()).await;
+        join_all(batch_add_req.0.into_iter().map(|mut add_req| {
+            let mock_ctx = TardisContext {
+                owner: TardisFuns::field.nanoid(),
+                ..ctx_clone.clone()
+            };
+            add_req.id = Some(mock_ctx.owner.clone().into());
+            async move {
+                let mut funs_cp = iam_constants::get_tardis_inst();
+                let others_id = add_req.others_id.clone();
+                funs_cp.begin().await.unwrap_or_default();
+                match IamAccountServ::add_account_agg(&add_req, false, &funs_cp, &mock_ctx).await {
+                    Ok(result) => {
+                        let _ = IamSearchClient::async_add_or_modify_account_search(&result, Box::new(false), "", &funs_cp, &mock_ctx).await;
+                        funs_cp.commit().await.unwrap_or_default();
+                    },
+                    Err(err) => {
+                        funs_cp.rollback().await.unwrap_or_default();
+                        log::error!("[IAM] batch_add_account_agg error: others_id {:?} error: {:?}", others_id, err);
+                    }
+                }
+            }
+        }).collect::<Vec<_>>()).await;
         
-        // ctx.0.execute_task().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -129,23 +128,23 @@ impl IamCiAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        // funs.begin().await?;
-        // for (others_id, modify_req) in batch_modify_req.0.into_iter() {
-        //     if let Some(account) = IamAccountServ::find_one_item(&IamAccountFilterReq {
-        //         basic: RbumBasicFilterReq {
-        //             with_sub_own_paths: true,
-        //             ..Default::default()
-        //         },
-        //         others_id: Some(others_id),
-        //         ..Default::default()
-        //     }, &funs, &ctx.0).await? {
-        //         IamAccountServ::modify_account_agg(&account.id, &modify_req, &funs, &ctx.0).await?;
-        //         IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx.0).await?;
-        //     }
-        // }
+        funs.begin().await?;
+        for (others_id, modify_req) in batch_modify_req.0.into_iter() {
+            if let Some(account) = IamAccountServ::find_one_item(&IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                others_id: Some(others_id),
+                ..Default::default()
+            }, &funs, &ctx.0).await? {
+                IamAccountServ::modify_account_agg(&account.id, &modify_req, &funs, &ctx.0).await?;
+                IamSearchClient::async_add_or_modify_account_search(&account.id, Box::new(true), "", &funs, &ctx.0).await?;
+            }
+        }
         
-        // funs.commit().await?;
-        // ctx.0.execute_task().await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -365,6 +364,71 @@ impl IamCiAccountApi {
             }
         }
         result.apps = apps;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+    /// Find Account By Ak
+    /// 通过Ak查找帐户
+    ///
+    /// if kind is none,query default kind(UserPwd)
+    /// 如果kind为空，则查询默认kind(UserPwd)
+    #[oai(path = "/ak/:ak", method = "get")]
+    async fn find_account_by_ak_improve(
+        &self,
+        ak: Path<String>,
+        kind: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
+        supplier: Query<Option<String>>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Option<IamAccountDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let supplier = supplier.0.unwrap_or_default();
+        let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
+        let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
+
+        let result = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), tenant_id.0.clone(), &funs).await {
+            if let Some(cert) = RbumCertServ::find_one_detail_rbum(
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: if let Some(tenant_id) = tenant_id.0 { Some(tenant_id) } else { Some("".to_string()) },
+                        ..Default::default()
+                    },
+                    ak: Some(ak.0),
+                    rel_rbum_cert_conf_ids: Some(vec![conf_id]),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx,
+            )
+            .await?
+            {
+                Some(
+                    IamAccountServ::get_item(
+                        &cert.rel_rbum_id,
+                        &IamAccountFilterReq {
+                            basic: RbumBasicFilterReq {
+                                own_paths: Some("".to_string()),
+                                with_sub_own_paths: true,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        &funs,
+                        &ctx,
+                    )
+                    .await?,
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

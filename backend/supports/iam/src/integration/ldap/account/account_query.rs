@@ -173,6 +173,9 @@ async fn build_and_execute_sql_query(
             AND phone_vcode_cert.rel_rbum_cert_conf_id = '{}'
             LEFT JOIN rbum_item_attr AS rbum_ext ON rbum_ext.rel_rbum_item_id = iam_account.id
             AND rbum_ext.rel_rbum_kind_attr_id = '{}'
+            LEFT JOIN rbum_rel AS rel_third_app ON rel_third_app.tag = 'IamThirdPartyAppAccount' AND rel_third_app.from_rbum_id = iam_account.id
+            LEFT JOIN iam_third_party_app as third_party_app ON third_party_app.id = rel_third_app.to_rbum_item_id
+            AND third_party_app.status = 1
         WHERE
             rbum_item.disabled = false
             AND rbum_item.scope_level = 0
@@ -216,7 +219,7 @@ impl LdapSqlWhereBuilder for AccountLdapSqlWhereBuilder {
 
     /// LDAP 属性名 -> 数据库查询字段 映射表 (attr, db_field)
     const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[
-        ("cn", "phone_vcode_cert.ak"),
+        ("cn", "user_pwd_cert.ak"),
         ("uid", "user_pwd_cert.ak"),
         ("samaccountname", "user_pwd_cert.ak"),
         ("mail", "mail_vcode_cert.ak"),
@@ -224,5 +227,25 @@ impl LdapSqlWhereBuilder for AccountLdapSqlWhereBuilder {
         ("displayname", "rbum_item.name"),
         ("givenname", "rbum_item.name"),
         ("sn", "rbum_item.name"),
+        ("memberOf", "third_party_app.id"),
     ];
+
+    /// memberOf 过滤器中的值与 LDAP 返回一致，为应用条目的完整 DN（`cn=<id>,ou=...`），需解析出 CN 再与 `third_party_app.id` 比较。
+    fn build_equality_where_clause(attribute: &str, value: &str) -> TardisResult<String> {
+        if Self::is_object_class(attribute) {
+            if Self::is_valid_object_class_value(value) {
+                return Ok("1=1".to_string());
+            } else {
+                return Ok("1=0".to_string());
+            }
+        }
+        let value_for_sql = if attribute.eq_ignore_ascii_case("memberOf") {
+            ldap_parser::extract_cn_from_dn(value).filter(|s| !s.is_empty()).unwrap_or_else(|| value.to_string())
+        } else {
+            value.to_string()
+        };
+        let escaped_value = value_for_sql.replace("'", "''");
+        let field = Self::get_db_field(attribute)?;
+        Ok(format!("{} = '{}'", field, escaped_value))
+    }
 }

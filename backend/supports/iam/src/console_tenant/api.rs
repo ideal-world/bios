@@ -9,3 +9,4 @@ pub mod iam_ct_res_api;
 pub mod iam_ct_role_api;
 pub mod iam_ct_sub_deploy_api;
 pub mod iam_ct_tenant_api;
+pub mod iam_ct_third_party_app_api;

@@ -5,6 +5,7 @@ use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::log::{debug, warn};
 use tardis::serde_json::Value;
@@ -26,6 +27,7 @@ use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
+use crate::serv::clients::cache_client::{CacheSpinLockConfig, FlowCacheClient};
 use crate::serv::clients::reach_client::FlowReachClient;
 use crate::serv::clients::search_client::FlowSearchClient;
 use crate::serv::flow_event_serv::FlowEventServ;
@@ -106,11 +108,16 @@ impl FlowCiInstApi {
     async fn find_state_and_next_transitions(
         &self,
         find_req: Json<Vec<FlowInstFindStateAndTransitionsReq>>,
+        tenant_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<FlowInstFindStateAndTransitionsResp>> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        if let (Some(tenant_id), Some(app_id)) = (tenant_id.0, app_id.0) {
+            ctx.0.own_paths = format!("{}/{}", tenant_id, app_id);
+        }
         let result = FlowInstServ::find_state_and_next_transitions(&find_req.0, &funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -210,11 +217,16 @@ impl FlowCiInstApi {
         &self,
         flow_inst_id: Path<String>,
         transfer_req: Json<FlowInstTransferReq>,
+        tenant_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<FlowInstTransferResp> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        if let (Some(tenant_id), Some(app_id)) = (tenant_id.0, app_id.0) {
+            ctx.0.own_paths = format!("{}/{}", tenant_id, app_id);
+        }
         let mut transfer = transfer_req.0;
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
@@ -447,9 +459,17 @@ impl FlowCiInstApi {
         warn!("ci inst batch_operate flow_inst_id: {:?}, req: {:?}", flow_inst_id, operate_req);
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        funs.begin().await?;
-        FlowInstServ::batch_operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        let lock_key = format!("flow:spin:batch_operate:{}:{}", ctx.0.own_paths, flow_inst_id.0);
+        let token = FlowCacheClient::spin_lock_acquire(&lock_key, &funs, &CacheSpinLockConfig::default()).await?;
+        let try_result: TardisResult<()> = {
+            funs.begin().await?;
+            FlowInstServ::batch_operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
+            funs.commit().await?;
+            Ok(())
+        };
+        let funs_cache = flow_constants::get_tardis_inst();
+        let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, &funs_cache).await;
+        try_result?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
 

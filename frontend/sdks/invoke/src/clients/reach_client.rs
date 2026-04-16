@@ -28,6 +28,19 @@ pub struct ReachMsgReceive {
     pub receive_kind: String,
     pub receive_ids: Vec<String>,
 }
+
+/// 与后端 `ReachMessageAddReq` 对应，用于 CI `PUT /ci/message/task/add`。
+/// `rel_reach_channel`、`receive_kind`、`reach_status` 等枚举请使用与后端一致的 `SCREAMING_SNAKE_CASE` 字符串（如 `"SMS"`、`"ACCOUNT"`、`"PENDING"`）。
+#[derive(Debug, Serialize, Clone)]
+pub struct ReachMessageAddSendTaskReq {
+    pub rel_reach_channel: String,
+    pub receive_kind: String,
+    pub to_res_ids: Vec<String>,
+    pub rel_reach_msg_signature_id: String,
+    pub rel_reach_msg_template_id: String,
+    pub replace: HashMap<String, Option<String>>,
+}
+
 impl ReachClient {
     pub async fn send_message(req: &ReachMsgSendReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
@@ -39,6 +52,15 @@ impl ReachClient {
         let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         funs.web_client().put_obj_to_str(&format!("{reach_url}/ci/message/batch/send"), &reqs, headers.clone()).await?;
+        Ok(())
+    }
+
+    /// Add send task
+    /// 添加发送任务
+    pub async fn add_send_task(req: &ReachMessageAddSendTaskReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let reach_url: String = BaseSpiClient::module_url(InvokeModuleKind::Reach, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().put_obj_to_str(&format!("{reach_url}/ci/message/task/add"), req, headers.clone()).await?;
         Ok(())
     }
     pub async fn general_send(to: &str, template_id: &str, replacement: &HashMap<String, String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

@@ -897,7 +897,7 @@ pub struct FlowModelFIndOrCreatReq {
 /// 初始化复制模型
 #[derive(Serialize, Deserialize, Clone, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelInitCopyReq {
-    pub rel_template_ids: Vec<String>,
+    pub rel_template_ids: HashMap<String, String>, // 模板ID, own_paths
     pub own_path: Vec<String>,
     pub rel_model_id: String,
     pub sync_inst: bool,
@@ -915,4 +915,5 @@ pub struct FlowModelMergeDataReq {
 pub struct FlowModelBatchDisableReq {
     pub rel_template_id: Option<String>,
     pub main: Option<bool>,
+    pub tags: Option<Vec<String>>,
 }

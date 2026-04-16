@@ -466,6 +466,8 @@ pub struct FlowInstFindStateAndTransitionsReq {
     pub flow_inst_id: String,
     /// 参数列表
     pub vars: Option<HashMap<String, Value>>,
+    /// 状态类型
+    pub sys_states: Option<Vec<FlowSysStateKind>>,
 }
 
 /// 实例状态及流转信息
@@ -704,6 +706,10 @@ pub struct FlowInstCommentInfo {
     pub id: Option<String>,
     /// 输出信息
     pub output_message: String,
+    /// 附件信息
+    pub attachments: Option<Vec<FlowInstCommentAttachmentInfo>>,
+    /// 图片信息
+    pub images: Option<Vec<String>>,
     /// 评价人上下文
     pub owner: String,
     pub parent_comment_id: Option<String>,
@@ -717,8 +723,19 @@ pub struct FlowInstCommentInfo {
 pub struct FlowInstCommentReq {
     /// 输出信息
     pub output_message: String,
+    /// 附件信息
+    pub attachments: Option<Vec<FlowInstCommentAttachmentInfo>>,
+    /// 图片信息
+    pub images: Option<Vec<String>>,
     pub parent_comment_id: Option<String>,
     pub parent_owner: Option<String>,
+}
+
+/// 评论附件
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowInstCommentAttachmentInfo {
+    pub name: Option<String>,
+    pub path: Option<String>,
 }
 
 /// 批量检查

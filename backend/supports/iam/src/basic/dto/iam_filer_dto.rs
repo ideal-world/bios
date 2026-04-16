@@ -7,7 +7,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFe
 
 use crate::{
     basic::dto::iam_app_dto::IamAppKind,
-    iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind, IamSubDeployHostKind},
+    iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind, IamSubDeployHostKind, IamThirdPartyAppStatusKind},
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
@@ -65,6 +65,7 @@ pub struct IamAccountFilterReq {
     pub rel2: Option<RbumItemRelFilterReq>,
     pub rel3: Option<RbumItemRelFilterReq>,
     pub rel4: Option<RbumItemRelFilterReq>,
+    pub rel5: Option<RbumItemRelFilterReq>,
     pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
     pub status: Option<IamAccountStatusKind>,
@@ -161,7 +162,8 @@ pub struct IamThirdPartyAppFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
-    pub status: Option<i16>,
+    pub external_id: Option<String>,
+    pub status: Option<IamThirdPartyAppStatusKind>,
     pub sort: Option<i64>,
 }
 

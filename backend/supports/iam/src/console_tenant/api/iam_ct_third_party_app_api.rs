@@ -15,108 +15,18 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::basic::dto::iam_filer_dto::IamThirdPartyAppFilterReq;
 use crate::iam_enumeration::IamThirdPartyAppStatusKind;
 use crate::basic::dto::iam_third_party_app_dto::{
-    IamThirdPartyAppAddReq, IamThirdPartyAppDetailResp, IamThirdPartyAppModifyReq, IamThirdPartyAppSummaryResp,
+    IamThirdPartyAppBatchModifyDisplayReq, IamThirdPartyAppSummaryResp,
 };
 use crate::basic::serv::iam_third_party_app_serv::IamThirdPartyAppServ;
 use crate::iam_constants;
 
 #[derive(Clone, Default)]
-pub struct IamCcThirdPartyAppApi;
+pub struct IamCtThirdPartyAppApi;
 
-/// Common Console Third Party App API
-/// 通用控制台第三方应用API
-#[poem_openapi::OpenApi(prefix_path = "/cc/third_party_app", tag = "bios_basic::ApiTag::Common")]
-impl IamCcThirdPartyAppApi {
-    /// Add Third Party App
-    /// 添加第三方应用
-    #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamThirdPartyAppAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let result = IamThirdPartyAppServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
-    }
-
-    /// Modify Third Party App
-    /// 修改第三方应用
-    #[oai(path = "/:id", method = "put")]
-    async fn modify(
-        &self,
-        id: Path<String>,
-        mut modify_req: Json<IamThirdPartyAppModifyReq>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamThirdPartyAppServ::modify_item(&id.0, &mut modify_req, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Get Third Party App By Id
-    /// 根据ID获取第三方应用
-    #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamThirdPartyAppDetailResp> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
-        let result = IamThirdPartyAppServ::get_item(&id.0, &IamThirdPartyAppFilterReq::default(), &funs, &ctx.0).await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
-    }
-
-    /// Delete Third Party App By Id
-    /// 删除第三方应用
-    #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamThirdPartyAppServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Get Third Party App By External Id
-    /// 根据外部ID获取第三方应用
-    #[oai(path = "/by_external_id/:external_id", method = "get")]
-    async fn get_by_external_id(
-        &self,
-        external_id: Path<String>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Option<IamThirdPartyAppDetailResp>> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
-        let result = IamThirdPartyAppServ::get_item_by_external_id(&external_id.0, &funs, &ctx.0).await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(result)
-    }
-
-    /// Delete Third Party App By External Id
-    /// 根据外部ID删除第三方应用
-    #[oai(path = "/by_external_id/:external_id", method = "delete")]
-    async fn delete_by_external_id(
-        &self,
-        external_id: Path<String>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Void> {
-        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamThirdPartyAppServ::delete_item_by_external_id(&external_id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
-    }
-
+/// Tenant Console Third Party App API
+/// 租户控制台第三方应用API
+#[poem_openapi::OpenApi(prefix_path = "/ct/third_party_app", tag = "bios_basic::ApiTag::Tenant")]
+impl IamCtThirdPartyAppApi {
     /// Paginate Third Party Apps
     /// 分页查询第三方应用
     #[oai(path = "/", method = "get")]
@@ -126,12 +36,10 @@ impl IamCcThirdPartyAppApi {
         ids: Query<Option<String>>,
         name: Query<Option<String>>,
         external_id: Query<Option<String>>,
-        tenant_id: Query<Option<String>>,
         status: Query<Option<IamThirdPartyAppStatusKind>>,
         scope_level: Query<Option<bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         ctx: TardisContextExtractor,
@@ -142,24 +50,20 @@ impl IamCcThirdPartyAppApi {
         let ids = id.0
             .map(|id| vec![id])
             .or_else(|| ids.0.map(|s| s.split(',').map(str::to_string).collect::<Vec<String>>()));
-        let mut filter = IamThirdPartyAppFilterReq {
-            basic: RbumBasicFilterReq {
-                ids,
-                name: name.0,
-                scope_level: scope_level.0,
-                with_sub_own_paths: with_sub.0.unwrap_or(false),
+
+        let result = IamThirdPartyAppServ::paginate_items(
+            &IamThirdPartyAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids,
+                    name: name.0,
+                    scope_level: scope_level.0,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                external_id: external_id.0,
+                status: status.0,
                 ..Default::default()
             },
-            external_id: external_id.0,
-            status: status.0,
-            ..Default::default()
-        };
-        if let Some(tenant_id) = tenant_id.0 {
-            filter.basic.own_paths = Some(tenant_id);
-            filter.basic.ignore_scope = true;
-        }
-        let result = IamThirdPartyAppServ::paginate_items(
-            &filter,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -275,22 +179,28 @@ impl IamCcThirdPartyAppApi {
         TardisResp::ok(result)
     }
 
-    /// Find Third Party Apps Bound To Account
-    /// 获取账号所关联的所有第三方应用
-    #[oai(path = "/by_account/:account_id", method = "get")]
-    async fn find_rel_third_party_app(
+    /// Batch Modify Display Status Of Third Party Apps For Current Account
+    /// 批量修改当前账号关联的第三方应用是否展示
+    #[oai(path = "/display/batch", method = "put")]
+    async fn batch_modify_rel_display(
         &self,
-        account_id: Path<String>,
-        /// 是否可见：true-筛选ext.visible为true或ext为null；false-筛选ext.visible为false；不传则忽略
-        visible: Query<Option<bool>>,
+        modify_req: Json<IamThirdPartyAppBatchModifyDisplayReq>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<Vec<IamThirdPartyAppSummaryResp>> {
+    ) -> TardisApiResult<Void> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let funs = iam_constants::get_tardis_inst();
-        let result = IamThirdPartyAppServ::find_rel_third_party_app(&account_id.0, visible.0, &funs, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamThirdPartyAppServ::batch_modify_rel_display(
+            &ctx.0.owner,
+            &modify_req.0.items,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        funs.commit().await?;
         ctx.0.execute_task().await?;
-        TardisResp::ok(result)
+        TardisResp::ok(Void {})
     }
 
     /// Paginate Accounts Bound To Third Party App

@@ -328,3 +328,20 @@ pub struct IamOauth2TokenResp {
 pub struct IamOauth2AuthorizeResp {
     pub redirect_url: String,
 }
+
+/// 临时脚本：为仅有 LDAP 凭证、无 UserPwd 的账号补全 UserPwd 后的单条结果
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCiLdapBootstrapUserPwdItemResp {
+    /// 账号对应 rbum_item 的 name
+    pub account_name: String,
+    /// UserPwd 凭证的 ak（与 LDAP 侧登录名一致，必要时已去重改名）
+    pub ak: String,
+    /// 生成的 UserPwd 明文密码
+    pub password_plain: String,
+}
+
+/// 临时脚本：为仅有 LDAP 凭证、无 UserPwd 的账号批量补全 UserPwd 的返回
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCiLdapBootstrapUserPwdResp {
+    pub items: Vec<IamCiLdapBootstrapUserPwdItemResp>,
+}
