@@ -302,7 +302,13 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let kind_account_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::RBUM_EXT_TABLE_IAM_ACCOUNT, funs, &ctx).await?;
     let kind_res_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_RES, iam_constants::RBUM_EXT_TABLE_IAM_RES, funs, &ctx).await?;
     let kind_sub_deploy_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_SUB_DEPLOY, iam_constants::RBUM_EXT_TABLE_IAM_SUB_DEPLOY, funs, &ctx).await?;
-    let kind_third_party_app_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_THIRD_PARTY_APP, iam_constants::RBUM_EXT_TABLE_IAM_THIRD_PARTY_APP, funs, &ctx).await?;
+    let kind_third_party_app_id = add_kind(
+        iam_constants::RBUM_KIND_CODE_IAM_THIRD_PARTY_APP,
+        iam_constants::RBUM_EXT_TABLE_IAM_THIRD_PARTY_APP,
+        funs,
+        &ctx,
+    )
+    .await?;
 
     let domain_iam_id = add_domain(funs, &ctx).await?;
 

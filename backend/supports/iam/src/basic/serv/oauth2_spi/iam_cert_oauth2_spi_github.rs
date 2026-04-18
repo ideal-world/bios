@@ -20,14 +20,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
         // GitHub OAuth App 的 client_id/client_secret/code 均由 GitHub 颁发，
         // 字符集为 URL-safe，不包含 '&' 或 '='，可直接拼接为表单主体。
         let form_body = format!("client_id={ak}&client_secret={sk}&code={code}");
-        let result = funs
-            .web_client()
-            .post_to_obj::<Value>(
-                "https://github.com/login/oauth/access_token",
-                &form_body,
-                headers,
-            )
-            .await?;
+        let result = funs.web_client().post_to_obj::<Value>("https://github.com/login/oauth/access_token", &form_body, headers).await?;
         if result.code != 200 {
             return Err(funs.err().not_found(
                 "oauth_spi_github",
