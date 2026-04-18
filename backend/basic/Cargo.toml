@@ -29,14 +29,26 @@ async-recursion.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 fancy-regex.workspace = true
-tardis = { workspace = true, features = ["crypto", "reldb-postgres", "cache", "web-server", "web-client"] }
+tardis = { workspace = true, features = [
+    "crypto",
+    "reldb-postgres",
+    "cache",
+    "web-server",
+    "web-client",
+] }
 strum = { workspace = true }
-testcontainers-modules = { workspace = true, features = ["redis"], optional = true  }
-bios-sdk-invoke = { version = "0.2.0", path = "../../frontend/sdks/invoke", features = ["default"], optional = true }
+testcontainers-modules = { workspace = true, features = [
+    "redis",
+], optional = true }
+bios-sdk-invoke = { version = "0.2.0", path = "../../frontend/sdks/invoke", features = [
+    "default",
+], optional = true }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
-bios-sdk-invoke = { version = "0.2.0", path = "../../frontend/sdks/invoke", features = ["default"] }
+bios-sdk-invoke = { version = "0.2.0", path = "../../frontend/sdks/invoke", features = [
+    "default",
+] }
 
 [[test]]
 name = "test_rbum"

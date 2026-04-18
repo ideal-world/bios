@@ -130,7 +130,9 @@ impl Default for IamLdapConfig {
             dc: dc.clone(),
             base_dn: format!("DC={}", dc[0]),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
-            bind_password: "KDi234!ds".to_string(),
+            // 不再内置默认密码，必须通过配置文件显式提供，以避免静态凭据泄漏。
+            // Deployments must set `iam.ldap.bind_password` explicitly; this default is intentionally empty.
+            bind_password: String::new(),
             ou_staff: "staff".to_string(),
             ou_organization: "organizations".to_string(),
             ou_app: "app".to_string(),
