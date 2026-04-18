@@ -11,12 +11,20 @@ const OAUTH2_GITHUB_USER_INFO_CACHE_KEY: &str = "OAUTH2_GITHUB_USER_INFO_CACHE_K
 impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
         //https://docs.github.com/cn/developers/apps/building-oauth-apps/authorizing-oauth-apps
-        let headers = vec![("Accept".to_string(), "application/json".to_string())];
+        // 将 client_secret 从 URL query 改为表单 body，避免 HTTP client / 反代理 / 访问日志
+        // 将 GitHub OAuth App secret 以明文形式记录下来。
+        let headers = vec![
+            ("Accept".to_string(), "application/json".to_string()),
+            ("Content-Type".to_string(), "application/x-www-form-urlencoded".to_string()),
+        ];
+        // GitHub OAuth App 的 client_id/client_secret/code 均由 GitHub 颁发，
+        // 字符集为 URL-safe，不包含 '&' 或 '='，可直接拼接为表单主体。
+        let form_body = format!("client_id={ak}&client_secret={sk}&code={code}");
         let result = funs
             .web_client()
             .post_to_obj::<Value>(
-                &format!("https://github.com/login/oauth/access_token?client_id={ak}&client_secret={sk}&code={code}"),
-                "",
+                "https://github.com/login/oauth/access_token",
+                &form_body,
                 headers,
             )
             .await?;

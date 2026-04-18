@@ -565,10 +565,9 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     info!(
         "Initialization is complete.
 -----------
-System administrator name: {} ,Initial password: {}
+System administrator name: {} . Initial password has been returned to the caller; it is intentionally not logged here to avoid leaking bootstrap credentials into log aggregators.
 -----------",
         iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT,
-        pwd
     );
     Ok((iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string(), pwd))
 }

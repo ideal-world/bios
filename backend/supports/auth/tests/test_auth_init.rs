@@ -87,7 +87,7 @@ pub async fn test_init() -> TardisResult<()> {
             .unwrap(),
         "iam-res://iam-serv/p1?a=1"
     );
-    let apis = auth_res_serv::get_apis_json()?["apis"].as_array().unwrap().clone();
+    let apis = auth_res_serv::get_apis_json().await?["apis"].as_array().unwrap().clone();
     let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-serv/p1?a=1").collect::<Vec<_>>();
     assert!(url.len() == 1);
 
@@ -151,7 +151,7 @@ pub async fn test_init() -> TardisResult<()> {
     sleep(Duration::from_secs(2)).await;
 
     assert!(auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"].get("a=1").is_none());
-    let apis = auth_res_serv::get_apis_json()?["apis"].as_array().unwrap().clone();
+    let apis = auth_res_serv::get_apis_json().await?["apis"].as_array().unwrap().clone();
     let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-serv/p1?a=1").collect::<Vec<_>>();
     assert!(url.is_empty());
     assert_eq!(

@@ -45,7 +45,8 @@ impl IamIdentCacheServ {
         } else {
             format!("{token_kind},{rel_iam_item_id}")
         };
-        log::trace!("add token: token={}", token);
+        // token 为用户会话凭据，严禁记录明文。
+        log::trace!("add token: token_len={}", token.len());
         if expire_sec > 0 {
             funs.cache()
                 .set_ex(
@@ -89,7 +90,7 @@ impl IamIdentCacheServ {
     }
 
     pub async fn delete_token_by_token(token: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("delete token: token={}", token);
+        log::trace!("delete token: token_len={}", token.len());
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
@@ -433,7 +434,8 @@ impl IamIdentCacheServ {
     }
 
     pub async fn add_aksk(ak: &str, sk: &str, tenant_id: &str, app_id: Option<String>, expire_sec: i64, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("add aksk: ak={},sk={}", ak, sk);
+        // 仅记录 ak 与 sk 长度，sk 属于敏感凭据，严禁进入日志。
+        log::trace!("add aksk: ak={}, sk_len={}", ak, sk.len());
         if expire_sec > 0 {
             funs.cache()
                 .set_ex(
