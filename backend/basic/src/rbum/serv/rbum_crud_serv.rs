@@ -182,10 +182,7 @@ where
     async fn check_scopes(values: HashMap<String, &Vec<String>>, expect_number: u64, table_name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut query = Query::select();
         let msg = values.iter().map(|(k, v)| format!("{k}={v:?}")).join(",");
-        query
-            .column((Alias::new(table_name), ID_FIELD.clone()))
-            .from(Alias::new(table_name))
-            .with_scope(table_name, &ctx.own_paths, false, &ctx.owner);
+        query.column((Alias::new(table_name), ID_FIELD.clone())).from(Alias::new(table_name)).with_scope(table_name, &ctx.own_paths, false, &ctx.owner);
         for (k, v) in values {
             query.and_where(Expr::col((Alias::new(table_name), Alias::new(&k))).is_in(v.clone()));
         }
@@ -1043,20 +1040,34 @@ impl RbumCrudQueryPackage for SelectStatement {
     }
 
     fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, owner: &str) -> &mut Self {
+        // scope_level = 0 (Root): globally visible
+        // scope_level = 0 (Root): 全局可见
         let mut cond = Cond::any().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(0));
-        cond = cond.add(
-            Cond::all()
-                .add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(-2))
-                .add(Expr::col((Alias::new(table_name), OWNER_FIELD.clone())).eq(owner)),
-        );
 
+        // scope_level = -1 (Private) and other non-Owner levels: match by own_paths.
+        // This condition also serves as a fallback for scope_level = -1 (Private),
+        // which requires an exact own_paths match to be visible at the current level.
+        // scope_level != -2 is required to prevent Owner-level records from being
+        // matched by own_paths alone — they must go through the dedicated Owner condition below.
+        //
+        // scope_level = -1 (Private) 及其他非 Owner 层级：通过 own_paths 匹配。
+        // 此条件同时兜底 scope_level = -1 (Private)，即精确匹配 own_paths 才对当前层级可见。
+        // 需要排除 scope_level = -2，防止 Owner 级别的记录仅凭 own_paths 匹配就被查出，
+        // Owner 级别必须走下方独立的 owner 条件。
         let own_cond = if with_sub_own_paths {
             Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{filter_own_paths}%"))
         } else {
             Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(filter_own_paths)
         };
-        cond = cond.add(own_cond);
-
+        cond = cond.add(
+            Cond::all()
+                .add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).ne(-2))
+                .add(own_cond),
+        );
+        // scope_level = -2 (Owner): only visible to the record owner
+        // scope_level = -2 (Owner): 仅记录所有者可见
+        cond = cond
+            .add(Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(-2)).add(Expr::col((Alias::new(table_name), OWNER_FIELD.clone())).eq(owner)));
         if let Some(p1) = rbum_scope_helper::get_pre_paths(1, filter_own_paths) {
             cond = cond.add(
                 Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(1)).add(
