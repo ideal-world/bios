@@ -16,6 +16,14 @@ use tardis::web::poem_openapi;
 /// 作用域层级类型
 #[derive(Display, Clone, Debug, PartialEq, Eq, Serialize, poem_openapi::Enum)]
 pub enum RbumScopeLevelKind {
+    /// Owner
+    ///
+    /// 所有者
+    ///
+    /// Only the owner is visible.
+    ///
+    /// 仅所有者可见。
+    Owner,
     /// Private
     ///
     /// 私有
@@ -56,6 +64,7 @@ impl<'de> Deserialize<'de> for RbumScopeLevelKind {
         D: serde::Deserializer<'de>,
     {
         String::deserialize(deserializer).and_then(|s| match s.to_lowercase().as_str() {
+            "owner" | "person" => Ok(RbumScopeLevelKind::Owner),
             "private" => Ok(RbumScopeLevelKind::Private),
             "root" => Ok(RbumScopeLevelKind::Root),
             "l1" => Ok(RbumScopeLevelKind::L1),
@@ -69,6 +78,7 @@ impl<'de> Deserialize<'de> for RbumScopeLevelKind {
 impl RbumScopeLevelKind {
     pub fn from_int(s: i16) -> TardisResult<RbumScopeLevelKind> {
         match s {
+            -2 => Ok(RbumScopeLevelKind::Owner),
             -1 => Ok(RbumScopeLevelKind::Private),
             0 => Ok(RbumScopeLevelKind::Root),
             1 => Ok(RbumScopeLevelKind::L1),
@@ -80,6 +90,7 @@ impl RbumScopeLevelKind {
 
     pub fn to_int(&self) -> i16 {
         match self {
+            RbumScopeLevelKind::Owner => -2,
             RbumScopeLevelKind::Private => -1,
             RbumScopeLevelKind::Root => 0,
             RbumScopeLevelKind::L1 => 1,

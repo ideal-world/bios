@@ -152,7 +152,7 @@ where
                     .column((Alias::new(table_name), ID_FIELD.clone()))
                     .from(Alias::new(table_name))
                     .and_where(Expr::col((Alias::new(table_name), ID_FIELD.clone())).eq(id))
-                    .with_scope(table_name, &ctx.own_paths, false),
+                    .with_scope(table_name, &ctx.own_paths, false, &ctx.owner),
             )
             .await?
             == 0
@@ -182,7 +182,10 @@ where
     async fn check_scopes(values: HashMap<String, &Vec<String>>, expect_number: u64, table_name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut query = Query::select();
         let msg = values.iter().map(|(k, v)| format!("{k}={v:?}")).join(",");
-        query.column((Alias::new(table_name), ID_FIELD.clone())).from(Alias::new(table_name)).with_scope(table_name, &ctx.own_paths, false);
+        query
+            .column((Alias::new(table_name), ID_FIELD.clone()))
+            .from(Alias::new(table_name))
+            .with_scope(table_name, &ctx.own_paths, false, &ctx.owner);
         for (k, v) in values {
             query.and_where(Expr::col((Alias::new(table_name), Alias::new(&k))).is_in(v.clone()));
         }
@@ -969,7 +972,7 @@ pub trait RbumCrudQueryPackage {
     /// Add scope filter conditions
     ///
     /// 添加作用域过滤条件
-    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool) -> &mut Self;
+    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, owner: &str) -> &mut Self;
 }
 
 impl RbumCrudQueryPackage for SelectStatement {
@@ -1017,7 +1020,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
         let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &ctx.own_paths };
         if has_scope && !filter.ignore_scope {
-            self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths);
+            self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths, &ctx.owner);
         } else if filter.with_sub_own_paths {
             self.and_where(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{filter_own_paths}%").as_str()));
         } else {
@@ -1039,8 +1042,13 @@ impl RbumCrudQueryPackage for SelectStatement {
         self
     }
 
-    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool) -> &mut Self {
+    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, owner: &str) -> &mut Self {
         let mut cond = Cond::any().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(0));
+        cond = cond.add(
+            Cond::all()
+                .add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(-2))
+                .add(Expr::col((Alias::new(table_name), OWNER_FIELD.clone())).eq(owner)),
+        );
 
         let own_cond = if with_sub_own_paths {
             Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{filter_own_paths}%"))

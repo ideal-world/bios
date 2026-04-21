@@ -132,6 +132,7 @@ impl IamCcAccountTaskServ {
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L1 => {}
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L2 => {}
                         bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L3 => {}
+                        bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Owner => {},
                     }
                     IamSearchClient::async_add_or_modify_account_search(&id, Box::new(true), "", &funs, &task_ctx).await?;
                 }

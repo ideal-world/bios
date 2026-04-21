@@ -1351,6 +1351,7 @@ impl IamCertServ {
             bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L1 => {}
             bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L2 => {}
             bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L3 => {}
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Owner => {},
         }
         Ok(ctx)
     }
