@@ -233,14 +233,14 @@ pub fn parse_base_dn_components(base: &str, config: &IamLdapConfig) -> (Option<S
     let mut cn = None;
     let mut ou = None;
     let mut dc = None;
-
+    let normalize_base = normalize_dn_for_match(base);
     // 提取 CN
-    if let Some(cn_val) = extract_cn_from_base(base) {
+    if let Some(cn_val) = extract_cn_from_base(&normalize_base) {
         cn = Some(cn_val);
     }
 
     // 提取 OU
-    if let Some(ou_val) = extract_ou_from_base(base) {
+    if let Some(ou_val) = extract_ou_from_base(&normalize_base) {
         ou = Some(ou_val);
     }
 
