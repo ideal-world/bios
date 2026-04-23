@@ -98,12 +98,37 @@ pub fn parse_search_request(req: &SearchRequest, entity_type: LdapEntityType, co
     })
 }
 
+/// 去掉 RDN 分隔符（逗号）后的空白，并去掉首尾空白，用于 DN 比较/包含判断。
+fn normalize_dn_for_match(dn: &str) -> String {
+    let dn = dn.trim();
+    let mut out = String::with_capacity(dn.len());
+    let mut after_comma = false;
+    for ch in dn.chars() {
+        if ch == ',' {
+            out.push(ch);
+            after_comma = true;
+        } else if after_comma && ch.is_whitespace() {
+            // skip
+        } else {
+            out.push(ch);
+            after_comma = false;
+        }
+    }
+    out
+}
+
 /// 验证base DN是否有效
 fn validate_base_dn(base: &str, entity_type: LdapEntityType, config: &IamLdapConfig) -> bool {
     match entity_type {
         LdapEntityType::RootDse => base.is_empty(),
-        LdapEntityType::Subschema => base.to_lowercase() == config.schema_dn.to_lowercase(),
-        LdapEntityType::Entry => base.to_lowercase().contains(&config.base_dn.to_lowercase()),
+        LdapEntityType::Subschema => {
+            normalize_dn_for_match(base).to_lowercase() == normalize_dn_for_match(&config.schema_dn).to_lowercase()
+        }
+        LdapEntityType::Entry => {
+            let base_n = normalize_dn_for_match(base).to_lowercase();
+            let config_dn = normalize_dn_for_match(&config.base_dn).to_lowercase();
+            base_n.contains(&config_dn)
+        }
     }
 }
 
