@@ -98,23 +98,24 @@ pub fn parse_search_request(req: &SearchRequest, entity_type: LdapEntityType, co
     })
 }
 
-/// 去掉 RDN 分隔符（逗号）后的空白，并去掉首尾空白，用于 DN 比较/包含判断。
+/// 规范化 DN 便于比较：整体 trim、按逗号分段后各 RDN 再 trim 后拼回（不解析转义，与旧版 `contains` 假设一致）。
 fn normalize_dn_for_match(dn: &str) -> String {
-    let dn = dn.trim();
-    let mut out = String::with_capacity(dn.len());
-    let mut after_comma = false;
-    for ch in dn.chars() {
-        if ch == ',' {
-            out.push(ch);
-            after_comma = true;
-        } else if after_comma && ch.is_whitespace() {
-            // skip
-        } else {
-            out.push(ch);
-            after_comma = false;
-        }
+    dn.trim()
+        .split(',')
+        .map(|p| p.trim())
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// 判断 `dn` 是否位于配置的命名上下文中：与 `base_dn` 全等，或 `dn` 是其一棵子树下的条目的 DN（右侧后缀匹配，逗号为 RDN 边界）。
+pub fn is_dn_at_or_under_base(dn: &str, base_dn: &str) -> bool {
+    let d = normalize_dn_for_match(dn).to_lowercase();
+    let b = normalize_dn_for_match(base_dn).to_lowercase();
+    if b.is_empty() {
+        return true;
     }
-    out
+    d == b || d.ends_with(&format!(",{}", b))
 }
 
 /// 验证base DN是否有效
@@ -124,11 +125,7 @@ fn validate_base_dn(base: &str, entity_type: LdapEntityType, config: &IamLdapCon
         LdapEntityType::Subschema => {
             normalize_dn_for_match(base).to_lowercase() == normalize_dn_for_match(&config.schema_dn).to_lowercase()
         }
-        LdapEntityType::Entry => {
-            let base_n = normalize_dn_for_match(base).to_lowercase();
-            let config_dn = normalize_dn_for_match(&config.base_dn).to_lowercase();
-            base_n.contains(&config_dn)
-        }
+        LdapEntityType::Entry => is_dn_at_or_under_base(base, &config.base_dn),
     }
 }
 
@@ -191,8 +188,7 @@ pub fn is_root_dse_query(req: &SearchRequest) -> bool {
 
 /// 检查是否为Schema查询
 pub fn is_subschema_query(req: &SearchRequest, config: &IamLdapConfig) -> bool {
-    let schema_dn = config.schema_dn.clone();
-    req.base.to_lowercase() == schema_dn.to_lowercase()
+    normalize_dn_for_match(&req.base).to_lowercase() == normalize_dn_for_match(&config.schema_dn).to_lowercase()
 }
 
 /// 检查是否为简单存在性查询（用于检查账户是否存在）
@@ -248,8 +244,8 @@ pub fn parse_base_dn_components(base: &str, config: &IamLdapConfig) -> (Option<S
         ou = Some(ou_val);
     }
 
-    // 提取 DC（通过检查是否包含配置的 base_dn）
-    if base.to_lowercase().contains(&config.base_dn.to_lowercase()) {
+    // 提取 DC：当前 base 是否在命名上下文中
+    if is_dn_at_or_under_base(base, &config.base_dn) {
         dc = Some(config.dc.clone());
     }
 
@@ -274,7 +270,7 @@ pub fn get_base_dn_level(base: &str, config: &IamLdapConfig) -> Option<LdapBaseD
     } else if let Some(ou_val) = ou {
         // Ou 枚举值中增加了 String 用于存放实际的 ou 值
         Some(LdapBaseDnLevel::Ou(ou_val))
-    } else if base.to_lowercase().contains(&config.base_dn.to_lowercase()) {
+    } else if is_dn_at_or_under_base(base, &config.base_dn) {
         Some(LdapBaseDnLevel::Domain)
     } else {
         None
