@@ -33,21 +33,27 @@ pub async fn try_set_real_ip_from_req_to_ctx(request: &Request, ctx: &TardisCont
 ///
 /// Forwarded format： `Forwarded: by=<identifier>; for=<identifier><,for=<identifier>>; host=<host>; proto=<http|https>`
 ///
+/// Accepts either the raw header value (as returned by
+/// [`tardis::web::poem::Request::headers`]) or a full header line prefixed with
+/// `Forwarded:`, so callers that already stripped the header name still work.
+///
 /// ```
 /// use bios_basic::helper::request_helper::parse_forwarded_ip;
-/// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.11; proto=http").unwrap().to_string(),"192.168.0.11");
+/// // Raw header value (production path via request.headers().get(FORWARDED)).
+/// assert_eq!(parse_forwarded_ip("for=192.168.0.11; proto=http").unwrap().to_string(), "192.168.0.11");
+/// // Full header line is also accepted.
+/// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.11; proto=http").unwrap().to_string(), "192.168.0.11");
 /// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.9, 192.168.0.11; proto=http").unwrap().to_string(), "192.168.0.9");
 /// assert_eq!(parse_forwarded_ip("Forwarded: proto=http; for=192.168.0.12").unwrap().to_string(), "192.168.0.12");
 /// assert_eq!(parse_forwarded_ip("Forwarded: for=192.168.0.10").unwrap().to_string(), "192.168.0.10");
 /// assert_eq!(parse_forwarded_ip("Forwarded: proto=http; for=192.168.0"), None);
 /// ```
 pub fn parse_forwarded_ip(forwarded_value: &str) -> Option<IpAddr> {
-    forwarded_value.strip_prefix("Forwarded: ").and_then(|forwarded_value| {
-        forwarded_value
-            .split(';')
-            .find(|part| part.trim().starts_with("for="))
-            .and_then(|part| part.trim()[4..].split(',').next().and_then(|ip_str| IpAddr::from_str(ip_str).ok()))
-    })
+    // Strip optional `Forwarded:` / `Forwarded: ` prefix so both the raw header value
+    // and a full header line are supported.
+    // 兼容两种入参：poem 直接返回的原始值 以及包含 `Forwarded:` 前缀的完整头行。
+    let value = forwarded_value.strip_prefix("Forwarded:").map(str::trim).unwrap_or(forwarded_value);
+    value.split(';').find_map(|part| part.trim().strip_prefix("for=")).and_then(|part| part.split(',').next()).and_then(|ip_str| IpAddr::from_str(ip_str.trim()).ok())
 }
 
 /// Convert IPv4-mapped IPv6 to ipv4

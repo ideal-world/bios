@@ -343,7 +343,8 @@ impl TryGetable for StatsDataTypeKind {
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+        // 若 sea_orm 以列索引方式取值则回退为错误而非 panic，避免库代码触发进程崩溃。
+        Err(TryGetError::DbErr(DbErr::Custom("StatsDataTypeKind::try_get_by is not supported; use try_get with column name".to_string())))
     }
 }
 
@@ -364,7 +365,7 @@ impl TryGetable for StatsFactColKind {
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+        Err(TryGetError::DbErr(DbErr::Custom("StatsFactColKind::try_get_by is not supported; use try_get with column name".to_string())))
     }
 }
 
@@ -383,7 +384,7 @@ impl TryGetable for StatsFactDetailKind {
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+        Err(TryGetError::DbErr(DbErr::Custom("StatsFactDetailKind::try_get_by is not supported; use try_get with column name".to_string())))
     }
 }
 
@@ -402,7 +403,7 @@ impl TryGetable for StatsFactDetailMethodKind {
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+        Err(TryGetError::DbErr(DbErr::Custom("StatsFactDetailMethodKind::try_get_by is not supported; use try_get with column name".to_string())))
     }
 }
 
@@ -565,6 +566,6 @@ impl TryGetable for StatsQueryTimeWindowKind {
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+        Err(TryGetError::DbErr(DbErr::Custom("StatsQueryTimeWindowKind::try_get_by is not supported; use try_get with column name".to_string())))
     }
 }

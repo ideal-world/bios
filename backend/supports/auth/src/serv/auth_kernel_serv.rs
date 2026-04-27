@@ -295,9 +295,18 @@ async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthCon
     };
     let now = Utc::now().timestamp_millis();
     if is_webhook {
+        // 未来时间直接拒绝。
         if req_head_time > now {
             return Err(TardisError::unauthorized(
                 "[Auth] The webhook interface time has expired. Procedure.",
+                "401-auth-req-date-incorrect",
+            ));
+        }
+        // 补充过期检查：webhook 签名也必须在 head_date_interval_ms 时间窗内，
+        // 否则泄露的历史签名可被无限重放。
+        if now - req_head_time > config.head_date_interval_ms as i64 {
+            return Err(TardisError::unauthorized(
+                "[Auth] The webhook request has expired or the client's time is incorrect.",
                 "401-auth-req-date-incorrect",
             ));
         }
