@@ -148,7 +148,7 @@ async fn build_and_execute_sql_query(
     let sql = format!(
         r#"
         SELECT
-            iam_account.id,
+            DISTINCT iam_account.id,
             rbum_item.name,
             iam_account.employee_code,
             iam_account.labor_type,

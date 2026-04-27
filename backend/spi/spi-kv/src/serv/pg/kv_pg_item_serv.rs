@@ -207,6 +207,17 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
         where_fragments.push(format!("k = ${}", sql_vals.len()));
     }
 
+    if let Some(paths) = &match_req.own_paths {
+        if !paths.is_empty() {
+            let mut placeholders = Vec::new();
+            for path in paths {
+                sql_vals.push(Value::from(path.clone()));
+                placeholders.push(format!("${}", sql_vals.len()));
+            }
+            where_fragments.push(format!("own_paths IN ({})", placeholders.join(", ")));
+        }
+    }
+
     if let Some(query_path) = match_req.query_path {
         let query_values = if let Some(query_values) = match_req.query_values {
             query_values.to_string()

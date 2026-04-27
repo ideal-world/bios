@@ -117,14 +117,14 @@ impl FlowSearchClient {
         let (kind, id) = key.split_once('_').unwrap_or_default();
         match FlowSearchTaskKind::from_str(kind)? {
             FlowSearchTaskKind::AddInstance => {
-                Self::async_add_or_modify_instance_search(id, Box::new(false), &funs, ctx).await?;
+                Self::async_add_or_modify_instance_search(id, false, &funs, ctx).await?;
             }
             FlowSearchTaskKind::ModifyInstance => {
-                Self::async_add_or_modify_instance_search(id, Box::new(true), &funs, ctx).await?;
+                Self::async_add_or_modify_instance_search(id, true, &funs, ctx).await?;
             }
             FlowSearchTaskKind::ModifyReviewInstance => {}
             FlowSearchTaskKind::ModifyModel => {
-                Self::async_add_or_modify_model_search(id, Box::new(true), &funs, ctx).await?;
+                Self::async_add_or_modify_model_search(id, true, &funs, ctx).await?;
             }
             FlowSearchTaskKind::DeleteModel => {
                 Self::async_delete_model_search(id, &funs, ctx).await?;
@@ -477,7 +477,7 @@ impl FlowSearchClient {
         Ok(())
     }
 
-    pub async fn async_add_or_modify_model_search(model_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn async_add_or_modify_model_search(model_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -498,7 +498,7 @@ impl FlowSearchClient {
         )
         .await?;
         let model_id_cp = model_id.to_string();
-        ctx.add_async_task(Box::new(|| {
+        ctx.add_async_task(Box::new(move || {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = flow_constants::get_tardis_inst();
@@ -535,7 +535,7 @@ impl FlowSearchClient {
     }
 
     // flow model 全局搜索埋点方法
-    async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_or_modify_model_search(model_resp: &FlowModelDetailResp, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model_id = &model_resp.id;
         // 数据共享权限处理
         let mut visit_tenants = vec![rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &model_resp.own_paths).unwrap_or_default()];
@@ -547,7 +547,7 @@ impl FlowSearchClient {
             own_paths = Some("".to_string());
         }
         let key = model_id.clone();
-        if *is_modify {
+        if is_modify {
             let modify_req = SearchItemModifyReq {
                 kind: Some(SEARCH_MODEL_TAG.to_string()),
                 title: Some(model_resp.name.clone()),
@@ -643,10 +643,10 @@ impl FlowSearchClient {
         Ok(())
     }
 
-    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn async_add_or_modify_instance_search(inst_id: &str, is_modify: bool, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         let inst_id_cp = inst_id.to_string();
-        ctx.add_async_task(Box::new(|| {
+        ctx.add_async_task(Box::new(move || {
             Box::pin(async move {
                 let inst_id_cp2 = inst_id_cp.clone();
                 let task_handle = tokio::spawn(async move {
@@ -664,7 +664,7 @@ impl FlowSearchClient {
     }
 
     // flow inst 全局搜索埋点方法
-    pub async fn add_or_modify_instance_search(inst_id: &str, is_modify: Box<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_instance_search(inst_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
             ..ctx.clone()
@@ -680,7 +680,7 @@ impl FlowSearchClient {
         let visit_apps = vec![app.clone()];
         let own_paths = Some(inst_resp.own_paths.clone());
         let key = inst_id;
-        if *is_modify {
+        if is_modify {
             let modify_req = SearchItemModifyReq {
                 kind: Some(SEARCH_INSTANCE_TAG.to_string()),
                 title: inst_resp.title.clone(),

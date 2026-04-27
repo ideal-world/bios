@@ -139,7 +139,7 @@ impl FlowInstServ {
             } else {
                 let inst_id = Self::start_secondary_flow(start_req, false, &rel_model, None, funs, ctx).await?;
                 let inst = Self::get(&inst_id, funs, ctx).await?;
-                FlowSearchClient::add_or_modify_instance_search(&inst_id, Box::new(false), funs, ctx).await?;
+                FlowSearchClient::add_or_modify_instance_search(&inst_id, false, funs, ctx).await?;
                 if inst.finish_abort.is_none() {
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: start_req.tag.clone(),
@@ -424,7 +424,7 @@ impl FlowInstServ {
                     let task_handle = tokio::spawn(async move {
                         let funs = flow_constants::get_tardis_inst();
                         let _ = Self::modify_inst_code(&inst_id_cp, &funs, &ctx_clone).await;
-                        let _ = FlowSearchClient::async_add_or_modify_instance_search(&inst_id_cp, Box::new(true), &funs, &ctx_clone).await;
+                        let _ = FlowSearchClient::async_add_or_modify_instance_search(&inst_id_cp, true, &funs, &ctx_clone).await;
                     });
                     task_handle.await.unwrap();
                     Ok(())
@@ -1937,7 +1937,7 @@ impl FlowInstServ {
                     ctx,
                 )
                 .await?;
-                FlowSearchClient::add_or_modify_instance_search(&root_inst_id, Box::new(false), funs, ctx).await?;
+                FlowSearchClient::add_or_modify_instance_search(&root_inst_id, false, funs, ctx).await?;
                 if let Some(rel_child_objs) = &artifacts.rel_child_objs {
                     Self::start_child_flow(&root_inst_id, rel_child_objs, funs, ctx).await?;
                 }
@@ -2034,6 +2034,7 @@ impl FlowInstServ {
         }
 
         if flow_inst_detail.main {
+            // 整实例 clone 后传入 spawn；若 profiling 显示为热点，可再评估 Arc<FlowInstDetailResp> 等共享方式。
             let flow_inst_cp = flow_inst_detail.clone();
             let new_inst_detail_cp = new_inst_detail.clone();
             let flow_transition_id = transfer_req.flow_transition_id.clone();
