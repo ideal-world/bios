@@ -296,11 +296,15 @@ async fn get_global_context_with_extra_roles(
                 if global_context.roles.contains(role_id) {
                     let extra_role_app_id = cache_client.hget(&format!("{}{}", config.cache_key_extra_role_info, role_id), app_id).await?;
                     if let Some(extra_role_app_id) = extra_role_app_id {
-                        let extend_role_id = match TardisFuns::json.str_to_obj::<IamCacheExtraRoleInfoValue>(&extra_role_app_id) {
-                            Ok(v) => v.role_id,
-                            Err(_) => extra_role_app_id,
+                        let extra_role_info = match TardisFuns::json.str_to_obj::<IamCacheExtraRoleInfoValue>(&extra_role_app_id) {
+                            Ok(v) => v,
+                            Err(_) => IamCacheExtraRoleInfoValue{
+                                own_paths: "".to_string(),
+                                role_id: extra_role_app_id,
+                            },
                         };
-                        extra_roles.push(extend_role_id);
+                        global_context.own_paths = extra_role_info.own_paths;
+                        extra_roles.push(extra_role_info.role_id);
                     }
                 }
             }
