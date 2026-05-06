@@ -453,7 +453,7 @@ impl IamAppServ {
                 continue;
             };
             let extra_role_id = extra_role.id;
-            IamIdentCacheServ::add_extra_role_info(&extra_role_id, app_id, &extra_role_id, funs).await?;
+            IamIdentCacheServ::add_extra_role_info(&extra_role_id, app_id, &extra_role.own_paths, &extra_role_id, funs).await?;
         }
         Ok(())
     }

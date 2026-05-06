@@ -28,6 +28,12 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants::{self, IAM_AVATAR};
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
+#[derive(Serialize)]
+struct IamCacheExtraRoleInfoValue {
+    own_paths: String,
+    role_id: String,
+}
+
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -773,18 +779,23 @@ impl IamIdentCacheServ {
         }
         Ok(())
     }
-    pub async fn add_extra_role_info(extra_role_id: &str, app_id: &str, app_extend_role_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_extra_role_info(extra_role_id: &str, app_id: &str, own_paths: &str, app_extend_role_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!(
-            "add extra role info: extra_role_id={}, app_id={}, app_extend_role_id={}",
+            "add extra role info: extra_role_id={}, app_id={}, own_paths={}, app_extend_role_id={}",
             extra_role_id,
             app_id,
+            own_paths,
             app_extend_role_id
         );
+        let value = TardisFuns::json.obj_to_string(&IamCacheExtraRoleInfoValue {
+            own_paths: own_paths.to_string(),
+            role_id: app_extend_role_id.to_string(),
+        })?;
         funs.cache()
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_extra_role_info_, extra_role_id).as_str(),
                 app_id,
-                app_extend_role_id,
+                value.as_str(),
             )
             .await?;
         Ok(())

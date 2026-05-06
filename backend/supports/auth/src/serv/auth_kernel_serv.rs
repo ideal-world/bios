@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use serde::Deserialize;
 use tardis::chrono::{NaiveDateTime, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
@@ -19,6 +20,13 @@ use crate::{
     auth_constants::DOMAIN_CODE,
     dto::auth_kernel_dto::{AuthContext, AuthReq},
 };
+
+#[derive(Deserialize)]
+struct IamCacheExtraRoleInfoValue {
+    #[allow(dead_code)]
+    own_paths: String,
+    role_id: String,
+}
 
 pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResult> {
     trace!("[Auth] Request auth: {:?}", req);
@@ -288,7 +296,11 @@ async fn get_global_context_with_extra_roles(
                 if global_context.roles.contains(role_id) {
                     let extra_role_app_id = cache_client.hget(&format!("{}{}", config.cache_key_extra_role_info, role_id), app_id).await?;
                     if let Some(extra_role_app_id) = extra_role_app_id {
-                        extra_roles.push(extra_role_app_id);
+                        let extend_role_id = match TardisFuns::json.str_to_obj::<IamCacheExtraRoleInfoValue>(&extra_role_app_id) {
+                            Ok(v) => v.role_id,
+                            Err(_) => extra_role_app_id,
+                        };
+                        extra_roles.push(extend_role_id);
                     }
                 }
             }
