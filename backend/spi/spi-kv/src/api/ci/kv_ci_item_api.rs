@@ -9,6 +9,21 @@ use crate::dto::kv_item_dto::{
 };
 use crate::serv::kv_item_serv;
 
+/// 将 query 中的逗号分隔 `own_paths` 解析为列表；空或仅空白则返回 `None`
+fn own_paths_from_csv(raw: Option<String>) -> Option<Vec<String>> {
+    let raw = raw?;
+    let s = raw.trim();
+    if s.is_empty() {
+        return None;
+    }
+    let v: Vec<String> = s.split(',').map(|p| p.trim().to_string()).filter(|p| !p.is_empty()).collect();
+    if v.is_empty() {
+        None
+    } else {
+        Some(v)
+    }
+}
+
 #[derive(Clone)]
 pub struct KvCiItemApi;
 
@@ -49,13 +64,14 @@ impl KvCiItemApi {
 
     /// Match Items By key prefix
     ///
-    /// 通过key前缀匹配Items
+    /// 通过key前缀匹配Items；`own_paths` 为逗号分隔的 path 列表，不传或空表示不过滤
     #[oai(path = "/item/match", method = "get")]
     async fn match_items_by_key_prefix(
         &self,
         key_prefix: Query<String>,
         extract: Query<Option<String>>,
         key_like: Query<Option<bool>>,
+        own_paths: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u16>,
         disable: Query<Option<bool>>,
@@ -67,6 +83,7 @@ impl KvCiItemApi {
         let resp = kv_item_serv::match_items(
             KvItemMatchReq {
                 key_prefix: key_prefix.0,
+                own_paths: own_paths_from_csv(own_paths.0),
                 extract: extract.0,
                 page_number: page_number.0,
                 page_size: page_size.0,

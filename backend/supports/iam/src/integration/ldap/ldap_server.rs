@@ -97,7 +97,7 @@ impl LdapSession {
         }
 
         // 验证DN格式
-        if !req.dn.to_lowercase().contains(&config.base_dn.to_lowercase()) {
+        if !ldap_parser::is_dn_at_or_under_base(&req.dn, &config.base_dn) {
             return req.gen_invalid_cred();
         }
 

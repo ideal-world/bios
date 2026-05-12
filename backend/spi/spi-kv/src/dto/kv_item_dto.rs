@@ -58,6 +58,8 @@ pub struct KvItemSummaryResp {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 pub struct KvItemMatchReq {
     pub key_prefix: String,
+    /// `Some` 且列表非空时仅返回 `own_paths` 属于该列表的记录（SQL `IN`）；`None` 或 `Some` 空列表则不按 `own_paths` 过滤
+    pub own_paths: Option<Vec<String>>,
     pub query_path: Option<String>,
     pub query_values: Option<Value>,
     pub extract: Option<String>,

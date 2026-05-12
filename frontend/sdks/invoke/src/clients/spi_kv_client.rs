@@ -95,6 +95,7 @@ impl SpiKvClient {
         page_number: u32,
         page_size: u16,
         disable: Option<bool>,
+        own_paths: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Option<TardisPage<KvItemSummaryResp>>> {
@@ -106,6 +107,12 @@ impl SpiKvClient {
         }
         if let Some(disable) = disable {
             url = format!("{url}&disable={disable}");
+        }
+        if let Some(paths) = own_paths {
+            if !paths.is_empty() {
+                let joined = paths.join(",");
+                url = format!("{url}&own_paths={joined}");
+            }
         }
         let resp = funs.web_client().get::<TardisResp<TardisPage<KvItemSummaryResp>>>(&url, headers.clone()).await?;
         BaseSpiClient::package_resp(resp)

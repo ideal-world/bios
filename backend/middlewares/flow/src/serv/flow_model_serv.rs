@@ -355,7 +355,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             }
         }
         if add_req.template && add_req.main && add_req.rel_model_id.clone().is_none_or(|id| id.is_empty()) {
-            FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(false), funs, ctx).await?;
+            FlowSearchClient::async_add_or_modify_model_search(flow_model_id, false, funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
                 Some(flow_model_id.to_string()),
@@ -577,7 +577,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             .collect::<TardisResult<Vec<()>>>()?;
         }
         if model_detail.template && model_detail.main && model_detail.rel_model_id.is_empty() {
-            FlowSearchClient::async_add_or_modify_model_search(flow_model_id, Box::new(true), funs, ctx).await?;
+            FlowSearchClient::async_add_or_modify_model_search(flow_model_id, true, funs, ctx).await?;
             FlowLogClient::add_ctx_task(
                 LogParamTag::DynamicLog,
                 Some(flow_model_id.to_string()),
@@ -2430,7 +2430,7 @@ impl FlowModelServ {
         .await?;
         for flow_model_id in flow_model_ids {
             if !search_models.contains(&flow_model_id) {
-                FlowSearchClient::async_add_or_modify_model_search(&flow_model_id, Box::new(false), funs, ctx).await?;
+                FlowSearchClient::async_add_or_modify_model_search(&flow_model_id, false, funs, ctx).await?;
             }
         }
         Ok(())

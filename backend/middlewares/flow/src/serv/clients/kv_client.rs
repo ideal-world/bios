@@ -26,11 +26,25 @@ impl FlowKvClient {
     }
 
     pub async fn get_role_id(original_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let mut role_id = "".to_string();
+        let mut role_id = original_id.to_string();
         if let Some(role_id_prefix) = original_id.split(':').collect_vec().first() {
-            role_id = SpiKvClient::match_items_by_key_prefix(format!("__k_n__:iam_role:{}", role_id_prefix), None, 1, 999, None, funs, ctx)
+            let own_paths_filter = vec![
+                ctx.own_paths.clone(),
+                rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap_or_default(),
+                String::new(),
+            ];
+            role_id = SpiKvClient::match_items_by_key_prefix(
+                format!("__k_n__:iam_role:{}", role_id_prefix),
+                None,
+                1,
+                999,
+                None,
+                Some(own_paths_filter),
+                funs,
+                ctx,
+            )
                 .await?
-                .map(|resp| resp.records.into_iter().filter(|record| ctx.own_paths.contains(&record.own_paths)).collect_vec())
+                .map(|resp| resp.records.into_iter().collect_vec())
                 .map(|records| {
                     if let Some(item) = records.iter().find(|r| r.own_paths == ctx.own_paths) {
                         return item.key.split("__k_n__:iam_role:").collect_vec().pop().map(|s| s.to_string()).unwrap_or_default();
