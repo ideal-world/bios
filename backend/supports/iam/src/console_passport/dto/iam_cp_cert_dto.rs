@@ -118,6 +118,20 @@ pub struct IamCpUserPwdBindReq {
     pub sk: TrimString,
 }
 
+/// 通过现有 token 刷新 Redis 账号上下文至目标租户或平台
+///
+/// token 保持不变，仅将 `cache_key_account_info_` 中的上下文数据刷新为目标租户维度。
+/// `tenant_id` 为 `None` 时，切换到平台级全局上下文（own_paths = ""）。
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpTokenSwitchReq {
+    /// 当前有效的 token，刷新后继续使用，不会失效
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub token: String,
+    /// 目标租户 ID；为 None 时切换到平台级全局上下文
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tenant_id: Option<String>,
+}
+
 // OAuth2 Service DTOs for Console Passport
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpOAuth2ServiceAuthorizeReq {

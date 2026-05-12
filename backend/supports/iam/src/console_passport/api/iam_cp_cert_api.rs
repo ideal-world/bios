@@ -27,7 +27,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{
     IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq,
-    IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
+    IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpTokenSwitchReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
 };
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
@@ -449,6 +449,54 @@ impl IamCpCertApi {
         }
         funs.commit().await?;
         TardisResp::ok(resp?)
+    }
+
+    /// Switch Tenant / Platform Context by Existing Token
+    ///
+    /// Refresh the Redis account context (`cache_key_account_info_`) to the target tenant scope
+    /// **without** issuing a new token. The same token remains valid and is returned in the response.
+    ///
+    /// 通过现有 Token 刷新账号上下文至目标租户或平台
+    ///
+    /// 不生成新 token，仅将 Redis 中的账号上下文数据（`cache_key_account_info_`）
+    /// 刷新为目标租户维度，原 token 保持不变并随响应返回。
+    #[oai(path = "/token/switch", method = "put")]
+    async fn switch_token(&self, switch_req: Json<IamCpTokenSwitchReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        // 验证请求体中的 token 确实属于当前已认证的账号，防止越权
+        let token_ctx = IamIdentCacheServ::get_context(
+            &IamContextFetchReq {
+                token: switch_req.0.token.clone(),
+                app_id: None,
+            },
+            &funs,
+        )
+        .await?;
+        if token_ctx.owner != ctx.0.owner {
+            return Err(funs.err().unauthorized("iam_cp_cert", "switch_token", "token does not belong to current account", "401-iam-token-owner-mismatch").into());
+        }
+        let account_id = ctx.0.owner.clone();
+        let target_tenant_id = switch_req.0.tenant_id.unwrap_or_default();
+        let target_ctx = TardisContext {
+            own_paths: target_tenant_id.clone(),
+            owner: account_id.clone(),
+            roles: vec![],
+            groups: vec![],
+            ..Default::default()
+        };
+        // 以目标租户维度刷新 Redis 账号上下文，token 保持不变
+        let resp = IamCertServ::package_tardis_account_context_and_resp(
+            &account_id,
+            &target_tenant_id,
+            switch_req.0.token.clone(),
+            None,
+            &funs,
+            &target_ctx,
+        )
+        .await?;
+        target_ctx.execute_task().await?;
+        TardisResp::ok(resp)
     }
 }
 
