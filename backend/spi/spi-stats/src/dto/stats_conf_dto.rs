@@ -197,6 +197,52 @@ pub struct StatsConfDimInfoResp {
     pub update_time: DateTime<Utc>,
 }
 
+/// Add Dimension Column Configuration Request Object
+///
+/// 添加维度列配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimColAddReq {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub key: String,
+    #[oai(validator(min_length = "2"))]
+    pub show_name: String,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub rel_cert_id: Option<String>,
+    pub rel_sql: Option<String>,
+    pub remark: Option<String>,
+}
+
+/// Modify Dimension Column Configuration Request Object
+///
+/// 修改维度列配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimColModifyReq {
+    #[oai(validator(min_length = "2"))]
+    pub show_name: Option<String>,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub rel_cert_id: Option<String>,
+    pub rel_sql: Option<String>,
+    pub remark: Option<String>,
+}
+
+/// Dimension Column Configuration Response Object
+///
+/// 维度列配置响应对象
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
+pub struct StatsConfDimColInfoResp {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub key: String,
+    #[oai(validator(min_length = "2"))]
+    pub show_name: String,
+    pub rel_conf_dim_key: String,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub rel_cert_id: Option<String>,
+    pub rel_sql: Option<String>,
+    pub remark: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
 /// Add Fact Configuration Request Object
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactAddReq {

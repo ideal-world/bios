@@ -1,0 +1,285 @@
+use bios_basic::spi::{
+    spi_funs::SpiBsInst,
+    spi_initializer::common_pg::{self, package_table_name},
+};
+use tardis::{
+    basic::{dto::TardisContext, result::TardisResult},
+    db::{
+        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+        sea_orm::Value,
+    },
+    web::web_resp::TardisPage,
+    TardisFunsInst,
+};
+
+use crate::{
+    dto::stats_conf_dto::{StatsConfDimColAddReq, StatsConfDimColInfoResp, StatsConfDimColModifyReq},
+    serv::stats_valid_serv,
+};
+
+use super::stats_pg_initializer;
+
+pub(crate) async fn add(dim_conf_key: &str, add_req: &StatsConfDimColAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_col_table_and_conn(bs_inst, ctx, true).await?;
+    let (_, conf_dim_table) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    if conn.count_by_sql(&format!("SELECT 1 FROM {conf_dim_table} WHERE key = $1"), vec![Value::from(dim_conf_key)]).await? == 0 {
+        return Err(funs.err().conflict("dim_col_conf", "add", "The dimension config not exists.", "409-spi-stats-dim-conf-not-exist"));
+    }
+    if let Some(rel_sql) = &add_req.rel_sql {
+        if !stats_valid_serv::validate_select_sql(rel_sql) {
+            return Err(funs.err().conflict("dim_col_conf", "add", "The rel_sql is not a valid sql.", "409-spi-stats-dim-col-conf-rel-sql-not-valid"));
+        }
+    }
+    if conn
+        .count_by_sql(
+            &format!("SELECT 1 FROM {table_name} WHERE key = $1 AND rel_conf_dim_key = $2"),
+            vec![Value::from(&add_req.key), Value::from(dim_conf_key)],
+        )
+        .await?
+        != 0
+    {
+        return Err(funs.err().conflict(
+            "dim_col_conf",
+            "add",
+            "The dimension column config already exists, please delete it and then add it.",
+            "409-spi-stats-dim-conf-col-exist",
+        ));
+    }
+    let mut sql_fields = vec![];
+    let mut params = vec![
+        Value::from(add_req.key.to_string()),
+        Value::from(add_req.show_name.clone()),
+        Value::from(dim_conf_key.to_string()),
+        Value::from(add_req.remark.as_ref().unwrap_or(&"".to_string()).as_str()),
+    ];
+    if let Some(data_type) = &add_req.data_type {
+        params.push(Value::from(data_type.to_string()));
+        sql_fields.push("data_type");
+    }
+    if let Some(rel_cert_id) = &add_req.rel_cert_id {
+        params.push(Value::from(rel_cert_id.to_string()));
+        sql_fields.push("rel_cert_id");
+    }
+    if let Some(rel_sql) = &add_req.rel_sql {
+        params.push(Value::from(rel_sql.to_string()));
+        sql_fields.push("rel_sql");
+    }
+    conn.execute_one(
+        &format!(
+            r#"INSERT INTO {table_name}
+(key, show_name, rel_conf_dim_key, remark {})
+VALUES
+($1, $2, $3, $4 {})
+"#,
+            if sql_fields.is_empty() {
+                "".to_string()
+            } else {
+                format!(",{}", sql_fields.join(","))
+            },
+            if sql_fields.is_empty() {
+                "".to_string()
+            } else {
+                format!(",{}", sql_fields.iter().enumerate().map(|(i, _)| format!("${}", i + 5)).collect::<Vec<String>>().join(","))
+            }
+        ),
+        params,
+    )
+    .await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub(crate) async fn modify(
+    dim_conf_key: &str,
+    dim_col_conf_key: &str,
+    modify_req: &StatsConfDimColModifyReq,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_col_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    if let Some(rel_sql) = &modify_req.rel_sql {
+        if !stats_valid_serv::validate_select_sql(rel_sql) {
+            return Err(funs.err().conflict("dim_col_conf", "modify", "The rel_sql is not a valid sql.", "409-spi-stats-dim-col-conf-rel-sql-not-valid"));
+        }
+    }
+    let mut sql_sets = vec![];
+    let mut params = vec![Value::from(dim_col_conf_key.to_string()), Value::from(dim_conf_key.to_string())];
+    if let Some(show_name) = &modify_req.show_name {
+        sql_sets.push(format!("show_name = ${}", params.len() + 1));
+        params.push(Value::from(show_name.to_string()));
+    }
+    if let Some(data_type) = &modify_req.data_type {
+        sql_sets.push(format!("data_type = ${}", params.len() + 1));
+        params.push(Value::from(data_type.to_string()));
+    }
+    if let Some(rel_cert_id) = &modify_req.rel_cert_id {
+        sql_sets.push(format!("rel_cert_id = ${}", params.len() + 1));
+        params.push(Value::from(rel_cert_id.to_string()));
+    }
+    if let Some(rel_sql) = &modify_req.rel_sql {
+        sql_sets.push(format!("rel_sql = ${}", params.len() + 1));
+        params.push(Value::from(rel_sql.to_string()));
+    }
+    if let Some(remark) = &modify_req.remark {
+        sql_sets.push(format!("remark = ${}", params.len() + 1));
+        params.push(Value::from(remark.to_string()));
+    }
+    if sql_sets.is_empty() {
+        return Err(funs.err().bad_request("dim_col_conf", "modify", "No fields to modify.", "400-spi-stats-dim-col-conf-nothing-to-modify"));
+    }
+    conn.execute_one(
+        &format!(
+            r#"UPDATE {table_name}
+SET {}
+WHERE key = $1 AND rel_conf_dim_key = $2
+"#,
+            sql_sets.join(","),
+        ),
+        params,
+    )
+    .await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub(crate) async fn delete(dim_conf_key: &str, dim_col_conf_key: Option<&str>, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_col_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    let mut where_clause = "rel_conf_dim_key = $1".to_string();
+    let mut params = vec![Value::from(dim_conf_key.to_string())];
+    if let Some(dim_col_conf_key) = dim_col_conf_key {
+        params.push(Value::from(dim_col_conf_key));
+        where_clause.push_str(&format!(" AND key = ${}", params.len()));
+    }
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE {where_clause}"), params).await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub(crate) async fn paginate(
+    dim_conf_key: Option<String>,
+    dim_col_conf_key: Option<String>,
+    show_name: Option<String>,
+    page_number: u32,
+    page_size: u32,
+    desc_by_create: Option<bool>,
+    desc_by_update: Option<bool>,
+    _funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<TardisPage<StatsConfDimColInfoResp>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = stats_pg_initializer::init_conf_dim_col_table_and_conn(bs_inst, ctx, true).await?;
+    do_paginate(
+        dim_conf_key,
+        dim_col_conf_key,
+        show_name,
+        page_number,
+        page_size,
+        desc_by_create,
+        desc_by_update,
+        &conn,
+        ctx,
+    )
+    .await
+}
+
+async fn do_paginate(
+    dim_conf_key: Option<String>,
+    dim_col_conf_key: Option<String>,
+    show_name: Option<String>,
+    page_number: u32,
+    page_size: u32,
+    desc_by_create: Option<bool>,
+    desc_by_update: Option<bool>,
+    conn: &TardisRelDBlConnection,
+    ctx: &TardisContext,
+) -> TardisResult<TardisPage<StatsConfDimColInfoResp>> {
+    let table_name = package_table_name("stats_conf_dim_col", ctx);
+    let mut sql_where = vec!["1 = 1".to_string()];
+    let mut sql_order = vec![];
+    let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
+    if let Some(dim_conf_key) = dim_conf_key {
+        sql_where.push(format!("rel_conf_dim_key = ${}", params.len() + 1));
+        params.push(Value::from(dim_conf_key));
+    }
+    if let Some(dim_col_conf_key) = &dim_col_conf_key {
+        sql_where.push(format!("key = ${}", params.len() + 1));
+        params.push(Value::from(dim_col_conf_key));
+    }
+    if let Some(show_name) = &show_name {
+        sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
+        params.push(Value::from(format!("%{show_name}%")));
+    }
+    if let Some(desc_by_create) = desc_by_create {
+        sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
+    }
+    if let Some(desc_by_update) = desc_by_update {
+        sql_order.push(format!("update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
+    }
+    let result = conn
+        .query_all(
+            &format!(
+                r#"SELECT
+    key,
+    show_name,
+    rel_conf_dim_key,
+    data_type,
+    rel_cert_id,
+    rel_sql,
+    remark,
+    create_time,
+    update_time,
+    count(*) OVER() AS total
+FROM {table_name}
+WHERE {}
+{}
+LIMIT $1 OFFSET $2"#,
+                sql_where.join(" AND "),
+                if sql_order.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("ORDER BY {}", sql_order.join(","))
+                }
+            ),
+            params,
+        )
+        .await?;
+
+    let mut total_size: i64 = 0;
+    let result = result
+        .into_iter()
+        .map(|item| {
+            if total_size == 0 {
+                total_size = item.try_get("", "total")?;
+            }
+            Ok(StatsConfDimColInfoResp {
+                key: item.try_get("", "key")?,
+                show_name: item.try_get("", "show_name")?,
+                rel_conf_dim_key: item.try_get("", "rel_conf_dim_key")?,
+                data_type: if item.try_get::<Option<String>>("", "data_type")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "data_type")?)
+                },
+                rel_cert_id: item.try_get("", "rel_cert_id")?,
+                rel_sql: item.try_get("", "rel_sql")?,
+                remark: item.try_get("", "remark")?,
+                create_time: item.try_get("", "create_time")?,
+                update_time: item.try_get("", "update_time")?,
+            })
+        })
+        .collect::<TardisResult<_>>()?;
+    Ok(TardisPage {
+        page_size: page_size as u64,
+        page_number: page_number as u64,
+        total_size: total_size as u64,
+        records: result,
+    })
+}

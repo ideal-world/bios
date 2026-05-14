@@ -156,6 +156,14 @@ pub(crate) async fn delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &Tard
             "409-spi-stats-dim-conf-used",
         ));
     }
+    let (_, conf_dim_col_table) = stats_pg_initializer::init_conf_dim_col_table_and_conn(bs_inst, ctx, true).await?;
+    if common_pg::check_table_exit("stats_conf_dim_col", &conn, ctx).await? {
+        conn.execute_one(
+            &format!("DELETE FROM {conf_dim_col_table} WHERE rel_conf_dim_key = $1"),
+            vec![Value::from(dim_conf_key)],
+        )
+        .await?;
+    }
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(dim_conf_key)]).await?;
     if online(dim_conf_key, &conn, ctx).await? {
         conn.execute_one(&format!("DROP TABLE {}_{dim_conf_key}", package_table_name("stats_inst_dim", ctx)), vec![]).await?;

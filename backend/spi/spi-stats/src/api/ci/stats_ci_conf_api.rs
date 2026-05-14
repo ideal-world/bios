@@ -6,11 +6,15 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::stats_conf_dto::{
-    StatsConfDimAddReq, StatsConfDimGroupAddReq, StatsConfDimGroupInfoResp, StatsConfDimGroupModifyReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq,
-    StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq, StatsConfFactDetailAddReq, StatsConfFactDetailInfoResp, StatsConfFactDetailModifyReq,
-    StatsConfFactInfoResp, StatsConfFactModifyReq, StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq,
+    StatsConfDimAddReq, StatsConfDimColAddReq, StatsConfDimColInfoResp, StatsConfDimColModifyReq, StatsConfDimGroupAddReq, StatsConfDimGroupInfoResp,
+    StatsConfDimGroupModifyReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp,
+    StatsConfFactColModifyReq, StatsConfFactDetailAddReq, StatsConfFactDetailInfoResp, StatsConfFactDetailModifyReq, StatsConfFactInfoResp, StatsConfFactModifyReq,
+    StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq,
 };
-use crate::serv::{stats_cert_serv, stats_conf_dim_group_serv, stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_detail_serv, stats_conf_fact_serv, stats_sync_serv};
+use crate::serv::{
+    stats_cert_serv, stats_conf_dim_col_serv, stats_conf_dim_group_serv, stats_conf_dim_serv, stats_conf_fact_col_serv, stats_conf_fact_detail_serv,
+    stats_conf_fact_serv, stats_sync_serv,
+};
 use crate::stats_enumeration::StatsFactColKind;
 
 #[derive(Clone)]
@@ -109,6 +113,83 @@ impl StatsCiConfApi {
             key.0,
             group_key.0,
             group_is_empty.0,
+            show_name.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Add Dimension Column Configuration
+    ///
+    /// 添加维度列配置
+    #[oai(path = "/dim/:dim_key/dim-col", method = "put")]
+    async fn dim_col_add(&self, dim_key: Path<String>, add_req: Json<StatsConfDimColAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_dim_col_serv::add(&dim_key.0, &add_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Modify Dimension Column Configuration
+    ///
+    /// 修改维度列配置
+    #[oai(path = "/dim/:dim_key/dim-col/:col_key", method = "patch")]
+    async fn dim_col_modify(
+        &self,
+        dim_key: Path<String>,
+        col_key: Path<String>,
+        modify_req: Json<StatsConfDimColModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_dim_col_serv::modify(&dim_key.0, &col_key.0, &modify_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete One Dimension Column Configuration
+    ///
+    /// 删除单条维度列配置
+    #[oai(path = "/dim/:dim_key/dim-col/:col_key", method = "delete")]
+    async fn dim_col_delete(&self, dim_key: Path<String>, col_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_dim_col_serv::delete(&dim_key.0, Some(col_key.0.as_str()), &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete All Dimension Column Configurations Under Dimension
+    ///
+    /// 删除某维度下全部维度列配置
+    #[oai(path = "/dim/:dim_key/dim-col", method = "delete")]
+    async fn dim_col_delete_all(&self, dim_key: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        stats_conf_dim_col_serv::delete(&dim_key.0, None, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Find Dimension Column Configurations
+    ///
+    /// 查询维度列配置
+    #[oai(path = "/dim/:dim_key/dim-col", method = "get")]
+    async fn dim_col_paginate(
+        &self,
+        dim_key: Path<String>,
+        key: Query<Option<String>>,
+        show_name: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<StatsConfDimColInfoResp>> {
+        let funs = crate::get_tardis_inst();
+        let resp = stats_conf_dim_col_serv::paginate(
+            Some(dim_key.0),
+            key.0,
             show_name.0,
             page_number.0,
             page_size.0,
