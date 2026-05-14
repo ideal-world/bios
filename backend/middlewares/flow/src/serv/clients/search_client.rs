@@ -251,6 +251,11 @@ impl FlowSearchClient {
                     ext_mut.insert("current_state_color".to_string(), current_state_color.to_json().unwrap_or_default());
                 }
             }
+            if let Some(current_state_sort) = &req.current_state_sort {
+                if let Some(ext_mut) = ext.as_object_mut() {
+                    ext_mut.insert("current_state_sort".to_string(), current_state_sort.to_json().unwrap_or_default());
+                }
+            }
             return SpiSearchClient::modify_item_and_name(
                 table,
                 rel_business_obj_id,

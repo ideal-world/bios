@@ -25,6 +25,7 @@ use tardis::{
 use crate::{
     domain::flow_state,
     dto::{
+        flow_inst_dto::FlowInstFilterReq,
         flow_state_dto::{
             FlowStateAddReq, FlowStateAggResp, FlowStateCountGroupByStateReq, FlowStateCountGroupByStateResp, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind,
             FlowStateModifyReq, FlowStateNameResp, FlowStateRelModelExt, FlowStateRelModelModifyReq, FlowStateSummaryResp, FlowSysStateKind,
@@ -455,6 +456,7 @@ impl FlowStateServ {
 
     pub async fn modify_rel_state_ext(flow_version_id: &str, modify_req: &FlowStateRelModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut ext = Self::get_rel_state_ext(flow_version_id, &modify_req.id, funs, ctx).await?;
+        let original_sort = ext.sort;
         if let Some(sort) = modify_req.sort {
             ext.sort = sort;
         }
@@ -478,6 +480,11 @@ impl FlowStateServ {
             ctx,
         )
         .await?;
+        if let Some(sort) = modify_req.sort {
+            if sort != original_sort {
+                Self::sync_inst_state_sort_to_search(flow_version_id, &modify_req.id, sort, funs, ctx).await?;
+            }
+        }
 
         Ok(())
     }
@@ -542,5 +549,23 @@ impl FlowStateServ {
         let from_trans = FlowTransitionServ::find_transitions_by_state_id(flow_version_id, None, Some(vec![state_id.to_string()]), funs, ctx).await?;
         FlowTransitionServ::delete_transitions(flow_version_id, &from_trans.into_iter().map(|tran| tran.id).collect_vec(), funs, ctx).await?;
         FlowRelServ::delete_simple_rel(&FlowRelKind::FlowModelState, flow_version_id, state_id, funs, ctx).await
+    }
+
+    // 更新关联的实例对应的工作项search的sort信息
+    async fn sync_inst_state_sort_to_search(flow_version_id: &str, state_id: &str, sort: i64, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let insts = FlowInstServ::find_detail_items(
+            &FlowInstFilterReq {
+                flow_version_id: Some(flow_version_id.to_string()),
+                current_state_id: Some(state_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        for inst in insts {
+            FlowInstServ::sync_state_sort(&inst.tag, &inst.rel_business_obj_id, flow_version_id, state_id, funs, ctx).await?;
+        }
+        Ok(())
     }
 }

@@ -434,6 +434,21 @@ impl IamAppServ {
     }
 
     async fn add_extra_role_cache_by_app_id(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let app = Self::get_item(
+            app_id,
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_owned()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         for extra_role_code in &funs.conf::<IamConfig>().extra_role_codes {
             let extra_role = IamRoleServ::find_one_item(
                 &crate::basic::dto::iam_filer_dto::IamRoleFilterReq {
@@ -453,7 +468,7 @@ impl IamAppServ {
                 continue;
             };
             let extra_role_id = extra_role.id;
-            IamIdentCacheServ::add_extra_role_info(&extra_role_id, app_id, &extra_role.own_paths, &extra_role_id, funs).await?;
+            IamIdentCacheServ::add_extra_role_info(&extra_role_id, app_id, &app.own_paths, &extra_role_id, funs).await?;
         }
         Ok(())
     }

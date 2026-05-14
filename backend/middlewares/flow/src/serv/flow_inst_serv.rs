@@ -1,3 +1,4 @@
+use core::clone::Clone;
 use std::{collections::HashMap, str::FromStr as _};
 
 use async_recursion::async_recursion;
@@ -75,6 +76,7 @@ impl FlowInstServ {
             if start_req.transition_id.is_none() {
                 let inst_id = Self::start_main_flow(start_req, &rel_model, current_state_name, funs, ctx).await?;
                 let main_inst = Self::get(&inst_id, funs, ctx).await?;
+                Self::when_enter_state(&main_inst, &rel_model.init_state_id, &rel_model.id, funs, ctx).await?;
                 if start_req.rel_child_objs.is_some() {
                     let rel_child_model = Self::find_rel_model(
                         start_req.rel_transition_id.clone(),
@@ -287,7 +289,6 @@ impl FlowInstServ {
             flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),
         )
         .await?;
-
         Ok(inst_id)
     }
 
@@ -586,7 +587,7 @@ impl FlowInstServ {
                     rel_flow_version_id: Set(flow_model.current_version_id.to_string()),
                     rel_business_obj_id: Set(rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()),
 
-                    current_state_id: Set(current_state_id),
+                    current_state_id: Set(current_state_id.clone()),
 
                     create_vars: Set(None),
                     current_vars: Set(None),
@@ -611,6 +612,9 @@ impl FlowInstServ {
                 id
             };
             let current_state_name = Self::get(&inst_id, funs, &current_ctx).await?.current_state_name.unwrap_or_default();
+            let main_inst = Self::get(&inst_id, funs, ctx).await?;
+            Self::when_enter_state(&main_inst, &current_state_id, &flow_model.id, funs, ctx).await?;
+
             result.push(FlowInstBatchBindResp {
                 rel_business_obj_id: rel_business_obj.rel_business_obj_id.clone().unwrap_or_default(),
                 current_state_name,
@@ -2722,10 +2726,11 @@ impl FlowInstServ {
         )
         .await?
         .ok_or_else(|| funs.err().not_found("flow_inst", "batch_update_when_switch_model", "flow model is not found", "404-flow-model-not-found"))?;
+
         if let Some(update_states) = update_states {
             for (old_state, new_state) in update_states {
                 if old_state != new_state {
-                    Self::async_unsafe_modify_state(
+                    Self::async_unsafe_modify_state_and_version_id(
                         &FlowInstFilterReq {
                             main: Some(true),
                             tags: Some(vec![new_model.tag.clone()]),
@@ -2733,6 +2738,7 @@ impl FlowInstServ {
                             ..Default::default()
                         },
                         new_state,
+                        Some(new_model.current_version_id.clone()),
                         &new_model_detail,
                         funs,
                         &mock_ctx,
@@ -2741,34 +2747,20 @@ impl FlowInstServ {
                 }
             }
         } else {
-            Self::async_unsafe_modify_state(
+            Self::async_unsafe_modify_state_and_version_id(
                 &FlowInstFilterReq {
                     main: Some(true),
                     tags: Some(vec![new_model.tag.clone()]),
                     ..Default::default()
                 },
                 &new_model.init_state_id,
+                Some(new_model.current_version_id.clone()),
                 &new_model_detail,
                 funs,
                 &mock_ctx,
             )
             .await?;
         }
-        Self::unsafe_modify_rel_model_id(&new_model.tag, &new_model.current_version_id, funs, &mock_ctx).await?;
-
-        Ok(())
-    }
-
-    pub async fn unsafe_modify_rel_model_id(tag: &str, modify_version_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let mut update_statement = Query::update();
-        update_statement.table(flow_inst::Entity);
-        update_statement.value(flow_inst::Column::RelFlowVersionId, modify_version_id);
-        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(tag));
-        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(true));
-        // 此处必须按own_paths修改，不可根据原模型修改。因为存在历史数据,并不一定完全等于原模型ID
-        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
-
-        funs.db().execute(&update_statement).await?;
 
         Ok(())
     }
@@ -2803,7 +2795,9 @@ impl FlowInstServ {
     }
 
     pub async fn unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let insts = Self::find_items(filter, funs, ctx).await?.into_iter().filter(|inst| inst.current_state_id != *state_id).collect_vec();
+        let mut filter = filter.clone();
+        filter.current_state_id = Some(state_id.to_string());
+        let insts = Self::find_items(&filter, funs, ctx).await?;
         let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
         let mut update_statement = Query::update();
         update_statement.table(flow_inst::Entity);
@@ -2850,6 +2844,7 @@ impl FlowInstServ {
                             own_paths: inst.own_paths.clone(),
                             ..ctx.clone()
                         };
+                        Self::sync_state_sort(&inst.tag, &inst.rel_business_obj_id, &inst.rel_flow_version_id, &next_flow_state.id, funs, ctx).await;
                         FlowExternalServ::do_notify_changes(
                             &inst.tag,
                             &inst.id,
@@ -2881,13 +2876,25 @@ impl FlowInstServ {
         Ok(())
     }
 
-    pub async fn async_unsafe_modify_state(
+    pub async fn async_unsafe_modify_state_and_version_id(
         filter: &FlowInstFilterReq,
         state_id: &str,
+        rel_flow_version_id: Option<String>,
         new_model: &FlowModelDetailResp,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if let Some(rel_flow_version_id) = rel_flow_version_id {
+            let mut update_statement = Query::update();
+            update_statement.table(flow_inst::Entity);
+            update_statement.value(flow_inst::Column::RelFlowVersionId, rel_flow_version_id);
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(new_model.tag.clone()));
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(true));
+            // 此处必须按own_paths修改，不可根据原模型修改。因为存在历史数据,并不一定完全等于原模型ID
+            update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
+
+            funs.db().execute(&update_statement).await?;
+        }
         let new_states = new_model.states().into_iter().map(|s| s.id).collect_vec();
         if let Some(current_state_id) = &filter.current_state_id {
             if new_states.contains(current_state_id) {
@@ -2992,6 +2999,7 @@ impl FlowInstServ {
                             error!("Flow Instance {}: failed to modify business obj search ext: {:?}", inst.id, e);
                         }
                     };
+                    Self::sync_state_sort(&inst.tag, &inst.rel_business_obj_id, &inst.rel_flow_version_id, &next_flow_state.id, &funs, &inst_ctx).await;
                     match FlowExternalServ::do_notify_changes(
                         &inst.tag,
                         &inst.id,
@@ -3194,6 +3202,9 @@ impl FlowInstServ {
     // 当进入该节点时
     async fn when_enter_state(flow_inst_detail: &FlowInstDetailResp, state_id: &str, _flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if flow_inst_detail.main {
+            // 将该sort同步至工作项search中
+            Self::sync_state_sort(&flow_inst_detail.tag, &flow_inst_detail.rel_business_obj_id, &flow_inst_detail.rel_flow_version_id, state_id, funs, ctx).await?;
+
             return Ok(());
         }
         let state = FlowStateServ::get_item(
@@ -5171,6 +5182,42 @@ impl FlowInstServ {
             .await;
         }
 
+        Ok(())
+    }
+
+    pub async fn sync_state_sort(tag: &str, rel_business_obj_id: &str, rel_flow_version_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // 获取当前状态的sort属性
+        let state_ext = FlowRelServ::find_from_simple_rels(
+            &FlowRelKind::FlowModelState,
+            &RbumRelFromKind::Item,
+            &rel_flow_version_id,
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .find(|rel| state_id == &rel.rel_id)
+        .map(|rel| {
+            if rel.ext.is_empty() {
+                FlowStateRelModelExt::default()
+            } else {
+                TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default()
+            }
+        })
+        .unwrap_or_default();
+        FlowSearchClient::modify_business_obj_search_ext(
+            &rel_business_obj_id,
+            &ModifyObjSearchExtReq {
+                tag: tag.to_string(),
+                current_state_sort: Some(state_ext.sort),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 }

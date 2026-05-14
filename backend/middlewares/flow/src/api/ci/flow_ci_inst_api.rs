@@ -681,6 +681,7 @@ impl FlowCiInstApi {
                         rel_state: None,
                         rel_transition_state_name: None,
                         current_state_color: None,
+                        ..Default::default()
                     },
                 );
             }

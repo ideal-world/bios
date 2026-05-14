@@ -1,10 +1,16 @@
 use std::collections::HashMap;
+use itertools::Itertools;
 
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use tardis::basic::dto::TardisContext;
+use tardis::web::poem_openapi::payload::Json;
+use crate::iam_config::IamBasicConfigApi;
+use tardis::basic::error::TardisError;
+use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::Query;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
@@ -12,6 +18,7 @@ use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -165,6 +172,62 @@ impl IamCsAppSetApi {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, None, false, None, &funs, &ctx).await?;
         ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Delete App Set Item (App Or Account) By App Set Item Id
+    /// 根据应用集项ID删除应用集项（应用或账号）
+    #[oai(path = "/item/:id", method = "delete")]
+    async fn delete_item(&self, id: Path<String>, tenant_id: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let tenant_ctx = TardisContext {
+            own_paths: tenant_id.0.clone(),
+            ..ctx.0.clone()
+        };
+        funs.begin().await?;
+        IamSetServ::delete_set_item(&id.0, &funs, &tenant_ctx).await?;
+        funs.commit().await?;
+        tenant_ctx.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch Add App Set Item (App Or Account)
+    /// 批量添加应用集项（应用或账号）
+    #[oai(path = "/item/batch", method = "put")]
+    async fn batch_add_set_item(&self, tenant_id: Query<String>, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
+        let mut funs = iam_constants::get_tardis_inst();
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let tenant_ctx = TardisContext {
+            own_paths: tenant_id.0.clone(),
+            ..ctx.0.clone()
+        };
+        funs.begin().await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &tenant_ctx).await?;
+        let result = join_all(
+            add_req
+                .rel_rbum_item_id
+                .split(',')
+                .map(|item_id| async {
+                    IamSetServ::add_set_item(
+                        &IamSetItemAddReq {
+                            set_id: set_id.clone(),
+                            set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+                            sort: add_req.sort,
+                            rel_rbum_item_id: item_id.to_string(),
+                        },
+                        &funs,
+                        &tenant_ctx,
+                    )
+                    .await
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<String>, TardisError>>()?;
+        funs.commit().await?;
+        tenant_ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 }

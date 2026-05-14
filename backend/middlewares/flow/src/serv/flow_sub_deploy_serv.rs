@@ -498,7 +498,7 @@ impl FlowSubDeployServ {
         let new_state_ids = new_flow_model.states().into_iter().map(|s| s.id.clone()).collect_vec();
         for orginal_state_id in orginal_state_ids {
             if !new_state_ids.contains(&orginal_state_id) {
-                FlowInstServ::async_unsafe_modify_state(
+                FlowInstServ::async_unsafe_modify_state_and_version_id(
                     &FlowInstFilterReq {
                         tags: Some(vec![new_flow_model.tag.clone()]),
                         current_state_id: Some(orginal_state_id.clone()),
@@ -506,6 +506,7 @@ impl FlowSubDeployServ {
                         ..Default::default()
                     },
                     &new_flow_model.init_state_id,
+                    None,
                     new_flow_model,
                     funs,
                     &global_ctx,
