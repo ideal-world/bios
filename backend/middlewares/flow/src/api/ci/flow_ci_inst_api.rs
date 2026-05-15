@@ -677,10 +677,9 @@ impl FlowCiInstApi {
                     inst_id.clone(),
                     ModifyObjSearchExtReq {
                         tag: tag.clone(),
-                        status: None,
+                        current_state_id: None,
                         rel_state: None,
                         rel_transition_state_name: None,
-                        current_state_color: None,
                         ..Default::default()
                     },
                 );
@@ -691,6 +690,53 @@ impl FlowCiInstApi {
             processed_count += chunk.len() as u32;
         }
         
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(processed_count)
+    }
+
+    /// 批量同步主实例搜索扩展信息（脚本）
+    ///
+    /// 获取所有 main=true 的实例，按200个分页，同步调用 batch_modify_business_obj_search_ext 更新 current_state_id 和 current_state_sort
+    #[oai(path = "/batch_sync_main_inst_search_ext_script", method = "post")]
+    async fn batch_sync_main_inst_search_ext_script(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u32> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+
+        const PAGE_SIZE: u32 = 200;
+        let filter = FlowInstFilterReq {
+            with_sub: Some(true),
+            main: Some(true),
+            ..Default::default()
+        };
+        let mut page_number = 1u32;
+        let mut processed_count = 0u32;
+
+        loop {
+            let page = FlowInstServ::paginate_detail_items(&filter, page_number, PAGE_SIZE, None, None, &funs, &ctx.0).await?;
+            if page.records.is_empty() {
+                break;
+            }
+            let mut items = HashMap::new();
+            for inst in &page.records {
+                items.insert(
+                    inst.rel_business_obj_id.clone(),
+                    ModifyObjSearchExtReq {
+                        tag: inst.tag.clone(),
+                        current_state_id: Some(inst.current_state_id.clone()),
+                        current_state_sort: inst.current_state_ext.as_ref().map(|ext| ext.sort),
+                        ..Default::default()
+                    },
+                );
+            }
+            FlowSearchClient::batch_modify_business_obj_search_ext(&items, &funs, &ctx.0).await?;
+            processed_count += page.records.len() as u32;
+            if page_number as u64 * PAGE_SIZE as u64 >= page.total_size {
+                break;
+            }
+            page_number += 1;
+        }
+
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(processed_count)

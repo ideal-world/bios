@@ -76,8 +76,8 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
                     .remove(id)
                     .unwrap_or_default();
                 req.tag = modify_req.tag;
-                if modify_req.status.is_some() {
-                    req.status = modify_req.status;
+                if modify_req.current_state_id.is_some() {
+                    req.current_state_id = modify_req.current_state_id;
                 }
                 if modify_req.rel_state.is_some() {
                     req.rel_state = modify_req.rel_state;
@@ -85,8 +85,8 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
                 if modify_req.rel_transition_state_name.is_some() {
                     req.rel_transition_state_name = modify_req.rel_transition_state_name;
                 }
-                if modify_req.current_state_color.is_some() {
-                    req.current_state_color = modify_req.current_state_color;
+                if modify_req.current_state_sort.is_some() {
+                    req.current_state_sort = modify_req.current_state_sort;
                 }
                 business_obj_items.insert(id.to_string(), req);
             }
@@ -96,12 +96,12 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
                     Ok(r) => r,
                     Err(_) => continue, // 如果解析失败，跳过这个任务
                 };
-                let mut req = business_obj_items
+                let mut req = review_instance_items
                     .remove(id)
                     .unwrap_or_default();
                 req.tag = modify_req.tag;
-                if modify_req.status.is_some() {
-                    req.status = modify_req.status;
+                if modify_req.current_state_id.is_some() {
+                    req.current_state_id = modify_req.current_state_id;
                 }
                 if modify_req.rel_state.is_some() {
                     req.rel_state = modify_req.rel_state;
@@ -109,8 +109,8 @@ pub async fn execute_async_task(ctx: &TardisContext) -> TardisResult<()> {
                 if modify_req.rel_transition_state_name.is_some() {
                     req.rel_transition_state_name = modify_req.rel_transition_state_name;
                 }
-                if modify_req.current_state_color.is_some() {
-                    req.current_state_color = modify_req.current_state_color;
+                if modify_req.current_state_sort.is_some() {
+                    req.current_state_sort = modify_req.current_state_sort;
                 }
                 review_instance_items.insert(id.to_string(), req);
             }

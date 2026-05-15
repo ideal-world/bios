@@ -38,6 +38,7 @@ use crate::{
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFilterReq},
         flow_var_dto::FillType,
     },
+    flow_config::FlowConfig,
     flow_constants,
     helper::{loop_check_helper, task_handler_helper},
     serv::{clients::reach_client::FlowReachClient, flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
@@ -104,7 +105,7 @@ impl FlowInstServ {
                     for rel_child_obj in start_req.rel_child_objs.clone().unwrap_or_default() {
                         let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                             tag: rel_child_obj.tag.clone(),
-                            status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
+                            current_state_id: Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone()),
                             rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                             rel_transition_state_name: Some("".to_string()),
                             ..Default::default()
@@ -145,7 +146,7 @@ impl FlowInstServ {
                 if inst.finish_abort.is_none() {
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: start_req.tag.clone(),
-                        status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
+                        current_state_id: Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone()),
                         rel_state: inst.artifacts.unwrap_or_default().state.map(|s| s.to_string()),
                         rel_transition_state_name: Some(inst.current_state_name.unwrap_or_default()),
                         ..Default::default()
@@ -218,7 +219,7 @@ impl FlowInstServ {
             .await?;
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: rel_child_obj.tag.clone(),
-                status: Some("".to_string()),
+                current_state_id: Some("".to_string()),
                 rel_state: Some("".to_string()),
                 rel_transition_state_name: Some("".to_string()),
                 ..Default::default()
@@ -443,7 +444,7 @@ impl FlowInstServ {
             )
             .await?
             .pop() {
-                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
             }
         }
 
@@ -736,6 +737,37 @@ impl FlowInstServ {
         Ok(funs.db().find_dtos::<FlowInstIdsResult>(&query).await?.into_iter().map(|inst| inst.id).collect_vec())
     }
 
+    pub async fn paginate_ids(
+        filter: &FlowInstFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        #[derive(sea_orm::FromQueryResult)]
+        pub struct FlowInstIdsResult {
+            pub id: String,
+        }
+        let mut query = Query::select();
+        Self::package_ext_query(&mut query, filter, funs, ctx).await?;
+        query.clear_selects().columns([(flow_inst::Entity, flow_inst::Column::Id)]);
+        if let Some(sort) = desc_by_create {
+            query.order_by((flow_inst::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_by_update {
+            query.order_by((flow_inst::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos::<FlowInstIdsResult>(&query, page_number as u64, page_size as u64).await?;
+        Ok(TardisPage {
+            page_size: page_size as u64,
+            page_number: page_number as u64,
+            total_size,
+            records: records.into_iter().map(|inst| inst.id).collect(),
+        })
+    }
+
     /// 查询所有 rel_inst_id 不为空的实例ID和tag
     pub async fn find_ids_with_tag_by_rel_inst_id_not_null(
         funs: &TardisFunsInst,
@@ -942,20 +974,16 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<FlowInstDetailResp>> {
-        let inst_ids = Self::find_ids(filter, funs, ctx).await?;
-        let total_size = inst_ids.len() as usize;
-        let records = Self::find_detail(
-            inst_ids[(((page_number - 1) * page_size) as usize).min(total_size)..((page_number * page_size) as usize).min(total_size)].to_vec(),
-            desc_by_create,
-            desc_by_update,
-            funs,
-            ctx,
-        )
-        .await?;
+        let page = Self::paginate_ids(filter, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await?;
+        let records = if page.records.is_empty() {
+            vec![]
+        } else {
+            Self::find_detail(page.records, desc_by_create, desc_by_update, funs, ctx).await?
+        };
         Ok(TardisPage {
-            page_size: page_size as u64,
-            page_number: page_number as u64,
-            total_size: total_size as u64,
+            page_size: page.page_size,
+            page_number: page.page_number,
+            total_size: page.total_size,
             records,
         })
     }
@@ -1089,14 +1117,14 @@ impl FlowInstServ {
                 .await?;
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: main_inst.tag.to_string(),
-                    status: Some("".to_string()),
+                    current_state_id: Some("".to_string()),
                     rel_state: Some("".to_string()),
                     rel_transition_state_name: Some("".to_string()),
                     ..Default::default()
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 // 通知工作项审批驳回
-                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_name.clone().unwrap_or_default(), flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
+                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
             }
         }
         // 携带子审批流的审批流
@@ -1157,7 +1185,7 @@ impl FlowInstServ {
                     }, funs, ctx).await?;
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: child_main_inst.tag.clone(),
-                        status: Some("".to_string()),
+                        current_state_id: Some("".to_string()),
                         rel_state: Some("".to_string()),
                         rel_transition_state_name: Some("".to_string()),
                         ..Default::default()
@@ -2013,7 +2041,7 @@ impl FlowInstServ {
                                 .await?;
                                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                                     tag: rel_child_obj.tag.clone(),
-                                    status: Some("".to_string()),
+                                    current_state_id: Some("".to_string()),
                                     rel_state: Some("".to_string()),
                                     rel_transition_state_name: Some("".to_string()),
                                     ..Default::default()
@@ -2095,7 +2123,7 @@ impl FlowInstServ {
             .unwrap_or_default();
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: child_inst.tag.clone(),
-                status: Some("".to_string()),
+                current_state_id: Some("".to_string()),
                 rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
                 rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
                 ..Default::default()
@@ -2986,7 +3014,7 @@ impl FlowInstServ {
                         &inst.rel_business_obj_id,
                         &ModifyObjSearchExtReq {
                             tag: inst.tag.clone(),
-                            current_state_color: Some(next_flow_state.color.clone()),
+                            current_state_id: Some(next_flow_state.id.clone()),
                             ..Default::default()
                         },
                         &funs,
@@ -3381,10 +3409,10 @@ impl FlowInstServ {
             for child_inst in child_insts {
                 let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                     tag: child_inst.tag.clone(),
-                    status: if flow_inst_detail.finish_time.is_some() {
+                    current_state_id: if flow_inst_detail.finish_time.is_some() {
                         Some("".to_string())
                     } else {
-                        Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string())
+                        Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone())
                     },
                     rel_state: if flow_inst_detail.finish_time.is_some() {
                         Some("".to_string())
@@ -3429,14 +3457,14 @@ impl FlowInstServ {
         // 流程结束时，更新对应的主审批流的search状态
         let mut modify_serach_ext = ModifyObjSearchExtReq {
             tag: inst_detail.tag.to_string(),
-            status: Some("".to_string()),
+            current_state_id: Some("".to_string()),
             rel_state: Some("".to_string()),
             rel_transition_state_name: Some("".to_string()),
             ..Default::default()
         };
         match FlowModelRelTransitionKind::from(rel_transition.clone()) {
             FlowModelRelTransitionKind::Transfer(_) => {
-                modify_serach_ext.status = None;
+                modify_serach_ext.current_state_id = None;
             },
             _ => {}
         }
@@ -3612,7 +3640,7 @@ impl FlowInstServ {
                         for rel_child_obj in rel_child_objs {
                             let modify_ext_req = ModifyObjSearchExtReq {
                                 tag: rel_child_obj.tag.clone(),
-                                status: Some("".to_string()),
+                                current_state_id: Some("".to_string()),
                                 rel_state: None,
                                 rel_transition_state_name: Some("".to_string()),
                                 ..Default::default()
@@ -3716,7 +3744,7 @@ impl FlowInstServ {
         }
         if inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
             let new_inst_detail = Self::get(&inst_detail.id, funs, ctx).await?;
-            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_name.clone().unwrap_or_default(), flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
+            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
         }
         Ok(())
     }
@@ -3923,7 +3951,7 @@ impl FlowInstServ {
                     .await?;
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: added_rel_child_main_inst.tag.clone(),
-                        status: Some(flow_constants::SPECIFED_APPROVING_STATE_NAME.to_string()),
+                        current_state_id: Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone()),
                         rel_state: Some(inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                         rel_transition_state_name: Some("".to_string()),
                         ..Default::default()
@@ -3953,7 +3981,7 @@ impl FlowInstServ {
                     .await?;
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: removed_rel_child_main_inst.tag.clone(),
-                        status: Some("".to_string()),
+                        current_state_id: Some("".to_string()),
                         rel_state: Some("".to_string()),
                         rel_transition_state_name: Some("".to_string()),
                         ..Default::default()
