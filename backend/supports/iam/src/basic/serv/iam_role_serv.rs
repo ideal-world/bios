@@ -428,7 +428,7 @@ impl IamRoleServ {
         for base_role in base_roles {
             let rel_res_id = spec_role_aggs.clone().map(|spec_role_agg| spec_role_agg.get(&base_role.id).cloned().unwrap_or_default()).unwrap_or_default();
             // 过滤掉内置的只读角色
-            if base_role.id == funs.iam_basic_role_app_read_id() {
+            if base_role.id == funs.iam_basic_role_app_read_id() || base_role.id == funs.iam_basic_role_project_read_id() {
                 continue;
             }
             Self::add_role_agg(

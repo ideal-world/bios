@@ -204,7 +204,10 @@ impl Default for IamConfig {
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
             cache_key_role_info_: "iam:cache:role:info:".to_string(),
             cache_key_extra_role_info_: "iam:cache:extra:role:info:".to_string(),
-            extra_role_codes: vec![iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string()],
+            extra_role_codes: vec![
+                iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE.to_string(),
+            ],
             // ..:<account_id>
             cache_key_double_auth_info: "iam:cache:double_auth:info:".to_string(),
             cache_key_double_auth_expire_sec: 300,
@@ -297,6 +300,7 @@ pub struct BasicInfo {
     pub role_tenant_app_manager_id: String,
     pub role_app_admin_id: String,
     pub role_app_read_id: String,
+    pub role_project_read_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -343,6 +347,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_role_tenant_app_manager_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
     fn iam_basic_role_app_read_id(&self) -> String;
+    fn iam_basic_role_project_read_id(&self) -> String;
 }
 
 impl IamBasicConfigApi for TardisFunsInst {
@@ -400,5 +405,9 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_app_read_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_app_read_id.clone())
+    }
+
+    fn iam_basic_role_project_read_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_project_read_id.clone())
     }
 }

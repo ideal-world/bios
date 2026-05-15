@@ -211,6 +211,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         iam_constants::RBUM_ITEM_NAME_TENANT_APP_MANAGER.to_string(),
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string(),
         iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
+        iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE.to_string(),
     ];
     let roles = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
@@ -265,6 +266,12 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found app read role", ""))?;
 
+    let role_project_read_id = roles
+        .iter()
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE)
+        .map(|r| r.id.clone())
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found project read role", ""))?;
+
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
         kind_app_id,
@@ -280,6 +287,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         kind_sub_deploy_id,
         kind_third_party_app_id,
         role_app_read_id,
+        role_project_read_id,
     })?;
     Ok(())
 }
@@ -319,6 +327,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_tenant_app_manager_id: "".to_string(),
         role_app_admin_id: "".to_string(),
         role_app_read_id: "".to_string(),
+        role_project_read_id: "".to_string(),
         kind_sub_deploy_id: kind_sub_deploy_id.to_string(),
         kind_third_party_app_id: kind_third_party_app_id.to_string(),
     })?;
@@ -343,6 +352,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
 
     init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
     init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
+    init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
     init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
     init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
     init_res_item_ids.add_role_res_list(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE, &vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]);
@@ -501,6 +511,16 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         &ctx,
     )
     .await?;
+    let role_project_read_id = add_role(
+        iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE,
+        iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        &IamRoleKind::App,
+        &init_res_item_ids,
+        funs,
+        &ctx,
+    )
+    .await?;
 
     let app_roles = [
         iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
@@ -558,6 +578,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         role_tenant_app_manager_id,
         role_app_admin_id,
         role_app_read_id,
+        role_project_read_id,
         kind_sub_deploy_id,
         kind_third_party_app_id,
     })?;
