@@ -27,7 +27,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
     AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp,
-    IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
+    IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp, IamAccountThirdPartyCertResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamCertLdapAddOrModifyReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
@@ -676,6 +676,7 @@ impl IamAccountServ {
 
         // let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
         let groups = IamSetServ::find_flat_set_items(&set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
+        let third_party_certs = Self::find_account_third_party_certs(&account.id, funs, ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
             name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
@@ -721,6 +722,7 @@ impl IamAccountServ {
             .into_iter()
             .map(|r| (r.rel_rbum_cert_conf_name.unwrap_or("".to_string()), r.ak))
             .collect(),
+            third_party_certs,
             orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, &mock_tenant_ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             exts: account_attrs
                 .into_iter()
@@ -1053,5 +1055,23 @@ impl IamAccountServ {
 
         funs.db().execute(&update_statement).await?;
         Ok(())
+    }
+
+    async fn find_account_third_party_certs(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountThirdPartyCertResp>> {
+        Ok(IamCertServ::find_3th_kind_cert(Some(account_id.to_string()), None, false, None, funs, ctx)
+            .await?
+            .into_iter()
+            .map(|cert| IamAccountThirdPartyCertResp {
+                id: cert.id,
+                supplier: cert.supplier,
+                ak: cert.ak,
+                ext: cert.ext,
+                status: cert.status,
+                start_time: cert.start_time,
+                end_time: cert.end_time,
+                rel_rbum_cert_conf_name: cert.rel_rbum_cert_conf_name,
+            })
+            .sorted_by(|a, b| a.end_time.cmp(&b.end_time))
+            .collect())
     }
 }
