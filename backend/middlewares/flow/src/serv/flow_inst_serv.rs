@@ -1,5 +1,5 @@
 use core::clone::Clone;
-use std::{collections::HashMap, str::FromStr as _};
+use std::{collections::{HashMap, HashSet}, str::FromStr as _};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
@@ -986,6 +986,38 @@ impl FlowInstServ {
             total_size: page.total_size,
             records,
         })
+    }
+
+    /// 在给定的业务对象 ID 中，筛选出仍存在「非主流程且未结束」实例的 rel_business_obj_id（用于主实例搜索扩展同步等场景）
+    pub async fn find_rel_business_obj_ids_with_unfinished_non_main_inst(
+        rel_business_obj_ids: Vec<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashSet<String>> {
+        if rel_business_obj_ids.is_empty() {
+            return Ok(HashSet::new());
+        }
+        #[derive(sea_orm::FromQueryResult)]
+        struct FlowInstRelBizIdResult {
+            rel_business_obj_id: String,
+        }
+        let mut query = Query::select();
+        Self::package_ext_query(
+            &mut query,
+            &FlowInstFilterReq {
+                with_sub: Some(true),
+                rel_business_obj_ids: Some(rel_business_obj_ids),
+                main: Some(false),
+                finish: Some(false),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        query.clear_selects().columns([(flow_inst::Entity, flow_inst::Column::RelBusinessObjId)]);
+        let rows = funs.db().find_dtos::<FlowInstRelBizIdResult>(&query).await?;
+        Ok(rows.into_iter().map(|r| r.rel_business_obj_id).collect())
     }
 
     pub async fn get_inst_ids_by_rel_business_obj_id(

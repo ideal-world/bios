@@ -25,6 +25,7 @@ use crate::dto::flow_inst_dto::{
 use crate::dto::flow_model_version_dto::FlowModelVersionFilterReq;
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
+use crate::flow_config::FlowConfig;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
 use crate::serv::clients::cache_client::{CacheSpinLockConfig, FlowCacheClient};
@@ -717,14 +718,23 @@ impl FlowCiInstApi {
             if page.records.is_empty() {
                 break;
             }
+            let rel_business_obj_ids = page.records.iter().map(|inst| inst.rel_business_obj_id.clone()).unique().collect_vec();
+            let rel_ids_with_unfinished_non_main =
+                FlowInstServ::find_rel_business_obj_ids_with_unfinished_non_main_inst(rel_business_obj_ids, &funs, &ctx.0).await?;
+            let approving_state_id = funs.conf::<FlowConfig>().specifed_approving_state_id.clone();
             let mut items = HashMap::new();
             for inst in &page.records {
+                let (current_state_id, current_state_sort) = if rel_ids_with_unfinished_non_main.contains(&inst.rel_business_obj_id) {
+                    (Some(approving_state_id.clone()), Some(-1))
+                } else {
+                    (Some(inst.current_state_id.clone()), inst.current_state_ext.as_ref().map(|ext| ext.sort))
+                };
                 items.insert(
                     inst.rel_business_obj_id.clone(),
                     ModifyObjSearchExtReq {
                         tag: inst.tag.clone(),
-                        current_state_id: Some(inst.current_state_id.clone()),
-                        current_state_sort: inst.current_state_ext.as_ref().map(|ext| ext.sort),
+                        current_state_id,
+                        current_state_sort,
                         ..Default::default()
                     },
                 );
