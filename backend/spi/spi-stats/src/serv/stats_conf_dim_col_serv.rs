@@ -32,5 +32,10 @@ spi_dispatch_service! {
             desc_by_create: Option<bool>,
             desc_by_update: Option<bool>
         ) -> TardisResult<TardisPage<StatsConfDimColInfoResp>>;
+        exec_rel_sql(
+            dim_conf_key: &str,
+            dim_col_conf_key: &str,
+            params: &[String]
+        ) -> TardisResult<Vec<serde_json::Value>>;
     }
 }

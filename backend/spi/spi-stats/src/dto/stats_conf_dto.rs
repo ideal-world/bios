@@ -225,6 +225,17 @@ pub struct StatsConfDimColModifyReq {
     pub remark: Option<String>,
 }
 
+/// Execute Dimension Column rel_sql Request Object
+///
+/// 执行维度列关联 SQL 请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimColRelSqlExecReq {
+    /// Placeholder values for $1, $2, ... in rel_sql
+    ///
+    /// rel_sql 中 $1、$2 等占位符的填充值
+    pub params: Vec<String>,
+}
+
 /// Dimension Column Configuration Response Object
 ///
 /// 维度列配置响应对象

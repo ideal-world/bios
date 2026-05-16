@@ -6,15 +6,16 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
-        sea_orm::Value,
+        sea_orm::{FromQueryResult, Value},
     },
+    serde_json,
     web::web_resp::TardisPage,
     TardisFunsInst,
 };
 
 use crate::{
     dto::stats_conf_dto::{StatsConfDimColAddReq, StatsConfDimColInfoResp, StatsConfDimColModifyReq},
-    serv::stats_valid_serv,
+    serv::{stats_cert_serv, stats_valid_serv},
 };
 
 use super::stats_pg_initializer;
@@ -282,4 +283,69 @@ LIMIT $1 OFFSET $2"#,
         total_size: total_size as u64,
         records: result,
     })
+}
+
+pub(crate) async fn exec_rel_sql(
+    dim_conf_key: &str,
+    dim_col_conf_key: &str,
+    params: &[String],
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+    inst: &SpiBsInst,
+) -> TardisResult<Vec<serde_json::Value>> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, _) = stats_pg_initializer::init_conf_dim_col_table_and_conn(bs_inst, ctx, true).await?;
+    let page = do_paginate(
+        Some(dim_conf_key.to_string()),
+        Some(dim_col_conf_key.to_string()),
+        None,
+        1,
+        1,
+        None,
+        None,
+        &conn,
+        ctx,
+    )
+    .await?;
+    let dim_col = page.records.into_iter().next().ok_or_else(|| {
+        funs.err().not_found(
+            "dim_col_conf",
+            "exec_rel_sql",
+            &format!("The dimension column config [{dim_col_conf_key}] not found under dimension [{dim_conf_key}]."),
+            "404-spi-stats-dim-col-conf-not-exist",
+        )
+    })?;
+    let cert_id = dim_col.rel_cert_id.ok_or_else(|| {
+        funs.err().bad_request("dim_col_conf", "exec_rel_sql", "The rel_cert_id is required.", "400-spi-stats-dim-col-conf-rel-cert-id-required")
+    })?;
+    let sql = dim_col.rel_sql.ok_or_else(|| {
+        funs.err().bad_request("dim_col_conf", "exec_rel_sql", "The rel_sql is required.", "400-spi-stats-dim-col-conf-rel-sql-required")
+    })?;
+    if cert_id.is_empty() || sql.is_empty() {
+        return Err(funs.err().bad_request(
+            "dim_col_conf",
+            "exec_rel_sql",
+            "The rel_cert_id and rel_sql must not be empty.",
+            "400-spi-stats-dim-col-conf-rel-sql-empty",
+        ));
+    }
+    if !stats_valid_serv::validate_select_sql(&sql) {
+        return Err(funs.err().bad_request(
+            "dim_col_conf",
+            "exec_rel_sql",
+            "The rel_sql is not a valid select sql.",
+            "400-spi-stats-dim-col-conf-rel-sql-not-valid",
+        ));
+    }
+    let data_source_conn = stats_cert_serv::get_db_conn_by_cert_id(&cert_id, funs, ctx).await?;
+    let sql_params: Vec<Value> = params.iter().map(|s| Value::from(s.as_str())).collect();
+    let results = data_source_conn.query_all(&sql, sql_params).await?;
+    results
+        .iter()
+        .map(|item| {
+            serde_json::Value::from_query_result_optional(item, "")
+                .map(|x| x.unwrap_or(serde_json::Value::Null))
+                .map_err(Into::into)
+        })
+        .collect()
 }

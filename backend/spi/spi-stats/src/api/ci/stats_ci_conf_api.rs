@@ -1,3 +1,4 @@
+use tardis::serde_json;
 use tardis::web::context_extractor::TardisContextExtractor;
 
 use tardis::web::poem_openapi;
@@ -6,7 +7,8 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::stats_conf_dto::{
-    StatsConfDimAddReq, StatsConfDimColAddReq, StatsConfDimColInfoResp, StatsConfDimColModifyReq, StatsConfDimGroupAddReq, StatsConfDimGroupInfoResp,
+    StatsConfDimAddReq, StatsConfDimColAddReq, StatsConfDimColInfoResp, StatsConfDimColModifyReq, StatsConfDimColRelSqlExecReq, StatsConfDimGroupAddReq,
+    StatsConfDimGroupInfoResp,
     StatsConfDimGroupModifyReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp,
     StatsConfFactColModifyReq, StatsConfFactDetailAddReq, StatsConfFactDetailInfoResp, StatsConfFactDetailModifyReq, StatsConfFactInfoResp, StatsConfFactModifyReq,
     StatsSyncDbConfigAddReq, StatsSyncDbConfigInfoResp, StatsSyncDbConfigModifyReq,
@@ -200,6 +202,23 @@ impl StatsCiConfApi {
         )
         .await?;
         TardisResp::ok(resp)
+    }
+
+    /// Execute Dimension Column rel_sql
+    ///
+    /// 根据维度列配置的 rel_cert_id 与 rel_sql 执行查询并返回结果；rel_sql 使用 $1、$2 等占位符，由 params 按序填充
+    #[oai(path = "/dim/:dim_key/dim-col/:col_key/rel-sql/exec", method = "post")]
+    async fn dim_col_rel_sql_exec(
+        &self,
+        dim_key: Path<String>,
+        col_key: Path<String>,
+        exec_req: Json<StatsConfDimColRelSqlExecReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<serde_json::Value>> {
+        let funs = crate::get_tardis_inst();
+        TardisResp::ok(
+            stats_conf_dim_col_serv::exec_rel_sql(&dim_key.0, &col_key.0, &exec_req.0.params, &funs, &ctx.0).await?,
+        )
     }
 
     /// Add Fact Configuration
