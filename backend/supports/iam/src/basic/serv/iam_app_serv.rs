@@ -31,7 +31,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
+use crate::iam_constants::{self, RBUM_ITEM_NAME_APP_READ_ROLE, RBUM_ITEM_NAME_PROJECT_READ_ROLE, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
 
@@ -203,7 +203,12 @@ impl IamAppServ {
         )
         .await?;
         IamRoleServ::add_app_copy_role_agg(&app_id, funs, &app_ctx).await?;
-        Self::add_extra_role_cache_by_app_id(&app_id, funs, &tenant_ctx).await?;
+        if add_req.kind.clone().unwrap_or(IamAppKind::Product) == IamAppKind::Product {
+            Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_APP_READ_ROLE, funs, &tenant_ctx).await?;
+        } else {
+            Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_PROJECT_READ_ROLE, funs, &tenant_ctx).await?;
+        }
+        
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
         let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, tenant_ctx).await?;
         // TODO 是否需要在这里初始化应用级别的set？
@@ -428,12 +433,12 @@ impl IamAppServ {
         IamAppServ::find_items(&filter, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
-    pub async fn init_extra_role_cache_by_app_id(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn init_extra_role_cache_by_app_id(app_id: &str, extra_role_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-        Self::add_extra_role_cache_by_app_id(app_id, funs, &tenant_ctx).await
+        Self::add_extra_role_cache_by_app_id(app_id, extra_role_code, funs, &tenant_ctx).await
     }
 
-    async fn add_extra_role_cache_by_app_id(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_extra_role_cache_by_app_id(app_id: &str, extra_role_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let app = Self::get_item(
             app_id,
             &IamAppFilterReq {
@@ -449,24 +454,19 @@ impl IamAppServ {
             ctx,
         )
         .await?;
-        for extra_role_code in &funs.conf::<IamConfig>().extra_role_codes {
-            let extra_role = IamRoleServ::find_one_item(
-                &crate::basic::dto::iam_filer_dto::IamRoleFilterReq {
-                    basic: RbumBasicFilterReq {
-                        code: Some(extra_role_code.clone()),
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    kind: Some(crate::iam_enumeration::IamRoleKind::App),
+        if let Some(extra_role) = IamRoleServ::find_one_item(
+            &crate::basic::dto::iam_filer_dto::IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some(extra_role_code.to_string()),
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
-                funs,
-                ctx,
-            )
-            .await?;
-            let Some(extra_role) = extra_role else {
-                continue;
-            };
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await? {
             let extra_role_id = extra_role.id;
             IamIdentCacheServ::add_extra_role_info(&extra_role_id, app_id, &app.own_paths, &extra_role_id, funs).await?;
         }
