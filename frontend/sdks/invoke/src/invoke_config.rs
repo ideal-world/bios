@@ -6,6 +6,49 @@ use std::{collections::HashMap, fmt::Debug};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::{error::TardisError, result::TardisResult};
 use tardis::TardisFunsInst;
+/// Configuration for initializing a SPI backend service instance.
+///
+/// SPI后端服务实例初始化配置（每个模块独立配置）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpiBsInitConfig {
+    /// Backend service name
+    ///
+    /// 后端服务名称
+    pub bs_name: String,
+    /// SPI service kind id
+    ///
+    /// SPI服务类型id
+    pub bs_kind_id: String,
+    /// Connection URI
+    ///
+    /// 连接URI
+    pub bs_conn_uri: String,
+    /// Access key / username
+    ///
+    /// 连接用户名/凭证名
+    pub bs_ak: String,
+    /// Secret key / password
+    ///
+    /// 连接密码/凭证密码
+    pub bs_sk: String,
+    /// Extended information (e.g. connection pool config)
+    ///
+    /// 扩展信息（如连接池配置）
+    pub bs_ext: String,
+    /// Whether the backend service is private
+    ///
+    /// 是否私有
+    pub bs_private: bool,
+    /// Whether the backend service is disabled
+    ///
+    /// 是否禁用
+    pub bs_disabled: Option<bool>,
+    /// App/tenant id to bind the backend service to
+    ///
+    /// 需要绑定后端服务的应用/租户id
+    pub app_tenant_id: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct InvokeConfig {
@@ -14,9 +57,15 @@ pub struct InvokeConfig {
     pub module_configs: HashMap<String, InvokeModuleConfig>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
 pub struct InvokeModuleConfig {
     pub in_event: bool,
+    /// Backend service initialization config for this module
+    ///
+    /// 该模块的后端服务初始化配置
+    pub bs_init: Option<SpiBsInitConfig>,
+
 }
 
 impl Default for InvokeConfig {
@@ -35,12 +84,12 @@ impl Default for InvokeConfig {
                 (InvokeModuleKind::Reach.to_string(), "http://127.0.0.1:8080/reach".to_string()),
             ]),
             module_configs: HashMap::from([
-                (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false }),
-                (InvokeModuleKind::Object.to_string(), InvokeModuleConfig { in_event: false }),
-                (InvokeModuleKind::Log.to_string(), InvokeModuleConfig { in_event: false }),
-                (InvokeModuleKind::Search.to_string(), InvokeModuleConfig { in_event: false }),
-                (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false }),
-                (InvokeModuleKind::Stats.to_string(), InvokeModuleConfig { in_event: false }),
+                (InvokeModuleKind::Kv.to_string(), InvokeModuleConfig { in_event: false, ..Default::default() }),
+                (InvokeModuleKind::Object.to_string(), InvokeModuleConfig { in_event: false, ..Default::default() }),
+                (InvokeModuleKind::Log.to_string(), InvokeModuleConfig { in_event: false, ..Default::default() }),
+                (InvokeModuleKind::Search.to_string(), InvokeModuleConfig { in_event: false, ..Default::default() }),
+                (InvokeModuleKind::Schedule.to_string(), InvokeModuleConfig { in_event: false, ..Default::default() }),
+                (InvokeModuleKind::Stats.to_string(), InvokeModuleConfig { in_event: false, ..Default::default() }),
             ]),
         }
     }
@@ -77,6 +126,7 @@ impl InvokeConfigManager {
         let conf = conf.get(code).unwrap_or_else(|| panic!("not found invoke config code {code}"));
         conf.module_configs.get(&module.to_string()).cloned()
     }
+
 }
 
 pub trait InvokeConfigApi {
@@ -85,6 +135,7 @@ pub trait InvokeConfigApi {
     fn invoke_conf_match_module_url(&self, module_url: &str) -> bool;
     fn invoke_conf_inject_context(&self, context: &TardisContext) -> TardisContext;
     fn invoke_conf_in_event(&self, module: InvokeModuleKind) -> bool;
+    fn invoke_conf_module_bs_init(&self, module: InvokeModuleKind) -> Option<SpiBsInitConfig>;
 }
 
 impl InvokeConfigApi for TardisFunsInst {
@@ -108,5 +159,9 @@ impl InvokeConfigApi for TardisFunsInst {
 
     fn invoke_conf_in_event(&self, module: InvokeModuleKind) -> bool {
         InvokeConfigManager::get_module_config(self.module_code(), module).map_or(false, |conf| conf.in_event)
+    }
+
+    fn invoke_conf_module_bs_init(&self, module: InvokeModuleKind) -> Option<SpiBsInitConfig> {
+        InvokeConfigManager::get_module_config(self.module_code(), module).and_then(|conf| conf.bs_init)
     }
 }

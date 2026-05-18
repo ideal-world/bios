@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{clients::base_spi_client::BaseSpiClient, invoke_config::InvokeConfig, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
+use crate::{clients::base_spi_client::{BaseSpiClient, SpiBsAddReq}, invoke_config::{InvokeConfig, InvokeConfigApi}, invoke_constants::DYNAMIC_LOG, invoke_enumeration::InvokeModuleKind};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -117,6 +117,31 @@ impl LogItemAddV2Req {
 }
 
 impl SpiLogClient {
+    /// Initialize the Log backend service: create if not exists and bind to app/tenant.
+    /// Reads all configuration from `InvokeModuleConfig.bs_init`.
+    ///
+    /// 初始化 Log 后端服务：不存在则创建，并绑定到应用/租户。配置均来自 invoke 配置，返回后端服务id。
+    pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        use tardis::basic::error::TardisError;
+        let init_cfg = funs
+            .invoke_conf_module_bs_init(InvokeModuleKind::Log)
+            .ok_or_else(|| TardisError::bad_request("log module bs_init config not set", ""))?;
+        let module_url = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
+        let bs_add_req = SpiBsAddReq {
+            name: init_cfg.bs_name.clone(),
+            kind_id: init_cfg.bs_kind_id.clone(),
+            conn_uri: init_cfg.bs_conn_uri.clone(),
+            ak: init_cfg.bs_ak.clone(),
+            sk: init_cfg.bs_sk.clone(),
+            ext: init_cfg.bs_ext.clone(),
+            private: init_cfg.bs_private,
+            disabled: init_cfg.bs_disabled,
+        };
+        let bs_id = BaseSpiClient::add_bs_if_not_exist(&module_url, &bs_add_req, funs, ctx).await?;
+        BaseSpiClient::add_bs_rel_if_not_exist(&module_url, &bs_id, &init_cfg.app_tenant_id, funs, ctx).await?;
+        Ok(bs_id)
+    }
+
     #[deprecated]
     pub async fn add_dynamic_log(
         content: &LogDynamicContentReq,

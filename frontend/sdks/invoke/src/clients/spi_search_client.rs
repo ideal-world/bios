@@ -1,17 +1,43 @@
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::TardisFunsInst;
 
 use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchReq, SearchItemSearchResp, SearchSaveItemReq};
+use crate::invoke_config::InvokeConfigApi;
 use crate::invoke_enumeration::InvokeModuleKind;
 
-use super::base_spi_client::BaseSpiClient;
+use super::base_spi_client::{BaseSpiClient, SpiBsAddReq};
 use super::spi_kv_client::SpiKvClient;
 
 pub struct SpiSearchClient;
 
 impl SpiSearchClient {
+    /// Initialize the Search backend service: create if not exists and bind to app/tenant.
+    /// Reads all configuration from `InvokeModuleConfig.bs_init`.
+    ///
+    /// 初始化 Search 后端服务：不存在则创建，并绑定到应用/租户。配置均来自 invoke 配置，返回后端服务id。
+    pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let init_cfg = funs
+            .invoke_conf_module_bs_init(InvokeModuleKind::Search)
+            .ok_or_else(|| TardisError::bad_request("search module bs_init config not set", ""))?;
+        let module_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
+        let bs_add_req = SpiBsAddReq {
+            name: init_cfg.bs_name.clone(),
+            kind_id: init_cfg.bs_kind_id.clone(),
+            conn_uri: init_cfg.bs_conn_uri.clone(),
+            ak: init_cfg.bs_ak.clone(),
+            sk: init_cfg.bs_sk.clone(),
+            ext: init_cfg.bs_ext.clone(),
+            private: init_cfg.bs_private,
+            disabled: init_cfg.bs_disabled,
+        };
+        let bs_id = BaseSpiClient::add_bs_if_not_exist(&module_url, &bs_add_req, funs, ctx).await?;
+        BaseSpiClient::add_bs_rel_if_not_exist(&module_url, &bs_id, &init_cfg.app_tenant_id, funs, ctx).await?;
+        Ok(bs_id)
+    }
+
     pub async fn add_item_and_name(add_req: &SearchItemAddReq, name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let search_url: String = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
