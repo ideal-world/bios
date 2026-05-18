@@ -4,6 +4,7 @@ use bios_basic::spi::{
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    chrono::{DateTime, NaiveDate, Utc},
     db::{
         reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
         sea_orm::{FromQueryResult, Value},
@@ -338,8 +339,33 @@ pub(crate) async fn exec_rel_sql(
         ));
     }
     let data_source_conn = stats_cert_serv::get_db_conn_by_cert_id(&cert_id, funs, ctx).await?;
-    let sql_params: Vec<Value> = params.iter().map(|s| Value::from(s.as_str())).collect();
-    let results = data_source_conn.query_all(&sql, sql_params).await?;
+    // 根据维度列的数据类型转换参数，避免类型不匹配错误（如 timestamp >= text）
+    let data_type = dim_col.data_type.as_ref();
+    let sql_params: TardisResult<Vec<Value>> = params
+        .iter()
+        .map(|s| match data_type {
+            Some(crate::stats_enumeration::StatsDataTypeKind::Int) => s.parse::<i32>()
+                .map(Value::from)
+                .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse int parameter: {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
+            Some(crate::stats_enumeration::StatsDataTypeKind::Float) => s.parse::<f32>()
+                .map(Value::from)
+                .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse float parameter: {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
+            Some(crate::stats_enumeration::StatsDataTypeKind::Double) => s.parse::<f64>()
+                .map(Value::from)
+                .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse double parameter: {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
+            Some(crate::stats_enumeration::StatsDataTypeKind::Boolean) => s.parse::<bool>()
+                .map(Value::from)
+                .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse bool parameter: {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
+            Some(crate::stats_enumeration::StatsDataTypeKind::Date) => NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                .map(Value::from)
+                .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse date parameter (expected format YYYY-MM-DD): {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
+            Some(crate::stats_enumeration::StatsDataTypeKind::DateTime) => DateTime::parse_from_rfc3339(s)
+                .map(|dt| Value::from(dt.with_timezone(&Utc)))
+                .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse datetime parameter (expected RFC3339 format): {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
+            Some(_) | None => Ok(Value::from(s.as_str())),
+        })
+        .collect();
+    let results = data_source_conn.query_all(&sql, sql_params?).await?;
     results
         .iter()
         .map(|item| {
