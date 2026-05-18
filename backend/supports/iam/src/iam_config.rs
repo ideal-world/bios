@@ -74,6 +74,18 @@ pub struct IamConfig {
     pub sms_pwd_path: String,
     pub third_integration_config_key: String,
     pub third_integration_schedule_code: String,
+    /// Reach 短信签名 ID：三方凭证到期提醒
+    pub third_party_cert_expiry_reach_msg_signature_id: String,
+    /// Reach 短信模板 ID：三方凭证到期提醒（模板变量：end_time、remaining_days、username）
+    pub third_party_cert_expiry_reach_msg_template_id: String,
+    /// 三方凭证到期提醒去重缓存 key 前缀：`{prefix}{account_id}:{yyyy-mm-dd}`
+    pub cache_key_third_party_cert_expiry_notify_: String,
+    /// Reach 短信签名 ID：三方凭证今日已到期提醒
+    pub third_party_cert_expired_reach_msg_signature_id: String,
+    /// Reach 短信模板 ID：三方凭证今日已到期提醒（模板变量：end_time、username）
+    pub third_party_cert_expired_reach_msg_template_id: String,
+    /// 三方凭证今日已到期提醒去重缓存 key 前缀：`{prefix}{account_id}:{yyyy-mm-dd}`
+    pub cache_key_third_party_cert_expired_notify_: String,
 
     /// init custom role list
     pub init_role_list: Option<Vec<InitRole>>,
@@ -235,6 +247,12 @@ impl Default for IamConfig {
             sms_pwd_path: "cc/msg/pwd".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
+            third_party_cert_expiry_reach_msg_signature_id: "".to_string(),
+            third_party_cert_expiry_reach_msg_template_id: "".to_string(),
+            cache_key_third_party_cert_expiry_notify_: "iam:cache:third_cert_expiry_notify:".to_string(),
+            third_party_cert_expired_reach_msg_signature_id: "".to_string(),
+            third_party_cert_expired_reach_msg_template_id: "".to_string(),
+            cache_key_third_party_cert_expired_notify_: "iam:cache:third_cert_expired_notify:".to_string(),
             iam_base_url: "http://127.0.0.1:8080/iam".to_string(),
             spi: Default::default(),
             strict_security_mode: false,

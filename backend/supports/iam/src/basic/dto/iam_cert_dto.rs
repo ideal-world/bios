@@ -345,3 +345,28 @@ pub struct IamCiLdapBootstrapUserPwdItemResp {
 pub struct IamCiLdapBootstrapUserPwdResp {
     pub items: Vec<IamCiLdapBootstrapUserPwdItemResp>,
 }
+
+/// 定时脚本：三方凭证到期提醒 — 已发送记录
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCcThirdPartyCertExpiryNotifyItemResp {
+    pub cert_id: String,
+    pub account_id: String,
+    pub supplier: String,
+    pub end_time: DateTime<Utc>,
+    pub remaining_days: i64,
+}
+
+/// 定时脚本：三方凭证到期提醒 — 跳过记录
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCcThirdPartyCertExpiryNotifySkippedItemResp {
+    pub cert_id: String,
+    pub account_id: String,
+    pub reason: String,
+}
+
+/// 定时脚本：三方凭证到期提醒返回
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCcThirdPartyCertExpiryNotifyResp {
+    pub sent: Vec<IamCcThirdPartyCertExpiryNotifyItemResp>,
+    pub skipped: Vec<IamCcThirdPartyCertExpiryNotifySkippedItemResp>,
+}
