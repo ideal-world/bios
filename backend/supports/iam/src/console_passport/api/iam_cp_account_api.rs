@@ -1,8 +1,9 @@
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_event_helper;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
@@ -19,7 +20,7 @@ use crate::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
 use crate::console_passport::serv::iam_cp_account_serv::IamCpAccountServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
-use crate::iam_enumeration::IamSetKind;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
@@ -184,5 +185,33 @@ impl IamCpAccountApi {
         .await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Check if current account has any role under specified own_paths
+    /// 判断当前账号在指定 own_paths 下是否有角色（通过 IamAccountRole 关联的 own_paths 判断）
+    /// own_paths 规则：平台="" 租户="{tenant_id}" 应用="{tenant_id}/{app_id}"
+    #[oai(path = "/has-role", method = "get")]
+    async fn has_role(&self, own_paths: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let count = RbumRelServ::count_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some(own_paths.0),
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamAccountRole.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(ctx.0.owner.clone()),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(count > 0)
     }
 }
