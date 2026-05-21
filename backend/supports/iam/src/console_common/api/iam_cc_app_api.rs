@@ -1,14 +1,18 @@
+use std::collections::HashSet;
+
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_app_dto::IamAppSummaryResp;
+use crate::basic::dto::iam_app_dto::{IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
@@ -95,5 +99,70 @@ impl IamCcAppApi {
         .await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// [临时脚本] 批量删除应用（按保留列表同步）
+    ///
+    /// 入参 `app_ids` 为系统中应保留的应用 ID 列表。
+    /// 查询当前上下文范围内全部应用，对不在该列表中的应用执行删除（IAM 应用仅支持禁用，等同删除）。
+    ///
+    /// 返回已成功禁用的应用 ID 列表。
+    #[oai(path = "/script/batch-delete", method = "post")]
+    async fn script_batch_delete_apps(
+        &self,
+        app_ids: Json<Vec<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<String>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+
+        let keep_ids: HashSet<String> = app_ids.0.into_iter().collect();
+        let all_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+
+        let mut deleted_ids = Vec::new();
+        for app in all_apps {
+            if keep_ids.contains(&app.id) || app.disabled {
+                continue;
+            }
+            if let Err(err) = IamAppServ::modify_item(
+                &app.id,
+                &mut IamAppModifyReq {
+                    name: None,
+                    scope_level: None,
+                    disabled: Some(true),
+                    icon: None,
+                    description: None,
+                    sort: None,
+                    contact_phone: None,
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await
+            {
+                warn!("[IAM] script_batch_delete_apps skip app_id={} reason={:?}", app.id, err);
+                continue;
+            }
+            deleted_ids.push(app.id);
+        }
+
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(deleted_ids)
     }
 }
