@@ -431,6 +431,7 @@ impl FlowExternalServ {
         inst_id: &str,
         rel_business_obj_id: &str,
         target_state: String,
+        target_state_id: String,
         original_state: String,
         approve_op: FlowExternalApproveOp,
         ctx: &TardisContext,
@@ -449,6 +450,7 @@ impl FlowExternalServ {
             curr_tag: tag.to_string(),
             curr_bus_obj_id: rel_business_obj_id.to_string(),
             target_state: Some(target_state),
+            target_state_id: Some(target_state_id),
             original_state: Some(original_state),
             sys_time: Some(Utc::now().timestamp_millis()),
             ..Default::default()
