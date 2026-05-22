@@ -563,8 +563,13 @@ impl FlowStateServ {
             ctx,
         )
         .await?;
+        let rel_business_obj_ids = insts.iter().map(|inst| inst.rel_business_obj_id.clone()).collect_vec();
+        let rel_ids_with_unfinished_non_main =
+                FlowInstServ::find_rel_business_obj_ids_with_unfinished_non_main_inst(rel_business_obj_ids, funs, ctx).await?;
         for inst in insts {
-            FlowInstServ::sync_state_sort(&inst.tag, &inst.rel_business_obj_id, flow_version_id, state_id, funs, ctx).await?;
+            if !rel_ids_with_unfinished_non_main.contains(&inst.rel_business_obj_id) {
+                FlowInstServ::sync_state_sort(&inst.tag, &inst.rel_business_obj_id, flow_version_id, state_id, funs, ctx).await?;
+            }
         }
         Ok(())
     }

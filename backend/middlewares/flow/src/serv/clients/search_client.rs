@@ -137,7 +137,7 @@ impl FlowSearchClient {
         Ok(())
     }
     pub async fn refresh_business_obj_search(rel_business_obj_id: &str, tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let (rel_state, rel_transition_state_name, current_state_id) = FlowInstServ::find_detail_items(
+        let (rel_state, rel_transition_state_name) = FlowInstServ::find_detail_items(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                 main: Some(false),
@@ -153,13 +153,11 @@ impl FlowSearchClient {
             (
                 inst.artifacts.unwrap_or_default().state,
                 inst.current_state_name,
-                Some(inst.current_state_id),
             )
         })
         .unwrap_or_default();
         let req = ModifyObjSearchExtReq {
             tag: tag.to_string(),
-            current_state_id,
             rel_state: Some(rel_state.map_or("".to_string(), |s| s.to_string())),
             rel_transition_state_name: Some(rel_transition_state_name.unwrap_or_default()),
             ..Default::default()
@@ -172,7 +170,7 @@ impl FlowSearchClient {
         let tag_search_map = Self::get_tag_search_map();
         if let Some((table, _kind)) = tag_search_map.get(tag) {
             let ext = json!({
-                "status": status,
+                // "status": status,
             });
             SpiSearchClient::modify_item_and_name(
                 table,
@@ -206,10 +204,11 @@ impl FlowSearchClient {
         let rel_business_obj_id_cp = rel_business_obj_id.to_string();
         let mut req_cp = req.clone();
         // 获取当前对象的状态信息
-        if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
+        if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], true, funs, ctx).await?.pop() {
             let inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
             if req_cp.current_state_id.as_deref() == Some("") {
                 req_cp.current_state_id = Some(inst.current_state_id.clone());
+                req_cp.current_state_sort = Some(inst.current_state_ext.map(|ext| ext.sort).unwrap_or(0));
             }
         }
         ctx.add_async_task(Box::new(|| {
@@ -299,10 +298,11 @@ impl FlowSearchClient {
                     let mut req_cp = req.clone();
                     let mut ext = json!({});
                     // 获取当前对象的状态信息
-                    if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop() {
+                    if let Some(inst_id) = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], true, funs, ctx).await?.pop() {
                         let inst = FlowInstServ::get(&inst_id, funs, ctx).await?;
                         if req_cp.current_state_id.as_deref() == Some("") {
                             req_cp.current_state_id = Some(inst.current_state_id.clone());
+                            req_cp.current_state_sort = Some(inst.current_state_ext.map(|ext| ext.sort).unwrap_or(0));
                         }
                     }
                     if let Some(current_state_id) = &req_cp.current_state_id {

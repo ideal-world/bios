@@ -77,7 +77,6 @@ impl FlowInstServ {
             if start_req.transition_id.is_none() {
                 let inst_id = Self::start_main_flow(start_req, &rel_model, current_state_name, funs, ctx).await?;
                 let main_inst = Self::get(&inst_id, funs, ctx).await?;
-                Self::when_enter_state(&main_inst, &rel_model.init_state_id, &rel_model.id, funs, ctx).await?;
                 if start_req.rel_child_objs.is_some() {
                     let rel_child_model = Self::find_rel_model(
                         start_req.rel_transition_id.clone(),
@@ -106,6 +105,7 @@ impl FlowInstServ {
                         let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                             tag: rel_child_obj.tag.clone(),
                             current_state_id: Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone()),
+                            current_state_sort: Some(funs.conf::<FlowConfig>().specifed_approving_state_sort),
                             rel_state: Some(main_inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                             rel_transition_state_name: Some("".to_string()),
                             ..Default::default()
@@ -147,6 +147,7 @@ impl FlowInstServ {
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: start_req.tag.clone(),
                         current_state_id: Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone()),
+                        current_state_sort: Some(funs.conf::<FlowConfig>().specifed_approving_state_sort),
                         rel_state: inst.artifacts.unwrap_or_default().state.map(|s| s.to_string()),
                         rel_transition_state_name: Some(inst.current_state_name.unwrap_or_default()),
                         ..Default::default()
@@ -578,7 +579,7 @@ impl FlowInstServ {
             let current_state_id =
                 FlowStateServ::match_state_id_by_name(&flow_model.current_version_id, &rel_business_obj.current_state_name.clone().unwrap_or_default(), funs, ctx).await?;
             let inst_id = if let Some(inst_id) =
-                Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], Some(true), funs, ctx).await?.pop()
+                Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj.rel_business_obj_id.clone().unwrap_or_default()], true, funs, ctx).await?.pop()
             {
                 inst_id
             } else {
@@ -759,6 +760,7 @@ impl FlowInstServ {
         if let Some(sort) = desc_by_update {
             query.order_by((flow_inst::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
+        query.order_by((flow_inst::Entity, ID_FIELD.clone()), Order::Asc);
         let (records, total_size) = funs.db().paginate_dtos::<FlowInstIdsResult>(&query, page_number as u64, page_size as u64).await?;
         Ok(TardisPage {
             page_size: page_size as u64,
@@ -1022,7 +1024,7 @@ impl FlowInstServ {
 
     pub async fn get_inst_ids_by_rel_business_obj_id(
         rel_business_obj_ids: Vec<String>,
-        main: Option<bool>,
+        main: bool,
         funs: &TardisFunsInst,
         _ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
@@ -2342,6 +2344,7 @@ impl FlowInstServ {
             let rel_business_obj_id_cp = curr_inst.rel_business_obj_id.clone();
             let target_state = next_flow_state.name.clone();
             let target_sys_state = next_flow_state.sys_state.clone();
+            let target_state_id = next_flow_state.id.clone();
             let target_state_color = next_flow_state.color.clone();
             let original_state = prev_flow_state.name.clone();
             let original_sys_state = prev_flow_state.sys_state.clone();
@@ -2361,6 +2364,7 @@ impl FlowInstServ {
                             target_state,
                             target_sys_state,
                             target_state_color,
+                            target_state_id,
                             original_state,
                             original_sys_state,
                             transition_name,
@@ -2742,7 +2746,7 @@ impl FlowInstServ {
             }
         }
         // 添加当前状态名称
-        if let Some(flow_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id], Some(true), funs, ctx).await?.pop() {
+        if let Some(flow_id) = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id], true, funs, ctx).await?.pop() {
             let current_state_name = Self::get(&flow_id, funs, ctx).await?.current_state_name.unwrap_or_default();
             new_vars.insert("status".to_string(), json!(current_state_name));
         }
@@ -2912,6 +2916,7 @@ impl FlowInstServ {
                             next_flow_state.name.clone(),
                             next_flow_state.sys_state,
                             next_flow_state.color.clone(),
+                            next_flow_state.id.clone(),
                             original_flow_state.name.clone(),
                             original_flow_state.sys_state,
                             "UPDATE".to_string(),
@@ -3067,6 +3072,7 @@ impl FlowInstServ {
                         next_flow_state.name.clone(),
                         next_flow_state.sys_state.clone(),
                         next_flow_state.color.clone(),
+                        next_flow_state.id.clone(),
                         original_flow_state.name.clone(),
                         original_flow_state.sys_state.clone(),
                         "UPDATE".to_string(),
@@ -3446,6 +3452,11 @@ impl FlowInstServ {
                     } else {
                         Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone())
                     },
+                    current_state_sort: if flow_inst_detail.finish_time.is_some() {
+                        Some(0)
+                    } else {
+                        Some(funs.conf::<FlowConfig>().specifed_approving_state_sort)
+                    },
                     rel_state: if flow_inst_detail.finish_time.is_some() {
                         Some("".to_string())
                     } else {
@@ -3477,7 +3488,7 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], Some(true), funs, ctx).await?.pop().ok_or_else(|| {
+        let inst_id = Self::get_inst_ids_by_rel_business_obj_id(vec![rel_business_obj_id.to_string()], true, funs, ctx).await?.pop().ok_or_else(|| {
             funs.err().not_found(
                 "flow_inst_serv",
                 "finish_approve_flow",
@@ -3610,7 +3621,7 @@ impl FlowInstServ {
                             let artifacts = child_inst.artifacts.clone().unwrap_or_default();
                             if let Some(conf) = FlowConfigServ::get_root_config_by_tag(&root_config, &child_inst.tag)? {
                                 if let Some(child_main_inst_id) =
-                                    Self::get_inst_ids_by_rel_business_obj_id(vec![child_inst.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop()
+                                    Self::get_inst_ids_by_rel_business_obj_id(vec![child_inst.rel_business_obj_id.clone()], true, funs, ctx).await?.pop()
                                 {
                                     FlowLogServ::add_finish_business_log_async_task(&child_inst, None, funs, ctx).await?;
                                     if artifacts.state == Some(FlowInstStateKind::Pass) {
@@ -3984,6 +3995,7 @@ impl FlowInstServ {
                     let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                         tag: added_rel_child_main_inst.tag.clone(),
                         current_state_id: Some(funs.conf::<FlowConfig>().specifed_approving_state_id.clone()),
+                        current_state_sort: Some(funs.conf::<FlowConfig>().specifed_approving_state_sort),
                         rel_state: Some(inst.artifacts.clone().unwrap_or_default().state.unwrap_or_default().to_string()),
                         rel_transition_state_name: Some("".to_string()),
                         ..Default::default()
@@ -4581,7 +4593,7 @@ impl FlowInstServ {
                     for child_inst in all_child_insts {
                         if let Some(conf) = FlowConfigServ::get_root_config_by_tag(&root_config, &child_inst.tag)? {
                             if let Some(child_main_inst_id) =
-                                Self::get_inst_ids_by_rel_business_obj_id(vec![child_inst.rel_business_obj_id.clone()], Some(true), funs, ctx).await?.pop()
+                                Self::get_inst_ids_by_rel_business_obj_id(vec![child_inst.rel_business_obj_id.clone()], true, funs, ctx).await?.pop()
                             {
                                 // 更新业务主流程的artifact的状态为审批拒绝
                                 Self::modify_inst_artifacts(

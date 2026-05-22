@@ -219,6 +219,7 @@ impl Default for IamConfig {
             extra_role_codes: vec![
                 iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
                 iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
             ],
             // ..:<account_id>
             cache_key_double_auth_info: "iam:cache:double_auth:info:".to_string(),

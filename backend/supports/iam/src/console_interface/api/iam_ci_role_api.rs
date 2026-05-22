@@ -14,7 +14,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{self, RBUM_ITEM_NAME_APP_READ_ROLE, RBUM_ITEM_NAME_PROJECT_READ_ROLE, RBUM_SCOPE_LEVEL_APP};
+use crate::iam_constants::{self, RBUM_ITEM_NAME_APP_READ_ROLE, RBUM_ITEM_NAME_PROJECT_READ_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_SCOPE_LEVEL_APP};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
@@ -386,6 +386,7 @@ impl IamCiRoleApi {
         for app_id in app_ids {
             let app_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(app_id.clone()))?;
             IamAppServ::init_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_APP_READ_ROLE, &funs, &app_ctx).await?;
+            IamAppServ::init_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, &funs, &app_ctx).await?;
         }
         let proj_ids = IamAppServ::find_id_items(
             &IamAppFilterReq {
@@ -406,6 +407,7 @@ impl IamCiRoleApi {
         for proj_id in proj_ids {
             let proj_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(proj_id.clone()))?;
             IamAppServ::init_extra_role_cache_by_app_id(&proj_id, RBUM_ITEM_NAME_PROJECT_READ_ROLE, &funs, &proj_ctx).await?;
+            IamAppServ::init_extra_role_cache_by_app_id(&proj_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, &funs, &proj_ctx).await?;
         }
         TardisResp::ok(Void {})
     }

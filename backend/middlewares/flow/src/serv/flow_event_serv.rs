@@ -271,7 +271,7 @@ impl FlowEventServ {
                             if !resp.rel_bus_objs.is_empty() {
                                 for rel_bus_obj_id in resp.rel_bus_objs.pop().unwrap_or_default().rel_bus_obj_ids {
                                     let inst_id =
-                                        FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
+                                        FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_bus_obj_id.clone()], true, funs, ctx).await?.pop().unwrap_or_default();
                                     let child_inst_detail = FlowInstServ::get(&inst_id, funs, ctx).await?;
                                     let var_change_info = Self::prepare_var_change_info(&child_inst_detail, &change_info, funs, ctx).await?;
                                     FlowExternalServ::do_modify_field(
@@ -460,7 +460,7 @@ impl FlowEventServ {
                             rel_tags.push((condition_item.obj_tag.clone().unwrap_or_default(), condition_item.obj_tag_rel_kind.clone()));
                         }
                     }
-                    let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], Some(true), funs, ctx).await?.pop().unwrap_or_default();
+                    let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![rel_obj_id.clone()], true, funs, ctx).await?.pop().unwrap_or_default();
                     let tag = if change_info.obj_tag_rel_kind == Some(TagRelKind::ParentOrSub) {
                         &flow_model.tag
                     } else {
@@ -497,7 +497,7 @@ impl FlowEventServ {
             result_rel_obj_ids = result_rel_obj_ids.into_iter().filter(|result_rel_obj_id| !mismatch_rel_obj_ids.contains(result_rel_obj_id)).collect_vec();
         }
 
-        let result = FlowInstServ::get_inst_ids_by_rel_business_obj_id(result_rel_obj_ids, Some(true), funs, ctx).await?;
+        let result = FlowInstServ::get_inst_ids_by_rel_business_obj_id(result_rel_obj_ids, true, funs, ctx).await?;
         Ok(result)
     }
 

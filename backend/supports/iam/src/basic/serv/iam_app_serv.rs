@@ -31,7 +31,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants::{self, RBUM_ITEM_NAME_APP_READ_ROLE, RBUM_ITEM_NAME_PROJECT_READ_ROLE, RBUM_SCOPE_LEVEL_PRIVATE};
+use crate::iam_constants::{self, RBUM_ITEM_NAME_APP_READ_ROLE, RBUM_ITEM_NAME_PROJECT_READ_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
 
@@ -205,8 +205,10 @@ impl IamAppServ {
         IamRoleServ::add_app_copy_role_agg(&app_id, funs, &app_ctx).await?;
         if add_req.kind.clone().unwrap_or(IamAppKind::Product) == IamAppKind::Product {
             Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_APP_READ_ROLE, funs, &tenant_ctx).await?;
+            Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, funs, &tenant_ctx).await?;
         } else {
             Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_PROJECT_READ_ROLE, funs, &tenant_ctx).await?;
+            Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, funs, &tenant_ctx).await?;
         }
         
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
