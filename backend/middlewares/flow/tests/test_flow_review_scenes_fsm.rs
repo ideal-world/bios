@@ -12,7 +12,7 @@ use bios_mw_flow::dto::flow_cond_dto::{BasicQueryCondInfo, BasicQueryOpKind};
 use bios_mw_flow::dto::flow_config_dto::FlowConfigModifyReq;
 
 use bios_mw_flow::dto::flow_inst_dto::{
-    FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstRelChildObj, FlowInstStartReq, FlowInstTransferReq,
+    FlowInstDetailResp, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstOperateReq, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstTransferReq,
     FlowInstTransferResp,
 };
 use bios_mw_flow::dto::flow_model_dto::{
@@ -224,12 +224,14 @@ pub async fn test(
             },
         )
         .await;
+    // 等待异步任务完成
+    sleep(Duration::from_millis(500)).await;
     let review_approval_flow_version: FlowModelVersionDetailResp = flow_client.get(&format!("/cc/model_version/{}", review_approval_flow.edit_version_id)).await;
-    let start_review_state_id = review_approval_flow_version.states()[0].id.clone();
+    let start_review_state_id = review_approval_flow_version.states().clone().into_iter().find(|state| state.name == "开始").unwrap().id;
     let approval_review_state_a_id = TardisFuns::field.nanoid();
     let approval_review_state_b_id = TardisFuns::field.nanoid();
-    let finish_review_state_id = review_approval_flow_version.states()[1].id.clone();
-    let start_review_transition_id = review_approval_flow_version.states()[0].transitions[0].id.clone();
+    let finish_review_state_id = review_approval_flow_version.states().clone().into_iter().find(|state| state.name == "结束").unwrap().id;
+    let start_review_transition_id = review_approval_flow_version.states().clone().into_iter().find(|state| state.name == "开始").unwrap().transitions[0].id.clone();
     let _: Void = flow_client
         .patch(
             &format!("/cc/model_version/{}", review_approval_flow.edit_version_id),
@@ -409,7 +411,7 @@ pub async fn test(
         )
         .await;
     let review_end_transition_id =
-        state_and_next_transitions[0].next_flow_transitions.iter().find(|tran| tran.next_flow_transition_name == *"结束评审").unwrap().next_flow_transition_id.clone();
+        state_and_next_transitions[0].next_flow_transitions.iter().find(|tran| tran.next_flow_transition_name == *"发起评审").unwrap().next_flow_transition_id.clone();
     let resp: FlowInstTransferResp = flow_client
         .put(
             &format!("/cc/inst/{}/transition/transfer", review_inst_id),
@@ -420,6 +422,7 @@ pub async fn test(
             },
         )
         .await;
+    sleep(Duration::from_secs(2)).await;
     // 开始评审
     let _: Void = flow_client
         .post(
@@ -455,9 +458,70 @@ pub async fn test(
     flow_client.set_auth(&ctx)?;
     kv_client.set_auth(&ctx)?;
     search_client.set_auth(&ctx)?;
+
+    // 评审自动结束
+
+    // ==================== 新增测试：单子实例 batch_operate Pass 场景 ====================
+    // 用于复现问题：batch_operate 传入单个子实例 Pass 后，child_main_inst 的 state 应为 Pass，
+    // 但实际可能变为 Overrule，且 current_state_id 未更新
+    
+    info!("【test_batch_operate_single_child_pass】");
+    
+    // 创建单个子对象的评审
+    let review_single_obj_id = TardisFuns::field.nanoid();
+    let review_single_inst_id: String = flow_client
+        .post(
+            "/ci/inst",
+            &FlowInstStartReq {
+                tag: "REVIEW".to_string(),
+                rel_business_obj_id: review_single_obj_id.clone(),
+                rel_transition_id: Some("__REVIEW__".to_string()),
+                // 只传入一个子对象 req_a
+                rel_child_objs: Some(vec![
+                    FlowInstRelChildObj {
+                        tag: "REQ".to_string(),
+                        obj_id: req_a_obj_id.to_string(),
+                    },
+                ]),
+                operator_map: Some(HashMap::from([
+                    (approval_review_state_a_id.to_string(), vec![t1_account_a_id.clone()]),
+                ])),
+                ..Default::default()
+            },
+        )
+        .await;
+    
+    // 发起评审 - 将状态流转移到"结束评审"
+    let state_and_next_transitions_single: Vec<FlowInstFindStateAndTransitionsResp> = flow_client
+        .put(
+            "/cc/inst/batch/state_transitions",
+            &vec![FlowInstFindStateAndTransitionsReq {
+                flow_inst_id: review_single_inst_id.clone(),
+                vars: None,
+                sys_states: None,
+            }],
+        )
+        .await;
+    let review_end_transition_id_single =
+        state_and_next_transitions_single[0].next_flow_transitions.iter().find(|tran| tran.next_flow_transition_name == *"发起评审").unwrap().next_flow_transition_id.clone();
+    let _: FlowInstTransferResp = flow_client
+        .put(
+            &format!("/cc/inst/{}/transition/transfer", review_single_inst_id),
+            &FlowInstTransferReq {
+                flow_transition_id: review_end_transition_id_single,
+                message: None,
+                vars: None,
+            },
+        )
+        .await;
+    
+    // 等待异步任务完成
+    sleep(Duration::from_millis(500)).await;
+    
+    // 执行 batch_operate - 只对 req_a 执行 Pass
     let _: Void = flow_client
         .post(
-            &format!("/ci/inst/{}/batch_operate", review_inst_id),
+            &format!("/ci/inst/{}/batch_operate", review_single_inst_id),
             &HashMap::from([(
                 req_a_obj_id.to_string(),
                 FlowInstOperateReq {
@@ -471,7 +535,38 @@ pub async fn test(
             )]),
         )
         .await;
-    // 评审自动结束
+    
+    // 等待异步任务完成（batch_operate 内部使用 tokio::spawn）
+    sleep(Duration::from_secs(2)).await;
+    
+    // 获取 req_a 的业务主实例（child_main_inst）
+    let req_a_main_inst: FlowInstDetailResp = flow_client
+        .get(&format!("/ci/inst/{}", req_a_inst_id))
+        .await;
+    
+    info!("req_a_main_inst artifacts.state: {:?}", req_a_main_inst.artifacts.as_ref().and_then(|a| a.state));
+    info!("req_a_main_inst current_state_id: {:?}", req_a_main_inst.current_state_id);
+    info!("req_a_main_inst current_state_name: {:?}", req_a_main_inst.current_state_name);
+    
+    // 【核心断言】验证 child_main_inst 的 state 为 Pass（而非 Overrule）
+    assert_eq!(
+        req_a_main_inst.artifacts.as_ref().and_then(|a| a.state),
+        Some(FlowInstStateKind::Pass),
+        "Bug: child_main_inst.state 应为 Pass，但实际为 {:?}",
+        req_a_main_inst.artifacts.as_ref().and_then(|a| a.state)
+    );
+    
+    // 【核心断言】验证 current_state_id 已更新为 processing_state_id（即 pass_status）
+    assert_eq!(
+        req_a_main_inst.current_state_id,
+        processing_state_id,
+        "Bug: child_main_inst.current_state_id 应更新为 pass_status ({})，但实际为 {:?}",
+        processing_state_id,
+        req_a_main_inst.current_state_id
+    );
+    
+    info!("【test_batch_operate_single_child_pass】测试通过！");
+    
     Ok(())
 }
 

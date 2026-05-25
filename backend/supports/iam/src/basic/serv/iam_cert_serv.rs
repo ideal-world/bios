@@ -41,6 +41,7 @@ use crate::basic::dto::iam_cert_dto::{
     IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq,
 };
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamResFilterReq, IamRoleFilterReq};
+use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
@@ -588,7 +589,7 @@ impl IamCertServ {
 
     pub async fn modify_3th_kind_cert(modify_req: &mut IamThirdPartyCertExtModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(Some(modify_req.rel_rbum_id.clone()), Some(vec![modify_req.supplier.clone()]), false, None, funs, ctx).await?;
-        RbumCertServ::modify_rbum(
+        let result = RbumCertServ::modify_rbum(
             &cert_3th.id,
             &mut RbumCertModifyReq {
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
@@ -604,7 +605,9 @@ impl IamCertServ {
             funs,
             ctx,
         )
-        .await
+        .await?;
+        IamSearchClient::async_add_or_modify_account_search(&modify_req.rel_rbum_id, Box::new(false), "", funs, ctx).await?;
+        Ok(result)
     }
 
     /// Get general cert method \

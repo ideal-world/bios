@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleBoneResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleBoneResp, IamRoleIdNameResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
@@ -204,5 +204,34 @@ impl IamCcRoleApi {
         let result = IamRoleServ::get_embed_sub_role_id(&id, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Get All Built-in Roles
+    /// 获取所有内置角色的ID和名称
+    #[oai(path = "/built_in", method = "get")]
+    async fn get_built_in_roles(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleIdNameResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    with_sub_own_paths: false,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                in_base: Some(true),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(result.into_iter().map(|role| IamRoleIdNameResp {
+            key: role.id,
+            name: role.name,
+        }).collect())
     }
 }

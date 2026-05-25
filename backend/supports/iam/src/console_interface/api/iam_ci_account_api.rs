@@ -388,7 +388,7 @@ impl IamCiAccountApi {
     /// Get Account By Account Id
     /// 通过帐户Id获取帐户
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
+    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, is_all_app: Query<Option<bool>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountDetailAggResp> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -411,8 +411,8 @@ impl IamCiAccountApi {
         .await?;
         // 添加项目组下的 `app` 及角色
         let mut apps = result.apps.clone();
+        let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
         if ctx.own_paths != "" {
-            let old_app_ids = apps.iter().map(|a| a.app_id.clone()).collect::<Vec<String>>();
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
             let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &id, &funs, &ctx).await?;
             let mut app_role_read = HashMap::new();
@@ -430,6 +430,39 @@ impl IamCiAccountApi {
                     roles: app_role_read.clone(),
                     groups: HashMap::default(),
                 });
+            }
+        } else {
+            if is_all_app.0.unwrap_or(false) {
+                let sets = IamSetServ::find_sets_by_account_id_and_kind(&id.0, &IamSetKind::Apps, &funs, &ctx).await?;
+                let mut seen_ids = std::collections::HashSet::new();
+                let sets: Vec<_> = sets
+                    .into_iter()
+                    .filter(|set| !set.own_paths.contains('/'))
+                    .filter(|set| seen_ids.insert(set.id.clone()))
+                    .collect();
+                for set in sets {
+                    let tenant_ctx = TardisContext {
+                        own_paths: set.own_paths.clone(),
+                        ..ctx.clone()
+                    };
+                    let app_items = IamSetServ::get_app_with_auth_by_account(&set.id, &id, &funs, &tenant_ctx).await?;
+                    let mut app_role_read = HashMap::new();
+                    app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+                    for (app_id, app_name) in app_items {
+                        if old_app_ids.contains(&app_id) {
+                            continue;
+                        }
+                        apps.push(IamAccountAppInfoResp {
+                            app_id: app_id.clone(),
+                            app_name: app_name.clone(),
+                            app_kind: IamAppKind::Product,
+                            app_own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
+                            app_icon: "".to_string(),
+                            roles: app_role_read.clone(),
+                            groups: HashMap::default(),
+                        });
+                    }
+                }
             }
         }
         result.apps = apps;
@@ -764,3 +797,4 @@ impl IamCiAccountApi {
         TardisResp::ok(Void {})
     }
 }
+

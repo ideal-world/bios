@@ -136,7 +136,7 @@ impl FlowInstServ {
                             .await?;
                         }
                     }
-                    FlowReachClient::send_review_start_message(&inst_id, ctx, funs).await?;
+                    // FlowReachClient::send_review_start_message(&inst_id, ctx, funs).await?;
                 }
                 Ok(inst_id)
             } else {
@@ -1123,7 +1123,7 @@ impl FlowInstServ {
             FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
-                FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                // FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
             }
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
@@ -3343,7 +3343,7 @@ impl FlowInstServ {
                     }
                 }
                 if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    // FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             FlowStateKind::Approval => {
@@ -3408,7 +3408,7 @@ impl FlowInstServ {
                     }
                 }
                 if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    // FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             FlowStateKind::Branch => {}
@@ -3427,7 +3427,7 @@ impl FlowInstServ {
                     )
                     .await?;
                     FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
-                    FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    // FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             _ => {}
@@ -3661,7 +3661,7 @@ impl FlowInstServ {
                                             ctx,
                                         )
                                         .await?;
-                                        if !conf.pass_status.is_empty() {
+                                        if !conf.unpass_status.is_empty() {
                                             Self::unsafe_modify_state(
                                                 &FlowInstFilterReq {
                                                     ids: Some(vec![child_main_inst_id.clone()]),
@@ -4568,7 +4568,7 @@ impl FlowInstServ {
         let all_child_insts = Self::find_detail_items(
             &FlowInstFilterReq {
                 rel_inst_ids: Some(vec![root_inst_id.to_string()]),
-                current_state_id: Some(root_inst.current_state_id.clone()),
+                // current_state_id: Some(root_inst.current_state_id.clone()),
                 ..Default::default()
             },
             funs,

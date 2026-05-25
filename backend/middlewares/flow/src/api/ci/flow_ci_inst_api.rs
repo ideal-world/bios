@@ -202,7 +202,7 @@ impl FlowCiInstApi {
             let review_end_time_utc = review_end_time.with_timezone(&Utc);
             let remaining = review_end_time_utc - now;
             if remaining <= threshold && remaining > Duration::zero() {
-                FlowReachClient::send_remind_approve_finish(&inst.id, &ctx.0, &funs).await?;
+                // FlowReachClient::send_remind_approve_finish(&inst.id, &ctx.0, &funs).await?;
             }
         }
         task_handler_helper::execute_async_task(&ctx.0).await?;
