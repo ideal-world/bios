@@ -192,6 +192,7 @@ impl FlowInstServ {
             for unfinished_inst_id in Self::find_ids(
                 &FlowInstFilterReq {
                     rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
+                    main: Some(false),
                     finish: Some(false),
                     ..Default::default()
                 },
@@ -697,6 +698,11 @@ impl FlowInstServ {
         }
         if let Some(current_state_id) = &filter.current_state_id {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).eq(current_state_id));
+        }
+        if let Some(not_in_state_id) = &filter.not_in_state_id {
+            if !not_in_state_id.is_empty() {
+                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).is_not_in(not_in_state_id.clone()));
+            }
         }
         if let Some(current_state_sys_kind) = &filter.current_state_sys_kind {
             query.and_where(Expr::col((flow_state::Entity, flow_state::Column::SysState)).eq(current_state_sys_kind.clone()));
@@ -2010,42 +2016,50 @@ impl FlowInstServ {
             }
             // 触发结束动作时，将对应业务的审批流结束
             if new_inst_detail.current_state_sys_kind == Some(FlowSysStateKind::Finish) {
-                if let Some(approve_inst) = Self::find_detail_items(
+                let approve_inst = Self::find_detail_items(
                     &FlowInstFilterReq {
                         rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
                         tags: Some(vec![flow_inst_detail.tag.clone()]),
                         main: Some(false),
-                        finish: Some(false),
                         ..Default::default()
                     },
                     funs,
                     ctx,
                 )
                 .await?
-                .pop()
-                {
-                    if let Some(next_transition) = Self::find_next_transitions(&approve_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
-                        let next_state = FlowStateServ::get_item(
-                            &next_transition.next_flow_state_id,
-                            &FlowStateFilterReq {
-                                basic: RbumBasicFilterReq {
-                                    own_paths: Some("".to_string()),
-                                    with_sub_own_paths: true,
+                .pop();
+                if let Some(approve_inst) = approve_inst {
+                    if approve_inst.finish_time.is_some() {
+                        // 审批流已正常结束，仅刷新关联工作项的 search
+                        if let Some(rel_child_objs) = new_inst_detail.artifacts.clone().unwrap_or_default().rel_child_objs {
+                            for rel_child_obj in rel_child_objs {
+                                FlowSearchClient::refresh_business_obj_search(&rel_child_obj.obj_id, &rel_child_obj.tag, funs, ctx).await?;
+                            }
+                        }
+                    } else {
+                        if let Some(next_transition) = Self::find_next_transitions(&approve_inst, &FlowInstFindNextTransitionsReq { vars: None }, funs, ctx).await?.pop() {
+                            let next_state = FlowStateServ::get_item(
+                                &next_transition.next_flow_state_id,
+                                &FlowStateFilterReq {
+                                    basic: RbumBasicFilterReq {
+                                        own_paths: Some("".to_string()),
+                                        with_sub_own_paths: true,
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                            funs,
-                            ctx,
-                        )
-                        .await?;
-                        if next_state.sys_state == FlowSysStateKind::Finish {
-                            Self::transfer_root_inst(&approve_inst.id, true, funs, ctx).await?;
+                                funs,
+                                ctx,
+                            )
+                            .await?;
+                            if next_state.sys_state == FlowSysStateKind::Finish {
+                                Self::transfer_root_inst(&approve_inst.id, true, funs, ctx).await?;
+                            } else {
+                                Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
+                            }
                         } else {
                             Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                         }
-                    } else {
-                        Self::abort(&approve_inst.id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
                     }
                 } else {
                     // 不存在审批流则按照关联的工作项刷新对应的search
@@ -2859,8 +2873,13 @@ impl FlowInstServ {
     }
 
     pub async fn unsafe_modify_state(filter: &FlowInstFilterReq, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(current_state_id) = &filter.current_state_id {
+            if current_state_id == state_id {
+                return Ok(());
+            }
+        }
         let mut filter = filter.clone();
-        filter.current_state_id = Some(state_id.to_string());
+        filter.not_in_state_id = Some(vec![state_id.to_string()]);
         let insts = Self::find_items(&filter, funs, ctx).await?;
         let inst_ids = insts.iter().map(|inst| inst.id.clone()).collect_vec();
         let mut update_statement = Query::update();

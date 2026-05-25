@@ -632,6 +632,8 @@ pub struct FlowInstFilterReq {
     pub finish_abort: Option<bool>,
     /// 当前状态ID
     pub current_state_id: Option<String>,
+    /// 排除的状态ID列表
+    pub not_in_state_id: Option<Vec<String>>,
     pub current_state_sys_kind: Option<FlowSysStateKind>,
 
     pub with_sub: Option<bool>,
