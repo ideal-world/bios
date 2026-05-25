@@ -446,7 +446,7 @@ impl FlowInstServ {
             )
             .await?
             .pop() {
-                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, funs.conf::<FlowConfig>().specifed_approving_state_name.clone(), funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
             }
         }
 
@@ -1164,7 +1164,7 @@ impl FlowInstServ {
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 // 通知工作项审批驳回
-                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
+                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_id.clone(), main_inst.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_name.clone(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
             }
         }
         // 携带子审批流的审批流
@@ -3806,7 +3806,7 @@ impl FlowInstServ {
         }
         if inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
             let new_inst_detail = Self::get(&inst_detail.id, funs, ctx).await?;
-            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
+            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_id.clone(), new_inst_detail.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_name.clone(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
         }
         Ok(())
     }
