@@ -6,7 +6,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_sdk_invoke::clients::reach_client::ReachMessageAddSendTaskReq;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::{DateTime, Datelike, Utc};
+use tardis::chrono::{DateTime, Datelike, FixedOffset, TimeZone, Utc};
 use tardis::TardisFunsInst;
 
 use crate::basic::dto::iam_cert_dto::{IamCcThirdPartyCertExpiryNotifyItemResp, IamCcThirdPartyCertExpiryNotifyResp, IamCcThirdPartyCertExpiryNotifySkippedItemResp};
@@ -48,7 +48,8 @@ impl IamCcCertExpiryNotifyServ {
             ));
         }
 
-        let today = Utc::now().date_naive();
+        let gmt_plus_8 = FixedOffset::east_opt(8 * 3600).expect("GMT+8 timezone offset is valid");
+        let today = Utc::now().with_timezone(&gmt_plus_8).date_naive();
         let today_str = today.format("%Y-%m-%d").to_string();
         let certs = IamCertServ::find_3th_kind_cert(None, None, false, None, funs, ctx).await?;
 
@@ -203,7 +204,8 @@ impl IamCcCertExpiryNotifyServ {
             ));
         }
 
-        let now = Utc::now();
+        let gmt_plus_8 = FixedOffset::east_opt(8 * 3600).expect("GMT+8 timezone offset is valid");
+        let now = Utc::now().with_timezone(&gmt_plus_8);
         let today = now.date_naive();
         let today_str = today.format("%Y-%m-%d").to_string();
         let certs = IamCertServ::find_3th_kind_cert(None, None, false, None, funs, ctx).await?;
