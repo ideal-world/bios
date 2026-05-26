@@ -2,13 +2,15 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisResp;
 use tardis::TardisFunsInst;
 
+use crate::invoke_config::InvokeConfigApi;
 use crate::invoke_enumeration::InvokeModuleKind;
 
-use super::base_spi_client::BaseSpiClient;
+use super::base_spi_client::{BaseSpiClient, SpiBsAddReq};
 
 #[derive(Clone, Debug, Default)]
 pub struct SpiObjectClient;
@@ -78,6 +80,30 @@ pub struct ObjectPresignBatchViewReq {
 }
 
 impl SpiObjectClient {
+    /// Initialize the Object backend service: create if not exists and bind to app/tenant.
+    /// Reads all configuration from `InvokeModuleConfig.bs_init`.
+    ///
+    /// 初始化 Object 后端服务：不存在则创建，并绑定到应用/租户。配置均来自 invoke 配置，返回后端服务id。
+    pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let init_cfg = funs
+            .invoke_conf_module_bs_init(InvokeModuleKind::Object)
+            .ok_or_else(|| TardisError::bad_request("object module bs_init config not set", ""))?;
+        let module_url = BaseSpiClient::module_url(InvokeModuleKind::Object, funs).await?;
+        let bs_add_req = SpiBsAddReq {
+            name: init_cfg.bs_name.clone(),
+            kind_id: init_cfg.bs_kind_id.clone(),
+            conn_uri: init_cfg.bs_conn_uri.clone(),
+            ak: init_cfg.bs_ak.clone(),
+            sk: init_cfg.bs_sk.clone(),
+            ext: init_cfg.bs_ext.clone(),
+            private: init_cfg.bs_private,
+            disabled: init_cfg.bs_disabled,
+        };
+        let bs_id = BaseSpiClient::add_bs_if_not_exist(&module_url, &bs_add_req, funs, ctx).await?;
+        BaseSpiClient::add_bs_rel_if_not_exist(&module_url, &bs_id, &init_cfg.app_tenant_id, funs, ctx).await?;
+        Ok(bs_id)
+    }
+
     /// Get presigned URL for uploading an object
     ///
     /// 获取上传对象的预签名 URL

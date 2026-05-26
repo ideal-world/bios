@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::serde_json::{json, Value};
@@ -7,9 +8,10 @@ use tardis::web::web_resp::TardisResp;
 use tardis::web::{poem_openapi, web_resp::TardisPage};
 use tardis::TardisFunsInst;
 
+use crate::invoke_config::InvokeConfigApi;
 use crate::invoke_enumeration::InvokeModuleKind;
 
-use super::base_spi_client::BaseSpiClient;
+use super::base_spi_client::{BaseSpiClient, SpiBsAddReq};
 #[derive(Clone, Debug, Default)]
 pub struct SpiKvClient;
 
@@ -49,7 +51,77 @@ pub struct KvItemDetailResp {
     pub update_time: DateTime<Utc>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+pub struct KvNameFindResp {
+    pub key: String,
+    pub name: String,
+    pub disable: bool,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct KvTagAddOrModifyReq {
+    pub key: String,
+    pub items: Vec<KvTagItemAddReq>,
+    pub disable: Option<bool>,
+    pub scope_level: Option<i16>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct KvTagItemAddReq {
+    pub code: String,
+    pub label: String,
+    pub color: String,
+    pub icon: String,
+    pub url: Option<String>,
+    pub service: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+pub struct KvTagFindResp {
+    pub key: String,
+    pub items: Vec<KvTagItemFindResp>,
+    pub disable: bool,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Clone, Debug)]
+pub struct KvTagItemFindResp {
+    pub code: String,
+    pub label: String,
+    pub color: String,
+    pub icon: String,
+    pub url: Option<String>,
+    pub service: Option<String>,
+}
+
 impl SpiKvClient {
+    /// Initialize the KV backend service: create if not exists and bind to app/tenant.
+    /// Reads all configuration from `InvokeModuleConfig.bs_init`.
+    ///
+    /// 初始化 KV 后端服务：不存在则创建，并绑定到应用/租户。配置均来自 invoke 配置，返回后端服务id。
+    pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let init_cfg = funs
+            .invoke_conf_module_bs_init(InvokeModuleKind::Kv)
+            .ok_or_else(|| TardisError::bad_request("kv module bs_init config not set", ""))?;
+        let module_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let bs_add_req = SpiBsAddReq {
+            name: init_cfg.bs_name.clone(),
+            kind_id: init_cfg.bs_kind_id.clone(),
+            conn_uri: init_cfg.bs_conn_uri.clone(),
+            ak: init_cfg.bs_ak.clone(),
+            sk: init_cfg.bs_sk.clone(),
+            ext: init_cfg.bs_ext.clone(),
+            private: init_cfg.bs_private,
+            disabled: init_cfg.bs_disabled,
+        };
+        let bs_id = BaseSpiClient::add_bs_if_not_exist(&module_url, &bs_add_req, funs, ctx).await?;
+        BaseSpiClient::add_bs_rel_if_not_exist(&module_url, &bs_id, &init_cfg.app_tenant_id, funs, ctx).await?;
+        Ok(bs_id)
+    }
+
     pub async fn add_or_modify_item<T: ?Sized + Serialize>(
         key: &str,
         value: &T,
@@ -87,6 +159,61 @@ impl SpiKvClient {
             )
             .await?;
         Ok(())
+    }
+
+    pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<KvNameFindResp>>> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let query: String = keys.iter().map(|k| format!("keys={}", k)).collect::<Vec<_>>().join("&");
+        let url = format!("{kv_url}/ci/scene/key-names?{query}");
+        let resp = funs.web_client().get::<TardisResp<Vec<KvNameFindResp>>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
+    }
+
+    pub async fn add_or_modify_tag(add_or_modify_req: &KvTagAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        funs.web_client().put_obj_to_str(&format!("{kv_url}/ci/scene/tag"), add_or_modify_req, headers.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn page_tags(
+        key_prefix: &str,
+        key_like: Option<bool>,
+        page_number: u32,
+        page_size: u16,
+        disable: Option<bool>,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Option<TardisPage<KvTagFindResp>>> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let mut url = format!("{kv_url}/ci/scene/tags?key_prefix={key_prefix}&page_number={page_number}&page_size={page_size}");
+        if let Some(key_like) = key_like {
+            url = format!("{url}&key_like={key_like}");
+        }
+        if let Some(disable) = disable {
+            url = format!("{url}&disable={disable}");
+        }
+        if let Some(desc) = desc_by_create {
+            url = format!("{url}&desc_by_create={desc}");
+        }
+        if let Some(desc) = desc_by_update {
+            url = format!("{url}&desc_by_update={desc}");
+        }
+        let resp = funs.web_client().get::<TardisResp<TardisPage<KvTagFindResp>>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
+    }
+
+    pub async fn find_tags(keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<KvTagFindResp>>> {
+        let kv_url = BaseSpiClient::module_url(InvokeModuleKind::Kv, funs).await?;
+        let headers = BaseSpiClient::headers(None, funs, ctx).await?;
+        let query: String = keys.iter().map(|k| format!("keys={}", k)).collect::<Vec<_>>().join("&");
+        let url = format!("{kv_url}/ci/tags?{query}");
+        let resp = funs.web_client().get::<TardisResp<Vec<KvTagFindResp>>>(&url, headers.clone()).await?;
+        BaseSpiClient::package_resp(resp)
     }
 
     pub async fn match_items_by_key_prefix(
