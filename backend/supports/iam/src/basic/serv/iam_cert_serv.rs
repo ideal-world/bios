@@ -1226,11 +1226,7 @@ impl IamCertServ {
             return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
         let mut old_app_ids = account_agg.apps.iter().map(|app| app.app_id.clone()).collect::<Vec<String>>();
-        let mut apps =if !tenant_id.is_empty() {
-            account_agg.apps
-        } else {
-            vec![]
-        };
+        let mut apps = account_agg.apps;
         if !tenant_id.is_empty() {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
             let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, account_id, &funs, &ctx).await?;
@@ -1335,6 +1331,10 @@ impl IamCertServ {
                         groups: HashMap::new(),
                     });
                 }
+            }
+            // 将apps中的roles替换为app_role_read
+            for app in apps.iter_mut() {
+                app.roles = app_role_read.clone();
             }
         }
         let account_info = IamAccountInfoResp {

@@ -389,7 +389,11 @@ impl IamIdentCacheServ {
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
                     &account_app_info.app_id,
                     &TardisFuns::json.obj_to_string(&TardisContext {
-                        own_paths: format!("{}/{}", tenant_id, account_app_info.app_id).to_string(),
+                        own_paths: if tenant_id.is_empty() {
+                            account_app_info.app_own_paths.clone()
+                        } else {
+                            format!("{}/{}", tenant_id, account_app_info.app_id).to_string()
+                        },
                         owner: account_info.account_id.to_string(),
                         roles: account_app_info.roles.keys().map(|id| id.to_string()).collect(),
                         groups: account_app_info.groups.keys().map(|id| id.to_string()).collect(),
