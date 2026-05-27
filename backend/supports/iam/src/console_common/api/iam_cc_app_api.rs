@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -12,7 +11,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_app_dto::{IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::IamAppSummaryResp;
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
@@ -134,31 +133,20 @@ impl IamCcAppApi {
         )
         .await?;
 
-        let mut deleted_ids = Vec::new();
-        for app in all_apps {
-            if keep_ids.contains(&app.id) || app.disabled {
-                continue;
-            }
-            if let Err(err) = IamAppServ::modify_item(
-                &app.id,
-                &mut IamAppModifyReq {
-                    name: None,
-                    scope_level: None,
-                    disabled: Some(true),
-                    icon: None,
-                    description: None,
-                    sort: None,
-                    contact_phone: None,
-                },
-                &funs,
-                &ctx.0,
-            )
-            .await
-            {
-                warn!("[IAM] script_batch_delete_apps skip app_id={} reason={:?}", app.id, err);
-                continue;
-            }
-            deleted_ids.push(app.id);
+        let deleted_ids: Vec<String> = all_apps
+            .into_iter()
+            .filter(|app| !keep_ids.contains(&app.id) && !app.disabled)
+            .map(|app| app.id)
+            .collect();
+
+        if !deleted_ids.is_empty() {
+            let in_clause = deleted_ids
+                .iter()
+                .map(|id| format!("'{}'", id.replace('\'', "''")))
+                .collect::<Vec<_>>()
+                .join(",");
+            let sql = format!("UPDATE rbum_item SET disabled = true WHERE id IN ({in_clause}) AND disabled = false");
+            funs.db().execute_one(&sql, vec![]).await?;
         }
 
         funs.commit().await?;
