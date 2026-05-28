@@ -26,7 +26,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
-use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleIdNameResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -1184,6 +1184,179 @@ impl IamRoleServ {
 
     pub fn is_custom_role(kind: IamRoleKind, scope_level: RbumScopeLevelKind) -> bool {
         kind != IamRoleKind::System && scope_level == RbumScopeLevelKind::Private
+    }
+
+    /// 聚合查询租户及基础项目角色（租户控制台）
+    pub async fn find_ct_role_base_app(
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamRoleSummaryResp>> {
+        let base_app_result = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(true),
+                in_embed: Some(true),
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let custom_app_result = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let base_tenant_result = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::Tenant),
+                in_base: Some(false),
+                in_embed: Some(true),
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let custom_tenant_result = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::Tenant),
+                in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut result = vec![];
+        result.extend(custom_tenant_result);
+        result.extend(base_tenant_result);
+        result.extend(custom_app_result);
+        result.extend(base_app_result);
+        Ok(result)
+    }
+
+    /// 获取项目内所有的角色信息（项目控制台）
+    pub async fn find_ca_role_base_app(
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamRoleSummaryResp>> {
+        let tenant_id = IamTenantServ::get_id_by_ctx(ctx, funs)?;
+        let base_app_result = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(true),
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let custom_app_result = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq { ..Default::default() },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                extend_role_ids: Some(vec!["".to_string()]),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let custom_tenant_role_ids = Self::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(tenant_id),
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .map(|r| r.id)
+        .collect_vec();
+        let custom_tenant_result = Self::find_items(
+            &IamRoleFilterReq {
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(false),
+                extend_role_ids: Some(custom_tenant_role_ids),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut result = vec![];
+        result.extend(custom_app_result);
+        result.extend(custom_tenant_result);
+        result.extend(base_app_result);
+        Ok(result)
+    }
+
+    /// 通用控制台：按上下文 own_paths 层级聚合查询角色（仅 id、name）
+    pub async fn find_cc_role_base_app(
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamRoleIdNameResp>> {
+        let roles = if IamAppServ::is_app_level_by_ctx(ctx) {
+            Self::find_ca_role_base_app(desc_by_create, desc_by_update, funs, ctx).await?
+        } else {
+            Self::find_ct_role_base_app(desc_by_create, desc_by_update, funs, ctx).await?
+        };
+        Ok(roles
+            .into_iter()
+            .map(|role| IamRoleIdNameResp {
+                key: role.id,
+                name: role.name,
+            })
+            .collect())
     }
 
     pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {

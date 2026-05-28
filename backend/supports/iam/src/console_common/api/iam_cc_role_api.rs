@@ -134,6 +134,23 @@ impl IamCcRoleApi {
         TardisResp::ok(result)
     }
 
+    /// Find Roles base app
+    /// 聚合查询租户及基础项目角色（按上下文 own_paths 层级自动选择）
+    #[oai(path = "/base_app", method = "get")]
+    async fn find_role_base_app(
+        &self,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamRoleIdNameResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::find_cc_role_base_app(desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Find pub Rel Res By Role Id
     /// 根据角色ID查找公开关联资源
     #[oai(path = "/:id/pub_res", method = "get")]
