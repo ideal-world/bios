@@ -714,7 +714,7 @@ impl FlowCiInstApi {
         let mut processed_count = 0u32;
 
         loop {
-            let page = FlowInstServ::paginate_detail_items(&filter, page_number, PAGE_SIZE, None, None, &funs, &ctx.0).await?;
+            let page = FlowInstServ::paginate_detail_items(&filter, page_number, PAGE_SIZE, None, Some(true), &funs, &ctx.0).await?;
             if page.records.is_empty() {
                 break;
             }

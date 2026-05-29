@@ -522,9 +522,9 @@ impl FlowEventServ {
                     .and_where(Expr::col(flow_inst::Column::Main).eq(true)),
             )
             .await?;
-        if rel_bus_obj_ids.len() != rel_insts.len() {
-            return Err(funs.err().not_found("flow_inst", "do_post_change", "some flow instances not found", "404-flow-inst-not-found"));
-        }
+        // if rel_bus_obj_ids.len() != rel_insts.len() {
+        //     return Err(funs.err().not_found("flow_inst", "do_post_change", "some flow instances not found", "404-flow-inst-not-found"));
+        // }
         Ok(rel_insts
             .iter()
             .filter(|inst_result| {

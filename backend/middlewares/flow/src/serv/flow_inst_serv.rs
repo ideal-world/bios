@@ -136,7 +136,7 @@ impl FlowInstServ {
                             .await?;
                         }
                     }
-                    // FlowReachClient::send_review_start_message(&inst_id, ctx, funs).await?;
+                    FlowReachClient::send_review_start_message(&inst_id, ctx, funs).await?;
                 }
                 Ok(inst_id)
             } else {
@@ -1129,7 +1129,7 @@ impl FlowInstServ {
             FlowLogServ::add_finish_log_async_task(&flow_inst_detail, Some(abort_req.message.to_string()), funs, ctx).await?;
             if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
                 FlowSearchClient::refresh_business_obj_search(&flow_inst_detail.rel_business_obj_id, &flow_inst_detail.tag, funs, ctx).await?;
-                // FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
             }
             FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyInstance, &flow_inst_detail.id, "", funs, ctx).await?;
             // 更新业务主流程的artifact的状态为审批拒绝
@@ -2822,6 +2822,8 @@ impl FlowInstServ {
                         &mock_ctx,
                     )
                     .await?;
+                } else {
+                    Self::unsafe_modify_version_id(&new_model_detail, funs, &mock_ctx).await?;
                 }
             }
         } else {
@@ -2956,6 +2958,24 @@ impl FlowInstServ {
         .await
         .into_iter()
         .collect::<TardisResult<Vec<_>>>()?;
+
+        Ok(())
+    }
+
+    pub async fn unsafe_modify_version_id(
+        new_model: &FlowModelDetailResp,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let mut update_statement = Query::update();
+        update_statement.table(flow_inst::Entity);
+        update_statement.value(flow_inst::Column::RelFlowVersionId, new_model.current_version_id.clone());
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Tag)).eq(new_model.tag.clone()));
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(true));
+        // 此处必须按own_paths修改，不可根据原模型修改。因为存在历史数据,并不一定完全等于原模型ID
+        update_statement.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
+
+        funs.db().execute(&update_statement).await?;
 
         Ok(())
     }
@@ -3362,7 +3382,7 @@ impl FlowInstServ {
                     }
                 }
                 if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                    // FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             FlowStateKind::Approval => {
@@ -3427,7 +3447,7 @@ impl FlowInstServ {
                     }
                 }
                 if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                    // FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             FlowStateKind::Branch => {}
@@ -3446,7 +3466,7 @@ impl FlowInstServ {
                     )
                     .await?;
                     FlowLogServ::add_finish_log_async_task(flow_inst_detail, None, funs, ctx).await?;
-                    // FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    FlowReachClient::send_finish_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
                 }
             }
             _ => {}
