@@ -1,4 +1,4 @@
-use std::{collections::HashMap, vec};
+use std::{collections::{HashMap, HashSet}, vec};
 
 use async_recursion::async_recursion;
 
@@ -29,7 +29,7 @@ use crate::{
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_model_dto::{
-            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
+            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStateSortSigItem, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -2882,5 +2882,101 @@ impl FlowModelServ {
             }
         }
         Ok(())
+    }
+
+    /// [临时脚本] 扫描所有 main=true 的模型，消除重复的 state sort，返回已修复的模型 ID 列表。
+    pub async fn script_fix_duplicate_main_model_state_sort(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut all_models = vec![];
+        let mut page = 1u32;
+        let page_size = 100u32;
+        loop {
+            let records = Self::paginate_detail_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    ..Default::default()
+                },
+                page,
+                page_size,
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .records;
+            if records.is_empty() {
+                break;
+            }
+            all_models.extend(records);
+            page += 1;
+        }
+
+        let mut fixed_model_ids = vec![];
+        for model in all_models {
+            let (_, has_duplicate_sort) = Self::build_state_sort_signature(&model);
+            if has_duplicate_sort {
+                Self::fix_model_duplicate_state_sort(&model, funs, ctx).await?;
+                fixed_model_ids.push(model.id);
+            }
+        }
+
+        Ok(fixed_model_ids)
+    }
+
+    /// 按现有 sort 顺序重排为 1, 2, 3...，消除重复 sort（如 a0b0c1d1e1 → a1b2c3d4e5）
+    async fn fix_model_duplicate_state_sort(model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut states = model.states();
+        states.sort_by_key(|s| (s.ext.sort, s.name.clone()));
+        let modify_states = states
+            .iter()
+            .enumerate()
+            .map(|(i, state)| FlowModelVersionModifyState {
+                id: Some(state.id.clone()),
+                modify_rel: Some(FlowStateRelModelModifyReq {
+                    id: state.id.clone(),
+                    sort: Some((i as i64) + 1),
+                    show_btns: None,
+                    is_edit: None,
+                }),
+                modify_state: None,
+                add_transitions: None,
+                modify_transitions: None,
+                delete_transitions: None,
+            })
+            .collect_vec();
+        Self::modify_model(
+            &model.id,
+            &mut FlowModelModifyReq {
+                modify_version: Some(FlowModelVersionModifyReq {
+                    modify_states: Some(modify_states),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    fn build_state_sort_signature(model: &FlowModelDetailResp) -> (Vec<FlowModelStateSortSigItem>, bool) {
+        let mut states = model.states();
+        states.sort_by_key(|s| (s.ext.sort, s.name.clone()));
+        let sorts: Vec<i64> = states.iter().map(|s| s.ext.sort).collect();
+        let has_duplicate_sort = sorts.len() != sorts.iter().copied().collect::<HashSet<_>>().len();
+        let signature = states
+            .into_iter()
+            .map(|s| FlowModelStateSortSigItem {
+                state_id: s.id,
+                state_name: s.name,
+                sort: s.ext.sort,
+            })
+            .collect();
+        (signature, has_duplicate_sort)
     }
 }
