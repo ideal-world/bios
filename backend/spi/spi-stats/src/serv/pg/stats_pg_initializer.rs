@@ -70,6 +70,8 @@ pub async fn init_conf_dim_col_table_and_conn(bs_inst: TypedSpiBsInst<'_, Tardis
     data_type character varying,
     rel_cert_id character varying,
     rel_sql character varying,
+    dict_kind character varying,
+    dict_dyn_interface character varying,
     remark character varying NOT NULL,
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,

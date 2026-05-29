@@ -68,6 +68,14 @@ pub(crate) async fn add(dim_conf_key: &str, add_req: &StatsConfDimColAddReq, fun
         params.push(Value::from(rel_sql.to_string()));
         sql_fields.push("rel_sql");
     }
+    if let Some(dict_kind) = &add_req.dict_kind {
+        params.push(Value::from(dict_kind.to_string()));
+        sql_fields.push("dict_kind");
+    }
+    if let Some(dict_dyn_interface) = &add_req.dict_dyn_interface {
+        params.push(Value::from(dict_dyn_interface.to_string()));
+        sql_fields.push("dict_dyn_interface");
+    }
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name}
@@ -126,6 +134,14 @@ pub(crate) async fn modify(
     if let Some(rel_sql) = &modify_req.rel_sql {
         sql_sets.push(format!("rel_sql = ${}", params.len() + 1));
         params.push(Value::from(rel_sql.to_string()));
+    }
+    if let Some(dict_kind) = &modify_req.dict_kind {
+        sql_sets.push(format!("dict_kind = ${}", params.len() + 1));
+        params.push(Value::from(dict_kind.to_string()));
+    }
+    if let Some(dict_dyn_interface) = &modify_req.dict_dyn_interface {
+        sql_sets.push(format!("dict_dyn_interface = ${}", params.len() + 1));
+        params.push(Value::from(dict_dyn_interface.to_string()));
     }
     if let Some(remark) = &modify_req.remark {
         sql_sets.push(format!("remark = ${}", params.len() + 1));
@@ -235,6 +251,8 @@ async fn do_paginate(
     data_type,
     rel_cert_id,
     rel_sql,
+    dict_kind,
+    dict_dyn_interface,
     remark,
     create_time,
     update_time,
@@ -272,6 +290,8 @@ LIMIT $1 OFFSET $2"#,
                 },
                 rel_cert_id: item.try_get("", "rel_cert_id")?,
                 rel_sql: item.try_get("", "rel_sql")?,
+                dict_kind: item.try_get("", "dict_kind")?,
+                dict_dyn_interface: item.try_get("", "dict_dyn_interface")?,
                 remark: item.try_get("", "remark")?,
                 create_time: item.try_get("", "create_time")?,
                 update_time: item.try_get("", "update_time")?,

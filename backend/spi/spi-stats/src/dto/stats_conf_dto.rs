@@ -209,6 +209,8 @@ pub struct StatsConfDimColAddReq {
     pub data_type: Option<StatsDataTypeKind>,
     pub rel_cert_id: Option<String>,
     pub rel_sql: Option<String>,
+    pub dict_kind: Option<String>,
+    pub dict_dyn_interface: Option<String>,
     pub remark: Option<String>,
 }
 
@@ -222,6 +224,8 @@ pub struct StatsConfDimColModifyReq {
     pub data_type: Option<StatsDataTypeKind>,
     pub rel_cert_id: Option<String>,
     pub rel_sql: Option<String>,
+    pub dict_kind: Option<String>,
+    pub dict_dyn_interface: Option<String>,
     pub remark: Option<String>,
 }
 
@@ -249,6 +253,8 @@ pub struct StatsConfDimColInfoResp {
     pub data_type: Option<StatsDataTypeKind>,
     pub rel_cert_id: Option<String>,
     pub rel_sql: Option<String>,
+    pub dict_kind: Option<String>,
+    pub dict_dyn_interface: Option<String>,
     pub remark: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
