@@ -69,6 +69,7 @@ impl FlowCiStateApi {
                     ..Default::default()
                 },
                 tag: tag.0,
+                main: Some(true),
                 sys_state: sys_state.0,
                 state_kind: state_kind.0,
                 template: template.0,

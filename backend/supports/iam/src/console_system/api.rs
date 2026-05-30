@@ -1,5 +1,6 @@
 pub mod iam_cs_account_api;
 pub mod iam_cs_account_attr_api;
+pub mod iam_cs_app_set_api;
 pub mod iam_cs_cert_api;
 pub mod iam_cs_org_api;
 pub mod iam_cs_platform_api;

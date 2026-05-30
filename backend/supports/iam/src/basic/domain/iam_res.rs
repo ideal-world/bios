@@ -23,6 +23,8 @@ pub struct Model {
     pub crypto_resp: bool,
     // Is secondary certification required / 是否需要二次认证
     pub double_auth: bool,
+    // Whether AK/SK auth only / 是否仅允许AKSK认证
+    pub only_aksk: bool,
     /// Secondary Authentication Message / 二次认证消息
     pub double_auth_msg: String,
     // 是否需要验证登陆

@@ -632,6 +632,8 @@ pub struct FlowInstFilterReq {
     pub finish_abort: Option<bool>,
     /// 当前状态ID
     pub current_state_id: Option<String>,
+    /// 排除的状态ID列表
+    pub not_in_state_id: Option<Vec<String>>,
     pub current_state_sys_kind: Option<FlowSysStateKind>,
 
     pub with_sub: Option<bool>,
@@ -814,10 +816,10 @@ pub struct FlowInstDetailInSearch {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ModifyObjSearchExtReq {
     pub tag: String,
-    pub status: Option<String>,                    // 当前状态
+    pub current_state_id: Option<String>,          // 当前状态ID
     pub rel_state: Option<String>,                 // 审批状态
     pub rel_transition_state_name: Option<String>, // 审批节点名
-    pub current_state_color: Option<String>,       // 当前状态颜色信息
+    pub current_state_sort: Option<i64>,           // 当前状态排序信息
 }
 
 /// 实例统计数量请求

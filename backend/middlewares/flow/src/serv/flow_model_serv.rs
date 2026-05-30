@@ -1,4 +1,4 @@
-use std::{collections::HashMap, vec};
+use std::{collections::{HashMap, HashSet}, vec};
 
 use async_recursion::async_recursion;
 
@@ -7,7 +7,7 @@ use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-        rbum_rel_dto::RbumRelDetailResp,
+        rbum_rel_dto::{RbumRelBoneResp, RbumRelDetailResp},
     },
     helper::rbum_scope_helper,
     rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind},
@@ -29,7 +29,7 @@ use crate::{
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
         flow_model_dto::{
-            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
+            FlowModelAddAndCopyModelReq, FlowModelAddReq, FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBindNewStateReq, FlowModelBindStateReq, FlowModelDetailResp, FlowModelFIndOrCreatReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelMergeDataReq, FlowModelModifyReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind, FlowModelStateSortSigItem, FlowModelStatus, FlowModelSummaryResp, FlowModelSyncModifiedFieldReq, FlowModelUnbindStateReq
         },
         flow_model_version_dto::{
             FlowModelVersionAddReq, FlowModelVersionBindState, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVersionModifyState,
@@ -2882,5 +2882,130 @@ impl FlowModelServ {
             }
         }
         Ok(())
+    }
+
+    /// [临时脚本] 扫描所有 main=true 的模型，消除重复的 state sort，返回已修复的模型 ID 列表。
+    pub async fn script_fix_duplicate_main_model_state_sort(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut page = 1u32;
+        let page_size = 100u32;
+        let mut fixed_model_ids = vec![];
+        loop {
+            let records = Self::paginate_detail_items(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    rel_model_ids: Some(vec!["".to_string()]),
+                    ..Default::default()
+                },
+                page,
+                page_size,
+                None,
+                Some(true),
+                funs,
+                ctx,
+            )
+            .await?
+            .records;
+            if records.is_empty() {
+                break;
+            }
+            for model in records {
+                let rel = FlowRelServ::find_from_simple_rels(
+                    &FlowRelKind::FlowModelState,
+                    &RbumRelFromKind::Item,
+                    &model.current_version_id,
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                if Self::is_state_sort_duplicate(rel.clone()) {
+                    let model_ctx = TardisContext {
+                        own_paths: model.own_paths,
+                        ..ctx.clone()
+                    };
+                    Self::fix_model_duplicate_state_sort(&model.id, rel, funs, &model_ctx).await?;
+                    fixed_model_ids.push(model.id);
+                }
+            }
+            page += 1;
+        }
+
+        Ok(fixed_model_ids)
+    }
+
+    /// 按现有 sort 顺序重排为 1, 2, 3...，消除重复 sort（如 a0b0c1d1e1 → a1b2c3d4e5）
+    async fn fix_model_duplicate_state_sort(model_id: &str, rels: Vec<RbumRelBoneResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        struct FlowStateRelExt {
+            id: String,
+            sort: i64,
+        }
+        let mut states = rels
+        .into_iter()
+        .map(|rel| {
+            let ext = if rel.ext.is_empty() {
+                FlowStateRelModelExt::default()
+            } else {
+                TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default()
+            };
+            FlowStateRelExt {
+                id: rel.rel_id,
+                sort: ext.sort
+            }
+        })
+        .collect_vec();
+        states.sort_by_key(|ext| ext.sort);
+        let modify_states = states
+            .iter()
+            .enumerate()
+            .map(|(i, state)| FlowModelVersionModifyState {
+                id: Some(state.id.clone()),
+                modify_rel: Some(FlowStateRelModelModifyReq {
+                    id: state.id.clone(),
+                    sort: Some((i as i64) + 1),
+                    show_btns: None,
+                    is_edit: None,
+                }),
+                modify_state: None,
+                add_transitions: None,
+                modify_transitions: None,
+                delete_transitions: None,
+            })
+            .collect_vec();
+        Self::modify_model(
+            model_id,
+            &mut FlowModelModifyReq {
+                modify_version: Some(FlowModelVersionModifyReq {
+                    modify_states: Some(modify_states),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    fn is_state_sort_duplicate(rels: Vec<RbumRelBoneResp>) -> bool {
+        let mut states_ext = rels
+            .into_iter()
+            .map(|rel| {
+                if rel.ext.is_empty() {
+                    FlowStateRelModelExt::default()
+                } else {
+                    TardisFuns::json.str_to_obj::<FlowStateRelModelExt>(&rel.ext).unwrap_or_default()
+                }
+            })
+            .collect_vec();
+        states_ext.sort_by_key(|ext| ext.sort);
+        let sorts: Vec<i64> = states_ext.iter().map(|ext| ext.sort).collect();
+        let has_duplicate_sort = sorts.len() != sorts.iter().copied().collect::<HashSet<_>>().len();
+        has_duplicate_sort
     }
 }

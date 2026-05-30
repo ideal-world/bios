@@ -44,4 +44,32 @@ if [ -z "$TAG" ]; then
     read TAG
 fi
 docker build -t $TAG ./
-docker push $TAG
+if [ -z "$OUTPUT" ]; then
+    echo "Where do you want to output:"
+    target_options=("tar" "push")
+    select opt in "${target_options[@]}"
+    do
+        case $opt in
+            "tar")
+                echo "tar"
+                OUTPUT="tar" 
+                break
+                ;;
+            "push")
+                echo "push"
+                OUTPUT="push"
+                break
+                ;;
+            *) 
+                echo "invalid option"
+                ;;
+        esac
+    done
+fi
+
+
+if [ -z "$OUTPUT" ] || [ "$OUTPUT" = "tar" ]; then
+    docker save $TAG -o spacegate.tar
+else
+    docker push $TAG
+fi

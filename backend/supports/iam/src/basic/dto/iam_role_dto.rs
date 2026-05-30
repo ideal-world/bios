@@ -129,3 +129,10 @@ pub struct IamRoleRelAccountCertResp {
     pub account: Option<IamAccountDetailResp>,
     pub certs: HashMap<String, String>,
 }
+
+/// 内置角色ID和名称响应
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+pub struct IamRoleIdNameResp {
+    pub key: String,
+    pub name: String,
+}

@@ -63,19 +63,24 @@ pub fn build_account_search_response(
         if let Some(specified_cn) = specified_cn.clone() {
             if specified_cn == cn {
                 results.push(req.gen_result_entry(LdapSearchResultEntry {
-                    dn: format!("cn={},ou={},{}", cn, config.ou_staff, config.base_dn),
+                    dn: build_account_dn(&cn, config),
                     attributes,
                 }));
             }
         } else {
             // 创建结果条目（账号使用 ou=config.ou_staff）
             results.push(req.gen_result_entry(LdapSearchResultEntry {
-                dn: format!("cn={},ou={},{}", cn, config.ou_staff, config.base_dn),
+                dn: build_account_dn(&cn, config),
                 attributes,
             }));
         }
     }
     results
+}
+
+/// 构建账号完整DN
+pub fn build_account_dn(cn: &str, config: &IamLdapConfig) -> String {
+    format!("cn={},ou={},{}", cn, config.ou_staff, config.base_dn)
 }
 
 /// 获取劳动类型标签
@@ -126,7 +131,7 @@ fn filter_attributes_by_request(all_attributes: &[LdapPartialAttribute], request
 /// 构建LDAP属性列表
 fn build_ldap_attributes(fields: &LdapAccountFields, config: &IamLdapConfig) -> Vec<LdapPartialAttribute> {
     // 将账户信息转换为LDAP字段结构
-    build_ldap_attributes_from_fields(&fields, config)
+    build_ldap_attributes_from_fields(fields, config)
 }
 
 /// 从LDAP账户字段构建LDAP属性列表

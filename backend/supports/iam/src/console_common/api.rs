@@ -1,4 +1,5 @@
 pub mod iam_cc_account_api;
+pub mod iam_cc_cert_api;
 // TODO remove
 pub mod iam_cc_account_task_api;
 pub mod iam_cc_app_api;

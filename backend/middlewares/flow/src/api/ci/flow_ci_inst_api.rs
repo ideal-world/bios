@@ -25,6 +25,7 @@ use crate::dto::flow_inst_dto::{
 use crate::dto::flow_model_version_dto::FlowModelVersionFilterReq;
 use crate::dto::flow_state_dto::FlowSysStateKind;
 use crate::dto::flow_transition_dto::FlowTransitionFilterReq;
+use crate::flow_config::FlowConfig;
 use crate::flow_constants;
 use crate::helper::{loop_check_helper, task_handler_helper};
 use crate::serv::clients::cache_client::{CacheSpinLockConfig, FlowCacheClient};
@@ -201,7 +202,7 @@ impl FlowCiInstApi {
             let review_end_time_utc = review_end_time.with_timezone(&Utc);
             let remaining = review_end_time_utc - now;
             if remaining <= threshold && remaining > Duration::zero() {
-                FlowReachClient::send_remind_approve_finish(&inst.id, &ctx.0, &funs).await?;
+                // FlowReachClient::send_remind_approve_finish(&inst.id, &ctx.0, &funs).await?;
             }
         }
         task_handler_helper::execute_async_task(&ctx.0).await?;
@@ -340,7 +341,7 @@ impl FlowCiInstApi {
     async fn bind(&self, add_req: Json<FlowInstBindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
-        let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], Some(true), &funs, &ctx.0).await?.pop();
+        let inst_id = FlowInstServ::get_inst_ids_by_rel_business_obj_id(vec![add_req.0.rel_business_obj_id.clone()], true, &funs, &ctx.0).await?.pop();
         let result = if let Some(inst_id) = inst_id {
             inst_id
         } else {
@@ -395,7 +396,7 @@ impl FlowCiInstApi {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let rel_business_obj_ids: Vec<_> = obj_ids.0.split(',').map(|id| id.to_string()).collect();
-        let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, Some(true), &funs, &ctx.0).await?;
+        let inst_ids = FlowInstServ::get_inst_ids_by_rel_business_obj_id(rel_business_obj_ids, true, &funs, &ctx.0).await?;
         let mut result = vec![];
         for inst_id in inst_ids {
             if let Ok(inst_detail) = FlowInstServ::get(&inst_id, &funs, &ctx.0).await {
@@ -677,10 +678,10 @@ impl FlowCiInstApi {
                     inst_id.clone(),
                     ModifyObjSearchExtReq {
                         tag: tag.clone(),
-                        status: None,
+                        current_state_id: None,
                         rel_state: None,
                         rel_transition_state_name: None,
-                        current_state_color: None,
+                        ..Default::default()
                     },
                 );
             }
@@ -690,6 +691,62 @@ impl FlowCiInstApi {
             processed_count += chunk.len() as u32;
         }
         
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(processed_count)
+    }
+
+    /// 批量同步主实例搜索扩展信息（脚本）
+    ///
+    /// 获取所有 main=true 的实例，按200个分页，同步调用 batch_modify_business_obj_search_ext 更新 current_state_id 和 current_state_sort
+    #[oai(path = "/batch_sync_main_inst_search_ext_script", method = "post")]
+    async fn batch_sync_main_inst_search_ext_script(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u32> {
+        let funs = flow_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+
+        const PAGE_SIZE: u32 = 200;
+        let filter = FlowInstFilterReq {
+            with_sub: Some(true),
+            main: Some(true),
+            ..Default::default()
+        };
+        let mut page_number = 1u32;
+        let mut processed_count = 0u32;
+
+        loop {
+            let page = FlowInstServ::paginate_detail_items(&filter, page_number, PAGE_SIZE, None, Some(true), &funs, &ctx.0).await?;
+            if page.records.is_empty() {
+                break;
+            }
+            let rel_business_obj_ids = page.records.iter().map(|inst| inst.rel_business_obj_id.clone()).unique().collect_vec();
+            let rel_ids_with_unfinished_non_main =
+                FlowInstServ::find_rel_business_obj_ids_with_unfinished_non_main_inst(rel_business_obj_ids, &funs, &ctx.0).await?;
+            let approving_state_id = funs.conf::<FlowConfig>().specifed_approving_state_id.clone();
+            let mut items = HashMap::new();
+            for inst in &page.records {
+                let (current_state_id, current_state_sort) = if rel_ids_with_unfinished_non_main.contains(&inst.rel_business_obj_id) {
+                    (Some(approving_state_id.clone()), Some(-1))
+                } else {
+                    (Some(inst.current_state_id.clone()), inst.current_state_ext.as_ref().map(|ext| ext.sort))
+                };
+                items.insert(
+                    inst.rel_business_obj_id.clone(),
+                    ModifyObjSearchExtReq {
+                        tag: inst.tag.clone(),
+                        current_state_id,
+                        current_state_sort,
+                        ..Default::default()
+                    },
+                );
+            }
+            FlowSearchClient::batch_modify_business_obj_search_ext(&items, &funs, &ctx.0).await?;
+            processed_count += page.records.len() as u32;
+            if page_number as u64 * PAGE_SIZE as u64 >= page.total_size {
+                break;
+            }
+            page_number += 1;
+        }
+
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(processed_count)

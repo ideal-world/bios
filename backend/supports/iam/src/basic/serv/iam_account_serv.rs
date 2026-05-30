@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bios_basic::helper::request_helper::get_real_ip_from_ctx;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
-use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumRelFromKind};
 
 use itertools::Itertools;
 use tardis::chrono::Utc;
@@ -27,12 +27,13 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
     AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp,
-    IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
+    IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp, IamAccountThirdPartyCertResp,
 };
-use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertLdapAddOrModifyReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -44,6 +45,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
+use crate::integration::ldap::account::account_result::build_account_dn;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
@@ -345,6 +347,21 @@ impl IamAccountServ {
             )
             .await?;
         }
+        // 当前逻辑，新增账号时添加add_req.cert_user_name.clone()为ldap的ak
+        if let Some(ldap_cert_conf) = IamCertLdapServ::get_cert_conf_by_ctx(funs, ctx).await? {
+            let ldap_config = funs.conf::<IamConfig>().ldap.clone();
+            IamCertLdapServ::add_or_modify_cert(
+                &IamCertLdapAddOrModifyReq {
+                    ldap_id: TrimString(build_account_dn(&add_req.cert_user_name.clone(), &ldap_config)),
+                    status: RbumCertStatusKind::Enabled,
+                },
+                &account_id,
+                &ldap_cert_conf.id,
+                funs,
+                ctx,
+            )
+            .await?;
+        }
         if let Some(cert_phone) = &add_req.cert_phone {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertPhoneVCodeServ::add_cert(
@@ -362,7 +379,7 @@ impl IamAccountServ {
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
-                IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
+                IamCertMailVCodeServ::add_cert_skip_activate(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
             let _ = MailClient::async_send_pwd(cert_mail, &pwd, funs, ctx).await;
         }
@@ -659,6 +676,7 @@ impl IamAccountServ {
 
         // let org_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &ctx.own_paths), false, funs, ctx).await?;
         let groups = IamSetServ::find_flat_set_items(&set_id, &account.id, false, funs, &mock_tenant_ctx).await?;
+        let third_party_certs = Self::find_account_third_party_certs(&account.id, funs, ctx).await?;
         let account = IamAccountDetailAggResp {
             id: account.id.clone(),
             name: if account.disabled { format!("{}(已注销)", account.name) } else { account.name },
@@ -704,6 +722,7 @@ impl IamAccountServ {
             .into_iter()
             .map(|r| (r.rel_rbum_cert_conf_name.unwrap_or("".to_string()), r.ak))
             .collect(),
+            third_party_certs,
             orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, &mock_tenant_ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             exts: account_attrs
                 .into_iter()
@@ -1036,5 +1055,23 @@ impl IamAccountServ {
 
         funs.db().execute(&update_statement).await?;
         Ok(())
+    }
+
+    async fn find_account_third_party_certs(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountThirdPartyCertResp>> {
+        Ok(IamCertServ::find_3th_kind_cert(Some(account_id.to_string()), None, false, None, funs, ctx)
+            .await?
+            .into_iter()
+            .map(|cert| IamAccountThirdPartyCertResp {
+                id: cert.id,
+                supplier: cert.supplier,
+                ak: cert.ak,
+                ext: cert.ext,
+                status: cert.status,
+                start_time: cert.start_time,
+                end_time: cert.end_time,
+                rel_rbum_cert_conf_name: cert.rel_rbum_cert_conf_name,
+            })
+            .sorted_by(|a, b| a.end_time.cmp(&b.end_time))
+            .collect())
     }
 }
