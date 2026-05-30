@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeNodeResp, RbumSetTreeResp};
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetSummaryResp, RbumSetTreeNodeResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq, RbumSetItemRelInfoResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
@@ -45,6 +45,60 @@ pub const DATA_GUARD_ROOT_SET_BUS_CODE: &str = "__data_guards__";
 pub struct IamSetServ;
 
 impl IamSetServ {
+    /// 根据 account_id 和 set_kind 获取对应的 set 列表
+    ///
+    /// Get set list by account_id and set_kind
+    pub async fn find_sets_by_account_id_and_kind(account_id: &str, set_kind: &IamSetKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumSetSummaryResp>> {
+        // 调用 RbumSetItemServ::find_detail_rbums 获取 account 关联的 set item
+        let set_items = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: Some(true),
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_item_ids: Some(vec![account_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+
+        // 去重并收集 rel_rbum_set_id
+        let set_ids: Vec<String> = set_items
+            .iter()
+            .map(|item| item.rel_rbum_set_id.clone())
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .collect();
+
+        if set_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // 根据 set_ids 查询 set 信息，并过滤出指定 kind 的 set
+        RbumSetServ::find_rbums(
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(set_ids),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel: None,
+                kind: Some(set_kind.to_string()),
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
     pub async fn init_set(set_kind: IamSetKind, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, Option<(String, String)>)> {
         let code = Self::get_default_code(&set_kind, &ctx.own_paths);
         let set_id = RbumSetServ::add_rbum(
@@ -618,6 +672,117 @@ impl IamSetServ {
             ctx,
         )
         .await
+    }
+
+    pub async fn get_tree_with_auth_by_account_opt(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumSetTreeResp>> {
+        let account_ids = vec![account_id.to_string()];
+        let app_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamAccountApp, true, account_id, None, None, funs, ctx).await?;
+
+        let account_cate = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: Some(true),
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.to_string()),
+                rel_rbum_item_ids: Some(account_ids.clone()),
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let app_cate = RbumSetItemServ::find_detail_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_can_not_exist: Some(true),
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: Some(set_id.to_string()),
+                rel_rbum_item_ids: Some(app_ids),
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if account_cate.is_empty() && app_cate.is_empty() {
+            return Ok(None);
+        }
+        let app_cate_sys_codes =
+            app_cate.iter().filter(|r| r.rel_rbum_set_cate_sys_code.is_some()).map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        let account_cate_sys_codes =
+            account_cate.iter().filter(|r| r.rel_rbum_set_cate_sys_code.is_some()).map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        if account_cate_sys_codes.is_empty() && app_cate_sys_codes.is_empty() {
+            return Ok(Some(RbumSetTreeResp { main: vec![], ext: None }));
+        }
+
+        let account_tree_sub = if account_cate_sys_codes.is_empty() {
+            RbumSetTreeResp { main: vec![], ext: None }
+        } else {
+            //  获取 account cate 的树
+            Self::get_tree(
+                set_id,
+                &mut RbumSetTreeFilterReq {
+                    fetch_cate_item: true,
+                    sys_codes: Some(account_cate_sys_codes.clone()),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        };
+        //  补全 account cate 的 parent node
+        let mut all_sys_codes = vec![];
+        for cate in account_tree_sub.main.iter() {
+            if cate.sys_code.is_empty() {
+                continue;
+            }
+            let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(&cate.sys_code, funs)?;
+            if !parent_sys_codes.is_empty() {
+                all_sys_codes.extend(parent_sys_codes);
+            }
+            all_sys_codes.push(cate.sys_code.clone());
+        }
+        //  补全 app cate 的 parent node
+        for cate_sys_code in app_cate_sys_codes.iter() {
+            if cate_sys_code.is_empty() {
+                continue;
+            }
+            let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(&cate_sys_code.clone(), funs)?;
+            if !parent_sys_codes.is_empty() {
+                all_sys_codes.extend(parent_sys_codes);
+            }
+            all_sys_codes.push(cate_sys_code.to_string());
+        }
+        if all_sys_codes.is_empty() {
+            return Ok(None);
+        }
+        let all_sys_codes = all_sys_codes.iter().map(|r| r.to_string()).collect::<Vec<String>>().into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
+
+        let result = Self::get_tree(
+            set_id,
+            &mut RbumSetTreeFilterReq {
+                fetch_cate_item: true,
+                sys_codes: Some(all_sys_codes),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(Some(result))
     }
 
     pub async fn get_app_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<(String, String)>> {

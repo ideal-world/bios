@@ -106,6 +106,7 @@ pub fn add_res(
     need_crypto_req: bool,
     need_crypto_resp: bool,
     need_double_auth: bool,
+    need_only_aksk: bool,
     need_login: bool,
 ) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
@@ -134,6 +135,7 @@ pub fn add_res(
                 need_crypto_req,
                 need_crypto_resp,
                 need_double_auth,
+                need_only_aksk,
                 need_login,
             );
             let res_uris: Vec<&str> = res_uri.split("://").collect();
@@ -146,6 +148,7 @@ pub fn add_res(
                         need_crypto_req,
                         need_crypto_resp,
                         need_double_auth,
+                        need_only_aksk,
                         need_login,
                     },
                 );

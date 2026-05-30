@@ -45,6 +45,7 @@ impl AuthResult {
                 groups: ctx.groups.clone(),
                 own_paths: ctx.own_paths.clone(),
                 ak: ctx.ak.clone(),
+                ident_by_ak_sk: ctx.ident_by_ak_sk,
             }),
             resp_body,
             resp_headers,
@@ -161,6 +162,8 @@ pub struct AuthContext {
     pub groups: Option<Vec<String>>,
     pub own_paths: Option<String>,
     pub ak: Option<String>,
+    /// true when the request was authenticated via AK/SK (Bios-Ak-Authorization or webhook AK), not via token alone
+    pub ident_by_ak_sk: bool,
 }
 
 impl fmt::Display for AuthContext {
@@ -254,6 +257,7 @@ impl ResContainerNode {
         need_crypto_req: bool,
         need_crypto_resp: bool,
         need_double_auth: bool,
+        need_only_aksk: bool,
         need_login: bool,
     ) {
         self.children.as_mut().expect("[Auth.kernel] children get none").insert(
@@ -267,6 +271,7 @@ impl ResContainerNode {
                     need_crypto_req,
                     need_crypto_resp,
                     need_double_auth,
+                    need_only_aksk,
                     need_login,
                 }),
             },
@@ -286,6 +291,7 @@ pub struct ResContainerLeafInfo {
     pub need_crypto_req: bool,
     pub need_crypto_resp: bool,
     pub need_double_auth: bool,
+    pub need_only_aksk: bool,
     pub need_login: bool,
 }
 
@@ -311,6 +317,7 @@ pub(crate) struct Api {
     pub need_crypto_req: bool,
     pub need_crypto_resp: bool,
     pub need_double_auth: bool,
+    pub need_only_aksk: bool,
     pub need_login: bool,
 }
 

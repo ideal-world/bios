@@ -409,6 +409,7 @@ impl IamSearchClient {
             "app_set": raw_app_set_map,
             "app_set_id": app_set,
             "third_party_app_ids": third_party_app_ids,
+            "third_cert_end_time": account_resp.third_party_certs.first().map(|c| c.end_time.to_rfc3339()),
             "scope_level":account_resp.scope_level
         });
         // save search

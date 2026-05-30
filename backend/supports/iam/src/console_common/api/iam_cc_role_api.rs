@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleBoneResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleBoneResp, IamRoleIdNameResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRoleKind;
@@ -134,6 +134,23 @@ impl IamCcRoleApi {
         TardisResp::ok(result)
     }
 
+    /// Find Roles base app
+    /// 聚合查询租户及基础项目角色（按上下文 own_paths 层级自动选择）
+    #[oai(path = "/base_app", method = "get")]
+    async fn find_role_base_app(
+        &self,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamRoleIdNameResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::find_cc_role_base_app(desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Find pub Rel Res By Role Id
     /// 根据角色ID查找公开关联资源
     #[oai(path = "/:id/pub_res", method = "get")]
@@ -204,5 +221,34 @@ impl IamCcRoleApi {
         let result = IamRoleServ::get_embed_sub_role_id(&id, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Get All Built-in Roles
+    /// 获取所有内置角色的ID和名称
+    #[oai(path = "/built_in", method = "get")]
+    async fn get_built_in_roles(&self, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<IamRoleIdNameResp>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    with_sub_own_paths: false,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                in_base: Some(true),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(result.into_iter().map(|role| IamRoleIdNameResp {
+            key: role.id,
+            name: role.name,
+        }).collect())
     }
 }

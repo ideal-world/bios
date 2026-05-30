@@ -197,6 +197,69 @@ pub struct StatsConfDimInfoResp {
     pub update_time: DateTime<Utc>,
 }
 
+/// Add Dimension Column Configuration Request Object
+///
+/// 添加维度列配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimColAddReq {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub key: String,
+    #[oai(validator(min_length = "2"))]
+    pub show_name: String,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub rel_cert_id: Option<String>,
+    pub rel_sql: Option<String>,
+    pub dict_kind: Option<String>,
+    pub dict_dyn_interface: Option<String>,
+    pub remark: Option<String>,
+}
+
+/// Modify Dimension Column Configuration Request Object
+///
+/// 修改维度列配置请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimColModifyReq {
+    #[oai(validator(min_length = "2"))]
+    pub show_name: Option<String>,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub rel_cert_id: Option<String>,
+    pub rel_sql: Option<String>,
+    pub dict_kind: Option<String>,
+    pub dict_dyn_interface: Option<String>,
+    pub remark: Option<String>,
+}
+
+/// Execute Dimension Column rel_sql Request Object
+///
+/// 执行维度列关联 SQL 请求对象
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsConfDimColRelSqlExecReq {
+    /// Placeholder values for $1, $2, ... in rel_sql
+    ///
+    /// rel_sql 中 $1、$2 等占位符的填充值
+    pub params: Vec<String>,
+}
+
+/// Dimension Column Configuration Response Object
+///
+/// 维度列配置响应对象
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug, Clone)]
+pub struct StatsConfDimColInfoResp {
+    #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
+    pub key: String,
+    #[oai(validator(min_length = "2"))]
+    pub show_name: String,
+    pub rel_conf_dim_key: String,
+    pub data_type: Option<StatsDataTypeKind>,
+    pub rel_cert_id: Option<String>,
+    pub rel_sql: Option<String>,
+    pub dict_kind: Option<String>,
+    pub dict_dyn_interface: Option<String>,
+    pub remark: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
 /// Add Fact Configuration Request Object
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsConfFactAddReq {

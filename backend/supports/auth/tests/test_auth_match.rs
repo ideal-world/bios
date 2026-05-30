@@ -18,6 +18,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -27,6 +28,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"apps":"#app1#app2#","tenants":"#tenant1#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -42,6 +44,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -51,6 +54,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc1#acc2#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -66,6 +70,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -79,6 +84,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -88,6 +94,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"roles":"#role1#role2#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -103,6 +110,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -116,6 +124,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -125,6 +134,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"groups":"#g2.aaaa#g1.aaab##g1.aaaaaaaa##g1.aaaaaaab#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -140,6 +150,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: Some(vec!["g2.bbbb".to_string()]),
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -153,6 +164,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: Some(vec!["g1.aaab".to_string()]),
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -166,6 +178,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: Some(vec!["g1.aaaa".to_string()]),
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -175,6 +188,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"apps":"#app1#app2#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -190,6 +204,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -203,6 +218,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -212,6 +228,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"tenants":"#tenant1#tenant2#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -227,6 +244,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -240,6 +258,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -249,6 +268,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://iam-serv",
         Some(TardisFuns::json.str_to_obj(r##"{"tenants":"#tenant1#tenant2#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -264,6 +284,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -277,6 +298,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         false,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://app1/ct/account/001".to_string(),
@@ -288,6 +310,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -301,6 +324,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -308,6 +332,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://app1/ct/account/**",
         Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc3#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -323,6 +348,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -330,6 +356,7 @@ pub async fn test_match() -> TardisResult<()> {
         "GET",
         "iam-res://app1/ct/**",
         Some(TardisFuns::json.str_to_obj(r##"{"roles":"#tenant_admin#"}"##)?),
+        false,
         false,
         false,
         false,
@@ -345,6 +372,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -363,6 +391,7 @@ pub async fn test_match() -> TardisResult<()> {
         false,
         true,
         false,
+        false,
     )?;
     assert!(auth_kernel_serv::do_auth(&AuthContext {
         rbum_uri: "iam-res://pbulic".to_string(),
@@ -374,6 +403,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -388,6 +418,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
@@ -403,6 +434,7 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_ok());
@@ -416,9 +448,50 @@ pub async fn test_match() -> TardisResult<()> {
         groups: None,
         own_paths: None,
         ak: None,
+        ident_by_ak_sk: false,
     })
     .await
     .is_err());
+
+    // only AK/SK (reject token-ident context; allow AK/SK-ident context)
+    auth_res_serv::add_res(
+        "GET",
+        "iam-res://iam-serv/only-aksk",
+        Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#acc1#"}"##)?),
+        false,
+        false,
+        false,
+        true,
+        false,
+    )?;
+    assert!(auth_kernel_serv::do_auth(&AuthContext {
+        rbum_uri: "iam-res://iam-serv/only-aksk".to_string(),
+        rbum_action: "get".to_string(),
+        app_id: None,
+        tenant_id: None,
+        account_id: Some("acc1".to_string()),
+        roles: None,
+        groups: None,
+        own_paths: None,
+        ak: None,
+        ident_by_ak_sk: false,
+    })
+    .await
+    .is_err());
+    assert!(auth_kernel_serv::do_auth(&AuthContext {
+        rbum_uri: "iam-res://iam-serv/only-aksk".to_string(),
+        rbum_action: "get".to_string(),
+        app_id: None,
+        tenant_id: None,
+        account_id: Some("acc1".to_string()),
+        roles: None,
+        groups: None,
+        own_paths: None,
+        ak: Some("some-ak".to_string()),
+        ident_by_ak_sk: true,
+    })
+    .await
+    .is_ok());
 
     Ok(())
 }

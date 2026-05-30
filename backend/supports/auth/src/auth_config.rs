@@ -22,6 +22,7 @@ pub struct AuthConfig {
 
     pub cache_key_token_info: String,
     pub cache_key_account_info: String,
+    pub cache_key_extra_role_info: String,
     pub cache_key_aksk_info: String,
     pub cache_key_crypto_key: String,
     pub cache_key_double_auth_info: String,
@@ -47,6 +48,8 @@ pub struct AuthConfig {
     pub default_resp_crypto: bool,
     /// Exclude encryption and decryption path.use prefix match.
     pub exclude_encrypt_decrypt_path: Vec<String>,
+    /// 若授权信息找不到，但是拥有以下角色则可以额外获得授权信息
+    pub extra_role_ids: Vec<String>,
 }
 
 impl Default for AuthConfig {
@@ -66,6 +69,7 @@ impl Default for AuthConfig {
 
             cache_key_token_info: "iam:cache:token:info:".to_string(),
             cache_key_account_info: "iam:cache:account:info:".to_string(),
+            cache_key_extra_role_info: "iam:cache:extra:role:info:".to_string(),
             cache_key_aksk_info: "iam:cache:aksk:info:".to_string(),
             cache_key_crypto_key: "auth:crypto:key:".to_string(),
             // ..:<account_id>
@@ -86,6 +90,7 @@ impl Default for AuthConfig {
 
             spi: IamSpiConfig::default(),
             exclude_encrypt_decrypt_path: vec!["/iam/ci/".to_string()],
+            extra_role_ids: vec![],
         }
     }
 }

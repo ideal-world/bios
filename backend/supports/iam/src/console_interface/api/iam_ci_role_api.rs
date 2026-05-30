@@ -1,4 +1,5 @@
-use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::basic::dto::iam_app_dto::IamAppKind;
+use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleRelAccountCertResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::iam_enumeration::IamRoleKind;
@@ -13,7 +14,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
+use crate::iam_constants::{self, RBUM_ITEM_NAME_APP_READ_ROLE, RBUM_ITEM_NAME_PROJECT_READ_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_SCOPE_LEVEL_APP};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
@@ -95,7 +96,7 @@ impl IamCiRoleApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut verify_read_admin = false;
         for role in &ctx.0.roles {
-            if role.contains(&funs.iam_basic_role_app_read_id()) {
+            if role.contains(&funs.iam_basic_role_app_read_id()) || role.contains(&funs.iam_basic_role_project_read_id()) {
                 verify_read_admin = true;
             }
         }
@@ -356,6 +357,58 @@ impl IamCiRoleApi {
     async fn refresh_role_cache(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamRoleServ::refresh_role_cache(&funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Init extra role cache for product app
+    /// 初始化产品应用的 extra role cache
+    #[oai(path = "/init_extra_role_cache", method = "post")]
+    async fn init_extra_role_cache(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let app_ids = IamAppServ::find_id_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamAppKind::Product),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        for app_id in app_ids {
+            let app_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(app_id.clone()))?;
+            IamAppServ::init_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_APP_READ_ROLE, &funs, &app_ctx).await?;
+            IamAppServ::init_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, &funs, &app_ctx).await?;
+        }
+        let proj_ids = IamAppServ::find_id_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamAppKind::Project),
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        for proj_id in proj_ids {
+            let proj_ctx = IamCertServ::try_use_app_ctx(ctx.0.clone(), Some(proj_id.clone()))?;
+            IamAppServ::init_extra_role_cache_by_app_id(&proj_id, RBUM_ITEM_NAME_PROJECT_READ_ROLE, &funs, &proj_ctx).await?;
+            IamAppServ::init_extra_role_cache_by_app_id(&proj_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, &funs, &proj_ctx).await?;
+        }
         TardisResp::ok(Void {})
     }
 }

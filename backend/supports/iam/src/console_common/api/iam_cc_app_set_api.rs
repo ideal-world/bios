@@ -1,15 +1,20 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
@@ -62,6 +67,87 @@ impl IamCcAppSetApi {
             .await?
         };
         ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find App Tree For All Tenants (or selected tenants if ``tenant_ids`` is set)
+    /// 返回各租户的应用树；若传入 ``tenant_ids``（逗号分隔的租户 ID）则仅返回这些租户，否则返回全部启用租户
+    ///
+    /// Other query parameters behave the same as ``GET /cs/apps/tree`` (except ``tenant_id`` replaced by ``tenant_ids``).
+    /// 其余查询参数与 ``GET /cs/apps/tree`` 一致（``tenant_id`` 在此处为 ``tenant_ids``）。
+    #[oai(path = "/tree/all", method = "get")]
+    async fn get_tree_all(
+        &self,
+        parent_sys_code: Query<Option<String>>,
+        only_related: Query<Option<bool>>,
+        tenant_ids: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<HashMap<String, RbumSetTreeResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let only_related = only_related.0.unwrap_or(false);
+        let mut result = HashMap::new();
+        let ext_ctx = ctx.0;
+
+        let specific_tenant_ids = tenant_ids.0.map(|s| s.split(',').map(String::from).collect::<Vec<_>>());
+
+        let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ext_ctx.clone())?;
+        try_set_real_ip_from_req_to_ctx(request, &sys_ctx).await?;
+
+        let tenant_id_list: Vec<String> = if let Some(ids) = specific_tenant_ids {
+            ids
+        } else {
+            IamTenantServ::find_items(
+                &IamTenantFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Some(true),
+                None,
+                &funs,
+                &sys_ctx,
+            )
+            .await?
+            .into_iter()
+            .map(|t| t.id)
+            .collect()
+        };
+
+        let parent_sys_code_q = parent_sys_code.0.clone();
+        for tid in tenant_id_list {
+            let t_ctx = IamCertServ::use_tenant_ctx(sys_ctx.clone(), &tid)?;
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &t_ctx).await?;
+            let tree = if only_related {
+                IamSetServ::get_tree_with_auth_by_account_opt(&set_id, &t_ctx.owner, &funs, &t_ctx).await?
+            } else {
+                Some(
+                    IamSetServ::get_tree(
+                        &set_id,
+                        &mut RbumSetTreeFilterReq {
+                            fetch_cate_item: true,
+                            hide_item_with_disabled: true,
+                            sys_codes: parent_sys_code_q.clone().map(|parent_sys_code| vec![parent_sys_code]),
+                            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+                            sys_code_query_depth: Some(1),
+                            ..Default::default()
+                        },
+                        &funs,
+                        &t_ctx,
+                    )
+                    .await?
+                )
+            };
+            if let Some(tree) = tree {
+                result.insert(tid, tree);
+            }
+        }
+        ext_ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 

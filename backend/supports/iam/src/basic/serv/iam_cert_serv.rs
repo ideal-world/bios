@@ -41,6 +41,7 @@ use crate::basic::dto::iam_cert_dto::{
     IamThirdPartyCertExtAddReq, IamThirdPartyCertExtModifyReq,
 };
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamResFilterReq, IamRoleFilterReq};
+use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
@@ -588,7 +589,7 @@ impl IamCertServ {
 
     pub async fn modify_3th_kind_cert(modify_req: &mut IamThirdPartyCertExtModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let cert_3th = Self::get_3th_kind_cert_by_rel_rbum_id(Some(modify_req.rel_rbum_id.clone()), Some(vec![modify_req.supplier.clone()]), false, None, funs, ctx).await?;
-        RbumCertServ::modify_rbum(
+        let result = RbumCertServ::modify_rbum(
             &cert_3th.id,
             &mut RbumCertModifyReq {
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
@@ -604,7 +605,9 @@ impl IamCertServ {
             funs,
             ctx,
         )
-        .await
+        .await?;
+        IamSearchClient::async_add_or_modify_account_search(&modify_req.rel_rbum_id, Box::new(false), "", funs, ctx).await?;
+        Ok(result)
     }
 
     /// Get general cert method \
@@ -1224,9 +1227,9 @@ impl IamCertServ {
         }
         let mut old_app_ids = account_agg.apps.iter().map(|app| app.app_id.clone()).collect::<Vec<String>>();
         let mut apps = account_agg.apps;
-        if tenant_id != "" {
+        if !tenant_id.is_empty() {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
-            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?;
+            let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, account_id, &funs, &ctx).await?;
             let mut app_role_read = HashMap::new();
             app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
             for (app_id, app_name) in app_items {
@@ -1295,6 +1298,43 @@ impl IamCertServ {
                         });
                     }
                 }
+            }
+        } else {
+            let mut app_role_read = HashMap::new();
+            app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            let proj_app = IamAppServ::find_items(
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        // own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    kind: Some(IamAppKind::Project),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for app in proj_app {
+                if !old_app_ids.contains(&app.id) {
+                    old_app_ids.push(app.id.clone());
+                    apps.push(IamAccountAppInfoResp {
+                        app_id: app.id.clone(),
+                        app_name: app.name.clone(),
+                        app_own_paths: app.own_paths.clone(),
+                        app_kind: IamAppKind::Project,
+                        app_icon: app.icon,
+                        roles: app_role_read.clone(),
+                        groups: HashMap::new(),
+                    });
+                }
+            }
+            // 将apps中的roles替换为app_role_read
+            for app in apps.iter_mut() {
+                app.roles = app_role_read.clone();
             }
         }
         let account_info = IamAccountInfoResp {

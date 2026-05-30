@@ -28,6 +28,21 @@ pub struct FlowCcModelApi;
 /// Flow model process API
 #[poem_openapi::OpenApi(prefix_path = "/cc/model")]
 impl FlowCcModelApi {
+    /// [临时脚本] 批量处理重复的状态排序
+    ///
+    /// 查询所有 main=true 的模型，对存在重复 sort 的模型按现有顺序重排为 1, 2, 3... 并持久化。
+    /// 返回已修复的模型 ID 列表。
+    #[oai(path = "/script/fix_duplicate_state_sort", method = "post")]
+    async fn script_fix_duplicate_state_sort(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<String>> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = FlowModelServ::script_fix_duplicate_main_model_state_sort(&funs, &ctx.0).await?;
+        funs.commit().await?;
+        task_handler_helper::execute_async_task(&ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
     /// Add Model
     ///
     /// 添加模型

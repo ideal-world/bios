@@ -228,6 +228,20 @@ pub struct IamAccountSummaryAggResp {
     pub orgs: Vec<String>,
 }
 
+/// 账号三方凭证概要信息
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountThirdPartyCertResp {
+    pub id: String,
+    /// 凭证供应商（如 gitlab、ldap 等）
+    pub supplier: String,
+    pub ak: String,
+    pub ext: String,
+    pub status: RbumCertStatusKind,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub rel_rbum_cert_conf_name: Option<String>,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountDetailAggResp {
     pub id: String,
@@ -259,6 +273,8 @@ pub struct IamAccountDetailAggResp {
 
     pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
+    /// 该账户下所有已启用的三方凭证
+    pub third_party_certs: Vec<IamAccountThirdPartyCertResp>,
     pub orgs: Vec<String>,
     pub exts: Vec<IamAccountAttrResp>,
     pub groups: HashMap<String, String>,

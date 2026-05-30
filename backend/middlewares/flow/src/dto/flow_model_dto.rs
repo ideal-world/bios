@@ -917,3 +917,11 @@ pub struct FlowModelBatchDisableReq {
     pub main: Option<bool>,
     pub tags: Option<Vec<String>>,
 }
+
+/// 状态排序签名项（临时脚本，内部使用）
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+pub struct FlowModelStateSortSigItem {
+    pub state_id: String,
+    pub state_name: String,
+    pub sort: i64,
+}

@@ -111,6 +111,7 @@ pub async fn test_init() -> TardisResult<()> {
                 && a["need_crypto_req"].as_bool().unwrap()
                 && a["need_crypto_resp"].as_bool().unwrap()
                 && a["need_double_auth"].as_bool().unwrap()
+                && !a["need_only_aksk"].as_bool().unwrap()
                 && !a["need_login"].as_bool().unwrap()
         })
         .collect::<Vec<_>>();
@@ -124,6 +125,7 @@ pub async fn test_init() -> TardisResult<()> {
                 && a["need_crypto_req"].as_bool().unwrap()
                 && !a["need_crypto_resp"].as_bool().unwrap()
                 && a["need_double_auth"].as_bool().unwrap()
+                && !a["need_only_aksk"].as_bool().unwrap()
                 && !a["need_login"].as_bool().unwrap()
         })
         .collect::<Vec<_>>();
@@ -178,6 +180,7 @@ pub async fn test_init() -> TardisResult<()> {
                 && !a["need_crypto_req"].as_bool().unwrap()
                 && !a["need_crypto_resp"].as_bool().unwrap()
                 && !a["need_double_auth"].as_bool().unwrap()
+                && !a["need_only_aksk"].as_bool().unwrap()
                 && !a["need_login"].as_bool().unwrap()
         })
         .collect::<Vec<_>>();

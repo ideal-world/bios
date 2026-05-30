@@ -12,6 +12,8 @@ use tardis::TardisFunsInst;
 use bios_basic::rbum::rbum_config::RbumConfig;
 use tardis::web::poem::http::HeaderName;
 
+use crate::iam_constants;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct IamConfig {
@@ -32,6 +34,12 @@ pub struct IamConfig {
     //     is_global<bool>:is global account
     // }
     pub cache_key_account_info_: String,
+    // extra_role_id -> {
+    //     <app_id>: app extend role id,
+    // }
+    pub cache_key_extra_role_info_: String,
+    /// 若授权信息找不到，但是拥有以下角色则可以额外获得授权信息
+    pub extra_role_codes: Vec<String>,
     // role_id -> iam_role
     pub cache_key_role_info_: String,
     pub cache_key_double_auth_info: String,
@@ -66,6 +74,18 @@ pub struct IamConfig {
     pub sms_pwd_path: String,
     pub third_integration_config_key: String,
     pub third_integration_schedule_code: String,
+    /// Reach 短信签名 ID：三方凭证到期提醒
+    pub third_party_cert_expiry_reach_msg_signature_id: String,
+    /// Reach 短信模板 ID：三方凭证到期提醒（模板变量：end_time、remaining_days、username）
+    pub third_party_cert_expiry_reach_msg_template_id: String,
+    /// 三方凭证到期提醒去重缓存 key 前缀：`{prefix}{account_id}:{yyyy-mm-dd}`
+    pub cache_key_third_party_cert_expiry_notify_: String,
+    /// Reach 短信签名 ID：三方凭证今日已到期提醒
+    pub third_party_cert_expired_reach_msg_signature_id: String,
+    /// Reach 短信模板 ID：三方凭证今日已到期提醒（模板变量：end_time、username）
+    pub third_party_cert_expired_reach_msg_template_id: String,
+    /// 三方凭证今日已到期提醒去重缓存 key 前缀：`{prefix}{account_id}:{yyyy-mm-dd}`
+    pub cache_key_third_party_cert_expired_notify_: String,
 
     /// init custom role list
     pub init_role_list: Option<Vec<InitRole>>,
@@ -195,6 +215,12 @@ impl Default for IamConfig {
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
             cache_key_role_info_: "iam:cache:role:info:".to_string(),
+            cache_key_extra_role_info_: "iam:cache:extra:role:info:".to_string(),
+            extra_role_codes: vec![
+                iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_PROJECT_READ_ROLE.to_string(),
+                iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string(),
+            ],
             // ..:<account_id>
             cache_key_double_auth_info: "iam:cache:double_auth:info:".to_string(),
             cache_key_double_auth_expire_sec: 300,
@@ -222,6 +248,12 @@ impl Default for IamConfig {
             sms_pwd_path: "cc/msg/pwd".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
+            third_party_cert_expiry_reach_msg_signature_id: "".to_string(),
+            third_party_cert_expiry_reach_msg_template_id: "".to_string(),
+            cache_key_third_party_cert_expiry_notify_: "iam:cache:third_cert_expiry_notify:".to_string(),
+            third_party_cert_expired_reach_msg_signature_id: "".to_string(),
+            third_party_cert_expired_reach_msg_template_id: "".to_string(),
+            cache_key_third_party_cert_expired_notify_: "iam:cache:third_cert_expired_notify:".to_string(),
             iam_base_url: "http://127.0.0.1:8080/iam".to_string(),
             spi: Default::default(),
             strict_security_mode: false,
@@ -287,6 +319,7 @@ pub struct BasicInfo {
     pub role_tenant_app_manager_id: String,
     pub role_app_admin_id: String,
     pub role_app_read_id: String,
+    pub role_project_read_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -333,6 +366,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_role_tenant_app_manager_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
     fn iam_basic_role_app_read_id(&self) -> String;
+    fn iam_basic_role_project_read_id(&self) -> String;
 }
 
 impl IamBasicConfigApi for TardisFunsInst {
@@ -390,5 +424,9 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_app_read_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_app_read_id.clone())
+    }
+
+    fn iam_basic_role_project_read_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_project_read_id.clone())
     }
 }

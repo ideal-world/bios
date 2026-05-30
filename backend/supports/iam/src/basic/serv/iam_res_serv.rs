@@ -83,6 +83,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             crypto_req: Set(add_req.crypto_req.unwrap_or(false)),
             crypto_resp: Set(add_req.crypto_resp.unwrap_or(false)),
             double_auth: Set(add_req.double_auth.unwrap_or(false)),
+            only_aksk: Set(add_req.only_aksk.unwrap_or(false)),
             double_auth_msg: Set(add_req.double_auth_msg.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             need_login: Set(add_req.need_login.unwrap_or(false)),
@@ -110,7 +111,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         )
         .await?;
         if res.kind == IamResKind::Api {
-            IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.need_login, funs).await?;
+            IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.only_aksk, res.need_login, funs).await?;
         }
         let (op_describe, op_kind) = match res.kind {
             IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
@@ -163,6 +164,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             && modify_req.crypto_req.is_none()
             && modify_req.crypto_resp.is_none()
             && modify_req.double_auth.is_none()
+            && modify_req.only_aksk.is_none()
             && modify_req.ext.is_none()
         {
             return Ok(None);
@@ -195,6 +197,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if let Some(double_auth) = modify_req.double_auth {
             iam_res.double_auth = Set(double_auth);
         }
+        if let Some(only_aksk) = modify_req.only_aksk {
+            iam_res.only_aksk = Set(only_aksk);
+        }
         if let Some(double_auth_msg) = &modify_req.double_auth_msg {
             iam_res.double_auth_msg = Set(double_auth_msg.to_string());
         }
@@ -221,7 +226,13 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             ctx,
         )
         .await?;
-        if res.kind == IamResKind::Api && (modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() || modify_req.method.is_some()) {
+        if res.kind == IamResKind::Api
+            && (modify_req.crypto_req.is_some()
+                || modify_req.crypto_resp.is_some()
+                || modify_req.double_auth.is_some()
+                || modify_req.only_aksk.is_some()
+                || modify_req.method.is_some())
+        {
             IamResCacheServ::add_or_modify_res_rel(
                 &res.code,
                 &res.method,
@@ -237,6 +248,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                     need_crypto_req: modify_req.crypto_req,
                     need_crypto_resp: modify_req.crypto_resp,
                     need_double_auth: modify_req.double_auth,
+                    need_only_aksk: modify_req.only_aksk,
                     need_login: modify_req.need_login,
                 },
                 funs,
@@ -248,7 +260,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 if disabled {
                     IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
                 } else {
-                    IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.need_login, funs).await?;
+                    IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.only_aksk, res.need_login, funs).await?;
                 }
             }
         }
@@ -409,6 +421,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::CryptoReq));
         query.column((iam_res::Entity, iam_res::Column::CryptoResp));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuth));
+        query.column((iam_res::Entity, iam_res::Column::OnlyAksk));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuthMsg));
         query.column((iam_res::Entity, iam_res::Column::NeedLogin));
         query.column((iam_res::Entity, iam_res::Column::Ext));
@@ -934,6 +947,7 @@ impl IamResServ {
                 need_crypto_req: Some(item.crypto_req),
                 need_crypto_resp: Some(item.crypto_resp),
                 need_double_auth: Some(item.double_auth),
+                need_only_aksk: Some(item.only_aksk),
                 need_login: Some(item.need_login),
             };
             IamResCacheServ::refresh_res_rel(&item.code, &item.method, rel_req, funs).await?;
@@ -1031,6 +1045,7 @@ impl IamMenuServ {
                     crypto_req: None,
                     crypto_resp: None,
                     double_auth: None,
+                    only_aksk: None,
                     double_auth_msg: None,
                     need_login: None,
                     bind_api_res: None,
@@ -1066,6 +1081,7 @@ impl IamMenuServ {
                     crypto_req: None,
                     crypto_resp: None,
                     double_auth: None,
+                    only_aksk: None,
                     double_auth_msg: None,
                     need_login: None,
                     bind_api_res: None,

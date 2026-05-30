@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use serde::Deserialize;
 use tardis::chrono::{NaiveDateTime, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
@@ -19,6 +20,13 @@ use crate::{
     auth_constants::DOMAIN_CODE,
     dto::auth_kernel_dto::{AuthContext, AuthReq},
 };
+
+#[derive(Deserialize)]
+struct IamCacheExtraRoleInfoValue {
+    #[allow(dead_code)]
+    own_paths: String,
+    role_id: String,
+}
 
 pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResult> {
     trace!("[Auth] Request auth: {:?}", req);
@@ -105,6 +113,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
             groups: Some(context.groups),
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
+            ident_by_ak_sk: false,
         })
     } else if let Some(ak_authorization) = get_ak_key(req, config) {
         let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, false).await?;
@@ -132,6 +141,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
             groups: None,
             own_paths: Some(own_paths),
             ak: Some(ak.to_string()),
+            ident_by_ak_sk: true,
         })
     } else if let Some(ak_authorization) = get_webhook_ak_key(req, config) {
         let (req_date, ak, signature) = self::parsing_base_ak(&ak_authorization, req, config, true).await?;
@@ -185,6 +195,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
                 groups: Some(context.groups),
                 own_paths: Some(own_paths.to_string()),
                 ak: Some(ak.to_string()),
+                ident_by_ak_sk: true,
             })
         } else {
             Err(TardisError::forbidden(
@@ -213,6 +224,7 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
             groups: None,
             own_paths: None,
             ak: None,
+            ident_by_ak_sk: false,
         })
     }
 }
@@ -242,6 +254,9 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
     let mut context: TardisContext = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), app_id).await? {
         TardisFuns::json.str_to_obj::<TardisContext>(&context)?
     } else {
+        if let Some(global_context) = get_global_context_with_extra_roles(account_id, app_id, config, cache_client).await? {
+            return Ok(global_context);
+        }
         return Err(TardisError::unauthorized(
             &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
             "401-auth-req-token-or-app-not-exist",
@@ -265,6 +280,41 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
         }
     }
     Ok(context)
+}
+
+async fn get_global_context_with_extra_roles(
+    account_id: &str,
+    app_id: &str,
+    config: &AuthConfig,
+    cache_client: &TardisCacheClient,
+) -> TardisResult<Option<TardisContext>> {
+    if let Some(global_context_str) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), "").await? {
+        let mut global_context = TardisFuns::json.str_to_obj::<TardisContext>(&global_context_str)?;
+        if !global_context.roles.is_empty() {
+            let mut extra_roles = vec![];
+            for role_id in &config.extra_role_ids {
+                if global_context.roles.contains(role_id) {
+                    let extra_role_app_id = cache_client.hget(&format!("{}{}", config.cache_key_extra_role_info, role_id), app_id).await?;
+                    if let Some(extra_role_app_id) = extra_role_app_id {
+                        let extra_role_info = match TardisFuns::json.str_to_obj::<IamCacheExtraRoleInfoValue>(&extra_role_app_id) {
+                            Ok(v) => v,
+                            Err(_) => IamCacheExtraRoleInfoValue{
+                                own_paths: "".to_string(),
+                                role_id: extra_role_app_id,
+                            },
+                        };
+                        global_context.own_paths = extra_role_info.own_paths;
+                        extra_roles.push(extra_role_info.role_id);
+                    }
+                }
+            }
+            if !extra_roles.is_empty() {
+                global_context.roles.extend(extra_roles);
+                return Ok(Some(global_context));
+            }
+        }
+    }
+    Ok(None)
 }
 
 async fn parsing_base_ak(ak_authorization: &str, req: &AuthReq, config: &AuthConfig, is_webhook: bool) -> TardisResult<(String, String, String)> {
@@ -422,6 +472,9 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             return Err(TardisError::forbidden("[Auth] Secondary confirmation is required", "401-auth-req-need-double-auth"));
         }
     }
+    if matched_res.need_only_aksk && !ctx.ident_by_ak_sk {
+        return Err(TardisError::forbidden("[Auth] Only AK/SK authentication is allowed", "403-auth-req-permission-denied"));
+    }
     // Check auth
     if let Some(auth) = &matched_res.auth {
         // let now = Utc::now().timestamp();
@@ -481,7 +534,6 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
     } else {
         return Ok(Some(matched_res));
     }
-
     if ctx.ak.is_some() {
         //have token,not not have permission
         Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))

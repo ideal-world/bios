@@ -19,6 +19,10 @@ pub struct FlowConfig {
     pub iam_url: String,
 
     pub cache_key_sync_modify_state: String,
+    /// 审批中虚拟状态 ID，用于业务 search ext 的 current_state_id
+    pub specifed_approving_state_id: String,
+    pub specifed_approving_state_name: String,
+    pub specifed_approving_state_sort: i64,
 }
 
 impl Default for FlowConfig {
@@ -31,6 +35,9 @@ impl Default for FlowConfig {
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             iam_url: "http://127.0.0.1:8080/iam".to_string(),
             cache_key_sync_modify_state: "flow:cache:sync:modify:status".to_string(),
+            specifed_approving_state_id: "".to_string(),
+            specifed_approving_state_name: "审批中".to_string(),
+            specifed_approving_state_sort: -1,
         }
     }
 }
