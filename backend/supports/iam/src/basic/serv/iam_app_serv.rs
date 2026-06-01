@@ -446,7 +446,7 @@ impl IamAppServ {
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
-                    own_paths: Some("".to_owned()),
+                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -460,6 +460,7 @@ impl IamAppServ {
             &crate::basic::dto::iam_filer_dto::IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     code: Some(extra_role_code.to_string()),
+                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

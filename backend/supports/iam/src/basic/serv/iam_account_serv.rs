@@ -6,7 +6,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumRelFromKind};
 use itertools::Itertools;
 use tardis::chrono::Utc;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -29,6 +29,7 @@ use crate::basic::dto::iam_account_dto::{
     AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp,
     IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp, IamAccountThirdPartyCertResp,
 };
+use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_cert_dto::{IamCertLdapAddOrModifyReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
@@ -44,6 +45,8 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 use crate::integration::ldap::account::account_result::build_account_dn;
 
@@ -1073,5 +1076,53 @@ impl IamAccountServ {
             })
             .sorted_by(|a, b| a.end_time.cmp(&b.end_time))
             .collect())
+    }
+
+    /// 获取账号在所有项目组下的应用列表
+    ///
+    /// 查询账号关联的所有 Apps 类型的 Set（排除有层级关系的），
+    /// 获取每个 Set 中的应用信息，过滤掉已在 `existing_app_ids` 中的应用。
+    pub async fn get_account_apps_from_all_sets(
+        account_id: &str,
+        existing_app_ids: &HashSet<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamAccountAppInfoResp>> {
+        let sets = IamSetServ::find_sets_by_account_id_and_kind(account_id, &IamSetKind::Apps, funs, ctx).await?;
+        let mut seen_ids = HashSet::new();
+        let sets: Vec<_> = sets
+            .into_iter()
+            .filter(|set| !set.own_paths.contains('/'))
+            .filter(|set| seen_ids.insert(set.id.clone()))
+            .collect();
+        
+        let mut apps = Vec::new();
+        let mut app_role_read = HashMap::new();
+        app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+
+        for set in sets {
+            let tenant_ctx = TardisContext {
+                own_paths: set.own_paths.clone(),
+                ..ctx.clone()
+            };
+            let app_items = IamSetServ::get_app_with_auth_by_account(&set.id, account_id, funs, &tenant_ctx).await?;
+            
+            for (app_id, app_name) in app_items {
+                if existing_app_ids.contains(&app_id) {
+                    continue;
+                }
+                apps.push(IamAccountAppInfoResp {
+                    app_id: app_id.clone(),
+                    app_name: app_name.clone(),
+                    app_kind: IamAppKind::Product,
+                    app_own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
+                    app_icon: "".to_string(),
+                    roles: app_role_read.clone(),
+                    groups: HashMap::default(),
+                });
+            }
+        }
+        
+        Ok(apps)
     }
 }

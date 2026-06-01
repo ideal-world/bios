@@ -2806,6 +2806,7 @@ impl FlowInstServ {
         .ok_or_else(|| funs.err().not_found("flow_inst", "batch_update_when_switch_model", "flow model is not found", "404-flow-model-not-found"))?;
 
         if let Some(update_states) = update_states {
+            let mut is_modify_version_id = false;
             for (old_state, new_state) in update_states {
                 if old_state != new_state {
                     Self::async_unsafe_modify_state_and_version_id(
@@ -2822,9 +2823,11 @@ impl FlowInstServ {
                         &mock_ctx,
                     )
                     .await?;
-                } else {
-                    Self::unsafe_modify_version_id(&new_model_detail, funs, &mock_ctx).await?;
+                    is_modify_version_id = true;
                 }
+            }
+            if !is_modify_version_id {
+                Self::unsafe_modify_version_id(&new_model_detail, funs, &mock_ctx).await?;
             }
         } else {
             Self::async_unsafe_modify_state_and_version_id(
