@@ -12,9 +12,10 @@ use tardis::basic::result::TardisResult;
 use tardis::futures_util::future::join_all;
 use tardis::serde_json::json;
 use tardis::tokio::sync::Mutex;
+use tardis::log::error;
 
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst, async_stream, tokio};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -1300,43 +1301,28 @@ impl IamCertServ {
                 }
             }
         } else {
+            let ctx_cp = ctx.clone();
+            let account_id_cp = account_id.to_string();
+            let token_cp = token.clone();
+            let access_token_cp = access_token.clone();
+            tardis::tokio::spawn(async move {
+                let funs = iam_constants::get_tardis_inst();
+                match Self::add_all_porject_auth(&account_id_cp, token_cp, access_token_cp, &funs, &ctx_cp).await {
+                    Ok(_) => {}
+                    Err(e) => error!("account_id {} add_all_porject_auth error:{:?}", account_id_cp, e),
+                }
+            });
+            let existing_app_ids: HashSet<String> = old_app_ids.into_iter().collect();
+            let extra_apps = IamAccountServ::get_account_apps_from_all_sets(account_id, &existing_app_ids, funs, ctx).await?;
+            apps.extend(extra_apps);
+            // 将apps中的roles替换为app_role_read
             let mut app_role_read = HashMap::new();
             app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
-            let proj_app = IamAppServ::find_items(
-                &IamAppFilterReq {
-                    basic: RbumBasicFilterReq {
-                        // own_paths: Some("".to_string()),
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    kind: Some(IamAppKind::Project),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for app in proj_app {
-                if !old_app_ids.contains(&app.id) {
-                    old_app_ids.push(app.id.clone());
-                    apps.push(IamAccountAppInfoResp {
-                        app_id: app.id.clone(),
-                        app_name: app.name.clone(),
-                        app_own_paths: app.own_paths.clone(),
-                        app_kind: IamAppKind::Project,
-                        app_icon: app.icon,
-                        roles: app_role_read.clone(),
-                        groups: HashMap::new(),
-                    });
-                }
-            }
-            // 将apps中的roles替换为app_role_read
             for app in apps.iter_mut() {
                 app.roles = app_role_read.clone();
             }
         }
+        
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),
@@ -1348,6 +1334,80 @@ impl IamCertServ {
         };
         IamIdentCacheServ::add_contexts(&account_info, tenant_id, funs).await?;
         Ok(account_info)
+    }
+
+    async fn add_all_porject_auth(
+        account_id: &str,
+        token: String,
+        access_token: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let account_agg = IamAccountServ::get_account_detail_aggs(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            false,
+            true,
+            false,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut old_app_ids = vec![];
+        let mut apps = vec![];
+        let mut app_role_read = HashMap::new();
+        app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+        let proj_app = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    // own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamAppKind::Project),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for app in proj_app {
+            if !old_app_ids.contains(&app.id) {
+                old_app_ids.push(app.id.clone());
+                apps.push(IamAccountAppInfoResp {
+                    app_id: app.id.clone(),
+                    app_name: app.name.clone(),
+                    app_own_paths: app.own_paths.clone(),
+                    app_kind: IamAppKind::Project,
+                    app_icon: app.icon,
+                    roles: app_role_read.clone(),
+                    groups: HashMap::new(),
+                });
+            }
+        }
+        // 将apps中的roles替换为app_role_read
+        for app in apps.iter_mut() {
+            app.roles = app_role_read.clone();
+        }
+        let account_info = IamAccountInfoResp {
+            account_id: account_id.to_string(),
+            account_name: account_agg.name.to_string(),
+            token,
+            access_token,
+            roles: account_agg.roles,
+            groups: account_agg.groups,
+            apps,
+        };
+        IamIdentCacheServ::add_contexts(&account_info, "", funs).await?;
+        Ok(())
     }
 
     pub fn try_use_tenant_ctx(ctx: TardisContext, tenant_id: Option<String>) -> TardisResult<TardisContext> {

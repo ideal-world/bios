@@ -35,9 +35,7 @@ impl FlowCcModelApi {
     #[oai(path = "/script/fix_duplicate_state_sort", method = "post")]
     async fn script_fix_duplicate_state_sort(&self, ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<Vec<String>> {
         let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
         let result = FlowModelServ::script_fix_duplicate_main_model_state_sort(&funs, &ctx.0).await?;
-        funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
