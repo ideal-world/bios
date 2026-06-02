@@ -700,7 +700,7 @@ impl FlowCiInstApi {
     ///
     /// 获取所有 main=true 的实例，按200个分页，同步调用 batch_modify_business_obj_search_ext 更新 current_state_id 和 current_state_sort
     #[oai(path = "/batch_sync_main_inst_search_ext_script", method = "post")]
-    async fn batch_sync_main_inst_search_ext_script(&self, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u32> {
+    async fn batch_sync_main_inst_search_ext_script(&self, page_number: Query<Option<u32>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<u32> {
         let funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
 
@@ -710,7 +710,11 @@ impl FlowCiInstApi {
             main: Some(true),
             ..Default::default()
         };
-        let mut page_number = 1u32;
+        let mut page_number = if let Some(page_number) = page_number.0 {
+            page_number
+        } else {
+            1u32
+        };
         let mut processed_count = 0u32;
 
         loop {

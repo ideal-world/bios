@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
@@ -433,36 +433,9 @@ impl IamCiAccountApi {
             }
         } else {
             if is_all_app.0.unwrap_or(false) {
-                let sets = IamSetServ::find_sets_by_account_id_and_kind(&id.0, &IamSetKind::Apps, &funs, &ctx).await?;
-                let mut seen_ids = std::collections::HashSet::new();
-                let sets: Vec<_> = sets
-                    .into_iter()
-                    .filter(|set| !set.own_paths.contains('/'))
-                    .filter(|set| seen_ids.insert(set.id.clone()))
-                    .collect();
-                for set in sets {
-                    let tenant_ctx = TardisContext {
-                        own_paths: set.own_paths.clone(),
-                        ..ctx.clone()
-                    };
-                    let app_items = IamSetServ::get_app_with_auth_by_account(&set.id, &id, &funs, &tenant_ctx).await?;
-                    let mut app_role_read = HashMap::new();
-                    app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
-                    for (app_id, app_name) in app_items {
-                        if old_app_ids.contains(&app_id) {
-                            continue;
-                        }
-                        apps.push(IamAccountAppInfoResp {
-                            app_id: app_id.clone(),
-                            app_name: app_name.clone(),
-                            app_kind: IamAppKind::Product,
-                            app_own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
-                            app_icon: "".to_string(),
-                            roles: app_role_read.clone(),
-                            groups: HashMap::default(),
-                        });
-                    }
-                }
+                let existing_app_ids: HashSet<String> = old_app_ids.into_iter().collect();
+                let extra_apps = IamAccountServ::get_account_apps_from_all_sets(&id.0, &existing_app_ids, &funs, &ctx).await?;
+                apps.extend(extra_apps);
             }
         }
         result.apps = apps;
