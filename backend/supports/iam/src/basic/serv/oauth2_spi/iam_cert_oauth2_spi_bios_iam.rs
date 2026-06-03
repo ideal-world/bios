@@ -56,20 +56,10 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
             )
         })?;
 
-        // 2. 用 access_token 拉取用户信息
-        let headers = vec![("Authorization".to_string(), format!("Bearer {access_token}"))];
-        let userinfo_result = funs.web_client().get_to_str(&format!("{base}/cp/oauth2/userinfo"), headers).await?;
-        if userinfo_result.code != 200 {
-            return Err(funs.err().not_found(
-                "oauth_spi_bios_iam",
-                "get_access_token",
-                "bios oauth get user info error",
-                "500-iam-cert-oauth-get-user-info-error",
-            ));
-        }
-        let userinfo_body = userinfo_result.body.unwrap_or_default();
-        trace!("iam oauth2 spi [BiosIam] get user info response: {}", userinfo_body);
-        let userinfo = TardisFuns::json.str_to_obj::<TardisResp<IamOauth2UserInfoResp>>(&userinfo_body)?.data.ok_or_else(|| {
+        // 2. 用 access_token 拉取用户信息（复用 get_user_info）
+        let userinfo_value = self.get_user_info(&access_token, "", base, funs).await?;
+        trace!("iam oauth2 spi [BiosIam] get user info response: {}", userinfo_value);
+        let userinfo = TardisFuns::json.json_to_obj::<TardisResp<IamOauth2UserInfoResp>>(userinfo_value)?.data.ok_or_else(|| {
             funs.err().not_found(
                 "oauth_spi_bios_iam",
                 "get_access_token",
@@ -170,7 +160,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
             ));
         }
         let base = base_url.trim_end_matches('/');
-        let headers = vec![("Authorization".to_string(), format!("Bearer {access_token}"))];
+        let headers = vec![("Bios-Token".to_string(), format!("{access_token}"))];
         let userinfo_result = funs.web_client().get_to_str(&format!("{base}/cp/oauth2/userinfo"), headers).await?;
         if userinfo_result.code != 200 {
             return Err(funs.err().not_found(
