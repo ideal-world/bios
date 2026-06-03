@@ -210,7 +210,7 @@ impl IamAppServ {
             Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_PROJECT_READ_ROLE, funs, &tenant_ctx).await?;
             Self::add_extra_role_cache_by_app_id(&app_id, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, funs, &tenant_ctx).await?;
         }
-        
+
         let app_admin_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_app_admin_id(), funs, &app_ctx).await?;
         let tenant_app_manager_role_id = IamRoleServ::get_embed_sub_role_id(&funs.iam_basic_role_tenant_app_manager_id(), funs, tenant_ctx).await?;
         // TODO 是否需要在这里初始化应用级别的set？
@@ -469,7 +469,8 @@ impl IamAppServ {
             funs,
             ctx,
         )
-        .await? {
+        .await?
+        {
             let extra_role_id = extra_role.id;
             IamIdentCacheServ::add_extra_role_info(&extra_role_id, app_id, &app.own_paths, &extra_role_id, funs).await?;
         }

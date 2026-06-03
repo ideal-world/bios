@@ -1,15 +1,15 @@
-use std::collections::HashMap;
 use itertools::Itertools;
+use std::collections::HashMap;
 
+use crate::iam_config::IamBasicConfigApi;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use tardis::basic::dto::TardisContext;
-use tardis::web::poem_openapi::payload::Json;
-use crate::iam_config::IamBasicConfigApi;
 use tardis::basic::error::TardisError;
 use tardis::futures::future::join_all;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetTreeFilterReq};
@@ -117,7 +117,13 @@ impl IamCsAppSetApi {
     /// Batch Add App Set Item (App Or Account)
     /// 批量添加应用集项（应用或账号）
     #[oai(path = "/item/batch", method = "put")]
-    async fn batch_add_set_item(&self, tenant_id: Query<String>, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
+    async fn batch_add_set_item(
+        &self,
+        tenant_id: Query<String>,
+        add_req: Json<IamSetItemWithDefaultSetAddReq>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let tenant_ctx = TardisContext {

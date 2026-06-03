@@ -69,6 +69,8 @@ pub enum IamCertOAuth2Supplier {
     // Weibo,
     Github,
     WechatMp,
+    /// 对接另一套 bios IAM 作为 OAuth2 身份提供方
+    BiosIam,
 }
 
 impl IamCertOAuth2Supplier {

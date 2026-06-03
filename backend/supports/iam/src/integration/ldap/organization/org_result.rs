@@ -74,8 +74,6 @@ fn extract_cn_from_org(org: &LdapOrgFields, _base: &str, _config: &IamLdapConfig
         return org.name.clone();
     }
 
-    
-
     // 最后使用ID
     org.sys_code.clone()
 }

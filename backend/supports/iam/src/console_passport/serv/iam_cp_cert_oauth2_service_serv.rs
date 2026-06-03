@@ -2,7 +2,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
-use crate::basic::dto::iam_cert_dto::{IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2TokenResp};
+use crate::basic::dto::iam_cert_dto::{
+    IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2IntrospectResp, IamOauth2TokenResp, IamOauth2UserInfoResp,
+};
 use crate::basic::serv::iam_cert_oauth2_service_serv::IamCertOAuth2ServiceServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{IamCpOAuth2ServiceAuthorizeReq, IamCpOAuth2ServiceAuthorizeResp, IamCpOAuth2ServiceTokenReq};
 use crate::iam_enumeration::Oauth2GrantType;
@@ -76,5 +78,23 @@ impl IamCpCertOAuth2ServiceServ {
             }
             _ => Err(funs.err().bad_request("oauth2", "exchange_token", "unsupported grant type", "400-oauth2-unsupported-grant-type")),
         }
+    }
+
+    /// Return the user info bound to an OAuth2 access token
+    /// 根据 OAuth2 访问令牌返回用户信息
+    pub async fn get_userinfo(access_token: &str, funs: &TardisFunsInst) -> TardisResult<IamOauth2UserInfoResp> {
+        IamCertOAuth2ServiceServ::get_userinfo(access_token, funs).await
+    }
+
+    /// Return the user info of the logged-in account from the request context
+    /// 根据登录上下文返回当前账号的用户信息
+    pub async fn get_userinfo_by_ctx(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOauth2UserInfoResp> {
+        IamCertOAuth2ServiceServ::build_userinfo_by_account_id(&ctx.owner, Some(&ctx.own_paths), funs).await
+    }
+
+    /// Introspect an OAuth2 token
+    /// OAuth2 令牌内省
+    pub async fn introspect(token: &str, funs: &TardisFunsInst) -> TardisResult<IamOauth2IntrospectResp> {
+        IamCertOAuth2ServiceServ::introspect(token, funs).await
     }
 }

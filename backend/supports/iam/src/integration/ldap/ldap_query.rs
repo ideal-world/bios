@@ -24,47 +24,31 @@ pub trait LdapSqlWhereBuilder {
     /// 根据 LDAP 查询类型构建 SQL WHERE 条件（主入口，会递归处理 And/Or/Not）
     fn build_sql_where_clause(query_type: &ldap_parser::LdapQueryType, config: &IamLdapConfig) -> TardisResult<String> {
         match query_type {
-            ldap_parser::LdapQueryType::Equality { attribute, value } => {
-                Self::build_equality_where_clause(attribute, value)
-            }
+            ldap_parser::LdapQueryType::Equality { attribute, value } => Self::build_equality_where_clause(attribute, value),
             ldap_parser::LdapQueryType::Present { attribute } => Self::build_present_where_clause(attribute),
             ldap_parser::LdapQueryType::And { filters } => {
-                let conditions: Vec<String> = filters
-                    .iter()
-                    .map(|f| Self::build_sql_where_clause(f, config))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let conditions: Vec<String> = filters.iter().map(|f| Self::build_sql_where_clause(f, config)).collect::<Result<Vec<_>, _>>()?;
                 Ok(format!("({})", conditions.join(" AND ")))
             }
             ldap_parser::LdapQueryType::Or { filters } => {
-                let conditions: Vec<String> = filters
-                    .iter()
-                    .map(|f| Self::build_sql_where_clause(f, config))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let conditions: Vec<String> = filters.iter().map(|f| Self::build_sql_where_clause(f, config)).collect::<Result<Vec<_>, _>>()?;
                 Ok(format!("({})", conditions.join(" OR ")))
             }
             ldap_parser::LdapQueryType::Not { filter } => {
                 let condition = Self::build_sql_where_clause(filter, config)?;
                 Ok(format!("NOT ({})", condition))
             }
-            ldap_parser::LdapQueryType::Substring { attribute, substrings } => {
-                Self::build_substring_where_clause(attribute, substrings)
-            }
-            ldap_parser::LdapQueryType::GreaterOrEqual { attribute, value } => {
-                Self::build_comparison_where_clause(attribute, value, ">=")
-            }
-            ldap_parser::LdapQueryType::LessOrEqual { attribute, value } => {
-                Self::build_comparison_where_clause(attribute, value, "<=")
-            }
-            ldap_parser::LdapQueryType::ApproxMatch { attribute, value } => {
-                Self::build_substring_where_clause(
-                    attribute,
-                    &ldap3_proto::proto::LdapSubstringFilter {
-                        initial: None,
-                        any: vec![value.clone()],
-                        final_: None,
-                    },
-                )
-            }
+            ldap_parser::LdapQueryType::Substring { attribute, substrings } => Self::build_substring_where_clause(attribute, substrings),
+            ldap_parser::LdapQueryType::GreaterOrEqual { attribute, value } => Self::build_comparison_where_clause(attribute, value, ">="),
+            ldap_parser::LdapQueryType::LessOrEqual { attribute, value } => Self::build_comparison_where_clause(attribute, value, "<="),
+            ldap_parser::LdapQueryType::ApproxMatch { attribute, value } => Self::build_substring_where_clause(
+                attribute,
+                &ldap3_proto::proto::LdapSubstringFilter {
+                    initial: None,
+                    any: vec![value.clone()],
+                    final_: None,
+                },
+            ),
         }
     }
 
@@ -90,12 +74,7 @@ pub trait LdapSqlWhereBuilder {
             .iter()
             .find(|(k, _)| (*k).eq_ignore_ascii_case(attr))
             .map(|(_, v)| (*v).to_string())
-            .ok_or_else(|| {
-                tardis::basic::error::TardisError::format_error(
-                    &format!("Unsupported LDAP attribute: {}", attr),
-                    "406-iam-ldap-unsupported-attribute",
-                )
-            })
+            .ok_or_else(|| tardis::basic::error::TardisError::format_error(&format!("Unsupported LDAP attribute: {}", attr), "406-iam-ldap-unsupported-attribute"))
     }
 
     /// 构建精确匹配的 WHERE 条件
@@ -122,10 +101,7 @@ pub trait LdapSqlWhereBuilder {
     }
 
     /// 构建子串匹配的 WHERE 条件
-    fn build_substring_where_clause(
-        attribute: &str,
-        substrings: &ldap3_proto::proto::LdapSubstringFilter,
-    ) -> TardisResult<String> {
+    fn build_substring_where_clause(attribute: &str, substrings: &ldap3_proto::proto::LdapSubstringFilter) -> TardisResult<String> {
         if Self::is_object_class(attribute) {
             if substrings.initial.is_none() && substrings.any.is_empty() && substrings.final_.is_none() {
                 return Ok("1=1".to_string());
@@ -193,20 +169,14 @@ pub trait LdapSqlWhereBuilder {
 /// 执行 LDAP 账号搜索
 ///
 /// 委托给 [account_query::execute_ldap_account_search]。
-pub async fn execute_account_search(
-    query: &ldap_parser::LdapSearchQuery,
-    config: &IamLdapConfig,
-) -> TardisResult<Vec<LdapAccountFields>> {
+pub async fn execute_account_search(query: &ldap_parser::LdapSearchQuery, config: &IamLdapConfig) -> TardisResult<Vec<LdapAccountFields>> {
     account_query::execute_ldap_account_search(query, config).await
 }
 
 /// 执行 LDAP 组织搜索
 ///
 /// 委托给 [org_query::execute_ldap_org_search]。
-pub async fn execute_org_search(
-    query: &ldap_parser::LdapSearchQuery,
-    config: &IamLdapConfig,
-) -> TardisResult<Vec<LdapOrgFields>> {
+pub async fn execute_org_search(query: &ldap_parser::LdapSearchQuery, config: &IamLdapConfig) -> TardisResult<Vec<LdapOrgFields>> {
     org_query::execute_ldap_org_search(query, config).await
 }
 
@@ -232,17 +202,11 @@ pub fn build_sql_where_clause(query_type: &ldap_parser::LdapQueryType, config: &
             Ok(format!("{} IS NOT NULL AND {} != ''", field, field))
         }
         ldap_parser::LdapQueryType::And { filters } => {
-            let conditions: Vec<String> = filters
-                .iter()
-                .map(|f| build_sql_where_clause(f, config))
-                .collect::<Result<Vec<_>, _>>()?;
+            let conditions: Vec<String> = filters.iter().map(|f| build_sql_where_clause(f, config)).collect::<Result<Vec<_>, _>>()?;
             Ok(format!("({})", conditions.join(" AND ")))
         }
         ldap_parser::LdapQueryType::Or { filters } => {
-            let conditions: Vec<String> = filters
-                .iter()
-                .map(|f| build_sql_where_clause(f, config))
-                .collect::<Result<Vec<_>, _>>()?;
+            let conditions: Vec<String> = filters.iter().map(|f| build_sql_where_clause(f, config)).collect::<Result<Vec<_>, _>>()?;
             Ok(format!("({})", conditions.join(" OR ")))
         }
         ldap_parser::LdapQueryType::Not { filter } => {
@@ -295,18 +259,16 @@ pub fn build_sql_where_clause(query_type: &ldap_parser::LdapQueryType, config: &
             let escaped_value = value.replace("'", "''");
             Ok(format!("{} <= '{}'", field, escaped_value))
         }
-        ldap_parser::LdapQueryType::ApproxMatch { attribute, value } => {
-            build_sql_where_clause(
-                &ldap_parser::LdapQueryType::Substring {
-                    attribute: attribute.clone(),
-                    substrings: ldap3_proto::proto::LdapSubstringFilter {
-                        initial: None,
-                        any: vec![value.clone()],
-                        final_: None,
-                    },
+        ldap_parser::LdapQueryType::ApproxMatch { attribute, value } => build_sql_where_clause(
+            &ldap_parser::LdapQueryType::Substring {
+                attribute: attribute.clone(),
+                substrings: ldap3_proto::proto::LdapSubstringFilter {
+                    initial: None,
+                    any: vec![value.clone()],
+                    final_: None,
                 },
-                config,
-            )
-        }
+            },
+            config,
+        ),
     }
 }

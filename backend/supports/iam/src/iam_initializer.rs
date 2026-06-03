@@ -41,7 +41,8 @@ use crate::console_interface::api::{
 };
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_oauth2_service_api, iam_cp_tenant_api};
 use crate::console_system::api::{
-    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_app_set_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_sub_deploy_api, iam_cs_tenant_api
+    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_app_set_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api,
+    iam_cs_sub_deploy_api, iam_cs_tenant_api,
 };
 use crate::console_tenant::api::{
     iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_cert_manage_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api,
@@ -311,7 +312,13 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let kind_account_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::RBUM_EXT_TABLE_IAM_ACCOUNT, funs, &ctx).await?;
     let kind_res_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_RES, iam_constants::RBUM_EXT_TABLE_IAM_RES, funs, &ctx).await?;
     let kind_sub_deploy_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_SUB_DEPLOY, iam_constants::RBUM_EXT_TABLE_IAM_SUB_DEPLOY, funs, &ctx).await?;
-    let kind_third_party_app_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_THIRD_PARTY_APP, iam_constants::RBUM_EXT_TABLE_IAM_THIRD_PARTY_APP, funs, &ctx).await?;
+    let kind_third_party_app_id = add_kind(
+        iam_constants::RBUM_KIND_CODE_IAM_THIRD_PARTY_APP,
+        iam_constants::RBUM_EXT_TABLE_IAM_THIRD_PARTY_APP,
+        funs,
+        &ctx,
+    )
+    .await?;
 
     let domain_iam_id = add_domain(funs, &ctx).await?;
 

@@ -9,7 +9,7 @@ pub struct IamCertOAuth2SpiGithub;
 const OAUTH2_GITHUB_USER_INFO_CACHE_KEY: &str = "OAUTH2_GITHUB_USER_INFO_CACHE_KEY:";
 #[async_trait]
 impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
-    async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
+    async fn get_access_token(&self, code: &str, ak: &str, sk: &str, _base_url: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
         //https://docs.github.com/cn/developers/apps/building-oauth-apps/authorizing-oauth-apps
         let headers = vec![("Accept".to_string(), "application/json".to_string())];
         let result = funs
@@ -94,5 +94,20 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
                 "500-iam-cert-oauth-get-account-name-error",
             ))
         }
+    }
+
+    /// 使用 access_token 向 Github 查询用户信息（Github OAuth App token 不过期，无需刷新）
+    async fn get_user_info(&self, access_token: &str, _open_id: &str, _base_url: &str, funs: &TardisFunsInst) -> TardisResult<Value> {
+        let headers = vec![
+            ("Authorization".to_string(), format!("Bearer {access_token}")),
+            ("Accept".to_string(), "application/json".to_string()),
+            ("User-Agent".to_string(), "BIOS".to_string()),
+        ];
+        let result = funs.web_client().get_to_str("https://api.github.com/user", headers).await?;
+        if result.code != 200 {
+            return Err(funs.err().not_found("oauth_spi_github", "get_user_info", "oauth get user info error", "500-iam-cert-oauth-get-user-info-error"));
+        }
+        let user_info = result.body.unwrap_or_default();
+        TardisFuns::json.str_to_obj::<Value>(&user_info)
     }
 }

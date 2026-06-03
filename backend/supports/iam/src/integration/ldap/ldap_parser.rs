@@ -100,12 +100,7 @@ pub fn parse_search_request(req: &SearchRequest, entity_type: LdapEntityType, co
 
 /// 规范化 DN 便于比较：整体 trim、按逗号分段后各 RDN 再 trim 后拼回（不解析转义，与旧版 `contains` 假设一致）。
 fn normalize_dn_for_match(dn: &str) -> String {
-    dn.trim()
-        .split(',')
-        .map(|p| p.trim())
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join(",")
+    dn.trim().split(',').map(|p| p.trim()).filter(|p| !p.is_empty()).collect::<Vec<_>>().join(",")
 }
 
 /// 判断 `dn` 是否位于配置的命名上下文中：与 `base_dn` 全等，或 `dn` 是其一棵子树下的条目的 DN（右侧后缀匹配，逗号为 RDN 边界）。
@@ -122,9 +117,7 @@ pub fn is_dn_at_or_under_base(dn: &str, base_dn: &str) -> bool {
 fn validate_base_dn(base: &str, entity_type: LdapEntityType, config: &IamLdapConfig) -> bool {
     match entity_type {
         LdapEntityType::RootDse => base.is_empty(),
-        LdapEntityType::Subschema => {
-            normalize_dn_for_match(base).to_lowercase() == normalize_dn_for_match(&config.schema_dn).to_lowercase()
-        }
+        LdapEntityType::Subschema => normalize_dn_for_match(base).to_lowercase() == normalize_dn_for_match(&config.schema_dn).to_lowercase(),
         LdapEntityType::Entry => is_dn_at_or_under_base(base, &config.base_dn),
     }
 }

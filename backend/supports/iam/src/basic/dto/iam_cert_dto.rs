@@ -329,6 +329,46 @@ pub struct IamOauth2AuthorizeResp {
     pub redirect_url: String,
 }
 
+/// OAuth2 用户信息响应（Provider 侧，供接入方据此映射本地账号）
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2UserInfoResp {
+    /// 身份提供方标识，固定为 bios IAM
+    pub provider: String,
+    /// 唯一主体标识，等于 Provider 侧账号 ID（接入方应据此建立绑定关系）
+    pub sub: String,
+    /// 账号所属租户 ID（own_paths），全局账号为空字符串
+    pub tenant_id: String,
+    /// 账号名称
+    pub name: String,
+    /// 邮箱（若有）
+    pub mail: Option<String>,
+    /// 手机号（若有）
+    pub phone: Option<String>,
+    /// 员工工号（若有）
+    pub employee_no: Option<String>,
+    /// 证件号（若有）
+    pub id_card_no: Option<String>,
+    /// 账号是否已禁用/注销
+    pub disabled: bool,
+}
+
+/// OAuth2 令牌内省请求
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2IntrospectReq {
+    pub token: String,
+}
+
+/// OAuth2 令牌内省响应
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2IntrospectResp {
+    /// 令牌是否有效
+    pub active: bool,
+    /// 身份提供方标识（仅 active 时返回）
+    pub provider: Option<String>,
+    /// 主体标识，等于 Provider 侧账号 ID（仅 active 时返回）
+    pub sub: Option<String>,
+}
+
 /// 临时脚本：为仅有 LDAP 凭证、无 UserPwd 的账号补全 UserPwd 后的单条结果
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCiLdapBootstrapUserPwdItemResp {

@@ -68,12 +68,12 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 use crate::iam_config::{IamConfig, IamLdapConfig};
 use crate::iam_constants;
 use crate::integration::ldap::account::{account_query, account_result};
+use crate::integration::ldap::app::{app_query, app_result};
 use crate::integration::ldap::ldap_auth;
 use crate::integration::ldap::ldap_entity;
 use crate::integration::ldap::ldap_parser;
 use crate::integration::ldap::ldap_parser::LdapBaseDnLevel;
 use crate::integration::ldap::organization::{org_query, org_result};
-use crate::integration::ldap::app::{app_query, app_result};
 use crate::integration::ldap::system::system_result;
 
 /// LDAP会话管理
@@ -144,7 +144,7 @@ impl LdapSession {
                     }
                 };
                 // 首先判断scope是否是base，如果确定是base，则直接按当前dn查询并筛选返回
-                if query.scope == LdapSearchScope::Base  || query.scope == LdapSearchScope::Subtree {
+                if query.scope == LdapSearchScope::Base || query.scope == LdapSearchScope::Subtree {
                     match base_dn_level {
                         LdapBaseDnLevel::Domain => {
                             let entrys = vec![ldap_entity::LdapEntity::build_dc_node(config).entry];

@@ -563,7 +563,8 @@ impl IamIdentCacheServ {
                 match_path,
                 ak
             ))
-            .await?.map(|s| tardis::TardisFuns::json.str_to_obj::<HashMap<String, String>>(&s).unwrap_or_default());
+            .await?
+            .map(|s| tardis::TardisFuns::json.str_to_obj::<HashMap<String, String>>(&s).unwrap_or_default());
         Ok(result)
     }
 
@@ -586,14 +587,17 @@ impl IamIdentCacheServ {
 
     pub async fn get_bind_api_res(res_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<Vec<String>>> {
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
-        let result = funs.cache().get(&format!(
-            "{}{}:res:{}:{}:{}",
-            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
-            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
-            match_method.unwrap_or("*"),
-            match_path,
-            res_id,
-        )).await?;
+        let result = funs
+            .cache()
+            .get(&format!(
+                "{}{}:res:{}:{}:{}",
+                funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+                match_method.unwrap_or("*"),
+                match_path,
+                res_id,
+            ))
+            .await?;
         Ok(result.map(|s| tardis::TardisFuns::json.str_to_obj::<Vec<String>>(&s).unwrap_or_default()))
     }
 
@@ -616,14 +620,17 @@ impl IamIdentCacheServ {
 
     pub async fn get_ak_bind_api_res(res_id: &str, match_method: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Option<Vec<String>>> {
         let match_path = &funs.conf::<IamConfig>().gateway_openapi_path;
-        let result = funs.cache().get(&format!(
-            "{}{}:{}:{}:{}",
-            funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
-            funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
-            match_method.unwrap_or("*"),
-            match_path,
-            res_id,
-        )).await?;
+        let result = funs
+            .cache()
+            .get(&format!(
+                "{}{}:{}:{}:{}",
+                funs.conf::<IamConfig>().cache_key_gateway_rule_info_,
+                funs.conf::<IamConfig>().openapi_plugin_allow_api_res,
+                match_method.unwrap_or("*"),
+                match_path,
+                res_id,
+            ))
+            .await?;
         Ok(result.map(|s| tardis::TardisFuns::json.str_to_obj::<Vec<String>>(&s).unwrap_or_default()))
     }
 
@@ -806,12 +813,7 @@ impl IamIdentCacheServ {
     }
     pub async fn delete_extra_role_info(extra_role_id: &str, app_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete extra role info: extra_role_id={}, app_id={}", extra_role_id, app_id);
-        funs.cache()
-            .hdel(
-                format!("{}{}", funs.conf::<IamConfig>().cache_key_extra_role_info_, extra_role_id).as_str(),
-                app_id,
-            )
-            .await?;
+        funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_extra_role_info_, extra_role_id).as_str(), app_id).await?;
         Ok(())
     }
 }
@@ -819,7 +821,16 @@ impl IamIdentCacheServ {
 pub struct IamResCacheServ;
 
 impl IamResCacheServ {
-    pub async fn add_res(item_code: &str, action: &str, crypto_req: bool, crypto_resp: bool, double_auth: bool, only_aksk: bool, need_login: bool, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_res(
+        item_code: &str,
+        action: &str,
+        crypto_req: bool,
+        crypto_resp: bool,
+        double_auth: bool,
+        only_aksk: bool,
+        need_login: bool,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add res: uri_mixed={}", uri_mixed);
         let add_res_dto = IamCacheResRelAddOrModifyDto {

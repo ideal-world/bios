@@ -34,7 +34,7 @@ impl LdapEntity {
                 vals: vec![dc.into()],
             });
         }
-        
+
         Self {
             entry: LdapSearchResultEntry { dn, attributes },
             parent_dn: "".to_string(),

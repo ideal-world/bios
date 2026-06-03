@@ -7,38 +7,37 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use tardis::serde_json::{json, Value as JsonValue};
 use tardis::basic::{dto::TardisContext, result::TardisResult};
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::serde_json::{json, Value as JsonValue};
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
-use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
-use crate::iam_enumeration::IamRelKind;
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::{
     domain::iam_third_party_app,
     dto::{
         iam_filer_dto::IamThirdPartyAppFilterReq,
-        iam_third_party_app_dto::{
-            IamThirdPartyAppAddReq, IamThirdPartyAppDetailResp, IamThirdPartyAppModifyReq, IamThirdPartyAppSummaryResp,
-        },
+        iam_third_party_app_dto::{IamThirdPartyAppAddReq, IamThirdPartyAppDetailResp, IamThirdPartyAppModifyReq, IamThirdPartyAppSummaryResp},
     },
 };
 use crate::iam_config::IamBasicInfoManager;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamThirdPartyAppServ;
 
 #[async_trait]
-impl RbumItemCrudOperation<
-    iam_third_party_app::ActiveModel,
-    IamThirdPartyAppAddReq,
-    IamThirdPartyAppModifyReq,
-    IamThirdPartyAppSummaryResp,
-    IamThirdPartyAppDetailResp,
-    IamThirdPartyAppFilterReq,
-> for IamThirdPartyAppServ
+impl
+    RbumItemCrudOperation<
+        iam_third_party_app::ActiveModel,
+        IamThirdPartyAppAddReq,
+        IamThirdPartyAppModifyReq,
+        IamThirdPartyAppSummaryResp,
+        IamThirdPartyAppDetailResp,
+        IamThirdPartyAppFilterReq,
+    > for IamThirdPartyAppServ
 {
     fn get_ext_table_name() -> &'static str {
         iam_third_party_app::Entity.table_name()
@@ -52,11 +51,7 @@ impl RbumItemCrudOperation<
         Some(IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone()))
     }
 
-    async fn package_item_add(
-        add_req: &IamThirdPartyAppAddReq,
-        _: &TardisFunsInst,
-        _: &TardisContext,
-    ) -> TardisResult<RbumItemKernelAddReq> {
+    async fn package_item_add(add_req: &IamThirdPartyAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
             name: add_req.name.clone(),
@@ -65,12 +60,7 @@ impl RbumItemCrudOperation<
         })
     }
 
-    async fn package_ext_add(
-        id: &str,
-        add_req: &IamThirdPartyAppAddReq,
-        _: &TardisFunsInst,
-        _: &TardisContext,
-    ) -> TardisResult<iam_third_party_app::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamThirdPartyAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<iam_third_party_app::ActiveModel> {
         Ok(iam_third_party_app::ActiveModel {
             id: Set(id.to_string()),
             external_id: Set(add_req.external_id.clone()),
@@ -83,12 +73,7 @@ impl RbumItemCrudOperation<
         })
     }
 
-    async fn package_item_modify(
-        _: &str,
-        modify_req: &IamThirdPartyAppModifyReq,
-        _: &TardisFunsInst,
-        _: &TardisContext,
-    ) -> TardisResult<Option<RbumItemKernelModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamThirdPartyAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() {
             return Ok(None);
         }
@@ -100,12 +85,7 @@ impl RbumItemCrudOperation<
         }))
     }
 
-    async fn package_ext_modify(
-        id: &str,
-        modify_req: &IamThirdPartyAppModifyReq,
-        _: &TardisFunsInst,
-        _: &TardisContext,
-    ) -> TardisResult<Option<iam_third_party_app::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamThirdPartyAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_third_party_app::ActiveModel>> {
         if modify_req.description.is_none()
             && modify_req.external_id.is_none()
             && modify_req.icon.is_none()
@@ -140,13 +120,7 @@ impl RbumItemCrudOperation<
         Ok(Some(model))
     }
 
-    async fn package_ext_query(
-        query: &mut SelectStatement,
-        _: bool,
-        filter: &IamThirdPartyAppFilterReq,
-        _: &TardisFunsInst,
-        _: &TardisContext,
-    ) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamThirdPartyAppFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::ExternalId));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::Description));
         query.column((iam_third_party_app::Entity, iam_third_party_app::Column::Icon));
@@ -168,11 +142,7 @@ impl RbumItemCrudOperation<
 
 impl IamThirdPartyAppServ {
     /// 根据外部ID获取第三方应用
-    pub async fn get_item_by_external_id(
-        external_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<Option<IamThirdPartyAppDetailResp>> {
+    pub async fn get_item_by_external_id(external_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamThirdPartyAppDetailResp>> {
         let page = Self::paginate_items(
             &IamThirdPartyAppFilterReq {
                 external_id: Some(external_id.to_string()),
@@ -195,11 +165,7 @@ impl IamThirdPartyAppServ {
     }
 
     /// 根据外部ID删除第三方应用
-    pub async fn delete_item_by_external_id(
-        external_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn delete_item_by_external_id(external_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(item) = Self::get_item_by_external_id(external_id, funs, ctx).await? {
             Self::delete_item_with_all_rels(&item.id, funs, ctx).await?;
         }
@@ -207,13 +173,7 @@ impl IamThirdPartyAppServ {
     }
 
     /// 绑定账号到第三方应用
-    pub async fn add_rel_account(
-        third_party_app_id: &str,
-        account_id: &str,
-        ignore_exist_error: bool,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn add_rel_account(third_party_app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_simple_rel(
             &IamRelKind::IamThirdPartyAppAccount,
             account_id,
@@ -231,32 +191,15 @@ impl IamThirdPartyAppServ {
     }
 
     /// 解绑账号与第三方应用
-    pub async fn delete_rel_account(
-        third_party_app_id: &str,
-        account_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn delete_rel_account(third_party_app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::delete_simple_rel(&IamRelKind::IamThirdPartyAppAccount, account_id, third_party_app_id, funs, ctx).await?;
         IamSearchClient::sync_add_or_modify_account_search(account_id, Box::new(true), "", funs, ctx).await?;
         Ok(())
     }
 
     /// 查询第三方应用绑定的账号列表
-    pub async fn find_rel_account(
-        third_party_app_id: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumRelAggResp>> {
-        IamRelServ::find_to_rels(
-            &IamRelKind::IamThirdPartyAppAccount,
-            third_party_app_id,
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await
+    pub async fn find_rel_account(third_party_app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
+        IamRelServ::find_to_rels(&IamRelKind::IamThirdPartyAppAccount, third_party_app_id, None, None, funs, ctx).await
     }
 
     /// 分页查询第三方应用绑定的账号
@@ -284,26 +227,12 @@ impl IamThirdPartyAppServ {
 
     /// 查询账号关联的所有第三方应用
     /// visible: None-不筛选；Some(true)-筛选ext.visible为true或ext为null；Some(false)-筛选ext.visible为false
-    pub async fn find_rel_third_party_app(
-        account_id: &str,
-        visible: Option<bool>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<IamThirdPartyAppSummaryResp>> {
+    pub async fn find_rel_third_party_app(account_id: &str, visible: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamThirdPartyAppSummaryResp>> {
         let global_ctx = TardisContext {
             own_paths: "".to_string(), // 查询所有关联的第三方应用，不受租户/部门等维度限制
             ..ctx.clone()
         };
-        let rels = IamRelServ::find_from_simple_rels(
-            &IamRelKind::IamThirdPartyAppAccount,
-            true,
-            account_id,
-            None,
-            None,
-            funs,
-            &global_ctx,
-        )
-        .await?;
+        let rels = IamRelServ::find_from_simple_rels(&IamRelKind::IamThirdPartyAppAccount, true, account_id, None, None, funs, &global_ctx).await?;
         let app_ids: Vec<String> = rels
             .into_iter()
             .filter(|r| {
@@ -311,18 +240,12 @@ impl IamThirdPartyAppServ {
                     None => true,
                     Some(true) => {
                         // 筛选 ext.visible 为 true 或 ext 为 null/空
-                        r.ext.is_empty()
-                            || tardis::serde_json::from_str::<JsonValue>(&r.ext)
-                                .ok()
-                                .and_then(|v| v.get("visible").and_then(|x| x.as_bool()))
-                                .unwrap_or(true) // ext 中无 visible 时视为可见
+                        r.ext.is_empty() || tardis::serde_json::from_str::<JsonValue>(&r.ext).ok().and_then(|v| v.get("visible").and_then(|x| x.as_bool())).unwrap_or(true)
+                        // ext 中无 visible 时视为可见
                     }
                     Some(false) => {
                         // 筛选 ext.visible 为 false
-                        tardis::serde_json::from_str::<JsonValue>(&r.ext)
-                            .ok()
-                            .and_then(|v| v.get("visible").and_then(|x| x.as_bool()))
-                            == Some(false)
+                        tardis::serde_json::from_str::<JsonValue>(&r.ext).ok().and_then(|v| v.get("visible").and_then(|x| x.as_bool())) == Some(false)
                     }
                 }
             })

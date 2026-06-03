@@ -10,12 +10,12 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::futures_util::future::join_all;
+use tardis::log::error;
 use tardis::serde_json::json;
 use tardis::tokio::sync::Mutex;
-use tardis::log::error;
 
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst, async_stream, tokio};
+use tardis::{async_stream, tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -1322,7 +1322,7 @@ impl IamCertServ {
                 app.roles = app_role_read.clone();
             }
         }
-        
+
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),
@@ -1336,13 +1336,7 @@ impl IamCertServ {
         Ok(account_info)
     }
 
-    async fn add_all_porject_auth(
-        account_id: &str,
-        token: String,
-        access_token: Option<String>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    async fn add_all_porject_auth(account_id: &str, token: String, access_token: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_agg = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
@@ -1451,7 +1445,7 @@ impl IamCertServ {
             bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L1 => {}
             bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L2 => {}
             bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::L3 => {}
-            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Owner => {},
+            bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind::Owner => {}
         }
         Ok(ctx)
     }

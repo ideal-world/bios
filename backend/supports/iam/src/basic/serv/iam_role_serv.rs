@@ -26,7 +26,9 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq};
-use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleIdNameResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{
+    IamRoleAddReq, IamRoleAggAddReq, IamRoleAggCopyReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleIdNameResp, IamRoleModifyReq, IamRoleSummaryResp,
+};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -1350,13 +1352,7 @@ impl IamRoleServ {
         } else {
             Self::find_ct_role_base_app(desc_by_create, desc_by_update, funs, ctx).await?
         };
-        Ok(roles
-            .into_iter()
-            .map(|role| IamRoleIdNameResp {
-                key: role.id,
-                name: role.name,
-            })
-            .collect())
+        Ok(roles.into_iter().map(|role| IamRoleIdNameResp { key: role.id, name: role.name }).collect())
     }
 
     pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {

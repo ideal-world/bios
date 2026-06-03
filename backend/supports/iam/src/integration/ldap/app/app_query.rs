@@ -24,7 +24,10 @@ pub async fn execute_ldap_app_search(query: &ldap_parser::LdapSearchQuery, confi
     if ldap_parser::is_simple_present_query(query) {
         if let Some(cn) = ldap_parser::extract_cn_from_base(&query.base) {
             let mut simple_query = query.clone();
-            simple_query.query_type = LdapQueryType::Equality { attribute: "cn".to_string(), value: cn };
+            simple_query.query_type = LdapQueryType::Equality {
+                attribute: "cn".to_string(),
+                value: cn,
+            };
             let apps = build_and_execute_app_sql_query(&simple_query, config, &funs, &ctx).await?;
             return Ok(apps);
         } else {
@@ -100,10 +103,8 @@ async fn build_and_execute_app_sql_query(
             let id = row.try_get::<String>("", "id").unwrap_or_default();
             let name = row.try_get::<String>("", "name").unwrap_or_default();
             let sort = row.try_get::<i64>("", "sort").unwrap_or_default();
-            let rel_phones = rel_result
-            .iter()
-            .filter(|r| r.try_get::<String>("", "id").unwrap_or_default() == id)
-            .map(|r| r.try_get::<String>("", "phone").unwrap_or_default()).collect_vec();
+            let rel_phones =
+                rel_result.iter().filter(|r| r.try_get::<String>("", "id").unwrap_or_default() == id).map(|r| r.try_get::<String>("", "phone").unwrap_or_default()).collect_vec();
             LdapAppFields {
                 id: id.clone(),
                 business_category: name.clone(),
@@ -132,9 +133,5 @@ impl LdapSqlWhereBuilder for AppLdapSqlWhereBuilder {
     const OBJECT_CLASS_VALUES: &'static [&'static str] = &["groupOfUniqueNames", "top"];
 
     /// LDAP 属性名 -> 数据库查询字段 映射表 (attr, db_field)
-    const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[
-        ("cn", "iam_third_party_app.id"),
-        ("name", "rbum_item.name"),
-        ("id", "rbum_item.id"),
-    ];
+    const ATTR_TO_DB_FIELD: &'static [(&'static str, &'static str)] = &[("cn", "iam_third_party_app.id"), ("name", "rbum_item.name"), ("id", "rbum_item.id")];
 }

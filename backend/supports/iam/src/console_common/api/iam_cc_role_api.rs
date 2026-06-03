@@ -246,9 +246,6 @@ impl IamCcRoleApi {
             &ctx.0,
         )
         .await?;
-        TardisResp::ok(result.into_iter().map(|role| IamRoleIdNameResp {
-            key: role.id,
-            name: role.name,
-        }).collect())
+        TardisResp::ok(result.into_iter().map(|role| IamRoleIdNameResp { key: role.id, name: role.name }).collect())
     }
 }

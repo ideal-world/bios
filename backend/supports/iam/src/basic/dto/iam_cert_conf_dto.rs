@@ -89,6 +89,10 @@ pub struct IamCertConfOAuth2AddOrModifyReq {
     pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk: TrimString,
+    /// OAuth2 身份提供方的基础地址（仅 Bios supplier 需要），例如 `https://bios.example.com`
+    /// 用于拼接 token / userinfo 端点；Github / WechatMp 等内置 supplier 可不填
+    #[oai(validator(max_length = "2000"))]
+    pub base_url: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -134,6 +138,9 @@ pub struct IamCertConfOAuth2Resp {
     pub ak: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk: String,
+    /// OAuth2 身份提供方的基础地址（仅 Bios supplier 需要）
+    #[oai(validator(max_length = "2000"))]
+    pub base_url: Option<String>,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertConfAkSkAddOrModifyReq {

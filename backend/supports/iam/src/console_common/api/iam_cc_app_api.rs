@@ -107,12 +107,7 @@ impl IamCcAppApi {
     ///
     /// 返回已成功禁用的应用 ID 列表。
     #[oai(path = "/script/batch-delete", method = "post")]
-    async fn script_batch_delete_apps(
-        &self,
-        app_ids: Json<Vec<String>>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Vec<String>> {
+    async fn script_batch_delete_apps(&self, app_ids: Json<Vec<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<String>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -133,18 +128,10 @@ impl IamCcAppApi {
         )
         .await?;
 
-        let deleted_ids: Vec<String> = all_apps
-            .into_iter()
-            .filter(|app| !keep_ids.contains(&app.id) && !app.disabled)
-            .map(|app| app.id)
-            .collect();
+        let deleted_ids: Vec<String> = all_apps.into_iter().filter(|app| !keep_ids.contains(&app.id) && !app.disabled).map(|app| app.id).collect();
 
         if !deleted_ids.is_empty() {
-            let in_clause = deleted_ids
-                .iter()
-                .map(|id| format!("'{}'", id.replace('\'', "''")))
-                .collect::<Vec<_>>()
-                .join(",");
+            let in_clause = deleted_ids.iter().map(|id| format!("'{}'", id.replace('\'', "''"))).collect::<Vec<_>>().join(",");
             let sql = format!("UPDATE rbum_item SET disabled = true WHERE id IN ({in_clause}) AND disabled = false");
             funs.db().execute_one(&sql, vec![]).await?;
         }

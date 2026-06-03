@@ -69,10 +69,7 @@ impl IamCcCertExpiryNotifyServ {
                     skipped.push(IamCcThirdPartyCertExpiryNotifySkippedItemResp {
                         cert_id: best.cert_id.clone(),
                         account_id: best.account_id.clone(),
-                        reason: format!(
-                            "superseded by cert {} with smaller remaining_days={}",
-                            pending.cert_id, pending.remaining_days
-                        ),
+                        reason: format!("superseded by cert {} with smaller remaining_days={}", pending.cert_id, pending.remaining_days),
                     });
                     account_best.insert(pending.account_id.clone(), pending);
                 }
@@ -80,10 +77,7 @@ impl IamCcCertExpiryNotifyServ {
                     skipped.push(IamCcThirdPartyCertExpiryNotifySkippedItemResp {
                         cert_id: pending.cert_id,
                         account_id: pending.account_id,
-                        reason: format!(
-                            "superseded by cert {} with smaller or equal remaining_days={}",
-                            best.cert_id, best.remaining_days
-                        ),
+                        reason: format!("superseded by cert {} with smaller or equal remaining_days={}", best.cert_id, best.remaining_days),
                     });
                 }
                 None => {
@@ -94,12 +88,7 @@ impl IamCcCertExpiryNotifyServ {
 
         for pending in account_best.into_values() {
             let account_id = pending.account_id.clone();
-            let dedup_key = format!(
-                "{}{}:{}",
-                iam_conf.cache_key_third_party_cert_expiry_notify_,
-                account_id,
-                today_str
-            );
+            let dedup_key = format!("{}{}:{}", iam_conf.cache_key_third_party_cert_expiry_notify_, account_id, today_str);
             if funs.cache().exists(&dedup_key).await? {
                 skipped.push(IamCcThirdPartyCertExpiryNotifySkippedItemResp {
                     cert_id: pending.cert_id.clone(),
@@ -121,10 +110,7 @@ impl IamCcCertExpiryNotifyServ {
                 }
             };
 
-            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx)
-                .await
-                .is_err()
-            {
+            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx).await.is_err() {
                 skipped.push(IamCcThirdPartyCertExpiryNotifySkippedItemResp {
                     cert_id: pending.cert_id.clone(),
                     account_id: account_id.clone(),
@@ -244,12 +230,7 @@ impl IamCcCertExpiryNotifyServ {
 
         for pending in account_best.into_values() {
             let account_id = pending.account_id.clone();
-            let dedup_key = format!(
-                "{}{}:{}",
-                iam_conf.cache_key_third_party_cert_expired_notify_,
-                account_id,
-                today_str
-            );
+            let dedup_key = format!("{}{}:{}", iam_conf.cache_key_third_party_cert_expired_notify_, account_id, today_str);
             if funs.cache().exists(&dedup_key).await? {
                 skipped.push(IamCcThirdPartyCertExpiryNotifySkippedItemResp {
                     cert_id: pending.cert_id.clone(),
@@ -271,10 +252,7 @@ impl IamCcCertExpiryNotifyServ {
                 }
             };
 
-            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx)
-                .await
-                .is_err()
-            {
+            if IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::PhoneVCode, funs, &account_ctx).await.is_err() {
                 skipped.push(IamCcThirdPartyCertExpiryNotifySkippedItemResp {
                     cert_id: pending.cert_id.clone(),
                     account_id: account_id.clone(),

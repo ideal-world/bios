@@ -27,7 +27,11 @@ pub struct IamCiCertLdapUserPwdScriptServ;
 
 impl IamCiCertLdapUserPwdScriptServ {
     /// 为存在 LDAP 凭证、但不存在 UserPwd 凭证的账号生成随机默认密码并写入 UserPwd 证书。
-    pub async fn bootstrap_userpwd_for_ldap_accounts_without(account_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamCiLdapBootstrapUserPwdItemResp>> {
+    pub async fn bootstrap_userpwd_for_ldap_accounts_without(
+        account_id: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamCiLdapBootstrapUserPwdItemResp>> {
         let ldap_conf_ids = Self::collect_ldap_cert_conf_ids(funs, ctx).await?;
         if ldap_conf_ids.is_empty() {
             return Ok(vec![]);
@@ -82,7 +86,7 @@ impl IamCiCertLdapUserPwdScriptServ {
             else {
                 continue;
             };
-            if let Ok(pwd_cert)= IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await {
+            if let Ok(pwd_cert) = IamCertServ::get_kernel_cert(account_id.as_str(), &IamCertKernelKind::UserPwd, funs, &account_ctx).await {
                 if pwd_cert.status == RbumCertStatusKind::Pending {
                     IamCertServ::delete_cert(&pwd_cert.id, funs, ctx).await?;
                 } else {
@@ -122,14 +126,19 @@ impl IamCiCertLdapUserPwdScriptServ {
                 replace.insert("ak".to_string(), Some(ak.to_string()));
                 replace.insert("pwd".to_string(), Some(pwd_plain));
                 let iam_conf = funs.conf::<IamConfig>();
-                SmsClient::add_send_task(&ReachMessageAddSendTaskReq {
-                    rel_reach_channel: "SMS".to_string(),
-                    receive_kind: "ACCOUNT".to_string(),
-                    to_res_ids: vec![account_id.clone()],
-                    rel_reach_msg_signature_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_signature_id.clone(),
-                    rel_reach_msg_template_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_template_id.clone(),
-                    replace,
-                }, funs, ctx).await?;
+                SmsClient::add_send_task(
+                    &ReachMessageAddSendTaskReq {
+                        rel_reach_channel: "SMS".to_string(),
+                        receive_kind: "ACCOUNT".to_string(),
+                        to_res_ids: vec![account_id.clone()],
+                        rel_reach_msg_signature_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_signature_id.clone(),
+                        rel_reach_msg_template_id: iam_conf.ldap.ldap_bootstrap_userpwd_reach_msg_template_id.clone(),
+                        replace,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
         }
 
@@ -149,10 +158,6 @@ impl IamCiCertLdapUserPwdScriptServ {
             status: Some(RbumCertConfStatusKind::Enabled),
             ..Default::default()
         };
-        Ok(RbumCertConfServ::find_rbums(&filter, None, None, funs, ctx)
-            .await?
-            .into_iter()
-            .map(|c| c.id)
-            .collect())
+        Ok(RbumCertConfServ::find_rbums(&filter, None, None, funs, ctx).await?.into_iter().map(|c| c.id).collect())
     }
 }

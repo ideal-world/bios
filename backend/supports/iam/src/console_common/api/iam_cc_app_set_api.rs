@@ -140,7 +140,7 @@ impl IamCcAppSetApi {
                         &funs,
                         &t_ctx,
                     )
-                    .await?
+                    .await?,
                 )
             };
             if let Some(tree) = tree {

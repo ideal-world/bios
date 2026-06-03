@@ -24,6 +24,8 @@ pub struct IamConfig {
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
     pub cache_key_token_info_: String,
+    // 第三方 Provider token 缓存 key 前缀，完整 key 为 `{prefix}{supplier}:{account_id}`
+    pub cache_key_oauth2_provider_token_: String,
     // ak -> (sk,tenant_id,[appid])
     pub cache_key_aksk_info_: String,
     // account_id -> [token, (token_kind, add_time)]
@@ -106,6 +108,11 @@ pub struct IamConfig {
     pub oauth2_refresh_token_expire_sec: u32,
     pub oauth2_require_pkce: bool,
     pub oauth2_allow_implicit_flow: bool,
+    /// 第三方 Provider 的 access_token/refresh_token 在 IAM 侧缓存的有效期（秒）
+    ///
+    /// 必须不小于本地登录 token 的有效期，否则会出现「登录 token 未失效但 Provider token 缓存已过期」的问题；
+    /// 实际生效值会与登录 token 默认时长（`RBUM_CERT_CONF_TOKEN_EXPIRE_SEC`）取较大者。
+    pub oauth2_provider_token_cache_expire_sec: u32,
 
     // open-api 插件配置
     pub openapi_plugin_time_range: String,
@@ -211,6 +218,7 @@ impl Default for IamConfig {
             invoke: InvokeConfig::default(),
             app_res_data_guard_code: "5/*/app*data_guard*all".to_string(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
+            cache_key_oauth2_provider_token_: "iam:cache:oauth2:provider_token:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
@@ -269,6 +277,7 @@ impl Default for IamConfig {
             oauth2_refresh_token_expire_sec: 30 * 24 * 3600,       // 30天
             oauth2_require_pkce: false,
             oauth2_allow_implicit_flow: false,
+            oauth2_provider_token_cache_expire_sec: 30 * 24 * 3600, // 30天
 
             // open-api 插件配置
             openapi_plugin_time_range: "redis-time-range:opres-time-range".to_string(),

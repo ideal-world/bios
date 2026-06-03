@@ -243,6 +243,46 @@ impl IamCpCertApi {
         TardisResp::ok(resp?)
     }
 
+    /// Bind general oauth2 identity to current logged-in account
+    /// 将通用 oauth2 身份绑定到当前登录账号
+    ///
+    /// 用于已登录用户首次登录时手动绑定外部身份提供方账号与本地账号。
+    /// 账号取自当前登录上下文，不会新建账号；返回绑定的 open_id。
+    #[oai(path = "/cert/oauth2/bind/:supplier", method = "put")]
+    async fn bind_oauth2(&self, supplier: Path<String>, bind_req: Json<IamCpOAuth2LoginReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let open_id = IamCpCertOAuth2Serv::bind(IamCertOAuth2Supplier::parse(&supplier.0)?, &bind_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(open_id)
+    }
+
+    /// Refresh the third-party provider's access_token via stored refresh_token
+    /// 通过已缓存的 refresh_token 置换第三方 Provider 的 access_token
+    ///
+    /// 账号取自当前登录上下文；返回最新的 Provider token 信息（access_token/refresh_token/过期时间）。
+    #[oai(path = "/cert/oauth2/refresh/:supplier", method = "put")]
+    async fn refresh_oauth2_token(&self, supplier: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2TokenInfo> {
+        let funs = iam_constants::get_tardis_inst();
+        let resp = IamCpCertOAuth2Serv::refresh_provider_token(IamCertOAuth2Supplier::parse(&supplier.0)?, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Get the third-party provider's user info via stored access_token
+    /// 通过已缓存的 access_token 查询第三方 Provider 的用户信息
+    ///
+    /// 账号取自当前登录上下文；返回 Provider 原始用户信息 JSON。
+    #[oai(path = "/cert/oauth2/userinfo/:supplier", method = "get")]
+    async fn get_oauth2_user_info(&self, supplier: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<tardis::serde_json::Value> {
+        let funs = iam_constants::get_tardis_inst();
+        let resp = IamCpCertOAuth2Serv::get_provider_user_info(IamCertOAuth2Supplier::parse(&supplier.0)?, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(resp)
+    }
+
     /// Validate userpwd By Current Account
     /// 通过当前账号验证用户密码
     ///
@@ -486,15 +526,7 @@ impl IamCpCertApi {
             ..Default::default()
         };
         // 以目标租户维度刷新 Redis 账号上下文，token 保持不变
-        let resp = IamCertServ::package_tardis_account_context_and_resp(
-            &account_id,
-            &target_tenant_id,
-            switch_req.0.token.clone(),
-            None,
-            &funs,
-            &target_ctx,
-        )
-        .await?;
+        let resp = IamCertServ::package_tardis_account_context_and_resp(&account_id, &target_tenant_id, switch_req.0.token.clone(), None, &funs, &target_ctx).await?;
         target_ctx.execute_task().await?;
         TardisResp::ok(resp)
     }

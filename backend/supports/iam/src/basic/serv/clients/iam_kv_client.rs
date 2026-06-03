@@ -1,12 +1,12 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_sdk_invoke::clients::spi_kv_client::{KvItemDetailResp, SpiKvClient};
 use serde::{Deserialize, Serialize};
-use tardis::{TardisFuns, tokio};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::Value,
     TardisFunsInst,
 };
+use tardis::{tokio, TardisFuns};
 
 use crate::iam_constants;
 
@@ -132,11 +132,7 @@ impl IamKvClient {
 
     pub async fn get_item_value(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<IamKvValue>>> {
         if cfg!(feature = "spi_kv") {
-            Ok(
-                SpiKvClient::get_item(key.to_string(), None, funs, ctx).await?.map(|kvresp|
-                    TardisFuns::json.json_to_obj::<Vec<IamKvValue>>(kvresp.value).unwrap_or_default()
-                )
-            )
+            Ok(SpiKvClient::get_item(key.to_string(), None, funs, ctx).await?.map(|kvresp| TardisFuns::json.json_to_obj::<Vec<IamKvValue>>(kvresp.value).unwrap_or_default()))
         } else {
             Ok(None)
         }

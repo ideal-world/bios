@@ -69,12 +69,7 @@ impl IamSetServ {
         .await?;
 
         // 去重并收集 rel_rbum_set_id
-        let set_ids: Vec<String> = set_items
-            .iter()
-            .map(|item| item.rel_rbum_set_id.clone())
-            .collect::<HashSet<String>>()
-            .into_iter()
-            .collect();
+        let set_ids: Vec<String> = set_items.iter().map(|item| item.rel_rbum_set_id.clone()).collect::<HashSet<String>>().into_iter().collect();
 
         if set_ids.is_empty() {
             return Ok(vec![]);
@@ -607,10 +602,8 @@ impl IamSetServ {
             ctx,
         )
         .await?;
-        let app_cate_sys_codes =
-            app_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
-        let account_cate_sys_codes =
-            account_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        let app_cate_sys_codes = app_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        let account_cate_sys_codes = account_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
         if account_cate_sys_codes.is_empty() && app_cate_sys_codes.is_empty() {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
@@ -717,10 +710,8 @@ impl IamSetServ {
         if account_cate.is_empty() && app_cate.is_empty() {
             return Ok(None);
         }
-        let app_cate_sys_codes =
-            app_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
-        let account_cate_sys_codes =
-            account_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        let app_cate_sys_codes = app_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
+        let account_cate_sys_codes = account_cate.iter().map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or_default()).collect::<Vec<String>>();
         if account_cate_sys_codes.is_empty() && app_cate_sys_codes.is_empty() {
             return Ok(Some(RbumSetTreeResp { main: vec![], ext: None }));
         }
@@ -807,7 +798,7 @@ impl IamSetServ {
         .await?
         .iter()
         // .filter(|r| r.rel_rbum_set_cate_sys_code.is_some())
-         .map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or("".to_string()))
+        .map(|r| r.rel_rbum_set_cate_sys_code.clone().unwrap_or("".to_string()))
         .collect::<Vec<String>>();
         if rbum_set_cate_code.is_empty() {
             return Ok(vec![]);

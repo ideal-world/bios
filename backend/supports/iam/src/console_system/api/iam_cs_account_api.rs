@@ -19,13 +19,13 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_account_dto::{
     AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp,
 };
-use crate::iam_config::IamBasicConfigApi;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind, IamSetKind};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
@@ -395,7 +395,7 @@ impl IamCsAccountApi {
     #[oai(path = "/apps/item", method = "get")]
     async fn paginate_items(
         &self,
-        tenant_id:Query<String>,
+        tenant_id: Query<String>,
         cate_sys_codes: Query<Option<String>>,
         sys_code_query_kind: Query<Option<RbumSetCateLevelQueryKind>>,
         sys_code_query_depth: Query<Option<i16>>,
@@ -414,7 +414,7 @@ impl IamCsAccountApi {
             own_paths: tenant_id.0.clone(),
             ..ctx.0.clone()
         };
-        
+
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &tenant_ctx).await?;
         let result = RbumSetItemServ::paginate_detail_rbums(
             &RbumSetItemFilterReq {

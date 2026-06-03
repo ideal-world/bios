@@ -111,7 +111,17 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         )
         .await?;
         if res.kind == IamResKind::Api {
-            IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.only_aksk, res.need_login, funs).await?;
+            IamResCacheServ::add_res(
+                &res.code,
+                &res.method,
+                res.crypto_req,
+                res.crypto_resp,
+                res.double_auth,
+                res.only_aksk,
+                res.need_login,
+                funs,
+            )
+            .await?;
         }
         let (op_describe, op_kind) = match res.kind {
             IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
@@ -260,7 +270,17 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 if disabled {
                     IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
                 } else {
-                    IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, res.only_aksk, res.need_login, funs).await?;
+                    IamResCacheServ::add_res(
+                        &res.code,
+                        &res.method,
+                        res.crypto_req,
+                        res.crypto_resp,
+                        res.double_auth,
+                        res.only_aksk,
+                        res.need_login,
+                        funs,
+                    )
+                    .await?;
                 }
             }
         }

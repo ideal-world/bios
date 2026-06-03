@@ -23,7 +23,10 @@ pub async fn execute_ldap_org_search(query: &ldap_parser::LdapSearchQuery, confi
     if ldap_parser::is_simple_present_query(query) {
         if let Some(cn) = ldap_parser::extract_cn_from_base(&query.base) {
             let mut simple_query = query.clone();
-            simple_query.query_type = LdapQueryType::Equality { attribute: "cn".to_string(), value: cn };
+            simple_query.query_type = LdapQueryType::Equality {
+                attribute: "cn".to_string(),
+                value: cn,
+            };
             let orgs = build_and_execute_org_sql_query(&simple_query, config, &funs, &ctx).await?;
             return Ok(orgs);
         } else {

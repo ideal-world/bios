@@ -79,7 +79,17 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
-                Self::save_product_spec_rel(&product.id, &spec.id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), spec_req.servers.clone(), funs, ctx).await?;
+                Self::save_product_spec_rel(
+                    &product.id,
+                    &spec.id,
+                    None,
+                    spec_req.api_call_frequency,
+                    spec_req.bind_api_res.clone(),
+                    spec_req.servers.clone(),
+                    funs,
+                    ctx,
+                )
+                .await?;
                 Self::set_rel_ak_cache(&spec.id, funs, ctx).await?;
             } else {
                 let spec_id = IamResServ::add_item(
@@ -96,7 +106,17 @@ impl IamOpenServ {
                     ctx,
                 )
                 .await?;
-                Self::save_product_spec_rel(&product.id, &spec_id, None, spec_req.api_call_frequency, spec_req.bind_api_res.clone(), spec_req.servers.clone(), funs, ctx).await?;
+                Self::save_product_spec_rel(
+                    &product.id,
+                    &spec_id,
+                    None,
+                    spec_req.api_call_frequency,
+                    spec_req.bind_api_res.clone(),
+                    spec_req.servers.clone(),
+                    funs,
+                    ctx,
+                )
+                .await?;
                 Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
             }
         }
@@ -148,7 +168,17 @@ impl IamOpenServ {
                 ctx,
             )
             .await?;
-            Self::save_product_spec_rel(&product_id, &spec_id, None, spec.api_call_frequency, spec.bind_api_res.clone(), spec.servers.clone(), funs, ctx).await?;
+            Self::save_product_spec_rel(
+                &product_id,
+                &spec_id,
+                None,
+                spec.api_call_frequency,
+                spec.bind_api_res.clone(),
+                spec.servers.clone(),
+                funs,
+                ctx,
+            )
+            .await?;
             Self::set_rel_ak_cache(&spec_id, funs, ctx).await?;
         }
         Ok(())
@@ -250,7 +280,18 @@ impl IamOpenServ {
             IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("External-Id".to_string(), create_proj_code.clone())]), funs).await?;
         }
         Self::bind_cert_product(cert_id, &product_id, None, bind_req.create_proj_code.clone(), funs, ctx).await?;
-        Self::bind_cert_spec(cert_id, &spec_id, None, bind_req.server_codes.clone(), bind_req.start_time, bind_req.end_time, bind_req.api_call_count, funs, ctx).await?;
+        Self::bind_cert_spec(
+            cert_id,
+            &spec_id,
+            None,
+            bind_req.server_codes.clone(),
+            bind_req.start_time,
+            bind_req.end_time,
+            bind_req.api_call_count,
+            funs,
+            ctx,
+        )
+        .await?;
 
         // update ext headers
         if let Some(ext_headers) = &bind_req.ext_headers {
@@ -438,7 +479,7 @@ impl IamOpenServ {
         .ak;
 
         IamIdentCacheServ::set_open_api_extand_header(&ak, None, HashMap::from([("Spec-Id".to_string(), spec_id.to_string())]), funs).await?;
-        if let Some(server_codes) = server_codes{
+        if let Some(server_codes) = server_codes {
             let mut api_res = HashSet::new();
             for server_code in server_codes {
                 api_res.extend(IamIdentCacheServ::get_bind_api_res(server_code.as_str(), None, funs).await?.unwrap_or_default());
