@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
@@ -361,6 +359,11 @@ impl IamCertOAuth2Serv {
                 "404-iam-cert-oauth-provider-token-not-found",
             ))
         }
+    }
+
+    /// 获取已缓存的第三方 Provider token，供前端直接调用 Provider API 时使用。
+    pub async fn get_provider_token(cert_supplier: IamCertOAuth2Supplier, account_id: &str, _tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
+        Self::get_cached_provider_token(&cert_supplier, account_id, funs).await
     }
 
     /// token 置换：使用已缓存的 refresh_token 向 Provider 换取新的 access_token，并更新缓存

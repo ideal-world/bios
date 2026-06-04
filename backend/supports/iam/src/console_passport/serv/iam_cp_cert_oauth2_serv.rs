@@ -45,6 +45,17 @@ impl IamCpCertOAuth2Serv {
         IamCertOAuth2Serv::bind_cert_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id, &ctx.owner, funs, ctx).await
     }
 
+    /// 获取当前登录账号已缓存的 Provider token
+    ///
+    /// 账号取自当前登录上下文 `ctx.owner`，租户取自 `ctx.own_paths`。
+    pub async fn get_provider_token(
+        cert_supplier: IamCertOAuth2Supplier,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2TokenInfo> {
+        IamCertOAuth2Serv::get_provider_token(cert_supplier, &ctx.owner, &ctx.own_paths, funs).await
+    }
+
     /// token 置换：用当前登录账号已缓存的 refresh_token 向 Provider 换取新的 access_token
     ///
     /// 账号取自当前登录上下文 `ctx.owner`，租户取自 `ctx.own_paths`。

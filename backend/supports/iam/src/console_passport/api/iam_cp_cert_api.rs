@@ -259,6 +259,18 @@ impl IamCpCertApi {
         TardisResp::ok(open_id)
     }
 
+    /// Get the third-party provider's cached token
+    /// 获取已缓存的第三方 Provider token
+    ///
+    /// 账号取自当前登录上下文；返回 Provider token 信息（access_token/refresh_token/过期时间）。
+    #[oai(path = "/cert/oauth2/token/:supplier", method = "get")]
+    async fn get_oauth2_token(&self, supplier: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2TokenInfo> {
+        let funs = iam_constants::get_tardis_inst();
+        let resp = IamCpCertOAuth2Serv::get_provider_token(IamCertOAuth2Supplier::parse(&supplier.0)?, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(resp)
+    }
+
     /// Refresh the third-party provider's access_token via stored refresh_token
     /// 通过已缓存的 refresh_token 置换第三方 Provider 的 access_token
     ///
