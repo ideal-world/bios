@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::RwLock};
 use lazy_static::lazy_static;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
-    futures::executor::block_on,
     log::info,
     serde_json::Value,
     url::Url,
@@ -34,7 +33,8 @@ pub fn get_res_json() -> TardisResult<Value> {
     Ok(Value::Null)
 }
 
-pub fn get_apis_json() -> TardisResult<Value> {
+// 改为 async，避免在 tokio 运行时上下文中使用 block_on 造成死锁或阻塞执行线程。
+pub async fn get_apis_json() -> TardisResult<Value> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let apis = if let Ok(apis) = RES_APIS.read() {
         if let Some(apis) = apis.as_ref() {
@@ -45,7 +45,7 @@ pub fn get_apis_json() -> TardisResult<Value> {
     } else {
         HashMap::new()
     };
-    let pub_key = block_on(auth_crypto_serv::fetch_public_key())?;
+    let pub_key = auth_crypto_serv::fetch_public_key().await?;
     TardisFuns::json.obj_to_json(&ServConfig {
         strict_security_mode: config.strict_security_mode,
         double_auth_exp_sec: config.double_auth_exp_sec,
