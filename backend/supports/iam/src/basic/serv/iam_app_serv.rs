@@ -349,6 +349,30 @@ impl IamAppServ {
         Ok(())
     }
 
+    pub async fn batch_modify_set_cate(app_ids: &[String], set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+        let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
+        for app_id in app_ids {
+            let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(app_id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
+            let sort = set_items.first().map(|set_item| set_item.sort).unwrap_or(0);
+            for set_item in set_items {
+                IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
+            }
+            IamSetServ::add_set_item(
+                &IamSetItemAddReq {
+                    set_id: apps_set_id.clone(),
+                    set_cate_id: set_cate_id.to_string(),
+                    sort,
+                    rel_rbum_item_id: app_id.to_string(),
+                },
+                funs,
+                &tenant_ctx,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
     pub async fn find_rel_account(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountApp, app_id, None, None, funs, ctx).await
     }

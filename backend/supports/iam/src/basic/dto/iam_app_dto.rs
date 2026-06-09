@@ -145,6 +145,16 @@ pub struct IamAppDetailResp {
     pub kind: IamAppKind,
 }
 
+/// Batch modify app set category request
+///
+/// 批量修改应用集合分类请求
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAppBatchModifySetCateReq {
+    pub app_ids: Vec<String>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: String,
+}
+
 /// Transfer ownership request for app
 ///
 /// 应用转移所有权请求
