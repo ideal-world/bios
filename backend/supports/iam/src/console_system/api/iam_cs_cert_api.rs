@@ -6,7 +6,10 @@ use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::{param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp, IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceResp};
+use crate::basic::dto::iam_cert_conf_dto::{
+    IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp, IamCertConfOAuth2AddOrModifyReq, IamCertConfOAuth2Resp, IamCertConfOAuth2ServiceAddOrModifyReq,
+    IamCertConfOAuth2ServiceResp,
+};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
@@ -14,11 +17,12 @@ use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_cert_dto::{IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdIntegrationSyncStatusDto};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
+use crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use crate::basic::serv::iam_cert_oauth2_service_serv::IamCertOAuth2ServiceServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
@@ -289,6 +293,90 @@ impl IamCsCertConfigOAuth2ServiceApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertOAuth2ServiceServ::delete_cert_conf(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct IamCsCertConfigOAuth2Api;
+
+/// System Console Cert Config OAuth2 API
+/// 系统控制台证书配置OAuth2 API（作为 OAuth2 客户端对接外部身份提供方）
+///
+/// 允许平台层管理 OAuth2 外部身份提供方（Github / WechatMp / BiosIam）的配置。
+#[poem_openapi::OpenApi(prefix_path = "/cs/oauth2", tag = "bios_basic::ApiTag::System")]
+impl IamCsCertConfigOAuth2Api {
+    /// Add or Enable OAuth2 Provider Cert Conf
+    /// 添加或启用 OAuth2 身份提供方配置
+    ///
+    /// 若当前 scope 下已存在该 supplier 的已禁用配置，则将其启用；否则新增一条配置。
+    #[oai(path = "/:supplier", method = "post")]
+    async fn add_oauth2_cert(
+        &self,
+        supplier: Path<String>,
+        add_req: Json<IamCertConfOAuth2AddOrModifyReq>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<String> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let cert_supplier = IamCertOAuth2Supplier::parse(&supplier.0)?;
+        let resp = IamCertOAuth2Serv::add_or_enable_cert_conf(cert_supplier, &add_req.0, &ctx.0.own_paths, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Get OAuth2 Provider Cert Conf
+    /// 获取 OAuth2 身份提供方配置
+    #[oai(path = "/:supplier", method = "get")]
+    async fn get_oauth2_cert(&self, supplier: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamCertConfOAuth2Resp> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let cert_supplier = IamCertOAuth2Supplier::parse(&supplier.0)?;
+        let cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(ctx.0.own_paths.clone()), &funs).await?;
+        let resp = IamCertOAuth2Serv::get_cert_conf(&cert_conf_id, &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Modify OAuth2 Provider Cert Conf
+    /// 修改 OAuth2 身份提供方配置
+    #[oai(path = "/:supplier", method = "put")]
+    async fn modify_oauth2_cert(
+        &self,
+        supplier: Path<String>,
+        modify_req: Json<IamCertConfOAuth2AddOrModifyReq>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let cert_supplier = IamCertOAuth2Supplier::parse(&supplier.0)?;
+        let cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(ctx.0.own_paths.clone()), &funs).await?;
+        IamCertOAuth2Serv::modify_cert_conf(&cert_conf_id, &modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Disable OAuth2 Provider Cert Conf
+    /// 禁用 OAuth2 身份提供方配置
+    #[oai(path = "/:supplier", method = "delete")]
+    async fn disable_oauth2_cert(&self, supplier: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let cert_supplier = IamCertOAuth2Supplier::parse(&supplier.0)?;
+        let cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(ctx.0.own_paths.clone()), &funs).await?;
+        IamCertServ::disable_cert_conf(&cert_conf_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
