@@ -227,7 +227,7 @@ impl IamCpCertApi {
         if let Err(e) = &resp {
             log::error!("login_or_register_by_oauth2 error: {:?}", e);
             let mut ctx = TardisContext::default();
-            ctx.own_paths = login_req.0.tenant_id;
+            ctx.own_paths = login_req.0.tenant_id.unwrap_or_default();
             try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
             let _ = IamLogClient::add_ctx_task(
                 LogParamTag::IamAbnormal,

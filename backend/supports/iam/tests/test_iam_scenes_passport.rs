@@ -784,6 +784,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
                     supplier: TrimString(IamCertOAuth2Supplier::WechatMp.to_string()),
                     ak: TrimString(app_id.to_string()),
                     sk: TrimString(secret.to_string()),
+                    base_url: None,
                 }]),
                 cert_conf_by_ldap: None,
             },

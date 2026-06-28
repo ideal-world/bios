@@ -77,7 +77,7 @@ pub struct IamCpOAuth2LoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tenant_id: String,
+    pub tenant_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

@@ -26,9 +26,9 @@ impl IamCpCertOAuth2Serv {
         ip: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<IamAccountInfoResp> {
-        let oauth_info = IamCertOAuth2Serv::get_or_add_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id.to_string(), funs).await?;
+        let oauth_info = IamCertOAuth2Serv::get_or_add_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id.clone().unwrap_or_default(), funs).await?;
         IamCertServ::package_tardis_context_and_resp(
-            Some(login_req.tenant_id.clone()),
+            login_req.tenant_id.clone(),
             &oauth_info.0,
             Some(IamCertTokenKind::TokenDefault.to_string()),
             Some(oauth_info.1),
@@ -42,7 +42,7 @@ impl IamCpCertOAuth2Serv {
     ///
     /// 用于已登录用户首次登录时主动关联两边账号；账号取自当前登录上下文 `ctx.owner`，返回绑定的 open_id。
     pub async fn bind(cert_supplier: IamCertOAuth2Supplier, login_req: &IamCpOAuth2LoginReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        IamCertOAuth2Serv::bind_cert_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id, &ctx.owner, funs, ctx).await
+        IamCertOAuth2Serv::bind_cert_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id.clone().unwrap_or_default(), &ctx.owner, funs, ctx).await
     }
 
     /// 获取当前登录账号已缓存的 Provider token
