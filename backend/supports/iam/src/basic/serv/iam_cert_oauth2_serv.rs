@@ -208,7 +208,7 @@ impl IamCertOAuth2Serv {
             Self::cache_provider_token(&cert_supplier, &account_id, &oauth_token_info, funs).await?;
             return Ok((account_id, oauth_token_info.access_token));
         }
-        if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, &mock_ctx).await?.account_self_reg {
+        if !tenant_id.is_empty() && !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, &mock_ctx).await?.account_self_reg {
             return Err(funs.err().not_found(
                 "rbum_cert",
                 "get_or_add_account",
