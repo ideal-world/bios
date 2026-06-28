@@ -219,4 +219,37 @@ impl IamCpAccountApi {
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
+
+    /// Check if current account has any role under specified own_paths (deep mode: with_sub for non-platform paths)
+    /// 判断当前账号在多个 own_paths 下是否有角色（深度模式：平台层不向下，租户/应用层向下查子路径）
+    /// own_paths 规则：平台="" 租户="{tenant_id}" 应用="{tenant_id}/{app_id}"
+    #[oai(path = "/has-role-deep", method = "post")]
+    async fn has_role_deep(&self, own_paths: Json<Vec<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<HashMap<String, bool>> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let mut result = HashMap::new();
+        for path in own_paths.0 {
+            let with = !path.is_empty();
+            let count = RbumRelServ::count_rbums(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some(path.clone()),
+                        with_sub_own_paths: with,
+                        ..Default::default()
+                    },
+                    tag: Some(IamRelKind::IamAccountRole.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    from_rbum_id: Some(ctx.0.owner.clone()),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+            result.insert(path, count > 0);
+        }
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
+    }
 }
