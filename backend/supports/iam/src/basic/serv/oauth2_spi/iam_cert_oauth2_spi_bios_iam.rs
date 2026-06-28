@@ -38,7 +38,8 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
             "client_secret": sk,
         })
         .to_string();
-        let token_result = funs.web_client().post_to_obj::<TardisResp<IamOauth2TokenResp>>(&format!("{base}/cp/oauth2/token"), token_body, None).await?;
+        let headers = vec![("Content-Type".to_string(), "application/json".to_string())];
+        let token_result = funs.web_client().post_to_obj::<TardisResp<IamOauth2TokenResp>>(&format!("{base}/cp/oauth2/token"), token_body, headers).await?;
         if token_result.code != 200 {
             return Err(funs.err().not_found(
                 "oauth_spi_bios_iam",
@@ -121,7 +122,8 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
             "client_secret": sk,
         })
         .to_string();
-        let token_result = funs.web_client().post_to_obj::<TardisResp<IamOauth2TokenResp>>(&format!("{base}/cp/oauth2/token"), token_body, None).await?;
+        let headers = vec![("Content-Type".to_string(), "application/json".to_string())];
+        let token_result = funs.web_client().post_to_obj::<TardisResp<IamOauth2TokenResp>>(&format!("{base}/cp/oauth2/token"), token_body, headers).await?;
         if token_result.code != 200 {
             return Err(funs.err().not_found(
                 "oauth_spi_bios_iam",

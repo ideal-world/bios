@@ -330,7 +330,7 @@ impl IamCertOAuth2ServiceServ {
         }
 
         // 2. 获取刷新令牌信息
-        let refresh_token_data = funs.cache().get(&format!("iam:oauth2:refresh_token:{}", req.refresh_token)).await?;
+        let refresh_token_data = funs.cache().get(&format!("{}{}", REDIS_REFRESH_TOKEN_KEY, req.refresh_token)).await?;
         let refresh_token_info: IamOAuth2RefreshTokenInfo = match refresh_token_data {
             Some(data) => TardisFuns::json.str_to_obj(&data)?,
             None => return Err(funs.err().unauthorized("oauth2", "refresh_token", "invalid_refresh_token", "401-oauth2-invalid-refresh-token")),
