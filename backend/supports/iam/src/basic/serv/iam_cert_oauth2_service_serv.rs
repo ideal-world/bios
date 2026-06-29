@@ -74,7 +74,7 @@ impl IamCertOAuth2ServiceServ {
                 ext: Some(TardisFuns::json.obj_to_string(&IamCertConfOAuth2ServiceExt {
                     client_id,
                     client_secret,
-                    redirect_uri: add_req.redirect_uri.to_string(),
+                    redirect_uris: add_req.redirect_uris.clone(),
                     scope: vec![],
                 })?),
                 sk_need: Some(false),
@@ -88,7 +88,7 @@ impl IamCertOAuth2ServiceServ {
                 sk_lock_err_times: None,
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
-                conn_uri: Some(add_req.redirect_uri.to_string()),
+                conn_uri: add_req.redirect_uris.first().cloned(),
                 status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: add_req.rel_rbum_item_id.clone(),
@@ -124,7 +124,7 @@ impl IamCertOAuth2ServiceServ {
             client_id: ext.client_id,
             client_secret: ext.client_secret,
             access_token_expire_sec: cert_conf.expire_sec,
-            redirect_uri: ext.redirect_uri,
+            redirect_uris: ext.redirect_uris,
         })
     }
 
@@ -155,7 +155,7 @@ impl IamCertOAuth2ServiceServ {
                 client_id: ext.client_id,
                 client_secret: ext.client_secret,
                 access_token_expire_sec: cert_conf.expire_sec,
-                redirect_uri: ext.redirect_uri.to_string(),
+                redirect_uris: ext.redirect_uris.clone(),
             });
         }
 
@@ -214,8 +214,8 @@ impl IamCertOAuth2ServiceServ {
 
         let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
 
-        // 3. 验证重定向URI
-        if add_req.redirect_uri.to_string() != ext.redirect_uri {
+        // 3. 验证重定向URI（必须在已注册列表中）
+        if !ext.redirect_uris.iter().any(|uri| *uri == add_req.redirect_uri.to_string()) {
             return Err(funs.err().bad_request("oauth2", "generate_code", "invalid_redirect_uri", "400-oauth2-invalid-redirect-uri"));
         }
 
