@@ -15,7 +15,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Pending;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumScopeLevelKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
@@ -104,9 +104,21 @@ impl IamCertOAuth2Serv {
     }
 
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertConfOAuth2Resp> {
-        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx)
-            .await
-            .map(|i: bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp| TardisFuns::json.str_to_obj(&i.ext))?
+        RbumCertConfServ::get_rbum(
+            id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+        .map(|i: bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp| TardisFuns::json.str_to_obj(&i.ext))?
     }
 
     pub async fn add_or_modify_cert(
@@ -179,6 +191,11 @@ impl IamCertOAuth2Serv {
     pub async fn get_cert_rel_account_by_open_id(open_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let result = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ak: Some(open_id.to_string()),
                 ..Default::default()
@@ -197,7 +214,7 @@ impl IamCertOAuth2Serv {
     pub async fn get_or_add_account(cert_supplier: IamCertOAuth2Supplier, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
         let mut mock_ctx = TardisContext {
-            own_paths: tenant_id.to_string(),
+            own_paths: "".to_string(),
             ..Default::default()
         };
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, &mock_ctx).await?;
