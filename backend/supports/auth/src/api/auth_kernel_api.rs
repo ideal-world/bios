@@ -63,7 +63,7 @@ impl AuthApi {
     /// fetch server config 获取服务器配置
     #[oai(path = "/apis", method = "get")]
     async fn fetch_server_config(&self, request: &Request) -> TardisApiResult<Value> {
-        let result = auth_res_serv::get_apis_json()?;
+        let result = auth_res_serv::get_apis_json().await?;
         let _ = SpiLogClient::add_item(
             LogParamContent {
                 op: "fetch_apis_config".to_string(),
