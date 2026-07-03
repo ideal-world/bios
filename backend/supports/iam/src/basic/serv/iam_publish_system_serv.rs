@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
@@ -16,7 +16,7 @@ use tardis::TardisFunsInst;
 use crate::basic::domain::iam_publish_system;
 use crate::basic::dto::iam_filer_dto::IamPublishSystemFilterReq;
 use crate::basic::dto::iam_publish_system_dto::{
-    IamPublishSystemAddReq, IamPublishSystemDetailResp, IamPublishSystemModifyReq, IamPublishSystemSummaryResp,
+    IamPublishSystemAddReq, IamPublishSystemDeleteResp, IamPublishSystemDetailResp, IamPublishSystemModifyReq, IamPublishSystemSummaryResp,
 };
 use crate::basic::serv::clients::iam_search_client::IamSearchClient;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -480,5 +480,52 @@ impl IamPublishSystemServ {
             ..ctx.clone()
         };
         IamRelServ::count_to_rels(&IamRelKind::IamAppPublishSystem, id, funs, &global_ctx).await
+    }
+
+    async fn find_rel_app_ids_by_tenant(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Vec<String>>> {
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let app_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamAppPublishSystem, id, None, None, funs, &global_ctx).await?;
+        if app_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let apps = RbumItemServ::find_rbums(
+            &RbumBasicFilterReq {
+                ids: Some(app_ids),
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?;
+        let mut rel_app_ids: HashMap<String, Vec<String>> = HashMap::new();
+        for app in apps {
+            if let Some(tenant_id) = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &app.own_paths) {
+                rel_app_ids.entry(tenant_id).or_default().push(app.id);
+            }
+        }
+        Ok(rel_app_ids)
+    }
+
+    /// 删除发布系统；若存在关联产品则拒绝删除并返回按租户分组的产品 ID
+    pub async fn delete_checked(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamPublishSystemDeleteResp> {
+        let rel_app_ids = Self::find_rel_app_ids_by_tenant(id, funs, ctx).await?;
+        if !rel_app_ids.is_empty() {
+            return Ok(IamPublishSystemDeleteResp {
+                deleted: false,
+                rel_app_ids,
+            });
+        }
+        Self::delete_item_with_all_rels(id, funs, ctx).await?;
+        Ok(IamPublishSystemDeleteResp {
+            deleted: true,
+            rel_app_ids: HashMap::new(),
+        })
     }
 }

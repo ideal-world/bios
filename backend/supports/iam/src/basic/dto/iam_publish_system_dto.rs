@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
@@ -105,4 +107,13 @@ impl FromQueryResult for IamPublishSystemDetailResp {
             update_time: res.try_get(pre, "update_time")?,
         })
     }
+}
+
+/// 发布系统删除响应
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamPublishSystemDeleteResp {
+    /// 是否已删除
+    pub deleted: bool,
+    /// 关联产品 ID，key 为租户 ID，value 为该租户下的产品 ID 列表（存在关联产品时无法删除）
+    pub rel_app_ids: HashMap<String, Vec<String>>,
 }

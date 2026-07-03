@@ -9,7 +9,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::basic::dto::iam_filer_dto::IamPublishSystemFilterReq;
 use crate::basic::dto::iam_publish_system_dto::{
-    IamPublishSystemAddReq, IamPublishSystemDetailResp, IamPublishSystemModifyReq, IamPublishSystemSummaryResp,
+    IamPublishSystemAddReq, IamPublishSystemDeleteResp, IamPublishSystemDetailResp, IamPublishSystemModifyReq, IamPublishSystemSummaryResp,
 };
 use crate::basic::serv::iam_publish_system_serv::IamPublishSystemServ;
 use crate::iam_constants;
@@ -71,16 +71,18 @@ impl IamCcPublishSystemApi {
     }
 
     /// Delete Publish System By Id
-    /// 删除发布系统
+    /// 删除发布系统；若存在关联产品则拒绝删除并返回关联产品 ID
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamPublishSystemDeleteResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamPublishSystemServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        let result = IamPublishSystemServ::delete_checked(&id.0, &funs, &ctx.0).await?;
+        if result.deleted {
+            funs.commit().await?;
+        }
         ctx.0.execute_task().await?;
-        TardisResp::ok(Void {})
+        TardisResp::ok(result)
     }
 
     /// Paginate Publish Systems
