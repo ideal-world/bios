@@ -45,7 +45,7 @@ impl FlowConfigServ {
 
     // 获取父级配置 租户id:项目id:项目模板id:review_config
     pub async fn get_root_config(root_tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowRootConfigResp>> {
-        let key = if let Some(mut template_id) = FlowModelServ::find_rel_template_id(funs, ctx).await? {
+        let key = if let Some(mut template_id) = FlowModelServ::find_rel_template_ids(funs, ctx).await?.unwrap_or_default().pop() {
             // 引用的模板，则向上获取根模板ID的配置
             while let Some(p_template_id) = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowTemplateTemplate, &template_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id)
             {

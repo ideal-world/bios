@@ -2069,6 +2069,12 @@ impl FlowModelServ {
                                         .unwrap_or_default();
                                     let mut new_vars_collect = vars_collect;
                                     new_vars_collect.extend(child_var_collects);
+                                    // 去重：name相同的元素保留一个
+                                    let mut seen_names = HashSet::new();
+                                    new_vars_collect = new_vars_collect
+                                        .into_iter()
+                                        .filter(|var| seen_names.insert(var.name.clone()))
+                                        .collect();
                                     modify_transition.vars_collect = Some(new_vars_collect);
                                 }
                             }
@@ -2456,9 +2462,9 @@ impl FlowModelServ {
         Ok(())
     }
 
-    pub async fn find_rel_template_id(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+    pub async fn find_rel_template_ids(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
-            Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &RbumRelFromKind::Item, &app_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id))
+            Ok(Some(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &RbumRelFromKind::Item, &app_id, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec()))
         } else {
             Ok(None)
         }

@@ -738,9 +738,12 @@ impl FlowTransitionFrontActionInfoRelevanceRelation {
             }
             FlowTransitionFrontActionInfoRelevanceRelation::IsNullOrEmpty => {
                 let s = left_value.as_str().to_string();
-                s.is_empty() || s == "[]" || s == "{}"
+                s.is_empty() || s == "[]" || s == "{}" || s == "null"
             }
-            FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => !left_value.as_str().to_string().is_empty(),
+            FlowTransitionFrontActionInfoRelevanceRelation::IsNotNull => {
+                let s = left_value.as_str().to_string();
+                !(s.is_empty() || s == "[]" || s == "{}" || s == "null")
+            },
         }
     }
 }

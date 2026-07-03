@@ -217,8 +217,10 @@ impl FlowCiModelApi {
                 // 若不存在目标模板
                 if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(&ctx.0) {
                     // 若当前处于应用层，则需要更新应用的关联模型
-                    if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
-                        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                    if let Some(old_template_ids) = FlowModelServ::find_rel_template_ids(&funs, &ctx.0).await? {
+                        for old_template_id in old_template_ids {
+                            FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                        }
                     }
                     FlowRelServ::add_simple_rel(
                         &FlowRelKind::FlowAppTemplate,
@@ -239,8 +241,10 @@ impl FlowCiModelApi {
         } else {
             // 复制操作，需删除应用和模板的关联关系
             if let Some(app_id) = FlowModelServ::get_app_id_by_ctx(&ctx.0) {
-                if let Some(old_template_id) = FlowModelServ::find_rel_template_id(&funs, &ctx.0).await? {
-                    FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                if let Some(old_template_ids) = FlowModelServ::find_rel_template_ids(&funs, &ctx.0).await? {
+                    for old_template_id in old_template_ids {
+                        FlowRelServ::delete_simple_rel(&FlowRelKind::FlowAppTemplate, &app_id, &old_template_id, &funs, &ctx.0).await?;
+                    }
                 }
             }
         }
