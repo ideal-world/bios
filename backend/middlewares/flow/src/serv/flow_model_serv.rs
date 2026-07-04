@@ -607,30 +607,47 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
         // 同步修改所有引用的下级模型
         if model_detail.template {
-            let child_models = Self::find_detail_items(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        own_paths: Some("".to_string()),
-                        with_sub_own_paths: true,
+            let ctx_clone = ctx.clone();
+            let model_detail_clone = model_detail.clone();
+            let modify_req_clone = modify_req.clone();
+            let flow_model_id = flow_model_id.to_string();
+            let sync_version = modify_req.current_version_id.is_some() && !model_detail.main;
+            tokio::spawn(async move {
+                let funs = flow_constants::get_tardis_inst();
+                match Self::find_detail_items(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        rel_model_ids: Some(vec![flow_model_id]),
                         ..Default::default()
                     },
-                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for child_model in child_models {
-                if modify_req.current_version_id.is_some() && !model_detail.main {
-                    // 当父模板修改启用版本时，为子模板创建对应的版本同时启用，以保证和父模板的配置同步
-                    Self::sync_add_version_child_model(&child_model, &model_detail, funs, ctx).await?;
-                } else {
-                    Self::sync_modify_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
+                    None,
+                    None,
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                {
+                    Ok(child_models) => {
+                        for child_model in child_models {
+                            if sync_version {
+                                // 当父模板修改启用版本时，为子模板创建对应的版本同时启用，以保证和父模板的配置同步
+                                if let Err(e) = Self::sync_add_version_child_model(&child_model, &model_detail_clone, &funs, &ctx_clone).await {
+                                    error!("Flow Model {} sync_add_version_child_model error:{:?}", child_model.id, e);
+                                }
+                            } else if let Err(e) =
+                                Self::sync_modify_child_model(&child_model, &model_detail_clone, &modify_req_clone, &funs, &ctx_clone).await
+                            {
+                                error!("Flow Model {} sync_modify_child_model error:{:?}", child_model.id, e);
+                            }
+                        }
+                    }
+                    Err(e) => error!("Flow Model find child models error:{:?}", e),
                 }
-            }
+            });
         }
 
         // 同步scope_level和disabled字段到相关的version数据

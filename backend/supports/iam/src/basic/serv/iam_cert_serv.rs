@@ -1312,15 +1312,6 @@ impl IamCertServ {
                     Err(e) => error!("account_id {} add_all_porject_auth error:{:?}", account_id_cp, e),
                 }
             });
-            let existing_app_ids: HashSet<String> = old_app_ids.into_iter().collect();
-            let extra_apps = IamAccountServ::get_account_apps_from_all_sets(account_id, &existing_app_ids, funs, ctx).await?;
-            apps.extend(extra_apps);
-            // 将apps中的roles替换为app_role_read
-            let mut app_role_read = HashMap::new();
-            app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
-            for app in apps.iter_mut() {
-                app.roles = app_role_read.clone();
-            }
         }
 
         let account_info = IamAccountInfoResp {
@@ -1387,6 +1378,10 @@ impl IamCertServ {
                 });
             }
         }
+        let mut existing_app_ids: HashSet<String> = account_agg.apps.iter().map(|app| app.app_id.clone()).collect();
+        existing_app_ids.extend(old_app_ids);
+        let extra_apps = IamAccountServ::get_account_apps_from_all_sets(account_id, &existing_app_ids, funs, ctx).await?;
+        apps.extend(extra_apps);
         // 将apps中的roles替换为app_role_read
         for app in apps.iter_mut() {
             app.roles = app_role_read.clone();
