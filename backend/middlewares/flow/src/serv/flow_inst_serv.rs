@@ -173,7 +173,13 @@ impl FlowInstServ {
     }
 
     ///  启动子工作流
-    async fn start_child_flow(root_inst_id: &str, rel_child_objs: &[FlowInstRelChildObj], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn start_child_flow(
+        root_inst_id: &str,
+        rel_child_objs: &[FlowInstRelChildObj],
+        prefetched_vars_map: &HashMap<String, HashMap<String, Value>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let root_inst = Self::get(root_inst_id, funs, ctx).await?;
         let rel_child_model = FlowModelServ::get_item(
             &root_inst.rel_flow_model_id.clone().unwrap_or_default(),
@@ -217,7 +223,7 @@ impl FlowInstServ {
                 true,
                 &rel_child_model,
                 None,
-                None,
+                prefetched_vars_map.get(&rel_child_obj.obj_id).cloned(),
                 funs,
                 ctx,
             )
@@ -464,7 +470,39 @@ impl FlowInstServ {
             )
             .await?
             .pop() {
-                FlowExternalServ::do_approve_notify_changes(&start_req.tag, &inst_id, &start_req.rel_business_obj_id, funs.conf::<FlowConfig>().specifed_approving_state_name.clone(), funs.conf::<FlowConfig>().specifed_approving_state_id.clone(), main_inst.current_state_name.clone().unwrap_or_default(), FlowExternalApproveOp::ApproveStart, ctx, funs).await?;
+                let ctx_clone = ctx.clone();
+                let tag = start_req.tag.clone();
+                let inst_id_cp = inst_id.clone();
+                let rel_business_obj_id = start_req.rel_business_obj_id.clone();
+                let target_state = funs.conf::<FlowConfig>().specifed_approving_state_name.clone();
+                let target_state_id = funs.conf::<FlowConfig>().specifed_approving_state_id.clone();
+                let original_state = main_inst.current_state_name.clone().unwrap_or_default();
+                ctx.add_async_task(Box::new(move || {
+                    Box::pin(async move {
+                        let inst_id_for_log = inst_id_cp.clone();
+                        let task_handle = tokio::spawn(async move {
+                            let funs = flow_constants::get_tardis_inst();
+                            let _ = FlowExternalServ::do_approve_notify_changes(
+                                &tag,
+                                &inst_id_cp,
+                                &rel_business_obj_id,
+                                target_state,
+                                target_state_id,
+                                original_state,
+                                FlowExternalApproveOp::ApproveStart,
+                                &ctx_clone,
+                                &funs,
+                            )
+                            .await;
+                        });
+                        match task_handle.await {
+                            Ok(_) => {}
+                            Err(e) => error!("Flow Instance {} do_approve_notify_changes error:{:?}", inst_id_for_log, e),
+                        }
+                        Ok(())
+                    })
+                }))
+                .await?;
             }
         }
 
@@ -2085,6 +2123,13 @@ impl FlowInstServ {
                     ctx,
                 )
                 .await?;
+                let mut prefetch_items = vec![(flow_inst_detail.tag.clone(), flow_inst_detail.rel_business_obj_id.clone())];
+                if let Some(rel_child_objs) = &artifacts.rel_child_objs {
+                    for rel_child_obj in rel_child_objs {
+                        prefetch_items.push((rel_child_obj.tag.clone(), rel_child_obj.obj_id.clone()));
+                    }
+                }
+                let prefetched_vars_map = Self::batch_prefetch_new_vars(&prefetch_items, funs, ctx).await?;
                 let root_inst_id = Self::start_secondary_flow(
                     &FlowInstStartReq {
                         rel_business_obj_id: flow_inst_detail.rel_business_obj_id.clone(),
@@ -2103,14 +2148,14 @@ impl FlowInstServ {
                     false,
                     &approve_model,
                     Some(approve_model_version.id),
-                    None,
+                    prefetched_vars_map.get(&flow_inst_detail.rel_business_obj_id).cloned(),
                     funs,
                     ctx,
                 )
                 .await?;
-                FlowSearchClient::add_or_modify_instance_search(&root_inst_id, false, funs, ctx).await?;
+                FlowSearchClient::async_add_or_modify_instance_search(&root_inst_id, false, funs, ctx).await?;
                 if let Some(rel_child_objs) = &artifacts.rel_child_objs {
-                    Self::start_child_flow(&root_inst_id, rel_child_objs, funs, ctx).await?;
+                    Self::start_child_flow(&root_inst_id, rel_child_objs, &prefetched_vars_map, funs, ctx).await?;
                 }
             }
             // 触发结束动作时，将对应业务的审批流结束
@@ -2304,6 +2349,15 @@ impl FlowInstServ {
             ctx,
         )
         .await?;
+        let version_transition = FlowTransitionServ::find_detail_items(
+            &FlowTransitionFilterReq {
+                flow_version_id: Some(flow_model_version.id.clone()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let next_flow_transition = Self::do_find_next_transitions(
             flow_inst_detail,
             Some(transfer_req.flow_transition_id.to_string()),
@@ -2318,33 +2372,16 @@ impl FlowInstServ {
         if next_flow_transition.is_none() {
             return Self::gen_transfer_resp(
                 flow_inst_detail,
-                &FlowTransitionServ::find_detail_items(
-                    &FlowTransitionFilterReq {
-                        flow_version_id: Some(flow_model_version.id.clone()),
-                        ..Default::default()
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?
-                .into_iter()
-                .find(|trans| trans.id == transfer_req.flow_transition_id)
-                .map(|tran| tran.from_flow_state_id)
-                .unwrap_or_default(),
+                &version_transition
+                    .iter()
+                    .find(|trans| trans.id == transfer_req.flow_transition_id)
+                    .map(|tran| tran.from_flow_state_id.clone())
+                    .unwrap_or_default(),
                 ctx,
                 funs,
             )
             .await;
         }
-        let version_transition = FlowTransitionServ::find_detail_items(
-            &FlowTransitionFilterReq {
-                flow_version_id: Some(flow_model_version.id.clone()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
 
         let next_flow_transition = next_flow_transition.unwrap_or_default();
         let next_transition_detail = version_transition.iter().find(|trans| trans.id == next_flow_transition.next_flow_transition_id).cloned().unwrap_or_default();
@@ -2885,6 +2922,37 @@ impl FlowInstServ {
                 if let Some(rel_id) = rel_id {
                     result.insert(rel_id, vars);
                 }
+            }
+        }
+        Ok(result)
+    }
+
+    async fn batch_prefetch_new_vars(
+        items: &[(String, String)],
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, HashMap<String, Value>>> {
+        if items.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let mut result = Self::batch_get_new_vars(items, funs, ctx).await?;
+        for (_, obj_id) in items {
+            result.entry(obj_id.clone()).or_default();
+        }
+        let obj_ids = items.iter().map(|(_, obj_id)| obj_id.clone()).unique().collect_vec();
+        let main_insts = Self::find_items(
+            &FlowInstFilterReq {
+                rel_business_obj_ids: Some(obj_ids),
+                main: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        for inst in main_insts {
+            if let Some(vars) = result.get_mut(&inst.rel_business_obj_id) {
+                vars.insert("status".to_string(), json!(inst.current_state_name));
             }
         }
         Ok(result)
@@ -3539,7 +3607,23 @@ impl FlowInstServ {
                     }
                 }
                 if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    let ctx_clone = ctx.clone();
+                    let inst_id = flow_inst_detail.id.clone();
+                    ctx.add_async_task(Box::new(move || {
+                        Box::pin(async move {
+                            let inst_id_cp = inst_id.clone();
+                            let task_handle = tokio::spawn(async move {
+                                let funs = flow_constants::get_tardis_inst();
+                                let _ = FlowReachClient::send_create_approve_instance(&inst_id, &ctx_clone, &funs).await;
+                            });
+                            match task_handle.await {
+                                Ok(_) => {}
+                                Err(e) => error!("Flow Instance {} send_create_approve_instance error:{:?}", inst_id_cp, e),
+                            }
+                            Ok(())
+                        })
+                    }))
+                    .await?;
                 }
             }
             FlowStateKind::Approval => {
@@ -3604,7 +3688,23 @@ impl FlowInstServ {
                     }
                 }
                 if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
-                    FlowReachClient::send_create_approve_instance(&flow_inst_detail.id, ctx, funs).await?;
+                    let ctx_clone = ctx.clone();
+                    let inst_id = flow_inst_detail.id.clone();
+                    ctx.add_async_task(Box::new(move || {
+                        Box::pin(async move {
+                            let inst_id_cp = inst_id.clone();
+                            let task_handle = tokio::spawn(async move {
+                                let funs = flow_constants::get_tardis_inst();
+                                let _ = FlowReachClient::send_create_approve_instance(&inst_id, &ctx_clone, &funs).await;
+                            });
+                            match task_handle.await {
+                                Ok(_) => {}
+                                Err(e) => error!("Flow Instance {} send_create_approve_instance error:{:?}", inst_id_cp, e),
+                            }
+                            Ok(())
+                        })
+                    }))
+                    .await?;
                 }
             }
             FlowStateKind::Branch => {}
