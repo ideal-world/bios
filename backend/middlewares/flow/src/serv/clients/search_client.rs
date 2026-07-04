@@ -383,7 +383,7 @@ impl FlowSearchClient {
                     tag: table.to_string(),
                     query: SearchItemQueryReq {
                         kinds: Some(vec![item_kind.clone()]),
-                        keys: Some(vec![TrimString(main_inst.rel_business_obj_id.clone())]),
+                        keys: None,
                         owners: None,
                         own_paths: None,
                         rlike_own_paths: None,
@@ -394,7 +394,11 @@ impl FlowSearchClient {
                         in_q_content: Some(true),
                         q: None,
                         q_scope: None,
-                        ext: None,
+                        ext: Some(vec![BasicQueryCondInfo {
+                            field: "key".to_string(),
+                            op: BasicQueryOpKind::In,
+                            value: json!([main_inst.rel_business_obj_id.clone()]),
+                        }]),
                     },
                     ctx: SearchItemSearchCtxReq {
                         accounts: None,

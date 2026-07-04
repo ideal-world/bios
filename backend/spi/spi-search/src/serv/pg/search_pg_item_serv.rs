@@ -180,7 +180,11 @@ pub async fn save(tag: &str, save_req: &mut SearchSaveItemReq, funs: &TardisFuns
             tag: tag.to_string(),
             ctx: SearchItemSearchCtxReq::default(),
             query: SearchItemQueryReq {
-                keys: Some(vec![save_req.key.clone()]),
+                ext: Some(vec![BasicQueryCondInfo {
+                    field: "key".to_string(),
+                    op: BasicQueryOpKind::In,
+                    value: json!([save_req.key.to_string()]),
+                }]),
                 ..Default::default()
             },
             adv_by_or: None,
@@ -273,7 +277,11 @@ pub async fn batch_save(tag: &str, only_modify: Option<bool>, batch_req: &mut [S
                 tag: tag.to_string(),
                 ctx: SearchItemSearchCtxReq::default(),
                 query: SearchItemQueryReq {
-                    keys: Some(batch_req.iter().map(|req| req.key.clone()).collect()),
+                    ext: Some(vec![BasicQueryCondInfo {
+                        field: "key".to_string(),
+                        op: BasicQueryOpKind::In,
+                        value: json!(batch_req.iter().map(|req| req.key.to_string()).collect::<Vec<_>>()),
+                    }]),
                     ..Default::default()
                 },
                 adv_by_or: None,
