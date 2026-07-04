@@ -296,7 +296,7 @@ impl IamCertOAuth2ServiceServ {
         let access_token_expire_sec = conf.expire_sec;
 
         // 7. 存储访问令牌（复用现有的令牌缓存系统）
-        IamIdentCacheServ::add_token(&access_token, &IamCertTokenKind::TokenOauth2, &code_info.ctx.owner, None, access_token_expire_sec, 1, funs).await?;
+        IamIdentCacheServ::add_token(&access_token, &IamCertTokenKind::TokenOauth2, &code_info.ctx.owner, None, access_token_expire_sec, conf.coexist_num, funs).await?;
 
         // 8. 存储刷新令牌
         let refresh_token_info = IamOAuth2RefreshTokenInfo {
@@ -345,19 +345,21 @@ impl IamCertOAuth2ServiceServ {
             return Err(funs.err().unauthorized("oauth2", "refresh_token", "refresh_token_expired", "401-oauth2-refresh-token-expired"));
         }
 
-        // 4. 生成新的访问令牌
-        let new_access_token = TardisFuns::crypto.key.generate_token()?;
-        let iam_config = funs.conf::<IamConfig>();
-        let access_token_expire_sec = iam_config.oauth2_access_token_default_expire_sec;
+        // 4. 获取凭证配置
+        let conf = Self::get_cert_conf_by_client_id(&refresh_token_info.client_id, funs).await?;
+        let access_token_expire_sec = conf.expire_sec;
 
-        // 5. 存储新的访问令牌
+        // 5. 生成新的访问令牌
+        let new_access_token = TardisFuns::crypto.key.generate_token()?;
+
+        // 6. 存储新的访问令牌
         IamIdentCacheServ::add_token(
             &new_access_token,
             &IamCertTokenKind::TokenOauth2,
             &refresh_token_info.user_id,
             None,
-            access_token_expire_sec as i64,
-            1,
+            access_token_expire_sec,
+            conf.coexist_num,
             funs,
         )
         .await?;
