@@ -86,10 +86,15 @@ impl SpiSearchClient {
     }
 
     /// Batch save
-    pub async fn batch_save(tag: &str, batch_req: &Vec<SearchSaveItemReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn batch_save(tag: &str, only_modify: Option<bool>, batch_req: &Vec<SearchSaveItemReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let search_url = BaseSpiClient::module_url(InvokeModuleKind::Search, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
-        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/batch/save"), batch_req, headers.clone()).await?;
+
+        let mut url = format!("{search_url}/ci/item/{tag}/batch/save");
+        if let Some(only_modify) = only_modify {
+            url = format!("{url}?only_modify={only_modify}");
+        }
+        funs.web_client().put_obj_to_str(&url, batch_req, headers.clone()).await?;
         Ok(())
     }
 

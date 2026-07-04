@@ -340,7 +340,7 @@ impl FlowSearchClient {
                     });
                 }
                 if !batch_req.is_empty() {
-                    SpiSearchClient::batch_save(table, &batch_req, funs, ctx).await?;
+                    SpiSearchClient::batch_save(table, Some(true), &batch_req, funs, ctx).await?;
                 }
             }
         }
@@ -465,7 +465,7 @@ impl FlowSearchClient {
             }
         }
         if !batch_req.is_empty() {
-            SpiSearchClient::batch_save(SEARCH_REVIEW_TAG, &batch_req, funs, ctx).await?;
+            SpiSearchClient::batch_save(SEARCH_REVIEW_TAG, None, &batch_req, funs, ctx).await?;
         }
 
         Ok(())
@@ -823,7 +823,7 @@ impl FlowSearchClient {
         }
         
         if !batch_req.is_empty() {
-            SpiSearchClient::batch_save(SEARCH_INSTANCE_TAG, &batch_req, funs, ctx).await?;
+            SpiSearchClient::batch_save(SEARCH_INSTANCE_TAG, None, &batch_req, funs, ctx).await?;
         }
         
         Ok(())

@@ -234,9 +234,15 @@ impl BasicQueryCondInfo {
     }
 
     fn compare(left: &Value, right: &Value) -> Option<Ordering> {
-        let lhs = Self::as_number(left)?;
-        let rhs = Self::as_number(right)?;
-        lhs.partial_cmp(&rhs)
+        if let (Some(lhs), Some(rhs)) = (Self::as_number(left), Self::as_number(right)) {
+            return lhs.partial_cmp(&rhs);
+        }
+
+        if let (Some(lhs), Some(rhs)) = (left.as_str(), right.as_str()) {
+            return lhs.partial_cmp(rhs);
+        }
+
+        None
     }
 
     fn value_gt(left: &Value, right: &Value) -> bool {
