@@ -15,7 +15,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Pending;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumScopeLevelKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
@@ -104,9 +104,21 @@ impl IamCertOAuth2Serv {
     }
 
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertConfOAuth2Resp> {
-        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx)
-            .await
-            .map(|i: bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp| TardisFuns::json.str_to_obj(&i.ext))?
+        RbumCertConfServ::get_rbum(
+            id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+        .map(|i: bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp| TardisFuns::json.str_to_obj(&i.ext))?
     }
 
     pub async fn add_or_modify_cert(
@@ -179,6 +191,11 @@ impl IamCertOAuth2Serv {
     pub async fn get_cert_rel_account_by_open_id(open_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let result = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ak: Some(open_id.to_string()),
                 ..Default::default()
@@ -195,10 +212,9 @@ impl IamCertOAuth2Serv {
     }
 
     pub async fn get_or_add_account(cert_supplier: IamCertOAuth2Supplier, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
-        let cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
+        let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
         let mut mock_ctx = TardisContext {
-            own_paths: tenant_id.to_string(),
+            own_paths: "".to_string(),
             ..Default::default()
         };
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, &mock_ctx).await?;
@@ -276,8 +292,7 @@ impl IamCertOAuth2Serv {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        let cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
+        let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
         let mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
@@ -316,6 +331,21 @@ impl IamCertOAuth2Serv {
         )
         .await?;
         Ok(open_id.to_string())
+    }
+
+    /// 查找 OAuth2 cert_conf_id：优先租户级，找不到时回退到平台级。
+    async fn get_oauth2_cert_conf_id(cert_supplier: &IamCertOAuth2Supplier, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<String> {
+        let kind = IamCertExtKind::OAuth2.to_string();
+        let supplier_str = cert_supplier.to_string();
+        let tenant_opt = if tenant_id.is_empty() { None } else { Some(tenant_id.to_string()) };
+        // 先查租户级
+        if let Some(ref tid) = tenant_opt {
+            if let Ok(id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier_str, Some(tid.clone()), funs).await {
+                return Ok(id);
+            }
+        }
+        // 回退到平台级
+        IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier_str, None, funs).await
     }
 
     fn get_access_token_func(supplier: IamCertOAuth2Supplier) -> Box<dyn IamCertOAuth2Spi> {
@@ -370,8 +400,7 @@ impl IamCertOAuth2Serv {
     ///
     /// 用于网关/调用方在 Provider access_token 过期后刷新令牌。返回最新的 token 信息。
     pub async fn refresh_provider_token(cert_supplier: IamCertOAuth2Supplier, account_id: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
-        let cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
+        let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
         let mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
@@ -403,8 +432,7 @@ impl IamCertOAuth2Serv {
     ///
     /// 返回 Provider 原始用户信息 JSON，供网关/调用方使用。
     pub async fn get_provider_user_info(cert_supplier: IamCertOAuth2Supplier, account_id: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<tardis::serde_json::Value> {
-        let cert_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
+        let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
         let mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
