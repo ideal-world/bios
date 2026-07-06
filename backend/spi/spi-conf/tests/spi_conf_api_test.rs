@@ -46,7 +46,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
             }),
         )
         .await;
-    log::info!("username: {username}, password: {password}");
+    log::info!("username: {username}, password_len: {}", password.len());
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "app001".to_string(),
@@ -491,7 +491,7 @@ pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
 
 pub async fn test_register(client: &mut TestHttpClient) -> TardisResult<()> {
     let RegisterResponse { username, password } = client.post("/ci/auth/register", &json!({})).await;
-    log::info!("username: {username}, password: {password}");
+    log::info!("username: {username}, password_len: {}", password.len());
     let resp = client.post_resp::<_, RegisterResponse>("/ci/auth/register", &json!({ "username": username })).await;
     // should be 409 conflict
     assert!(resp.code.contains("409"));

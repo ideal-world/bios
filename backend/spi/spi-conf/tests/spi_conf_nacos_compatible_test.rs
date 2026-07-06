@@ -47,7 +47,8 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
             }),
         )
         .await;
-    log::info!("username: {username}, password: {password}");
+    // Avoid leaking credentials in CI logs; log only the username and password length.
+    log::info!("username: {username}, password_len: {}", password.len());
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "app001".to_string(),

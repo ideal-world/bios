@@ -67,9 +67,13 @@ pub async fn decrypt_req(
         )
     })?;
     let sm_keys = SM2_KEYS.read().await;
-    let input_keys = sm_keys
-        .as_ref()
-        .expect("[Auth] Encrypted request: sm keys none")
+    let sm_keys_ref = sm_keys.as_ref().ok_or_else(|| {
+        TardisError::internal_error(
+            "[Auth] Encrypted request: sm keys not initialized",
+            "500-auth-crypto-not-initialized",
+        )
+    })?;
+    let input_keys = sm_keys_ref
         .1
         .decrypt(&input_keys)
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: decrypt error:{e}"), "401-auth-req-crypto-error"))?;
