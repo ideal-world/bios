@@ -22,6 +22,9 @@ pub struct IamAppAggAddReq {
 
     pub admin_ids: Option<Vec<String>>,
 
+    /// 绑定的发布系统 ID 列表
+    pub publish_system_ids: Option<Vec<String>>,
+
     pub disabled: Option<bool>,
     pub set_cate_id: Option<String>,
 
@@ -80,6 +83,8 @@ pub struct IamAppAggModifyReq {
     pub contact_phone: Option<String>,
 
     pub admin_ids: Option<Vec<String>>,
+    /// 绑定的发布系统 ID 列表
+    pub publish_system_ids: Option<Vec<String>>,
     pub set_cate_id: Option<String>,
 
     pub sync_apps_group: Option<bool>,
@@ -143,6 +148,16 @@ pub struct IamAppDetailResp {
     pub contact_phone: String,
 
     pub kind: IamAppKind,
+}
+
+/// Batch modify app set category request
+///
+/// 批量修改应用集合分类请求
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAppBatchModifySetCateReq {
+    pub app_ids: Vec<String>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: String,
 }
 
 /// Transfer ownership request for app

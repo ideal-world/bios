@@ -21,6 +21,10 @@ pub struct IamConfig {
     pub in_event: bool,
     pub invoke: InvokeConfig,
     pub app_res_data_guard_code: String,
+    /// Platform-level virtual root node id for merged apps tree
+    pub platform_apps_tree_root_id: String,
+    /// Platform-level virtual root node display name for merged apps tree
+    pub platform_apps_tree_root_name: String,
     // token -> (token_kind, account_id)
     // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
     pub cache_key_token_info_: String,
@@ -177,6 +181,7 @@ pub struct IamSpiConfig {
     pub search_url: String,
     pub log_url: String,
     pub search_account_tag: String,
+    pub search_publish_system_tag: String,
     pub stats_orgs_prefix: String,
     pub kv_url: String,
     pub kv_tenant_prefix: String,
@@ -196,6 +201,7 @@ impl Default for IamSpiConfig {
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             search_account_tag: "iam_account".to_string(),
+            search_publish_system_tag: "iam_publish_system".to_string(),
             stats_orgs_prefix: "iam_orgs".to_string(),
             kv_url: "http://127.0.0.1:8080/spi-kv".to_string(),
             kv_tenant_prefix: "iam_tenant".to_string(),
@@ -217,6 +223,8 @@ impl Default for IamConfig {
             in_event: false,
             invoke: InvokeConfig::default(),
             app_res_data_guard_code: "5/*/app*data_guard*all".to_string(),
+            platform_apps_tree_root_id: String::new(),
+            platform_apps_tree_root_name: "平台".to_string(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_oauth2_provider_token_: "iam:cache:oauth2:provider_token:".to_string(),
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
@@ -321,6 +329,7 @@ pub struct BasicInfo {
     pub kind_res_id: String,
     pub kind_sub_deploy_id: String,
     pub kind_third_party_app_id: String,
+    pub kind_publish_system_id: String,
     pub domain_iam_id: String,
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
@@ -368,6 +377,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_kind_res_id(&self) -> String;
     fn iam_basic_kind_sub_deploy_id(&self) -> String;
     fn iam_basic_kind_third_party_app_id(&self) -> String;
+    fn iam_basic_kind_publish_system_id(&self) -> String;
     fn iam_basic_domain_iam_id(&self) -> String;
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
@@ -405,6 +415,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_kind_third_party_app_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.kind_third_party_app_id.clone())
+    }
+
+    fn iam_basic_kind_publish_system_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_publish_system_id.clone())
     }
 
     fn iam_basic_domain_iam_id(&self) -> String {

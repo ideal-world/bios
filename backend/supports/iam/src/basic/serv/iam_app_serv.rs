@@ -27,6 +27,7 @@ use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_publish_system_serv::IamPublishSystemServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -225,6 +226,9 @@ impl IamAppServ {
                 }
             }
         }
+        if let Some(publish_system_ids) = &add_req.publish_system_ids {
+            Self::add_rel_publish_system_all(&app_id, publish_system_ids.clone(), true, funs, &app_ctx).await?;
+        }
         //refresh ctx
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
         let _ = IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await;
@@ -346,6 +350,33 @@ impl IamAppServ {
                 .await;
             }
         }
+        if let Some(publish_system_ids) = &modify_req.publish_system_ids {
+            Self::add_rel_publish_system_all(id, publish_system_ids.clone(), true, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn batch_modify_set_cate(app_ids: &[String], set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+        let apps_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, funs, &tenant_ctx).await?;
+        for app_id in app_ids {
+            let set_items = IamSetServ::find_set_items(Some(apps_set_id.clone()), None, Some(app_id.to_owned()), None, true, Some(true), funs, &tenant_ctx).await?;
+            let sort = set_items.first().map(|set_item| set_item.sort).unwrap_or(0);
+            for set_item in set_items {
+                IamSetServ::delete_set_item(&set_item.id, funs, &tenant_ctx).await?;
+            }
+            IamSetServ::add_set_item(
+                &IamSetItemAddReq {
+                    set_id: apps_set_id.clone(),
+                    set_cate_id: set_cate_id.to_string(),
+                    sort,
+                    rel_rbum_item_id: app_id.to_string(),
+                },
+                funs,
+                &tenant_ctx,
+            )
+            .await?;
+        }
         Ok(())
     }
 
@@ -417,6 +448,88 @@ impl IamAppServ {
             ..ctx.clone()
         };
         IamRelServ::count_to_rels(&IamRelKind::IamAppTenant, app_id, funs, &mock_ctx).await
+    }
+
+    pub async fn add_rel_publish_system_all(
+        app_id: &str,
+        publish_system_ids: Vec<String>,
+        ignore_exist_error: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let original_publish_system_ids = Self::find_id_rel_publish_system(app_id, None, None, funs, ctx).await?;
+        let original_publish_system_ids = HashSet::from_iter(original_publish_system_ids.iter().cloned());
+        for publish_system_id in publish_system_ids.clone() {
+            if original_publish_system_ids.contains(&publish_system_id) {
+                continue;
+            }
+            Self::add_rel_publish_system(app_id, &publish_system_id, ignore_exist_error, funs, ctx).await?;
+        }
+        for publish_system_id in original_publish_system_ids.difference(&publish_system_ids.iter().cloned().collect::<HashSet<String>>()) {
+            Self::delete_rel_publish_system(app_id, publish_system_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn add_rel_publish_system(app_id: &str, publish_system_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_rel_publish_system_tenant_in_ctx(publish_system_id, funs, ctx).await?;
+        IamRelServ::add_simple_rel(
+            &IamRelKind::IamAppPublishSystem,
+            app_id,
+            publish_system_id,
+            None,
+            None,
+            ignore_exist_error,
+            false,
+            funs,
+            ctx,
+        )
+        .await?;
+        IamSearchClient::async_add_or_modify_publish_system_search(publish_system_id, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn delete_rel_publish_system(app_id: &str, publish_system_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAppPublishSystem, app_id, publish_system_id, funs, ctx).await?;
+        IamSearchClient::async_add_or_modify_publish_system_search(publish_system_id, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn find_id_rel_publish_system(
+        app_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_from_id_rels(&IamRelKind::IamAppPublishSystem, true, app_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    pub async fn count_rel_publish_system(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        IamRelServ::count_to_rels(&IamRelKind::IamAppPublishSystem, app_id, funs, &mock_ctx).await
+    }
+
+    /// 校验发布系统所属分公司（租户）是否在当前上下文的 own_paths 范围内
+    async fn check_rel_publish_system_tenant_in_ctx(publish_system_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_ids = IamPublishSystemServ::find_id_rel_tenant(publish_system_id, None, None, funs, ctx).await?;
+        if ctx.own_paths.is_empty() {
+            return Ok(());
+        }
+        for rel_tenant_id in tenant_ids {
+            if ctx.own_paths == rel_tenant_id || ctx.own_paths.starts_with(&format!("{rel_tenant_id}/")) {
+                return Ok(());
+            }
+        }
+        Err(funs.err().unauthorized(
+            &Self::get_obj_name(),
+            "add_rel_publish_system",
+            "publish system tenant not in current context own_paths",
+            "403-iam-app-publish-system-tenant-out-of-scope",
+        ))
     }
 
     pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Option<RbumItemRelFilterReq>> {

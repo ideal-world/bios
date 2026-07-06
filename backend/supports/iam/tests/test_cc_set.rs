@@ -1271,6 +1271,23 @@ pub async fn test_bind_platform_to_tenant_node(
     resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 0);
 
+    // sys cc 点击跨租户根节点 xxx2 -> 应返回当前节点及关联租户的一级组织
+    let resp = IamSetServ::get_tree(
+        &sys_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![set_cate_sys_xxx2.sys_code.clone()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    assert!(resp.main.iter().any(|r| r.name == "xxx2公司" && r.rel.is_some()));
+    assert!(resp.main.iter().any(|r| r.name == "t2_xxx公司" && r.ext.contains("set_id")));
+
     // sys cc查询第二层 ->t2_xxx xxx2_sub
     let query_ctx = IamCertServ::try_use_tenant_ctx(sys_context.clone(), set_cate_sys_xxx2.rel.clone())?;
     let query_code = if query_ctx.own_paths.is_empty() {

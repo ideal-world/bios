@@ -1082,6 +1082,7 @@ impl IamAccountServ {
     ///
     /// 查询账号关联的所有 Apps 类型的 Set（排除有层级关系的），
     /// 获取每个 Set 中的应用信息，过滤掉已在 `existing_app_ids` 中的应用。
+    /// 若关联的 Set 中存在平台层 Set，则默认拥有各租户 Set 下全部应用的权限。
     pub async fn get_account_apps_from_all_sets(
         account_id: &str,
         existing_app_ids: &HashSet<String>,
@@ -1091,17 +1092,43 @@ impl IamAccountServ {
         let sets = IamSetServ::find_sets_by_account_id_and_kind(account_id, &IamSetKind::Apps, funs, ctx).await?;
         let mut seen_ids = HashSet::new();
         let sets: Vec<_> = sets.into_iter().filter(|set| !set.own_paths.contains('/')).filter(|set| seen_ids.insert(set.id.clone())).collect();
+        let has_platform_set = IamSetServ::account_has_platform_apps_auth(account_id, funs, ctx).await?;
 
         let mut apps = Vec::new();
         let mut app_role_read = HashMap::new();
         app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
 
         for set in sets {
+            // 平台层 Set 仅作为"拥有全部应用权限"的标记，实际应用分布在各租户 Set 中
+            if has_platform_set && set.own_paths.is_empty() {
+                continue;
+            }
             let tenant_ctx = TardisContext {
                 own_paths: set.own_paths.clone(),
                 ..ctx.clone()
             };
-            let app_items = IamSetServ::get_app_with_auth_by_account(&set.id, account_id, funs, &tenant_ctx).await?;
+            let app_items = if has_platform_set {
+                IamAppServ::find_items(
+                    &IamAppFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            enabled: Some(true),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    &tenant_ctx,
+                )
+                .await?
+                .into_iter()
+                .map(|app| (app.id, app.name))
+                .collect()
+            } else {
+                IamSetServ::get_app_with_auth_by_account(&set.id, account_id, funs, &tenant_ctx).await?
+            };
 
             for (app_id, app_name) in app_items {
                 if existing_app_ids.contains(&app_id) {

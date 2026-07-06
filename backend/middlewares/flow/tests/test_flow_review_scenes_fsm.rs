@@ -342,6 +342,7 @@ pub async fn test(
     //             flow_inst_id: review_inst_id.clone(),
     //             vars: None,
     //             sys_states: None,
+    //             visibility_vars: None,
     //         }],
     //     )
     //     .await;
@@ -654,6 +655,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 set_cate_id: None,
                 kind: None,
                 sync_apps_group: None,
+                publish_system_ids: None,
             },
         )
         .await;

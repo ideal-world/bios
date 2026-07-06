@@ -167,6 +167,27 @@ pub struct IamThirdPartyAppFilterReq {
     pub sort: Option<i64>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct IamPublishSystemFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
+    pub sys_ident: Option<String>,
+}
+
+impl RbumItemFilterFetcher for IamPublishSystemFilterReq {
+    fn basic(&self) -> &RbumBasicFilterReq {
+        &self.basic
+    }
+    fn rel(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel
+    }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
+    }
+}
+
 impl RbumItemFilterFetcher for IamThirdPartyAppFilterReq {
     fn basic(&self) -> &RbumBasicFilterReq {
         &self.basic

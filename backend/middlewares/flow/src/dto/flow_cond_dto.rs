@@ -1,12 +1,14 @@
 //! Basic DTOs
 //!
 //! 基础的DTOs
+use core::cmp::Ordering;
 use std::collections::HashMap;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tardis::chrono::DateTime;
+use tardis::log::warn;
 use tardis::serde_json::json;
 use tardis::TardisFuns;
 use tardis::{basic::result::TardisResult, serde_json::Value};
@@ -16,7 +18,7 @@ use tardis::web::poem_openapi;
 /// Basic query condition object
 ///
 /// 基础的查询条件对象
-#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, poem_openapi::Object)]
 pub struct BasicQueryCondInfo {
     /// Query field
     #[oai(validator(min_length = "1"))]
@@ -38,154 +40,44 @@ impl BasicQueryCondInfo {
         let is_match = conds.iter().any(|and_conds| {
             and_conds.iter().all(|cond| {
                 let field = if cond.field.contains("custom_") {
-                    cond.field[7..cond.field.len()].to_string()
+                    // 先尝试用原始字段名（带 custom_ 前缀）匹配，若匹配不到则使用去掉前缀的值匹配
+                    let original_field = cond.field[7..cond.field.len()].to_string();
+                    if check_vars.contains_key(&original_field) {
+                        original_field
+                    } else {
+                        cond.field.clone()
+                    }
                 } else {
                     cond.field.clone()
                 };
+                warn!("field: {:?}, cond:{:?}, check_vars:{:?}", field, cond, check_vars);
                 match check_vars.get(&field) {
                     Some(check_val) => match &cond.op {
                         BasicQueryOpKind::Eq => {
                             if cond.value.is_array() {
                                 cond.value.as_array().cloned().unwrap_or(vec![]).first().cloned().unwrap_or(json!("")) == *check_val
                             } else {
-                                &cond.value == check_val
+                                Self::value_eq(&cond.value, check_val)
                             }
                         }
                         BasicQueryOpKind::Ne => {
                             if cond.value.is_array() {
                                 cond.value.as_array().cloned().unwrap_or(vec![]).first().cloned().unwrap_or(json!("")) != *check_val
                             } else {
-                                &cond.value != check_val
+                                !Self::value_eq(&cond.value, check_val)
                             }
                         }
                         BasicQueryOpKind::Gt => {
-                            if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0)
-                                    < if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_f64().unwrap_or(0.0)
-                                    } else {
-                                        0.0
-                                    }
-                            } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0)
-                                    < if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                    } else if check_val.is_i64() {
-                                        check_val.as_i64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0)
-                                    < if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_u64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_string() {
-                                cond.value.as_str().unwrap_or("") < check_val.as_str().unwrap_or("")
-                            } else {
-                                false
-                            }
+                            Self::value_gt(check_val, &cond.value)
                         }
                         BasicQueryOpKind::Ge => {
-                            if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0)
-                                    <= if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_f64().unwrap_or(0.0)
-                                    } else {
-                                        0.0
-                                    }
-                            } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0)
-                                    <= if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                    } else if check_val.is_i64() {
-                                        check_val.as_i64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0)
-                                    <= if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_u64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_string() {
-                                cond.value.as_str().unwrap_or("") <= check_val.as_str().unwrap_or("")
-                            } else {
-                                false
-                            }
+                            Self::value_ge(check_val, &cond.value)
                         }
                         BasicQueryOpKind::Lt => {
-                            if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0)
-                                    > if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_f64().unwrap_or(0.0)
-                                    } else {
-                                        0.0
-                                    }
-                            } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0)
-                                    > if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                    } else if check_val.is_i64() {
-                                        check_val.as_i64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0)
-                                    > if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_u64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_string() {
-                                cond.value.as_str().unwrap_or("") > check_val.as_str().unwrap_or("")
-                            } else {
-                                false
-                            }
+                            Self::value_lt(check_val, &cond.value)
                         }
                         BasicQueryOpKind::Le => {
-                            if cond.value.is_f64() {
-                                cond.value.as_f64().unwrap_or(0.0)
-                                    >= if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<f64>().unwrap_or(0.0)
-                                    } else if check_val.is_f64() {
-                                        check_val.as_f64().unwrap_or(0.0)
-                                    } else {
-                                        0.0
-                                    }
-                            } else if cond.value.is_i64() {
-                                cond.value.as_i64().unwrap_or(0)
-                                    >= if check_val.is_string() {
-                                        check_val.as_str().unwrap_or("").parse::<i64>().unwrap_or(0)
-                                    } else if check_val.is_i64() {
-                                        check_val.as_i64().unwrap_or(0)
-                                    } else {
-                                        0
-                                    }
-                            } else if cond.value.is_u64() {
-                                cond.value.as_u64().unwrap_or(0) >= check_val.as_str().unwrap_or("").parse::<u64>().unwrap_or(0)
-                            } else if cond.value.is_string() {
-                                cond.value.as_str().unwrap_or("") >= check_val.as_str().unwrap_or("")
-                            } else {
-                                false
-                            }
+                            Self::value_le(check_val, &cond.value)
                         }
                         BasicQueryOpKind::Like | BasicQueryOpKind::LLike | BasicQueryOpKind::RLike => {
                             check_val.as_str().map(|check_val_str| cond.value.as_str().map(|cond_val_str| check_val_str.contains(cond_val_str)).unwrap_or(false)).unwrap_or(false)
@@ -245,9 +137,15 @@ impl BasicQueryCondInfo {
                                 !check_val_arr.contains(&cond.value)
                             }
                         }
-                        BasicQueryOpKind::IsNull => check_val.as_str().unwrap_or("").is_empty(),
-                        BasicQueryOpKind::IsNotNull => !check_val.as_str().unwrap_or("").is_empty(),
-                        BasicQueryOpKind::IsNullOrEmpty => check_val.as_str().unwrap_or("").is_empty(),
+                        BasicQueryOpKind::IsNull => {
+                            Self::is_null_or_empty(check_val)
+                        },
+                        BasicQueryOpKind::IsNotNull => {
+                            !Self::is_null_or_empty(check_val)
+                        },
+                        BasicQueryOpKind::IsNullOrEmpty => {                            
+                            Self::is_null_or_empty(check_val)
+                        },
                     },
                     None => cond.op == BasicQueryOpKind::IsNullOrEmpty || cond.op == BasicQueryOpKind::IsNull,
                 }
@@ -289,6 +187,78 @@ impl BasicQueryCondInfo {
             }
         }
         Ok(result)
+    }
+
+    fn is_null_or_empty(value: &Value) -> bool {
+        warn!("is_null_or_empty value:{:?}", value);
+        match value {
+            Value::Null => true,
+            Value::String(s) => s.is_empty(),
+            Value::Array(arr) => arr.is_empty(),
+            Value::Object(map) => map.is_empty(),
+            _ => false,
+        }
+    }
+
+    fn value_eq(left: &Value, right: &Value) -> bool {
+        if left == right {
+            return true;
+        }
+
+        match (left, right) {
+            // String <-> Number
+            (Value::String(s), Value::Number(n))
+            | (Value::Number(n), Value::String(s)) => {
+                s.parse::<f64>()
+                    .ok()
+                    .zip(n.as_f64())
+                    .is_some_and(|(lhs, rhs)| lhs == rhs)
+            }
+
+            // String <-> Bool
+            (Value::String(s), Value::Bool(b))
+            | (Value::Bool(b), Value::String(s)) => {
+                s.eq_ignore_ascii_case(&b.to_string())
+            }
+
+            _ => false,
+        }
+    }
+
+    fn as_number(value: &Value) -> Option<f64> {
+        match value {
+            Value::Number(n) => n.as_f64(),
+            Value::String(s) => s.trim().parse::<f64>().ok(),
+            _ => None,
+        }
+    }
+
+    fn compare(left: &Value, right: &Value) -> Option<Ordering> {
+        if let (Some(lhs), Some(rhs)) = (Self::as_number(left), Self::as_number(right)) {
+            return lhs.partial_cmp(&rhs);
+        }
+
+        if let (Some(lhs), Some(rhs)) = (left.as_str(), right.as_str()) {
+            return lhs.partial_cmp(rhs);
+        }
+
+        None
+    }
+
+    fn value_gt(left: &Value, right: &Value) -> bool {
+        Self::compare(left, right) == Some(Ordering::Greater)
+    }
+
+    fn value_lt(left: &Value, right: &Value) -> bool {
+        Self::compare(left, right) == Some(Ordering::Less)
+    }
+
+    fn value_ge(left: &Value, right: &Value) -> bool {
+        matches!(Self::compare(left, right), Some(Ordering::Greater | Ordering::Equal))
+    }
+
+    fn value_le(left: &Value, right: &Value) -> bool {
+        matches!(Self::compare(left, right), Some(Ordering::Less | Ordering::Equal))
     }
 }
 
