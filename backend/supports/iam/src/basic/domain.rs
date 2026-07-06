@@ -7,4 +7,5 @@ pub mod iam_sub_deploy;
 pub mod iam_sub_deploy_host;
 pub mod iam_sub_deploy_license;
 pub mod iam_tenant;
+pub mod iam_publish_system;
 pub mod iam_third_party_app;

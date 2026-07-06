@@ -26,7 +26,7 @@ spi_dispatch_service! {
         add(add_req: &mut SearchItemAddReq) -> TardisResult<()>;
         modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq) -> TardisResult<()>;
         save(tag: &str, save_req: &mut SearchSaveItemReq) -> TardisResult<()>;
-        batch_save(tag: &str, batch_req: &mut Vec<SearchSaveItemReq>) -> TardisResult<()>;
+        batch_save(tag: &str, only_modify: Option<bool>, batch_req: &mut Vec<SearchSaveItemReq>) -> TardisResult<()>;
         delete(tag: &str, key: &str) -> TardisResult<()>;
         batch_delete(tag: &str, key: Vec<String>) -> TardisResult<()>;
         delete_by_ownership(tag: &str, own_paths: &str) -> TardisResult<()>;

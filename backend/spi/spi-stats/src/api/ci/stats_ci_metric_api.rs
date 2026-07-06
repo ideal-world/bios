@@ -1,3 +1,4 @@
+use tardis::log::warn;
 use tardis::web::context_extractor::TardisContextExtractor;
 
 use tardis::web::poem_openapi;
@@ -20,6 +21,7 @@ impl StatsCiMetricApi {
     /// 查询指标
     #[oai(path = "/", method = "put")]
     async fn query_metrics(&self, query_req: Json<StatsQueryMetricsReq>, ctx: TardisContextExtractor) -> TardisApiResult<StatsQueryMetricsResp> {
+        warn!("query_metrics req: {:?}", query_req.0);
         let funs = crate::get_tardis_inst();
         let resp = stats_metric_serv::query_metrics(&query_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)

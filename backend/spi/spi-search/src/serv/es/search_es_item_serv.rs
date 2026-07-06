@@ -220,7 +220,7 @@ pub async fn save(_tag: &str, _save_req: &mut SearchSaveItemReq, funs: &TardisFu
     Err(funs.err().format_error("search_es_item_serv", "save", "not supports", "500-not-supports"))
 }
 
-pub async fn batch_save(_tag: &str, _batch_req: &mut Vec<SearchSaveItemReq>, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+pub async fn batch_save(_tag: &str, _only_modify: Option<bool>, _batch_req: &mut Vec<SearchSaveItemReq>, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
     Err(funs.err().format_error("search_es_item_serv", "batch_save", "not supports", "500-not-supports"))
 }
 

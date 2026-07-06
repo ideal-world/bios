@@ -121,6 +121,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 set_cate_id: None,
                 kind: None,
                 sync_apps_group: None,
+                publish_system_ids: None,
             },
         )
         .await;

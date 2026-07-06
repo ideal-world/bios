@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppAggModifyReq};
+use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppAggModifyReq, IamAppBatchModifySetCateReq};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 
@@ -266,6 +266,20 @@ impl IamCiAppApi {
         .await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
+    }
+
+    /// Batch Modify App Set Category
+    /// 批量修改应用集合分类
+    #[oai(path = "/set_cate/batch", method = "put")]
+    async fn batch_modify_set_cate(&self, modify_req: Json<IamAppBatchModifySetCateReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        funs.begin().await?;
+        IamAppServ::batch_modify_set_cate(&modify_req.0.app_ids, &modify_req.0.set_cate_id, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
     }
 
     /// Add App Rel Account

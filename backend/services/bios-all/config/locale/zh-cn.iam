@@ -68,3 +68,10 @@
 409-role-prohibit-delete	当前角色不可删除
 
 409-sub-deploy-host-duplicate	当前二级部署存在重复的host
+
+400-iam-publish-system-tenant-empty	关联租户不能为空
+404-iam-publish-system-tenant-not-exist	租户不存在
+409-iam-publish-system-delete-conflict	发布系统已关联应用，无法删除
+409-iam-publish-system-name-exist	发布系统名称已存在
+409-iam-publish-system-sys-ident-exist	发布系统标识已存在
+409-iam-publish-system-tenant-change-conflict	发布系统在已移除租户中存在关联应用，无法移除租户关联

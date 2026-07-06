@@ -251,6 +251,7 @@ async fn do_paginate(
     data_type,
     rel_cert_id,
     rel_sql,
+    rel_sql_extra,
     dict_kind,
     dict_dyn_interface,
     remark,
@@ -290,6 +291,7 @@ LIMIT $1 OFFSET $2"#,
                 },
                 rel_cert_id: item.try_get("", "rel_cert_id")?,
                 rel_sql: item.try_get("", "rel_sql")?,
+                rel_sql_extra: item.try_get("", "rel_sql_extra")?,
                 dict_kind: item.try_get("", "dict_kind")?,
                 dict_dyn_interface: item.try_get("", "dict_dyn_interface")?,
                 remark: item.try_get("", "remark")?,
@@ -339,7 +341,7 @@ pub(crate) async fn exec_rel_sql(
     let cert_id = dim_col.rel_cert_id.ok_or_else(|| {
         funs.err().bad_request("dim_col_conf", "exec_rel_sql", "The rel_cert_id is required.", "400-spi-stats-dim-col-conf-rel-cert-id-required")
     })?;
-    let sql = dim_col.rel_sql.ok_or_else(|| {
+    let mut sql = dim_col.rel_sql.ok_or_else(|| {
         funs.err().bad_request("dim_col_conf", "exec_rel_sql", "The rel_sql is required.", "400-spi-stats-dim-col-conf-rel-sql-required")
     })?;
     if cert_id.is_empty() || sql.is_empty() {
@@ -361,7 +363,7 @@ pub(crate) async fn exec_rel_sql(
     let data_source_conn = stats_cert_serv::get_db_conn_by_cert_id(&cert_id, funs, ctx).await?;
     // 根据维度列的数据类型转换参数，避免类型不匹配错误（如 timestamp >= text）
     let data_type = dim_col.data_type.as_ref();
-    let sql_params: TardisResult<Vec<Value>> = params
+    let mut sql_params: Vec<Value> = params
         .iter()
         .map(|s| match data_type {
             Some(crate::stats_enumeration::StatsDataTypeKind::Int) => s.parse::<i32>()
@@ -384,8 +386,12 @@ pub(crate) async fn exec_rel_sql(
                 .map_err(|e| funs.err().bad_request("dim_col_conf", "exec_rel_sql", &format!("Failed to parse datetime parameter (expected RFC3339 format): {e}"), "400-spi-stats-dim-col-conf-param-parse-error")),
             Some(_) | None => Ok(Value::from(s.as_str())),
         })
-        .collect();
-    let results = data_source_conn.query_all(&sql, sql_params?).await?;
+        .collect::<TardisResult<Vec<_>>>()?;
+    if dim_col.rel_sql_extra.clone().is_some_and(|extra| !extra.is_empty()) {
+        sql.push_str(&dim_col.rel_sql_extra.unwrap_or_default());
+        sql_params.push(Value::from(ctx.own_paths.as_str()));
+    }
+    let results = data_source_conn.query_all(&sql, sql_params).await?;
     results
         .iter()
         .map(|item| {

@@ -302,6 +302,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             set_cate_id: None,
             kind: None,
             sync_apps_group: None,
+            publish_system_ids: None,
         },
         &funs,
         &tenant_admin_context,

@@ -11,6 +11,7 @@ pub const RBUM_KIND_CODE_IAM_ROLE: &str = "iam-role";
 pub const RBUM_KIND_CODE_IAM_RES: &str = "iam-res";
 pub const RBUM_KIND_CODE_IAM_SUB_DEPLOY: &str = "iam-sub-deploy";
 pub const RBUM_KIND_CODE_IAM_THIRD_PARTY_APP: &str = "iam-third-party-app";
+pub const RBUM_KIND_CODE_IAM_PUBLISH_SYSTEM: &str = "iam-publish-system";
 
 pub const RBUM_EXT_TABLE_IAM_TENANT: &str = "iam_tenant";
 pub const RBUM_EXT_TABLE_IAM_APP: &str = "iam_app";
@@ -19,6 +20,7 @@ pub const RBUM_EXT_TABLE_IAM_ROLE: &str = "iam_role";
 pub const RBUM_EXT_TABLE_IAM_RES: &str = "iam_res";
 pub const RBUM_EXT_TABLE_IAM_SUB_DEPLOY: &str = "iam_sub_deploy";
 pub const RBUM_EXT_TABLE_IAM_THIRD_PARTY_APP: &str = "iam_third_party_app";
+pub const RBUM_EXT_TABLE_IAM_PUBLISH_SYSTEM: &str = "iam_publish_system";
 
 pub const RBUM_SYSTEM_OWNER: &str = "_system_";
 

@@ -1505,6 +1505,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 set_cate_id: None,
                 kind: None,
                 sync_apps_group: None,
+                publish_system_ids: None,
             },
         )
         .await;
@@ -1523,6 +1524,7 @@ async fn load_iam_data(search_client: &mut TestHttpClient, iam_client: &mut BIOS
                 set_cate_id: None,
                 kind: None,
                 sync_apps_group: None,
+                publish_system_ids: None,
             },
         )
         .await;

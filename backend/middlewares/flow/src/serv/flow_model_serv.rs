@@ -607,30 +607,47 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 
         // 同步修改所有引用的下级模型
         if model_detail.template {
-            let child_models = Self::find_detail_items(
-                &FlowModelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        own_paths: Some("".to_string()),
-                        with_sub_own_paths: true,
+            let ctx_clone = ctx.clone();
+            let model_detail_clone = model_detail.clone();
+            let modify_req_clone = modify_req.clone();
+            let flow_model_id = flow_model_id.to_string();
+            let sync_version = modify_req.current_version_id.is_some() && !model_detail.main;
+            tokio::spawn(async move {
+                let funs = flow_constants::get_tardis_inst();
+                match Self::find_detail_items(
+                    &FlowModelFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        rel_model_ids: Some(vec![flow_model_id]),
                         ..Default::default()
                     },
-                    rel_model_ids: Some(vec![flow_model_id.to_string()]),
-                    ..Default::default()
-                },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-            for child_model in child_models {
-                if modify_req.current_version_id.is_some() && !model_detail.main {
-                    // 当父模板修改启用版本时，为子模板创建对应的版本同时启用，以保证和父模板的配置同步
-                    Self::sync_add_version_child_model(&child_model, &model_detail, funs, ctx).await?;
-                } else {
-                    Self::sync_modify_child_model(&child_model, &model_detail, modify_req, funs, ctx).await?;
+                    None,
+                    None,
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                {
+                    Ok(child_models) => {
+                        for child_model in child_models {
+                            if sync_version {
+                                // 当父模板修改启用版本时，为子模板创建对应的版本同时启用，以保证和父模板的配置同步
+                                if let Err(e) = Self::sync_add_version_child_model(&child_model, &model_detail_clone, &funs, &ctx_clone).await {
+                                    error!("Flow Model {} sync_add_version_child_model error:{:?}", child_model.id, e);
+                                }
+                            } else if let Err(e) =
+                                Self::sync_modify_child_model(&child_model, &model_detail_clone, &modify_req_clone, &funs, &ctx_clone).await
+                            {
+                                error!("Flow Model {} sync_modify_child_model error:{:?}", child_model.id, e);
+                            }
+                        }
+                    }
+                    Err(e) => error!("Flow Model find child models error:{:?}", e),
                 }
-            }
+            });
         }
 
         // 同步scope_level和disabled字段到相关的version数据
@@ -1616,7 +1633,12 @@ impl FlowModelServ {
             model_details
         };
 
-        Ok(result.first().cloned())
+        Ok(result.into_iter().max_by(|a, b| {
+            a.rel_model_id
+                .is_empty()
+                .cmp(&b.rel_model_id.is_empty())
+                .then_with(|| a.update_time.cmp(&b.update_time))
+        }))
     }
     /// 根据own_paths和rel_template_id获取模型ID
     /// 规则1：如果rel_template_id不为空，优先通过rel_template_id查找rel表类型为FlowModelTemplate关联的模型ID，找不到则直接返回默认模板ID
@@ -2064,6 +2086,12 @@ impl FlowModelServ {
                                         .unwrap_or_default();
                                     let mut new_vars_collect = vars_collect;
                                     new_vars_collect.extend(child_var_collects);
+                                    // 去重：name相同的元素保留一个
+                                    let mut seen_names = HashSet::new();
+                                    new_vars_collect = new_vars_collect
+                                        .into_iter()
+                                        .filter(|var| seen_names.insert(var.name.clone()))
+                                        .collect();
                                     modify_transition.vars_collect = Some(new_vars_collect);
                                 }
                             }
@@ -2085,6 +2113,21 @@ impl FlowModelServ {
                                     delete_transitions.push(trans_id);
                                 };
                             }
+                        }
+                    }
+                    if let Some(add_transitions) = &mut modify_state.add_transitions {
+                        let add_transitions_cp = add_transitions.clone();
+                        add_transitions.clear();
+                        for add_transition in add_transitions_cp {
+                            if child_model_transitions
+                                .iter()
+                                .find(|child_tran| {
+                                    child_tran.from_flow_state_id == add_transition.from_flow_state_id
+                                        && child_tran.to_flow_state_id == add_transition.to_flow_state_id
+                                }).is_none()
+                            {
+                                add_transitions.push(add_transition);
+                            };
                         }
                     }
                 }
@@ -2436,9 +2479,9 @@ impl FlowModelServ {
         Ok(())
     }
 
-    pub async fn find_rel_template_id(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+    pub async fn find_rel_template_ids(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
-            Ok(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &RbumRelFromKind::Item, &app_id, None, None, funs, ctx).await?.pop().map(|r| r.rel_id))
+            Ok(Some(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &RbumRelFromKind::Item, &app_id, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec()))
         } else {
             Ok(None)
         }

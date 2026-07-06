@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetFilterReq, RbumSetItemFilterReq},
+    helper::rbum_scope_helper,
+    rbum_enumeration::RbumScopeLevelKind,
     serv::{
         rbum_crud_serv::RbumCrudOperation,
         rbum_item_serv::RbumItemCrudOperation,
@@ -25,11 +27,13 @@ use crate::{
         dto::{
             iam_account_dto::IamAccountDetailAggResp,
             iam_app_dto::IamAppKind,
-            iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq, IamTenantFilterReq},
+            iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamPublishSystemFilterReq, IamRoleFilterReq, IamTenantFilterReq},
+            iam_publish_system_dto::IamPublishSystemDetailResp,
         },
         serv::{
-            clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ,
-            iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ, iam_third_party_app_serv::IamThirdPartyAppServ,
+            clients::iam_kv_client::IamKvClient, iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_publish_system_serv::IamPublishSystemServ,
+            iam_rel_serv::IamRelServ, iam_role_serv::IamRoleServ, iam_set_serv::IamSetServ, iam_sub_deploy_serv::IamSubDeployServ, iam_tenant_serv::IamTenantServ,
+            iam_third_party_app_serv::IamThirdPartyAppServ,
         },
     },
     iam_config::IamConfig,
@@ -109,6 +113,136 @@ impl IamSearchClient {
             })
         }))
         .await
+    }
+
+    pub async fn async_add_or_modify_publish_system_search(publish_system_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let publish_system_resp = IamPublishSystemServ::get_item(
+            publish_system_id,
+            &IamPublishSystemFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_publish_system_search(publish_system_resp, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    pub async fn add_or_modify_publish_system_search(
+        publish_system_resp: IamPublishSystemDetailResp,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let tag = funs.conf::<IamConfig>().spi.search_publish_system_tag.clone();
+        let key = publish_system_resp.id.clone();
+        let content = if let Some(sys_ident) = &publish_system_resp.sys_ident {
+            format!("{},{}", publish_system_resp.name, sys_ident)
+        } else {
+            publish_system_resp.name.clone()
+        };
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let rel_app_ids = IamRelServ::find_to_id_rels(
+            &IamRelKind::IamAppPublishSystem,
+            &publish_system_resp.id,
+            None,
+            None,
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        // 数据共享权限处理
+        let mut visit_tenants = publish_system_resp.rel_tenant_ids.clone();
+        visit_tenants.push(rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &publish_system_resp.own_paths).unwrap_or_default());
+        let mut visit_apps = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &publish_system_resp.own_paths).map(|app| vec![app]).unwrap_or_default();
+        let mut own_paths = Some(publish_system_resp.own_paths.clone());
+        if publish_system_resp.scope_level == RbumScopeLevelKind::Root {
+            visit_apps.push("".to_string());
+            visit_tenants.push("".to_string());
+            own_paths = Some("".to_string());
+        }
+        visit_tenants.sort();
+        visit_tenants.dedup();
+        let ext = json!({
+            "name": publish_system_resp.name,
+            "sys_ident": publish_system_resp.sys_ident,
+            "rel_tenant_id": publish_system_resp.rel_tenant_ids,
+            "description": publish_system_resp.description,
+            "scope_level": publish_system_resp.scope_level,
+            "rel_app_ids": rel_app_ids,
+        });
+        SpiSearchClient::save(
+            &tag,
+            &SearchSaveItemReq {
+                kind: Some(tag.clone()),
+                key: TrimString(key),
+                title: Some(publish_system_resp.name.clone()),
+                content: Some(content),
+                data_source: None,
+                owner: Some(publish_system_resp.owner),
+                own_paths,
+                create_time: Some(publish_system_resp.create_time),
+                update_time: Some(publish_system_resp.update_time),
+                ext: Some(ext),
+                visit_keys: Some(SearchItemVisitKeysReq {
+                    accounts: None,
+                    apps: Some(visit_apps),
+                    tenants: Some(visit_tenants),
+                    roles: None,
+                    groups: None,
+                }),
+            },
+            Some(publish_system_resp.name.clone()),
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn async_delete_publish_system_search(publish_system_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::delete_publish_system_search(&publish_system_id, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    pub async fn delete_publish_system_search(publish_system_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tag = funs.conf::<IamConfig>().spi.search_publish_system_tag.clone();
+        SpiSearchClient::delete_item_and_name(&tag, publish_system_id, funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn async_delete_account_search(account_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {

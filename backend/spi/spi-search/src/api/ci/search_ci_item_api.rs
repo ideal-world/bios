@@ -1,10 +1,9 @@
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::Query;
 
 use tardis::log::error;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::Path;
+use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::{serde_json, tokio};
@@ -57,10 +56,10 @@ impl SearchCiItemApi {
 
     /// Batch save
     #[oai(path = "/:tag/batch/save", method = "put")]
-    async fn batch_save(&self, tag: Path<String>, mut batch_req: Json<Vec<SearchSaveItemReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn batch_save(&self, tag: Path<String>, only_modify: Query<Option<bool>>, mut batch_req: Json<Vec<SearchSaveItemReq>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = crate::get_tardis_inst();
         funs.begin().await?;
-        search_item_serv::batch_save(&tag.0, &mut batch_req.0, &funs, &ctx.0).await?;
+        search_item_serv::batch_save(&tag.0, only_modify.0, &mut batch_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

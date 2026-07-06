@@ -395,7 +395,7 @@ impl IamCsAccountApi {
     #[oai(path = "/apps/item", method = "get")]
     async fn paginate_items(
         &self,
-        tenant_id: Query<String>,
+        tenant_id: Query<Option<String>>,
         cate_sys_codes: Query<Option<String>>,
         sys_code_query_kind: Query<Option<RbumSetCateLevelQueryKind>>,
         sys_code_query_depth: Query<Option<i16>>,
@@ -411,7 +411,7 @@ impl IamCsAccountApi {
         let funs = iam_constants::get_tardis_inst();
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let tenant_ctx = TardisContext {
-            own_paths: tenant_id.0.clone(),
+            own_paths: tenant_id.0.unwrap_or_default().clone(),
             ..ctx.0.clone()
         };
 
