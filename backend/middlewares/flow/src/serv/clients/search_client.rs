@@ -142,6 +142,7 @@ impl FlowSearchClient {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                 main: Some(false),
                 finish: Some(false),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,

@@ -118,6 +118,7 @@ impl FlowInstServ {
                             &FlowInstFilterReq {
                                 rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
                                 main: Some(true),
+                                with_sub: Some(true),
                                 ..Default::default()
                             },
                             funs,
@@ -202,6 +203,7 @@ impl FlowInstServ {
                     rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
                     main: Some(false),
                     finish: Some(false),
+                    with_sub: Some(true),
                     ..Default::default()
                 },
                 funs,
@@ -251,6 +253,7 @@ impl FlowInstServ {
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
                 main: Some(true),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
@@ -319,6 +322,7 @@ impl FlowInstServ {
                 tags: Some(vec![start_req.tag.clone()]),
                 main: Some(false),
                 finish: Some(false),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
@@ -463,6 +467,7 @@ impl FlowInstServ {
                 &FlowInstFilterReq {
                     rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
                     main: Some(true),
+                    with_sub: Some(true),
                     ..Default::default()
                 },
                 funs,
@@ -1134,6 +1139,7 @@ impl FlowInstServ {
             &FlowInstFilterReq {
             rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
             main: Some(false),
+            with_sub: Some(true),
             ..Default::default()
         }, funs, ctx).await?;
         funs.db().execute(
@@ -1204,6 +1210,7 @@ impl FlowInstServ {
                 &FlowInstFilterReq {
                     rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
                     main: Some(true),
+                    with_sub: Some(true),
                     ..Default::default()
                 },
                 funs,
@@ -1242,6 +1249,7 @@ impl FlowInstServ {
                     &FlowInstFilterReq {
                         rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
                         main: Some(true),
+                        with_sub: Some(true),
                         ..Default::default()
                     },
                     funs,
@@ -1279,6 +1287,7 @@ impl FlowInstServ {
                     &FlowInstFilterReq {
                         rel_business_obj_ids: Some(rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
                         main: Some(true),
+                        with_sub: Some(true),
                         ..Default::default()
                     },
                     funs,
@@ -1892,6 +1901,7 @@ impl FlowInstServ {
                 rel_business_obj_ids: Some(flow_insts.iter().map(|flow_inst| flow_inst.rel_business_obj_id.clone()).collect_vec()),
                 main: Some(false),
                 finish: Some(false),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
@@ -2165,6 +2175,7 @@ impl FlowInstServ {
                         rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
                         tags: Some(vec![flow_inst_detail.tag.clone()]),
                         main: Some(false),
+                        with_sub: Some(true),
                         ..Default::default()
                     },
                     funs,
@@ -2213,6 +2224,7 @@ impl FlowInstServ {
                                 &FlowInstFilterReq {
                                     rel_business_obj_ids: Some(vec![rel_child_obj.obj_id.clone()]),
                                     main: Some(true),
+                                    with_sub: Some(true),
                                     ..Default::default()
                                 },
                                 funs,
@@ -2304,6 +2316,7 @@ impl FlowInstServ {
                     rel_business_obj_ids: Some(vec![child_inst.rel_business_obj_id.clone()]),
                     main: Some(false),
                     finish: Some(false),
+                    with_sub: Some(true),
                     ..Default::default()
                 },
                 funs,
@@ -2944,6 +2957,7 @@ impl FlowInstServ {
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(obj_ids),
                 main: Some(true),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
@@ -3815,6 +3829,7 @@ impl FlowInstServ {
                     rel_inst_ids: Some(vec![root_inst_id]),
                     main: Some(false),
                     rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
+                    with_sub: Some(true),
                     ..Default::default()
                 },
                 funs,
@@ -3880,6 +3895,7 @@ impl FlowInstServ {
                     &FlowInstFilterReq {
                         rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                         main: Some(true),
+                        with_sub: Some(true),
                         ..Default::default()
                     },
                     funs,
@@ -3907,6 +3923,7 @@ impl FlowInstServ {
                                 rel_business_obj_ids: Some(rel_child_objs.iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect_vec()),
                                 main: Some(false),
                                 rel_inst_ids: Some(vec![root_inst_id.clone()]),
+                                with_sub: Some(true),
                                 ..Default::default()
                             },
                             funs,
@@ -4271,6 +4288,7 @@ impl FlowInstServ {
                     &FlowInstFilterReq {
                         rel_business_obj_ids: Some(added_rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
                         main: Some(true),
+                        with_sub: Some(true),
                         ..Default::default()
                     },
                     funs,
@@ -4302,6 +4320,7 @@ impl FlowInstServ {
                     &FlowInstFilterReq {
                         rel_business_obj_ids: Some(removed_rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
                         main: Some(true),
+                        with_sub: Some(true),
                         ..Default::default()
                     },
                     funs,
@@ -4418,6 +4437,7 @@ impl FlowInstServ {
                 rel_business_obj_ids: Some(vec![inst.rel_business_obj_id.clone()]),
                 finish: Some(false),
                 main: Some(false),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,

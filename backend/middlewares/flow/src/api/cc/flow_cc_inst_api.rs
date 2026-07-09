@@ -136,6 +136,7 @@ impl FlowCcInstApi {
                 &FlowInstFilterReq {
                     rel_business_obj_ids: Some(vec![flow_inst_detail.rel_business_obj_id.clone()]),
                     main: Some(true),
+                    with_sub: Some(true),
                     ..Default::default()
                 },
                 &funs,
