@@ -2153,6 +2153,7 @@ impl FlowInstServ {
                         operator_map: artifacts.operator_map.clone(),
                         log_text: None,
                         rel_inst_id: None,
+                        current_state_name: None,
                         data_source: Some(flow_inst_detail.data_source.clone()),
                     },
                     false,

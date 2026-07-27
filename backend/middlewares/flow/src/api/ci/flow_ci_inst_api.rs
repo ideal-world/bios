@@ -49,7 +49,7 @@ impl FlowCiInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
-        let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
+        let result = FlowInstServ::start(&add_req.0, add_req.0.current_state_name.clone(), &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -64,7 +64,7 @@ impl FlowCiInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
-        let inst_id = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
+        let inst_id = FlowInstServ::start(&add_req.0, add_req.0.current_state_name.clone(), &funs, &ctx.0).await?;
         let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
