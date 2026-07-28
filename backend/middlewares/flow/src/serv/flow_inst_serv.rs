@@ -4070,7 +4070,7 @@ impl FlowInstServ {
                     None,
                     rel_business_obj_id,
                     &inst_id,
-                    None,
+                    Some(FlowExternalCallbackOp::Default),
                     None,
                     Some("审批通过".to_string()),
                     tran.to_flow_state_name.clone(),
