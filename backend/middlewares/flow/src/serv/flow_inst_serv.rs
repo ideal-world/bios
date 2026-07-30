@@ -143,7 +143,10 @@ impl FlowInstServ {
                 }
                 Ok(inst_id)
             } else {
-                let inst_id = Self::start_secondary_flow(start_req, false, &rel_model, None, Some(new_vars), funs, ctx).await?;
+                let Some(inst_id) = Self::start_secondary_flow(start_req, false, &rel_model, None, Some(new_vars), funs, ctx).await? else {
+                    // 审批流已自动结束，未创建审批实例；返回空串以便事务提交并执行 search 任务
+                    return Ok(String::new());
+                };
                 let inst = Self::get(&inst_id, funs, ctx).await?;
                 FlowSearchClient::add_or_modify_instance_search(&inst_id, false, funs, ctx).await?;
                 if inst.finish_abort.is_none() {
@@ -157,7 +160,7 @@ impl FlowInstServ {
                     })?;
                     FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 }
-                
+
                 Ok(inst_id)
             }
         } else {
@@ -167,7 +170,12 @@ impl FlowInstServ {
     pub async fn start(start_req: &FlowInstStartReq, current_state_name: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let inst_id = Self::try_start(start_req, current_state_name, funs, ctx).await?;
         if inst_id.is_empty() {
-            Err(funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))
+            // 带 transition_id 时，空串表示审批流自动结束（未创建审批实例），视为成功
+            if start_req.transition_id.is_some() {
+                Ok(String::new())
+            } else {
+                Err(funs.err().not_found("flow_inst_serv", "start", "model not found", "404-flow-model-not-found"))
+            }
         } else {
             Ok(inst_id)
         }
@@ -213,7 +221,7 @@ impl FlowInstServ {
             {
                 Self::abort(&unfinished_inst_id, &FlowInstAbortReq { message: "".to_string() }, funs, ctx).await?;
             }
-            let child_inst_id = Self::start_secondary_flow(
+            let Some(child_inst_id) = Self::start_secondary_flow(
                 &FlowInstStartReq {
                     rel_business_obj_id: rel_child_obj.obj_id.clone(),
                     tag: rel_child_obj.tag.clone(),
@@ -229,7 +237,10 @@ impl FlowInstServ {
                 funs,
                 ctx,
             )
-            .await?;
+            .await?
+            else {
+                continue;
+            };
             let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
                 tag: rel_child_obj.tag.clone(),
                 current_state_id: Some("".to_string()),
@@ -307,6 +318,7 @@ impl FlowInstServ {
         Ok(inst_id)
     }
 
+    /// 启动子审批流。返回 `None` 表示 dry_run 判定会直接结束，已执行 `finish_approve_flow`，未创建审批实例。
     async fn start_secondary_flow(
         start_req: &FlowInstStartReq,
         child: bool,
@@ -315,7 +327,7 @@ impl FlowInstServ {
         prefetched_new_vars: Option<HashMap<String, Value>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<Option<String>> {
         if !Self::find_ids(
             &FlowInstFilterReq {
                 rel_business_obj_ids: Some(vec![start_req.rel_business_obj_id.clone()]),
@@ -368,7 +380,8 @@ impl FlowInstServ {
                 ctx,
             )
             .await?;
-            return Err(funs.err().internal_error("flow_inst", "start_secondary_flow", "The process is automatically terminated", "500-flow-inst-auto-finish"));
+            // 返回 Ok(None) 而非 Err，保证外层事务可 commit，search 异步任务可执行
+            return Ok(None);
         }
         let init_state = FlowStateServ::get_item(
             &flow_model.init_state_id,
@@ -531,7 +544,7 @@ impl FlowInstServ {
         }))
         .await?;
 
-        Ok(inst_id)
+        Ok(Some(inst_id))
     }
 
     // 创建实例（干跑） 返回终止的状态ID
@@ -2140,7 +2153,7 @@ impl FlowInstServ {
                     }
                 }
                 let prefetched_vars_map = Self::batch_prefetch_new_vars(&prefetch_items, funs, ctx).await?;
-                let root_inst_id = Self::start_secondary_flow(
+                if let Some(root_inst_id) = Self::start_secondary_flow(
                     &FlowInstStartReq {
                         rel_business_obj_id: flow_inst_detail.rel_business_obj_id.clone(),
                         tag: flow_inst_detail.tag.clone(),
@@ -2163,10 +2176,12 @@ impl FlowInstServ {
                     funs,
                     ctx,
                 )
-                .await?;
-                FlowSearchClient::async_add_or_modify_instance_search(&root_inst_id, false, funs, ctx).await?;
-                if let Some(rel_child_objs) = &artifacts.rel_child_objs {
-                    Self::start_child_flow(&root_inst_id, rel_child_objs, &prefetched_vars_map, funs, ctx).await?;
+                .await?
+                {
+                    FlowSearchClient::async_add_or_modify_instance_search(&root_inst_id, false, funs, ctx).await?;
+                    if let Some(rel_child_objs) = &artifacts.rel_child_objs {
+                        Self::start_child_flow(&root_inst_id, rel_child_objs, &prefetched_vars_map, funs, ctx).await?;
+                    }
                 }
             }
             // 触发结束动作时，将对应业务的审批流结束
