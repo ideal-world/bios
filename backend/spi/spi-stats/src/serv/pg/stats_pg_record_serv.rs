@@ -189,18 +189,21 @@ pub(crate) async fn fact_record_load(
     }
     // Because Dimension and Measure may share the same field
     // Existing fields are not stored in duplicate
-    for (req_fact_col_key, req_fact_col_value) in req_data {
-        // 查找一下是否命中了rel_field字段
-        let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key || c.rel_field.as_ref() == Some(req_fact_col_key));
-        if fact_col_conf.is_none()
-            || fields_values.contains_key(&fact_col_conf.unwrap().key)
-            || req_fact_col_value.is_null()
-            || req_fact_col_value.is_none()
-            || req_fact_col_value.is_empty()
-        {
+    // Prefer rel_field when present (e.g. key=id with value "111", rel_field=ids with value ["111","222"])
+    for fact_col_conf in &fact_col_conf_set {
+        if fields_values.contains_key(&fact_col_conf.key) {
             continue;
         }
-        let fact_col_conf = fact_col_conf.unwrap();
+        let req_fact_col_value = match &fact_col_conf.rel_field {
+            Some(rel_field) if req_data.contains_key(rel_field) => req_data.get(rel_field),
+            _ => req_data.get(&fact_col_conf.key),
+        };
+        let Some(req_fact_col_value) = req_fact_col_value else {
+            continue;
+        };
+        if req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty() {
+            continue;
+        }
         let req_fact_col_key = fact_col_conf.key.as_str();
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
@@ -441,7 +444,12 @@ pub(crate) async fn fact_records_load(
                 fields.push(fact_col_conf.key.to_string());
             }
 
-            let req_fact_col_value = req_data.get(&fact_col_conf.key).ok_or_else(|| {
+            // Prefer rel_field when present (e.g. key=id with value "111", rel_field=ids with value ["111","222"])
+            let req_fact_col_value = match &fact_col_conf.rel_field {
+                Some(rel_field) if req_data.contains_key(rel_field) => req_data.get(rel_field),
+                _ => req_data.get(&fact_col_conf.key),
+            }
+            .ok_or_else(|| {
                 funs.err().bad_request(
                     "fact_record",
                     "load_set",
@@ -530,14 +538,23 @@ async fn fact_records_modify(
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(idempotent_id.to_string())];
     let mut fields = vec![];
-    for (req_fact_col_key, req_fact_col_value) in req_data {
-        let fact_col_conf = fact_col_conf_set.iter().find(|c| c.key == req_fact_col_key || c.rel_field.as_ref() == Some(&req_fact_col_key));
-        if fact_col_conf.is_none() || fields.contains(&fact_col_conf.unwrap().key) || req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty()
-        {
+    // Prefer rel_field when present (e.g. key=id with value "111", rel_field=ids with value ["111","222"])
+    for fact_col_conf in &fact_col_conf_set {
+        if fields.contains(&fact_col_conf.key) {
             continue;
         }
-        let fact_col_conf = fact_col_conf.unwrap();
+        let req_fact_col_value = match &fact_col_conf.rel_field {
+            Some(rel_field) if req_data.contains_key(rel_field) => req_data.get(rel_field),
+            _ => req_data.get(&fact_col_conf.key),
+        };
+        let Some(req_fact_col_value) = req_fact_col_value else {
+            continue;
+        };
+        if req_fact_col_value.is_null() || req_fact_col_value.is_none() || req_fact_col_value.is_empty() {
+            continue;
+        }
         fields.push(fact_col_conf.key.clone());
+        let req_fact_col_key = fact_col_conf.key.as_str();
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
                 return Err(funs.err().not_found("fact_record", "load", "Fail to get conf_dim_key", "400-spi-stats-fail-to-get-dim-config-key"));
@@ -553,9 +570,9 @@ async fn fact_records_modify(
             // TODO check value enum when stable_ds = true
             sql_sets.push(format!("{} = ${}", fact_col_conf.key, params.len() + 1));
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                params.push(dim_conf.data_type.json_to_sea_orm_value_array(&req_fact_col_value, false)?);
+                params.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
             } else {
-                params.push(dim_conf.data_type.json_to_sea_orm_value(&req_fact_col_value, false)?);
+                params.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
             let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
@@ -567,7 +584,7 @@ async fn fact_records_modify(
                 ));
             };
             sql_sets.push(format!("{} = ${}", fact_col_conf.key, params.len() + 1));
-            params.push(mes_data_type.json_to_sea_orm_value(&req_fact_col_value, false)?);
+            params.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
                 return Err(funs.err().bad_request(
