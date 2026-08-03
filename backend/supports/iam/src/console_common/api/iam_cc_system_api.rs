@@ -1,10 +1,14 @@
+use std::collections::HashMap;
+
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::TardisFuns;
 
+use crate::basic::dto::iam_health_dto::{IamHealthComponentResp, IamHealthResp};
 use crate::iam_config::IamConfig;
 use crate::iam_constants::{self, IAM_AVATAR};
 #[derive(Clone, Default)]
@@ -60,5 +64,67 @@ impl IamCcSystemApi {
         let funs = iam_constants::get_tardis_inst();
         let data = TaskProcessor::get_process_data(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.0, &funs.cache()).await?;
         TardisResp::ok(data)
+    }
+
+    /// Health Check
+    /// 健康检查（服务、数据库、Redis、MQ）
+    #[oai(path = "/health", method = "get")]
+    async fn health(&self) -> TardisApiResult<IamHealthResp> {
+        let funs = iam_constants::get_tardis_inst();
+
+        let service = Self::healthy_component();
+
+        let database = match funs.db().query_all("SELECT 1", vec![]).await {
+            Ok(_) => Self::healthy_component(),
+            Err(err) => Self::unhealthy_component(err.to_string()),
+        };
+
+        let redis = {
+            let cache_key = format!("{IAM_AVATAR}:health:{}", TardisFuns::field.nanoid());
+            match funs.cache().set_ex(&cache_key, "ok", 5).await {
+                Ok(_) => match funs.cache().get(&cache_key).await {
+                    Ok(value) if value.as_deref() == Some("ok") => {
+                        let _ = funs.cache().del(&cache_key).await;
+                        Self::healthy_component()
+                    }
+                    Ok(_) => {
+                        let _ = funs.cache().del(&cache_key).await;
+                        Self::unhealthy_component("redis value mismatch".to_string())
+                    }
+                    Err(err) => {
+                        let _ = funs.cache().del(&cache_key).await;
+                        Self::unhealthy_component(err.to_string())
+                    }
+                },
+                Err(err) => Self::unhealthy_component(err.to_string()),
+            }
+        };
+
+        let mq_topic = format!("{IAM_AVATAR}::health");
+        let mq_payload = format!("{IAM_AVATAR}-health-check");
+        let mq = match funs.mq().publish(&mq_topic, mq_payload, &HashMap::new()).await {
+            Ok(_) => Self::healthy_component(),
+            Err(err) => Self::unhealthy_component(err.to_string()),
+        };
+
+        let healthy = service.healthy && database.healthy && redis.healthy && mq.healthy;
+        TardisResp::ok(IamHealthResp {
+            healthy,
+            service,
+            database,
+            redis,
+            mq,
+        })
+    }
+
+    fn healthy_component() -> IamHealthComponentResp {
+        IamHealthComponentResp { healthy: true, detail: None }
+    }
+
+    fn unhealthy_component(detail: String) -> IamHealthComponentResp {
+        IamHealthComponentResp {
+            healthy: false,
+            detail: Some(detail),
+        }
     }
 }
