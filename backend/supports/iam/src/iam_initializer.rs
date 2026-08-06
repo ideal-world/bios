@@ -56,7 +56,9 @@ use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetKind};
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
     init_db(funs).await?;
-    init_api(web_server).await
+    init_api(web_server).await?;
+    iam_cc_system_api::init_mq_health_check();
+    Ok(())
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {

@@ -149,11 +149,7 @@ impl IamSearchClient {
         .await
     }
 
-    pub async fn add_or_modify_publish_system_search(
-        publish_system_resp: IamPublishSystemDetailResp,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn add_or_modify_publish_system_search(publish_system_resp: IamPublishSystemDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tag = funs.conf::<IamConfig>().spi.search_publish_system_tag.clone();
         let key = publish_system_resp.id.clone();
         let content = if let Some(sys_ident) = &publish_system_resp.sys_ident {
@@ -165,15 +161,7 @@ impl IamSearchClient {
             own_paths: "".to_string(),
             ..ctx.clone()
         };
-        let rel_app_ids = IamRelServ::find_to_id_rels(
-            &IamRelKind::IamAppPublishSystem,
-            &publish_system_resp.id,
-            None,
-            None,
-            funs,
-            &mock_ctx,
-        )
-        .await?;
+        let rel_app_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamAppPublishSystem, &publish_system_resp.id, None, None, funs, &mock_ctx).await?;
         // 数据共享权限处理
         let mut visit_tenants = publish_system_resp.rel_tenant_ids.clone();
         visit_tenants.push(rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &publish_system_resp.own_paths).unwrap_or_default());

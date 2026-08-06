@@ -7,7 +7,6 @@ pub struct IamHealthComponentResp {
     pub detail: Option<String>,
 }
 
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamHealthResp {
     pub healthy: bool,
@@ -16,4 +15,3 @@ pub struct IamHealthResp {
     pub redis: IamHealthComponentResp,
     pub mq: IamHealthComponentResp,
 }
-
