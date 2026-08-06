@@ -556,6 +556,7 @@ impl FlowCiInstApi {
         current_state_id: Query<Option<String>>,
         current_state_sys_kind: Query<Option<FlowSysStateKind>>,
         with_sub: Query<Option<bool>>,
+        is_child: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         mut ctx: TardisContextExtractor,

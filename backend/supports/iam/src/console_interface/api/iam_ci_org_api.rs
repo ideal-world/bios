@@ -4,13 +4,14 @@ use crate::iam_constants;
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
-use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 #[derive(Clone, Default)]
 pub struct IamCiOrgApi;
@@ -58,6 +59,33 @@ impl IamCiOrgApi {
             &ctx,
         )
         .await?;
+        ctx.execute_task().await?;
+        TardisResp::ok(result)
+    }
+
+    /// paginate Org Items
+    ///
+    /// 分页获取组织项
+    #[oai(path = "/items", method = "get")]
+    async fn paginate(
+        &self,
+        tenant_id: Query<Option<String>>,
+        cate_id: Query<Option<String>>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<TardisPage<RbumSetItemDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
+        let code = if ctx.own_paths.is_empty() {
+            IamSetServ::get_default_org_code_by_system()
+        } else {
+            IamSetServ::get_default_org_code_by_tenant(&funs, &ctx)?
+        };
+        let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx).await?;
+        let result = IamSetServ::paginate_set_items(Some(set_id), cate_id.0, None, None, false, None, page_number.0, page_size.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

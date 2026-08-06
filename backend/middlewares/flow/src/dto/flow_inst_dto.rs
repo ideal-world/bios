@@ -133,7 +133,7 @@ pub struct FlowInstSummaryResp {
     /// 结束时间
     pub finish_time: Option<DateTime<Utc>>,
     /// 是否异常终止
-    pub finish_abort: bool,
+    pub finish_abort: Option<bool>,
     /// 输出信息
     pub output_message: Option<String>,
     /// 触发的动作
@@ -637,6 +637,8 @@ pub struct FlowInstFilterReq {
     /// 排除的状态ID列表
     pub not_in_state_id: Option<Vec<String>>,
     pub current_state_sys_kind: Option<FlowSysStateKind>,
+    // 是否为子审批流
+    pub is_child: Option<bool>,
 
     pub with_sub: Option<bool>,
 

@@ -789,6 +789,13 @@ impl FlowInstServ {
                 query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::CurrentStateId)).is_not_in(not_in_state_id.clone()));
             }
         }
+        if let Some(is_child) = filter.is_child {
+            if is_child {
+                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelInstId)).is_not_null());
+            } else {
+                query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelInstId)).is_null());
+            } 
+        }
         if let Some(current_state_sys_kind) = &filter.current_state_sys_kind {
             query.and_where(Expr::col((flow_state::Entity, flow_state::Column::SysState)).eq(current_state_sys_kind.clone()));
         }
@@ -1877,7 +1884,7 @@ impl FlowInstServ {
                     update_time: inst.update_time,
                     finish_ctx: inst.finish_ctx.map(|finish_ctx| TardisFuns::json.json_to_obj(finish_ctx).unwrap_or_default()),
                     finish_time: inst.finish_time,
-                    finish_abort: inst.finish_abort.is_some(),
+                    finish_abort: inst.finish_abort,
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id.clone(),
