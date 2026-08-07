@@ -7,6 +7,7 @@ use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
@@ -31,6 +32,7 @@ impl IamCiOrgApi {
     async fn get_tree(
         &self,
         parent_sys_code: Query<Option<String>>,
+        parent_cate_ids: Query<Option<String>>,
         tenant_id: Query<Option<String>>,
         mut ctx: TardisContextExtractor,
         request: &Request,
@@ -44,13 +46,22 @@ impl IamCiOrgApi {
         } else {
             IamSetServ::get_default_org_code_by_tenant(&funs, &ctx)?
         };
+        let mut parent_sys_codes = parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]);
+        if let Some(parent_cate_ids) = parent_cate_ids.0 {
+            let mut tmp_parent_sys_codes = vec![];
+            let parent_cate_ids: Vec<_> = parent_cate_ids.split(',').collect();
+            for parent_cate_id in parent_cate_ids {
+                tmp_parent_sys_codes.push(RbumSetCateServ::get_sys_code(&parent_cate_id, &funs, &ctx).await?);
+            }
+            parent_sys_codes = Some(tmp_parent_sys_codes);
+        }
         let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx).await?;
         let result = IamSetServ::get_tree(
             &set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
                 hide_item_with_disabled: true,
-                sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
+                sys_codes: parent_sys_codes,
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 sys_code_query_depth: Some(1),
                 ..Default::default()
