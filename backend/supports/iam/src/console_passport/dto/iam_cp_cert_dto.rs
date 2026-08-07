@@ -80,6 +80,16 @@ pub struct IamCpOAuth2LoginReq {
     pub tenant_id: Option<String>,
 }
 
+/// 判断 OAuth2 身份是否已绑定的请求
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpOAuth2BindCheckReq {
+    /// OAuth2 对应的用户 id（open_id）
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub open_id: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tenant_id: Option<String>,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpLdapLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]

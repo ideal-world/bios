@@ -45,6 +45,13 @@ impl IamCpCertOAuth2Serv {
         IamCertOAuth2Serv::bind_cert_account(cert_supplier, login_req.code.as_ref(), &login_req.tenant_id.clone().unwrap_or_default(), &ctx.owner, funs, ctx).await
     }
 
+    /// 判断外部 OAuth2 身份（open_id）是否已绑定到本地账号
+    ///
+    /// 传入 OAuth2 对应的用户 id（open_id），已绑定返回 `true`，未绑定返回 `false`。
+    pub async fn is_bound(cert_supplier: IamCertOAuth2Supplier, open_id: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        IamCertOAuth2Serv::is_open_id_bound(cert_supplier, open_id, tenant_id, funs).await
+    }
+
     /// 获取当前登录账号已缓存的 Provider token
     ///
     /// 账号取自当前登录上下文 `ctx.owner`，租户取自 `ctx.own_paths`。

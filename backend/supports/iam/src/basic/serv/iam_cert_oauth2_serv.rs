@@ -211,6 +211,18 @@ impl IamCertOAuth2Serv {
         Ok(result)
     }
 
+    /// 判断指定 OAuth2 外部身份（open_id）是否已绑定到本地账号
+    ///
+    /// 传入 OAuth2 对应的用户 id（open_id），已绑定返回 `true`，未绑定返回 `false`。
+    pub async fn is_open_id_bound(cert_supplier: IamCertOAuth2Supplier, open_id: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
+        let mock_ctx = TardisContext {
+            own_paths: tenant_id.to_string(),
+            ..Default::default()
+        };
+        Ok(Self::get_cert_rel_account_by_open_id(open_id, &cert_conf_id, funs, &mock_ctx).await?.is_some())
+    }
+
     pub async fn get_or_add_account(cert_supplier: IamCertOAuth2Supplier, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
         let mut mock_ctx = TardisContext {

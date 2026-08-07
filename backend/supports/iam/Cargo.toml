@@ -29,6 +29,7 @@ serde.workspace = true
 async-trait.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
+lapin = "2"
 tardis = { workspace = true, features = [
     "reldb-postgres",
     "cache",
