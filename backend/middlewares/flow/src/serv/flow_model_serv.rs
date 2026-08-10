@@ -2253,7 +2253,7 @@ impl FlowModelServ {
     }
 
     pub async fn sync_modified_field(req: &FlowModelSyncModifiedFieldReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let model_ids = if Self::get_app_id_by_ctx(ctx).is_some() {
+        let approve_model_ids = if Self::get_app_id_by_ctx(ctx).is_some() {
             Self::find_id_items(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
@@ -2289,9 +2289,9 @@ impl FlowModelServ {
             )
             .await?
         };
-        let model_versions = FlowModelVersionServ::find_detail_items(
+        let approve_model_versions = FlowModelVersionServ::find_detail_items(
             &FlowModelVersionFilterReq {
-                rel_model_ids: Some(model_ids),
+                rel_model_ids: Some(approve_model_ids),
                 ..Default::default()
             },
             None,
@@ -2300,8 +2300,8 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        for model_version in model_versions {
-            let states = model_version.states();
+        for approve_model_version in approve_model_versions {
+            let states = approve_model_version.states();
             for state in states {
                 let add_default_conf = match state.state_kind {
                     FlowStateKind::Form => state.kind_conf.clone().unwrap_or_default().form.unwrap_or_default().add_default_field.unwrap_or_default(),
@@ -2341,6 +2341,56 @@ impl FlowModelServ {
                     ctx,
                 )
                 .await?;
+            }
+        }
+
+        if let Some(main_model) = if Self::get_app_id_by_ctx(ctx).is_some() {
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    tags: Some(vec![req.tag.clone()]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        } else {
+            Self::find_one_detail_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    main: Some(true),
+                    rel_template_id: req.rel_template_id.clone(),
+                    tags: Some(vec![req.tag.clone()]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        } {
+            let transitions = main_model.transitions();
+            let delete_fields = req.delete_fields.clone().unwrap_or_default();
+            let mut modify_transitions = vec![];
+            for transition in transitions {
+                if let Some(vars_collect) = transition.vars_collect() {
+                    let new_vars_collect = vars_collect.into_iter().filter(|var| !delete_fields.contains(&var.name)).collect_vec();
+                    modify_transitions.push(FlowTransitionModifyReq {
+                        id: transition.id.clone().into(),
+                        vars_collect: Some(new_vars_collect),
+                        ..Default::default()
+                    });
+                }
+            }
+            if !modify_transitions.is_empty() {
+                FlowTransitionServ::modify_transitions(&main_model.current_version_id, &modify_transitions, funs, ctx).await?;
             }
         }
 
