@@ -26,8 +26,9 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{
-    IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq,
-    IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpTokenSwitchReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
+    IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2BindCheckReq,
+    IamCpOAuth2LoginReq, IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpTokenSwitchReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq,
+    IamCpUserPwdLoginReq,
 };
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
@@ -257,6 +258,24 @@ impl IamCpCertApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(open_id)
+    }
+
+    /// Check whether the oauth2 identity is bound to a local account
+    /// 判断 oauth2 身份是否已绑定本地账号
+    ///
+    /// 传入 oauth2 对应的用户 id（open_id），已绑定返回 true，未绑定返回 false。
+    #[oai(path = "/exist/oauth2/:supplier", method = "put")]
+    async fn is_oauth2_bound(&self, supplier: Path<String>, check_req: Json<IamCpOAuth2BindCheckReq>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+        let funs = iam_constants::get_tardis_inst();
+        let resp = IamCpCertOAuth2Serv::is_bound(
+            IamCertOAuth2Supplier::parse(&supplier.0)?,
+            &check_req.0.open_id,
+            check_req.0.tenant_id.as_deref().unwrap_or_default(),
+            &funs,
+        )
+        .await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(resp)
     }
 
     /// Get the third-party provider's cached token
