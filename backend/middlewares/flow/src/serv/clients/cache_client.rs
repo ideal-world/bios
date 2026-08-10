@@ -62,6 +62,11 @@ impl FlowCacheClient {
         Ok(())
     }
 
+    /// Returns whether the lock key currently exists in cache.
+    pub async fn spin_lock_exists(lock_key: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        Ok(funs.cache().get(lock_key).await?.is_some())
+    }
+
     /// Acquires the spin lock, runs `f`, then releases the lock (even if `f` returns `Err`).
     pub async fn with_spin_lock<F, Fut, T>(lock_key: &str, funs: &TardisFunsInst, config: &CacheSpinLockConfig, f: F) -> TardisResult<T>
     where
