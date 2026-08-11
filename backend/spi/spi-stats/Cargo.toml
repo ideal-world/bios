@@ -30,8 +30,10 @@ itertools.workspace = true
 lazy_static.workspace = true
 serde.workspace = true
 serde_json = {workspace = true, features = ["preserve_order"]}
+serde_yaml = "0.9"
 strum = {workspace = true, features = ["derive"]}
 tardis = {workspace = true, features = ["reldb-postgres", "web-server"]}
+zip = "2"
 
 [dev-dependencies]
 bios-basic = {version = "0.2.0", path = "../../basic", features = [
