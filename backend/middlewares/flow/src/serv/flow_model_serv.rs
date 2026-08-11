@@ -266,92 +266,26 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 )
                 .await?;
                 let main = add_req.main;
-                // 同步添加应用层模板
-                join_all(
-                    FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx)
-                        .await?
-                        .into_iter()
-                        .map(|rel| async move {
-                            let mock_ctx = TardisContext {
-                                own_paths: if rel.rel_own_paths.contains("/") {
-                                    rel.rel_own_paths.clone()
-                                } else {
-                                    format!("{}/{}", ctx.own_paths, rel.rel_id)
-                                },
-                                ..ctx.clone()
-                            };
-                            if main {
-                                Self::copy_or_reference_main_model(
-                                    flow_model_id,
-                                    &FlowModelAssociativeOperationKind::Reference,
-                                    FlowModelKind::AsModel,
-                                    None,
-                                    &None,
-                                    None,
-                                    funs,
-                                    &mock_ctx,
-                                )
-                                .await
-                            } else {
-                                Self::copy_or_reference_non_main_model(
-                                    flow_model_id,
-                                    &FlowModelAssociativeOperationKind::Reference,
-                                    FlowModelKind::AsModel,
-                                    None,
-                                    None,
-                                    funs,
-                                    &mock_ctx,
-                                )
-                                .await
-                            }
-                        })
-                        .collect_vec(),
-                )
-                .await
-                .into_iter()
-                .collect::<TardisResult<Vec<_>>>()?;
-                // 同步添加租户层模板
-                join_all(
-                    FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateTemplate, &RbumRelFromKind::Other, rel_template_id, None, None, funs, ctx)
-                        .await?
-                        .into_iter()
-                        .map(|rel| async move {
-                            let rel_template_id = rel.rel_id.clone();
-                            let data_source = Self::find_data_source_by_template_id(&rel_template_id, funs, ctx).await?;
-                            let mock_ctx = TardisContext {
-                                own_paths: rel.rel_own_paths,
-                                ..ctx.clone()
-                            };
-                            if main {
-                                Self::copy_or_reference_main_model(
-                                    flow_model_id,
-                                    &FlowModelAssociativeOperationKind::Reference,
-                                    FlowModelKind::AsTemplateAndAsModel,
-                                    Some(rel_template_id),
-                                    &None,
-                                    data_source,
-                                    funs,
-                                    &mock_ctx,
-                                )
-                                .await
-                            } else {
-                                Self::copy_or_reference_non_main_model(
-                                    flow_model_id,
-                                    &FlowModelAssociativeOperationKind::Reference,
-                                    FlowModelKind::AsTemplateAndAsModel,
-                                    Some(rel_template_id),
-                                    data_source,
-                                    funs,
-                                    &mock_ctx,
-                                )
-                                .await
-                            }
-                        })
-                        .collect_vec(),
-                )
-                .await
-                .into_iter()
-                .collect::<TardisResult<Vec<_>>>()?;
+                // 异步添加应用层模板
+                let flow_model_id_clone = flow_model_id.to_string();
+                let rel_template_id_clone = rel_template_id.clone();
+                let ctx_clone = ctx.clone();
+                tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    if let Err(e) = Self::sync_add_app_models(&flow_model_id_clone, &rel_template_id_clone, main, &funs, &ctx_clone).await {
+                        error!("Flow Model {} sync_add_app_models error:{:?}", flow_model_id_clone, e);
+                    }
+                });
+                // 异步添加租户层模板
+                let flow_model_id_clone = flow_model_id.to_string();
+                let rel_template_id_clone = rel_template_id.clone();
+                let ctx_clone = ctx.clone();
+                tokio::spawn(async move {
+                    let funs = flow_constants::get_tardis_inst();
+                    if let Err(e) = Self::sync_add_tenant_models(&flow_model_id_clone, &rel_template_id_clone, main, &funs, &ctx_clone).await {
+                        error!("Flow Model {} sync_add_tenant_models error:{:?}", flow_model_id_clone, e);
+                    }
+                });
             }
         }
         if add_req.template && add_req.main && add_req.rel_model_id.clone().is_none_or(|id| id.is_empty()) {
@@ -1999,6 +1933,100 @@ impl FlowModelServ {
 
     pub fn get_app_id_by_ctx(ctx: &TardisContext) -> Option<String> {
         rbum_scope_helper::get_path_item(2, &ctx.own_paths)
+    }
+
+    /// 同步添加应用层模板：将模型引用到关联该模板的各应用
+    async fn sync_add_app_models(flow_model_id: &str, rel_template_id: &str, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        join_all(
+            FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move {
+                    let mock_ctx = TardisContext {
+                        own_paths: if rel.rel_own_paths.contains("/") {
+                            rel.rel_own_paths.clone()
+                        } else {
+                            format!("{}/{}", ctx.own_paths, rel.rel_id)
+                        },
+                        ..ctx.clone()
+                    };
+                    if main {
+                        Self::copy_or_reference_main_model(
+                            flow_model_id,
+                            &FlowModelAssociativeOperationKind::Reference,
+                            FlowModelKind::AsModel,
+                            None,
+                            &None,
+                            None,
+                            funs,
+                            &mock_ctx,
+                        )
+                        .await
+                    } else {
+                        Self::copy_or_reference_non_main_model(
+                            flow_model_id,
+                            &FlowModelAssociativeOperationKind::Reference,
+                            FlowModelKind::AsModel,
+                            None,
+                            None,
+                            funs,
+                            &mock_ctx,
+                        )
+                        .await
+                    }
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<_>>>()?;
+        Ok(())
+    }
+
+    /// 同步添加租户层模板：将模型引用到关联该模板的各租户模板
+    async fn sync_add_tenant_models(flow_model_id: &str, rel_template_id: &str, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        join_all(
+            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateTemplate, &RbumRelFromKind::Other, rel_template_id, None, None, funs, ctx)
+                .await?
+                .into_iter()
+                .map(|rel| async move {
+                    let rel_template_id = rel.rel_id.clone();
+                    let data_source = Self::find_data_source_by_template_id(&rel_template_id, funs, ctx).await?;
+                    let mock_ctx = TardisContext {
+                        own_paths: rel.rel_own_paths,
+                        ..ctx.clone()
+                    };
+                    if main {
+                        Self::copy_or_reference_main_model(
+                            flow_model_id,
+                            &FlowModelAssociativeOperationKind::Reference,
+                            FlowModelKind::AsTemplateAndAsModel,
+                            Some(rel_template_id),
+                            &None,
+                            data_source,
+                            funs,
+                            &mock_ctx,
+                        )
+                        .await
+                    } else {
+                        Self::copy_or_reference_non_main_model(
+                            flow_model_id,
+                            &FlowModelAssociativeOperationKind::Reference,
+                            FlowModelKind::AsTemplateAndAsModel,
+                            Some(rel_template_id),
+                            data_source,
+                            funs,
+                            &mock_ctx,
+                        )
+                        .await
+                    }
+                })
+                .collect_vec(),
+        )
+        .await
+        .into_iter()
+        .collect::<TardisResult<Vec<_>>>()?;
+        Ok(())
     }
 
     async fn sync_add_version_child_model(child_model: &FlowModelDetailResp, parent_model: &FlowModelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
