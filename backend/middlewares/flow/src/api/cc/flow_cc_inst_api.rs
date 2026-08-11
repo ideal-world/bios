@@ -335,21 +335,30 @@ impl FlowCcInstApi {
         _request: &Request,
     ) -> TardisApiResult<FlowInstTransferResp> {
         let mut funs = flow_constants::get_tardis_inst();
-        let mut transfer = transfer_req.0;
-        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
-        funs.begin().await?;
-        let result = FlowInstServ::transfer(
-            &inst,
-            &transfer,
-            false,
-            FlowExternalCallbackOp::Default,
-            loop_check_helper::InstancesTransition::default(),
-            &ctx.0,
-            &funs,
-        )
-        .await?;
-        funs.commit().await?;
+        let lock_key = format!("flow:spin:transfer:{}", flow_inst_id.0);
+        let token = FlowCacheClient::spin_lock_acquire(&lock_key, &funs, &CacheSpinLockConfig::default()).await?;
+        let try_result: TardisResult<FlowInstTransferResp> = {
+            let mut transfer = transfer_req.0;
+            let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+            FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
+            funs.begin().await?;
+            let result = FlowInstServ::transfer(
+                &inst,
+                &transfer,
+                false,
+                FlowExternalCallbackOp::Default,
+                loop_check_helper::InstancesTransition::default(),
+                &ctx.0,
+                &funs,
+            )
+            .await?;
+            funs.commit().await?;
+            Ok(result)
+        };
+        // `commit` consumes `funs`; use a fresh inst for cache unlock (same domain / Redis config).
+        let funs_cache = flow_constants::get_tardis_inst();
+        let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, &funs_cache).await;
+        let result = try_result?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
