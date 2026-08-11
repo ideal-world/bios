@@ -13,6 +13,7 @@ use crate::dto::search_item_dto::{
     SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchReq, SearchItemSearchResp, SearchQueryMetricsReq,
     SearchQueryMetricsResp, SearchSaveItemReq,
 };
+use crate::dto::search_sync_dto::{SearchSyncBatchReq, SearchSyncFinishReq, SearchSyncFinishResp};
 use crate::serv::search_item_serv;
 use tardis::log::warn;
 
@@ -150,5 +151,29 @@ impl SearchCiItemApi {
         let funs = crate::get_tardis_inst();
         let result = search_item_serv::import_data(&import_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
+    }
+
+    /// 分批推送业务 key 列表
+    ///
+    /// 业务服务多次调用本接口分批推送业务 key，Search 库写入临时对账表，
+    /// 供后续 sync/finish 结束信号与 sync/diff 对账查询使用。
+    #[oai(path = "/sync/batch", method = "put")]
+    async fn sync_batch(&self, mut batch_req: Json<SearchSyncBatchReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = crate::get_tardis_inst();
+        search_item_serv::sync_batch(&mut batch_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// 同步完成（批次收尾 + 对账 Diff）
+    ///
+    /// 业务服务分批推送完全部 key 后调用本接口：
+    /// 返回已推送 key 数量（total，落盘确认）与对账结果
+    /// （deleted_keys / missing_keys），不执行删除与写入；
+    /// 具体操作由业务服务调用 batch_delete / batch_save 完成。
+    #[oai(path = "/sync/finish", method = "put")]
+    async fn sync_finish(&self, mut finish_req: Json<SearchSyncFinishReq>, ctx: TardisContextExtractor) -> TardisApiResult<SearchSyncFinishResp> {
+        let funs = crate::get_tardis_inst();
+        let resp = search_item_serv::sync_finish(&mut finish_req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
     }
 }
