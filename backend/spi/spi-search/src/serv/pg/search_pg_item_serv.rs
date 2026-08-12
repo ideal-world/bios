@@ -1958,7 +1958,8 @@ async fn init_tmp_sync_table(bs_inst: bios_basic::spi::spi_funs::TypedSpiBsInst<
 /// （配合「同一时刻仅一个同步任务」的分布式锁约束，不会误删其他进行中的同步）。
 pub async fn sync_batch(batch_req: &mut SearchSyncBatchReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
-    let (conn, tmp_table) = init_tmp_sync_table(bs_inst, ctx).await?;
+    let (mut conn, tmp_table) = init_tmp_sync_table(bs_inst, ctx).await?;
+    conn.begin().await?;
     // 清理该 tag+kind 下其他批次的临时数据（幂等：重复推送同一批次不会影响本批次）
     conn.execute_one(
         &format!("DELETE FROM {tmp_table} WHERE tag = $1 AND kind = $2 AND batch_id <> $3"),
@@ -1970,6 +1971,7 @@ pub async fn sync_batch(batch_req: &mut SearchSyncBatchReq, _funs: &TardisFunsIn
     )
     .await?;
     if batch_req.keys.is_empty() {
+        conn.commit().await?;
         return Ok(());
     }
     // 分批插入，避免单条 SQL 参数规模过大
@@ -1990,6 +1992,7 @@ pub async fn sync_batch(batch_req: &mut SearchSyncBatchReq, _funs: &TardisFunsIn
         )
         .await?;
     }
+    conn.commit().await?;
     Ok(())
 }
 
