@@ -265,27 +265,42 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                     ctx,
                 )
                 .await?;
-                let main = add_req.main;
                 // 异步添加应用层模板
                 let flow_model_id_clone = flow_model_id.to_string();
                 let rel_template_id_clone = rel_template_id.clone();
+                let main_clone = add_req.main;
                 let ctx_clone = ctx.clone();
-                tokio::spawn(async move {
-                    let funs = flow_constants::get_tardis_inst();
-                    if let Err(e) = Self::sync_add_app_models(&flow_model_id_clone, &rel_template_id_clone, main, &funs, &ctx_clone).await {
-                        error!("Flow Model {} sync_add_app_models error:{:?}", flow_model_id_clone, e);
-                    }
-                });
+                ctx.add_sync_task(Box::new(move || {
+                    Box::pin(async move {
+                        let task_handle = tokio::spawn(async move {
+                            let funs = flow_constants::get_tardis_inst();
+                            if let Err(e) = Self::sync_add_app_models(&flow_model_id_clone, &rel_template_id_clone, main_clone, &funs, &ctx_clone).await {
+                                error!("Flow Model {} sync_add_app_models error:{:?}", flow_model_id_clone, e);
+                            }
+                        });
+                        task_handle.await.unwrap();
+                        Ok(())
+                    })
+                }))
+                .await?;
                 // 异步添加租户层模板
                 let flow_model_id_clone = flow_model_id.to_string();
                 let rel_template_id_clone = rel_template_id.clone();
+                let main_clone = add_req.main;
                 let ctx_clone = ctx.clone();
-                tokio::spawn(async move {
-                    let funs = flow_constants::get_tardis_inst();
-                    if let Err(e) = Self::sync_add_tenant_models(&flow_model_id_clone, &rel_template_id_clone, main, &funs, &ctx_clone).await {
-                        error!("Flow Model {} sync_add_tenant_models error:{:?}", flow_model_id_clone, e);
-                    }
-                });
+                ctx.add_sync_task(Box::new(move || {
+                    Box::pin(async move {
+                        let task_handle = tokio::spawn(async move {
+                            let funs = flow_constants::get_tardis_inst();
+                            if let Err(e) = Self::sync_add_tenant_models(&flow_model_id_clone, &rel_template_id_clone, main_clone, &funs, &ctx_clone).await {
+                                error!("Flow Model {} sync_add_tenant_models error:{:?}", flow_model_id_clone, e);
+                            }
+                        });
+                        task_handle.await.unwrap();
+                        Ok(())
+                    })
+                }))
+                .await?;
             }
         }
         if add_req.template && add_req.main && add_req.rel_model_id.clone().is_none_or(|id| id.is_empty()) {
@@ -1937,95 +1952,77 @@ impl FlowModelServ {
 
     /// 同步添加应用层模板：将模型引用到关联该模板的各应用
     async fn sync_add_app_models(flow_model_id: &str, rel_template_id: &str, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        join_all(
-            FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| async move {
-                    let mock_ctx = TardisContext {
-                        own_paths: if rel.rel_own_paths.contains("/") {
-                            rel.rel_own_paths.clone()
-                        } else {
-                            format!("{}/{}", ctx.own_paths, rel.rel_id)
-                        },
-                        ..ctx.clone()
-                    };
-                    if main {
-                        Self::copy_or_reference_main_model(
-                            flow_model_id,
-                            &FlowModelAssociativeOperationKind::Reference,
-                            FlowModelKind::AsModel,
-                            None,
-                            &None,
-                            None,
-                            funs,
-                            &mock_ctx,
-                        )
-                        .await
-                    } else {
-                        Self::copy_or_reference_non_main_model(
-                            flow_model_id,
-                            &FlowModelAssociativeOperationKind::Reference,
-                            FlowModelKind::AsModel,
-                            None,
-                            None,
-                            funs,
-                            &mock_ctx,
-                        )
-                        .await
-                    }
-                })
-                .collect_vec(),
-        )
-        .await
-        .into_iter()
-        .collect::<TardisResult<Vec<_>>>()?;
+        for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowAppTemplate, rel_template_id, None, None, funs, ctx).await? {
+            let mock_ctx = TardisContext {
+                own_paths: if rel.rel_own_paths.contains("/") {
+                    rel.rel_own_paths.clone()
+                } else {
+                    format!("{}/{}", ctx.own_paths, rel.rel_id)
+                },
+                ..ctx.clone()
+            };
+            if main {
+                Self::copy_or_reference_main_model(
+                    flow_model_id,
+                    &FlowModelAssociativeOperationKind::Reference,
+                    FlowModelKind::AsModel,
+                    None,
+                    &None,
+                    None,
+                    funs,
+                    &mock_ctx,
+                )
+                .await?;
+            } else {
+                Self::copy_or_reference_non_main_model(
+                    flow_model_id,
+                    &FlowModelAssociativeOperationKind::Reference,
+                    FlowModelKind::AsModel,
+                    None,
+                    None,
+                    funs,
+                    &mock_ctx,
+                )
+                .await?;
+            }
+        }
         Ok(())
     }
 
     /// 同步添加租户层模板：将模型引用到关联该模板的各租户模板
     async fn sync_add_tenant_models(flow_model_id: &str, rel_template_id: &str, main: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        join_all(
-            FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateTemplate, &RbumRelFromKind::Other, rel_template_id, None, None, funs, ctx)
-                .await?
-                .into_iter()
-                .map(|rel| async move {
-                    let rel_template_id = rel.rel_id.clone();
-                    let data_source = Self::find_data_source_by_template_id(&rel_template_id, funs, ctx).await?;
-                    let mock_ctx = TardisContext {
-                        own_paths: rel.rel_own_paths,
-                        ..ctx.clone()
-                    };
-                    if main {
-                        Self::copy_or_reference_main_model(
-                            flow_model_id,
-                            &FlowModelAssociativeOperationKind::Reference,
-                            FlowModelKind::AsTemplateAndAsModel,
-                            Some(rel_template_id),
-                            &None,
-                            data_source,
-                            funs,
-                            &mock_ctx,
-                        )
-                        .await
-                    } else {
-                        Self::copy_or_reference_non_main_model(
-                            flow_model_id,
-                            &FlowModelAssociativeOperationKind::Reference,
-                            FlowModelKind::AsTemplateAndAsModel,
-                            Some(rel_template_id),
-                            data_source,
-                            funs,
-                            &mock_ctx,
-                        )
-                        .await
-                    }
-                })
-                .collect_vec(),
-        )
-        .await
-        .into_iter()
-        .collect::<TardisResult<Vec<_>>>()?;
+        for rel in FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowTemplateTemplate, &RbumRelFromKind::Other, rel_template_id, None, None, funs, ctx).await? {
+            let rel_template_id = rel.rel_id.clone();
+            let data_source = Self::find_data_source_by_template_id(&rel_template_id, funs, ctx).await?;
+            let mock_ctx = TardisContext {
+                own_paths: rel.rel_own_paths,
+                ..ctx.clone()
+            };
+            if main {
+                Self::copy_or_reference_main_model(
+                    flow_model_id,
+                    &FlowModelAssociativeOperationKind::Reference,
+                    FlowModelKind::AsTemplateAndAsModel,
+                    Some(rel_template_id),
+                    &None,
+                    data_source,
+                    funs,
+                    &mock_ctx,
+                )
+                .await?;
+            } else {
+                Self::copy_or_reference_non_main_model(
+                    flow_model_id,
+                    &FlowModelAssociativeOperationKind::Reference,
+                    FlowModelKind::AsTemplateAndAsModel,
+                    Some(rel_template_id),
+                    data_source,
+                    funs,
+                    &mock_ctx,
+                )
+                .await?;
+            }
+        }
         Ok(())
     }
 
