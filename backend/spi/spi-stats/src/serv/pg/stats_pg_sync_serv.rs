@@ -29,6 +29,9 @@ use crate::{
 
 use super::{stats_pg_conf_fact_col_serv, stats_pg_conf_fact_serv, stats_pg_record_serv};
 
+const FACT_RECORD_SYNC_PAGE_SIZE: i64 = 1_000;
+const FACT_RECORD_SYNC_ERROR_LIMIT: usize = 100;
+
 pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
@@ -53,32 +56,64 @@ pub(crate) async fn fact_record_sync(fact_conf_key: &str, funs: &TardisFunsInst,
             let funs = stats_initializer::get_tardis_inst();
             let inst = funs.init(None, &task_ctx, true, stats_initializer::init_fun).await?;
             let db_source_conn = stats_cert_serv::get_db_conn_by_cert_id(&cert_id, &funs, &task_ctx).await?;
-            let db_source_list = db_source_conn.query_all(&sync_sql, vec![]).await?;
-            let mut success = 0;
-            let mut error = 0;
+            let sync_sql = sync_sql.trim().trim_end_matches(';');
+            let total = db_source_conn
+                .query_one(&format!("SELECT COUNT(*) AS total FROM ({sync_sql}) AS sync_source"), vec![])
+                .await?
+                .map(|record| record.try_get::<i64>("", "total"))
+                .transpose()?
+                .unwrap_or_default();
+            let mut offset = 0_i64;
+            let mut success = 0_u64;
+            let mut error = 0_u64;
             let mut error_list = vec![];
-            let total = db_source_list.len();
-            for db_source_record in db_source_list {
-                let fact_record_key = db_source_record.try_get::<String>("", "key")?;
-                let add_req = StatsFactRecordLoadReq {
-                    own_paths: db_source_record.try_get::<Option<String>>("", "own_paths")?.unwrap_or_default(),
-                    ct: db_source_record.try_get::<Option<DateTime<Utc>>>("", "ct")?.unwrap_or_default(),
-                    idempotent_id: db_source_record.try_get::<Option<String>>("", "idempotent_id")?,
-                    ignore_updates: Some(false),
-                    data: serde_json::Value::from_query_result(&db_source_record, "")?,
-                    ext: None,
-                };
-                let load_resp = stats_pg_record_serv::fact_record_load(&fact_conf_key, &fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await;
-                if load_resp.is_ok() {
-                    success += 1;
-                } else {
-                    error += 1;
-                    error_list.push(json!({"key":fact_record_key,"error":load_resp.unwrap_err().to_string()}));
+            while offset < total.max(0) {
+                let db_source_list = db_source_conn
+                    .query_all(
+                        &format!("SELECT * FROM ({sync_sql}) AS sync_source ORDER BY \"key\", ct, idempotent_id LIMIT $1 OFFSET $2"),
+                        vec![Value::from(FACT_RECORD_SYNC_PAGE_SIZE), Value::from(offset)],
+                    )
+                    .await?;
+                if db_source_list.is_empty() {
+                    break;
                 }
+
+                let page_len = db_source_list.len() as i64;
+                for db_source_record in db_source_list {
+                    let fact_record_key = db_source_record.try_get::<String>("", "key")?;
+                    let add_req = StatsFactRecordLoadReq {
+                        own_paths: db_source_record.try_get::<Option<String>>("", "own_paths")?.unwrap_or_default(),
+                        ct: db_source_record.try_get::<Option<DateTime<Utc>>>("", "ct")?.unwrap_or_default(),
+                        idempotent_id: db_source_record.try_get::<Option<String>>("", "idempotent_id")?,
+                        ignore_updates: Some(false),
+                        data: serde_json::Value::from_query_result(&db_source_record, "")?,
+                        ext: if db_source_record.column_names().iter().any(|column_name| column_name == "ext") {
+                            db_source_record.try_get::<Option<serde_json::Value>>("", "ext")?
+                        } else {
+                            None
+                        },
+                    };
+                    match stats_pg_record_serv::fact_record_load(&fact_conf_key, &fact_record_key, add_req, &funs, &task_ctx, inst.as_ref()).await {
+                        Ok(_) => success += 1,
+                        Err(load_error) => {
+                            error += 1;
+                            if error_list.len() < FACT_RECORD_SYNC_ERROR_LIMIT {
+                                error_list.push(json!({"key":fact_record_key,"error":load_error.to_string()}));
+                            }
+                        }
+                    }
+                }
+                offset += page_len;
                 let _ = TaskProcessor::set_process_data(
                     &funs.conf::<StatsConfig>().cache_key_async_task_status,
                     task_id,
-                    json!({"success":success,"error":error,"total":total,"error_list":error_list}),
+                    json!({
+                        "success":success,
+                        "error":error,
+                        "total":total,
+                        "error_list":error_list,
+                        "error_list_truncated":error as usize > error_list.len()
+                    }),
                     &funs.cache(),
                 )
                 .await;
