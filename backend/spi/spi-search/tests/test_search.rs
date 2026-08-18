@@ -79,9 +79,10 @@ async fn init_data(code: &str, conn_uri: &str, pg: bool) -> TardisResult<()> {
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
 
     test_search_item::test(&mut client).await?;
-    // pg support multiple search
+    // pg support multiple search & sync diff
     if pg {
         test_search_item::test_multiple_search(&mut client).await?;
+        test_search_item::test_sync(&mut client).await?;
     }
     client.set_auth(&ctx)?;
     client.delete(&format!("/ci/manage/bs/{}", bs_id)).await;

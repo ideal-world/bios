@@ -16,7 +16,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst};
+use bios_basic::{dto::BasicQueryCondInfo, enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInst, spi::spi_initializer};
 
 use crate::{
     dto::search_item_dto::{
@@ -25,6 +25,7 @@ use crate::{
         SearchItemSearchReq, SearchItemSearchResp, SearchItemSearchSortKind, SearchItemSearchSortReq, SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq,
         SearchWordCombinationsRuleWay,
     },
+    dto::search_sync_dto::{SearchSyncBatchReq, SearchSyncFinishReq, SearchSyncFinishResp},
     search_config::SearchConfig,
 };
 
@@ -33,6 +34,18 @@ use super::search_pg_initializer;
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 const FUNCTION_EXT_SUFFIX_FLAG: &str = "_ext_";
 const INNER_FIELD: [&str; 8] = ["key", "title", "kind", "content", "owner", "own_paths", "create_time", "update_time"];
+
+/// 同步对账临时表标识
+const TMP_SYNC_TABLE_FLAG: &str = "tmp_sync_ids";
+/// 同步对账临时表建表 DDL（{schema}.starsys_tmp_sync_ids）
+/// key 列对应 Search 业务表主键 key；一次同步覆盖一个 tag+kind 全量，无需 own_paths 维度
+const TMP_SYNC_TABLE_CREATE: &str = r#"id BIGSERIAL PRIMARY KEY,
+    batch_id character varying NOT NULL,
+    tag character varying NOT NULL,
+    kind character varying NOT NULL,
+    key character varying NOT NULL"#;
+/// 单批写入临时表的最大行数（控制单条 SQL 参数规模）
+const TMP_SYNC_BATCH_INSERT_LIMIT: usize = 1000;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
@@ -1920,4 +1933,142 @@ pub async fn import_data(import_req: &SearchImportDataReq, funs: &TardisFunsInst
         }
     }
     Ok(true)
+}
+
+/// 初始化同步对账临时表并返回连接与表名
+async fn init_tmp_sync_table(bs_inst: bios_basic::spi::spi_funs::TypedSpiBsInst<'_, TardisRelDBClient>, ctx: &TardisContext) -> TardisResult<(TardisRelDBlConnection, String)> {
+    spi_initializer::common_pg::init_table_and_conn(
+        bs_inst,
+        ctx,
+        true,
+        None,
+        TMP_SYNC_TABLE_FLAG,
+        TMP_SYNC_TABLE_CREATE,
+        None,
+        vec![("batch_id", "btree"), ("tag", "btree"), ("kind", "btree"), ("key", "btree")],
+        None,
+        None,
+    )
+    .await
+}
+
+/// 分批推送业务 key 列表：写入临时对账表
+///
+/// 写入前先清理同一 tag+kind 下其他批次的临时数据，保证临时表仅保留当前同步批次
+/// （配合「同一时刻仅一个同步任务」的分布式锁约束，不会误删其他进行中的同步）。
+pub async fn sync_batch(batch_req: &mut SearchSyncBatchReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<()> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (mut conn, tmp_table) = init_tmp_sync_table(bs_inst, ctx).await?;
+    conn.begin().await?;
+    // 清理该 tag+kind 下其他批次的临时数据（幂等：重复推送同一批次不会影响本批次）
+    conn.execute_one(
+        &format!("DELETE FROM {tmp_table} WHERE tag = $1 AND kind = $2 AND batch_id <> $3"),
+        vec![
+            Value::from(batch_req.tag.clone()),
+            Value::from(batch_req.kind.clone()),
+            Value::from(batch_req.sync_batch_id.clone()),
+        ],
+    )
+    .await?;
+    if batch_req.keys.is_empty() {
+        conn.commit().await?;
+        return Ok(());
+    }
+    // 分批插入，避免单条 SQL 参数规模过大
+    for chunk in batch_req.keys.chunks(TMP_SYNC_BATCH_INSERT_LIMIT) {
+        let mut params: Vec<Value> = Vec::with_capacity(chunk.len() * 4);
+        let mut values: Vec<String> = Vec::with_capacity(chunk.len());
+        for (i, key) in chunk.iter().enumerate() {
+            let base = i * 4;
+            values.push(format!("(${}, ${}, ${}, ${})", base + 1, base + 2, base + 3, base + 4));
+            params.push(Value::from(batch_req.sync_batch_id.clone()));
+            params.push(Value::from(batch_req.tag.clone()));
+            params.push(Value::from(batch_req.kind.clone()));
+            params.push(Value::from(key.clone()));
+        }
+        conn.execute_one(
+            &format!("INSERT INTO {tmp_table} (batch_id, tag, kind, key) VALUES {}", values.join(",")),
+            params,
+        )
+        .await?;
+    }
+    conn.commit().await?;
+    Ok(())
+}
+
+/// 同步完成：批次收尾 + 对账 Diff。
+///
+/// 业务服务多次调用 sync/batch 推送完全部 key 后调用本接口：
+/// 1. 返回已推送的 key 数量（total，落盘确认）；
+/// 2. 基于临时表与 Search 业务表做差异比对，返回冗余 key（deleted_keys）与缺失 key（missing_keys）。
+/// 不执行删除/写入（由业务服务调用 batch_delete / batch_save 完成），
+/// 也不清理临时表（保证重复调用结果一致），临时表数据由下一次 sync_batch 写入前统一清理。
+pub async fn sync_finish(finish_req: &mut SearchSyncFinishReq, _funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<SearchSyncFinishResp> {
+    let bs_inst = inst.inst::<TardisRelDBClient>();
+    let (conn, tag_table) = search_pg_initializer::init_table_and_conn(bs_inst, &finish_req.tag, ctx, true).await?;
+    let (_, tmp_table) = init_tmp_sync_table(bs_inst, ctx).await?;
+
+    // ① 已推送 key 数量
+    let total_rows = conn
+        .query_all(
+            &format!("SELECT count(*) AS total FROM {tmp_table} WHERE batch_id = $1 AND tag = $2 AND kind = $3"),
+            vec![
+                Value::from(finish_req.sync_batch_id.clone()),
+                Value::from(finish_req.tag.clone()),
+                Value::from(finish_req.kind.clone()),
+            ],
+        )
+        .await?;
+    let total = match total_rows.first() {
+        Some(r) => r.try_get::<i64>("", "total")?,
+        None => 0,
+    };
+
+    // ② 冗余：Search 有、临时表无
+    let deleted_rows = conn
+        .query_all(
+            &format!(
+                r#"SELECT s.key FROM {tag_table} s
+WHERE s.kind = $1
+  AND NOT EXISTS (
+      SELECT 1 FROM {tmp_table} t
+      WHERE t.batch_id = $2
+        AND t.tag = $3
+        AND t.kind = $1
+        AND t.key = s.key
+  )"#
+            ),
+            vec![
+                Value::from(finish_req.kind.clone()),
+                Value::from(finish_req.sync_batch_id.clone()),
+                Value::from(finish_req.tag.clone()),
+            ],
+        )
+        .await?;
+    let deleted_keys = deleted_rows.into_iter().map(|r| Ok(r.try_get::<String>("", "key")?)).collect::<TardisResult<Vec<String>>>()?;
+
+    // ③ 缺失：临时表有、Search 无
+    let missing_rows = conn
+        .query_all(
+            &format!(
+                r#"SELECT t.key FROM {tmp_table} t
+WHERE t.batch_id = $1
+  AND t.tag = $2
+  AND t.kind = $3
+  AND NOT EXISTS (
+      SELECT 1 FROM {tag_table} s
+      WHERE s.kind = $3
+        AND s.key = t.key
+  )"#
+            ),
+            vec![
+                Value::from(finish_req.sync_batch_id.clone()),
+                Value::from(finish_req.tag.clone()),
+                Value::from(finish_req.kind.clone()),
+            ],
+        )
+        .await?;
+    let missing_keys = missing_rows.into_iter().map(|r| Ok(r.try_get::<String>("", "key")?)).collect::<TardisResult<Vec<String>>>()?;
+
+    Ok(SearchSyncFinishResp { total, deleted_keys, missing_keys })
 }

@@ -1,5 +1,6 @@
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_search::dto::search_item_dto::SearchItemSearchResp;
+use bios_spi_search::dto::search_sync_dto::SearchSyncFinishResp;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::log;
@@ -705,6 +706,84 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 0);
+
+    Ok(())
+}
+
+/// 同步对账 Diff 测试（仅 PG 后端支持）
+///
+/// 前置数据状态（由 test 函数准备）：
+/// - tag=feed kind=req 现有 key=002（001 已删除）
+/// - tag=feed kind=task 现有 key=003（own_paths=t001/a002）
+pub async fn test_sync(client: &mut TestHttpClient) -> TardisResult<()> {
+    log::info!("--- Test Search Item Sync Diff ---");
+
+    // 场景1：kind=req 现有 [002]，推送 [001,002] → total=2，缺失 001
+    let _: Void = client
+        .put(
+            "/ci/item/sync/batch",
+            &json!({
+                "sync_batch_id":"sync_test_1",
+                "tag":"feed",
+                "kind":"req",
+                "keys":["001","002"]
+            }),
+        )
+        .await;
+    let finish_resp: SearchSyncFinishResp = client
+        .put(
+            "/ci/item/sync/finish",
+            &json!({
+                "sync_batch_id":"sync_test_1",
+                "tag":"feed",
+                "kind":"req"
+            }),
+        )
+        .await;
+    assert_eq!(finish_resp.total, 2, "unexpected finish total: {:?}", finish_resp.total);
+    assert!(finish_resp.deleted_keys.is_empty(), "unexpected deleted_keys: {:?}", finish_resp.deleted_keys);
+    assert_eq!(finish_resp.missing_keys, vec!["001".to_string()], "unexpected missing_keys: {:?}", finish_resp.missing_keys);
+
+    // 场景2：kind=task 现有 [003]，推送 [004] → total=1，冗余 003、缺失 004
+    let _: Void = client
+        .put(
+            "/ci/item/sync/batch",
+            &json!({
+                "sync_batch_id":"sync_test_2",
+                "tag":"feed",
+                "kind":"task",
+                "keys":["004"]
+            }),
+        )
+        .await;
+    let finish_resp: SearchSyncFinishResp = client
+        .put(
+            "/ci/item/sync/finish",
+            &json!({
+                "sync_batch_id":"sync_test_2",
+                "tag":"feed",
+                "kind":"task"
+            }),
+        )
+        .await;
+    assert_eq!(finish_resp.total, 1, "unexpected finish total: {:?}", finish_resp.total);
+    assert_eq!(finish_resp.deleted_keys, vec!["003".to_string()], "unexpected deleted_keys: {:?}", finish_resp.deleted_keys);
+    assert_eq!(finish_resp.missing_keys, vec!["004".to_string()], "unexpected missing_keys: {:?}", finish_resp.missing_keys);
+
+    // 幂等：重复调用 finish 结果一致（finish 只读，不清理临时表）
+    let finish_resp: SearchSyncFinishResp = client
+        .put(
+            "/ci/item/sync/finish",
+            &json!({
+                "sync_batch_id":"sync_test_2",
+                "tag":"feed",
+                "kind":"task"
+            }),
+        )
+        .await;
+    assert_eq!(finish_resp.total, 1, "unexpected finish total: {:?}", finish_resp.total);
+    assert_eq!(finish_resp.deleted_keys, vec!["003".to_string()], "unexpected deleted_keys: {:?}", finish_resp.deleted_keys);
+    assert_eq!(finish_resp.missing_keys, vec!["004".to_string()], "unexpected missing_keys: {:?}", finish_resp.missing_keys);
 
     Ok(())
 }

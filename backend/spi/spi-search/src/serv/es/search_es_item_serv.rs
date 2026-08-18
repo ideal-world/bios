@@ -18,6 +18,7 @@ use crate::dto::search_item_dto::{
     SearchItemModifyReq, SearchItemQueryReq, SearchItemSearchCtxReq, SearchItemSearchPageReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp,
     SearchQueryMetricsReq, SearchQueryMetricsResp, SearchSaveItemReq,
 };
+use crate::dto::search_sync_dto::{SearchSyncBatchReq, SearchSyncFinishReq, SearchSyncFinishResp};
 
 use super::search_es_initializer;
 const INNER_FIELD: [&str; 7] = ["key", "title", "content", "owner", "own_paths", "create_time", "update_time"];
@@ -908,4 +909,12 @@ pub async fn export_data(_export_req: &SearchExportDataReq, _funs: &TardisFunsIn
 
 pub async fn import_data(_import_req: &SearchImportDataReq, _funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<bool> {
     Ok(true)
+}
+
+pub async fn sync_batch(_batch_req: &mut SearchSyncBatchReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<()> {
+    Err(funs.err().format_error("search_es_item_serv", "sync_batch", "not supports", "500-not-supports"))
+}
+
+pub async fn sync_finish(_finish_req: &mut SearchSyncFinishReq, funs: &TardisFunsInst, _ctx: &TardisContext, _inst: &SpiBsInst) -> TardisResult<SearchSyncFinishResp> {
+    Err(funs.err().format_error("search_es_item_serv", "sync_finish", "not supports", "500-not-supports"))
 }
