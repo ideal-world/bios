@@ -270,7 +270,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 let rel_template_id_clone = rel_template_id.clone();
                 let main_clone = add_req.main;
                 let ctx_clone = ctx.clone();
-                ctx.add_sync_task(Box::new(move || {
+                ctx.add_async_task(Box::new(move || {
                     Box::pin(async move {
                         let task_handle = tokio::spawn(async move {
                             let funs = flow_constants::get_tardis_inst();
@@ -288,7 +288,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
                 let rel_template_id_clone = rel_template_id.clone();
                 let main_clone = add_req.main;
                 let ctx_clone = ctx.clone();
-                ctx.add_sync_task(Box::new(move || {
+                ctx.add_async_task(Box::new(move || {
                     Box::pin(async move {
                         let task_handle = tokio::spawn(async move {
                             let funs = flow_constants::get_tardis_inst();

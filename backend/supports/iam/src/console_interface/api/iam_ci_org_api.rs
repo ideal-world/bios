@@ -82,12 +82,14 @@ impl IamCiOrgApi {
         &self,
         tenant_id: Query<Option<String>>,
         cate_id: Query<Option<String>>,
+        sys_code_query_kind: Query<Option<RbumSetCateLevelQueryKind>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
-        ctx: TardisContextExtractor,
+        mut ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let code = if ctx.own_paths.is_empty() {
@@ -96,7 +98,12 @@ impl IamCiOrgApi {
             IamSetServ::get_default_org_code_by_tenant(&funs, &ctx)?
         };
         let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx).await?;
-        let result = IamSetServ::paginate_set_items(Some(set_id), cate_id.0, None, None, false, None, page_number.0, page_size.0, &funs, &ctx).await?;
+        let sys_codes = if let Some(cate_id) = cate_id.0 {
+            Some(vec![RbumSetCateServ::get_sys_code(&cate_id, &funs, &ctx).await?])
+        }else {
+            None
+        };
+        let result = IamSetServ::paginate_set_items(Some(set_id), None, None, None, false, None, sys_codes, sys_code_query_kind.0, page_number.0, page_size.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

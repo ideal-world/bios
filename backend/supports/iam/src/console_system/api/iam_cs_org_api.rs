@@ -267,7 +267,7 @@ impl IamCsOrgItemApi {
         } else {
             Some(RbumScopeLevelKind::Root)
         };
-        let result = IamSetServ::paginate_set_items(Some(set_id), cate_id.0, None, scope_level, false, None, page_number.0, page_size.0, &funs, &ctx).await?;
+        let result = IamSetServ::paginate_set_items(Some(set_id), cate_id.0, None, scope_level, false, None, None, None, page_number.0, page_size.0, &funs, &ctx).await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
