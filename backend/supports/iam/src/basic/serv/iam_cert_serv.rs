@@ -1769,30 +1769,47 @@ impl IamCertServ {
             )
             .await
         };
-        if let Err(e) = result.as_ref() {
-            if e.message.as_str() == "cert is locked" {
-                let mut mock_ctx = TardisContext { ..Default::default() };
-                if let Some(own_paths) = own_paths {
-                    mock_ctx.own_paths = own_paths;
+        if result.is_err() {
+            let mut mock_ctx = TardisContext { ..Default::default() };
+            if let Some(own_paths) = own_paths {
+                mock_ctx.own_paths = own_paths;
+            }
+            let rel_rbum_id = RbumCertServ::find_rbums(
+                &RbumCertFilterReq {
+                    ak: Some(ak.to_string()),
+                    rel_rbum_kind: rel_rbum_kind.cloned(),
+                    rel_rbum_cert_conf_ids: rbum_cert_conf_id.map(|id| vec![id.to_string()]),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                &mock_ctx,
+            )
+            .await
+            .ok()
+            .and_then(|certs| certs.into_iter().next().map(|cert| cert.rel_rbum_id));
+            if let Some(rel_rbum_id) = rel_rbum_id {
+                if RbumCertServ::cert_is_locked(&rel_rbum_id, funs).await? {
+                    add_ip(ip, &mock_ctx).await?;
+                    let _ = IamLogClient::add_ctx_task(
+                        LogParamTag::IamAccount,
+                        None,
+                        "密码锁定账号".to_string(),
+                        Some("PasswordLockAccount".to_string()),
+                        &mock_ctx,
+                    )
+                    .await;
+                    let _ = IamLogClient::add_ctx_task(
+                        LogParamTag::SecurityVisit,
+                        None,
+                        "连续登录失败".to_string(),
+                        Some("ContinuLoginFail".to_string()),
+                        &mock_ctx,
+                    )
+                    .await;
+                    mock_ctx.execute_task().await?;
                 }
-                add_ip(ip, &mock_ctx).await?;
-                let _ = IamLogClient::add_ctx_task(
-                    LogParamTag::IamAccount,
-                    None,
-                    "密码锁定账号".to_string(),
-                    Some("PasswordLockAccount".to_string()),
-                    &mock_ctx,
-                )
-                .await;
-                let _ = IamLogClient::add_ctx_task(
-                    LogParamTag::SecurityVisit,
-                    None,
-                    "连续登录失败".to_string(),
-                    Some("ContinuLoginFail".to_string()),
-                    &mock_ctx,
-                )
-                .await;
-                mock_ctx.execute_task().await?;
             }
         }
         result
