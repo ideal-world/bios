@@ -37,74 +37,71 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 ///
 /// # Examples
 ///
-/// An example SQL assembled from a completed query is as follows:
-/// ```
-/// -- Outer SQL, responsible for grouping and sorting, filtering, and length limitation after grouping
+/// An example SQL assembled by the current implementation is shown below. This
+/// example enables distinct measures, rollup grouping, and group details.
+/// ```sql
+/// -- Outer query: aggregate, group, filter aggregated values, sort, and apply the request limit.
 /// SELECT
-///  -- The format of the returned field is: `field name__<function name>`
+///   -- Returned aliases use the format `<field>__<function or time window>`.
 ///   date(timezone('UTC', _.ct)) AS ct__date,
 ///   _.status AS status__,
 ///   sum(_.act_hours) AS act_hours__sum,
-///   sum(_.plan_hours) AS plan_hours__sum
+///   sum(_.plan_hours) AS plan_hours__sum,
+///   -- Added only when group_agg is true and at least one group is configured.
+///   string_agg(
+///     _._key || ' - ' || _._own_paths || ' - ' || to_char(_._ct, 'YYYY-MM-DD HH24:MI:SS'),
+///     ','
+///   ) AS s_agg
 /// FROM
 ///   (
-///     -- Inner SQL, responsible for filtering, deduplication, and length limitation
+///     -- Middle query: select requested fields, apply request filters and dimension ordering,
+///     -- then enforce the fact configuration's query_limit.
 ///     SELECT
-///       -- Query dimensions and measures
 ///       fact.act_hours AS act_hours,
 ///       fact.plan_hours AS plan_hours,
 ///       fact.ct AS ct,
-///       fact.status AS status
+///       fact.status AS status,
+///       fact.key AS _key,
+///       fact.own_paths AS _own_paths,
+///       fact.ct AS _ct
 ///     FROM
-///         (
-///             SELECT
-///                 -- Built-in statement for deduplication
-///                 DISTINCT ON (fact.key) fact.key,fact.*
-///             FROM
-///             -- Query fact instance table
-///             xxx.starsys_stats_inst_fact_req fact
-///             -- Association instance delete table
-///             LEFT JOIN xxx.starsys_stats_inst_fact_req_del del ON del.key = fact.key
-///             AND del.ct >= '2023-01-01 12:00:00 +00:00'
-///             AND del.ct <= '2023-02-01 12:00:00 +00:00'
-///             WHERE
-///                 -- Built-in statement for permission control
-///                 fact.own_paths LIKE 't1/a1%'
-///                 -- Built-in statement for filter deleted records
-///                 AND del.key IS NULL
-///                  -- Time filter
-///                 AND fact.ct >= '2023-01-01 12:00:00 +00:00'
-///                 AND fact.ct <= '2023-02-01 12:00:00 +00:00'
-///                 ORDER BY
-///                 -- Built-in statement for deduplication
-///                 fact.key, fact.ct DESC
-///         ) fact
-///       -- Other filter conditions, optional
+///       (
+///         -- Inner query: enforce ownership and time range, exclude deleted records,
+///         -- and retain the latest row for each key when distinct measures are enabled.
+///         SELECT DISTINCT ON (fact.key)
+///           fact.key AS _key,
+///           fact.*,
+///           1 AS _count
+///         FROM tenant.starsys_stats_inst_fact_req fact
+///         LEFT JOIN tenant.starsys_stats_inst_fact_req_del del
+///           ON del.key = fact.key
+///          AND del.ct >= $2
+///          AND del.ct <= $3
+///         WHERE fact.own_paths LIKE $1
+///           AND del.key IS NULL
+///           AND fact.ct >= $2
+///           AND fact.ct <= $3
+///         ORDER BY _key, fact.ct DESC
+///       ) fact
+///     WHERE 1 = 1
+///       -- Optional request where conditions.
 ///       AND (
-///         fact.act_hours > 10
-///         AND date_part('day', timezone('UTC', fact.ct)) != 1
-///         OR fact.status = 'open'
+///         (fact.act_hours > $4 AND date_part('day', timezone('UTC', fact.ct)) != $5)
+///         OR fact.status = $6
 ///       )
-///     ORDER BY
-///         -- Order of the dimension values
-///         fact.status DESC
-///     LIMIT
-///     -- built-in statement, the value is the limit length in the fact configuration
-///       2000
+///     -- Optional dimension_order from the request.
+///     ORDER BY fact.status DESC
+///     -- query_limit from the fact configuration.
+///     LIMIT 2000
 ///   ) _
-/// GROUP BY
-/// -- List of dimensions to grouping
-/// -- Omit adding rollup dimensions according to the ignore_group_rollup configuration, Default is false
-///   ROLLUP(date(timezone('UTC', _.ct)), _.status)
-/// HAVING
-/// -- Filter condition of the measure value after grouping and aggregation, optional
-///   sum(_.act_hours) > 30
-/// ORDER BY
-/// -- Order of the measure and group values ​​after grouping ad aggregation, optional
-///   act_hours__sum DESC
-/// LIMIT
-/// -- Length limit after grouping, optional
-///   2
+/// -- Uses GROUP BY without ROLLUP when ignore_group_rollup is true.
+/// GROUP BY ROLLUP(date(timezone('UTC', _.ct)), _.status)
+/// -- Optional request having conditions.
+/// HAVING sum(_.act_hours) > $7
+/// -- Optional group_order and metrics_order from the request.
+/// ORDER BY status__ ASC, act_hours__sum DESC
+/// -- Optional limit from the request, applied after aggregation.
+/// LIMIT 2
 /// ```
 pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext, inst: &SpiBsInst) -> TardisResult<StatsQueryMetricsResp> {
     let bs_inst = inst.inst::<TardisRelDBClient>();
