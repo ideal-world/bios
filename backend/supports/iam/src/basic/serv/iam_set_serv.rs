@@ -1346,6 +1346,8 @@ impl IamSetServ {
         scope_level: Option<RbumScopeLevelKind>,
         with_sub: bool,
         table_rbum_set_cate_is_left: Option<bool>,
+        sys_codes: Option<Vec<String>>,
+        sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
         page_number: u32,
         page_size: u32,
         funs: &TardisFunsInst,
@@ -1363,6 +1365,8 @@ impl IamSetServ {
                 rel_rbum_set_cate_ids: set_cate_id.map(|r| vec![r]),
                 rel_rbum_item_ids: item_id.map(|i| vec![i]),
                 rel_rbum_item_scope_level: scope_level,
+                rel_rbum_set_cate_sys_codes: sys_codes,
+                sys_code_query_kind,
                 ..Default::default()
             },
             page_number,

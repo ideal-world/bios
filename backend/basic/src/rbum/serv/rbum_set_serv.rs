@@ -822,7 +822,7 @@ impl RbumSetCateServ {
     /// Fetch the sys_code of the specified node
     ///
     /// 获取指定节点的sys_code
-    async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::check_scope(rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         let sys_code = funs
             .db()

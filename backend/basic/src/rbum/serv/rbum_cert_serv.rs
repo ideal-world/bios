@@ -378,11 +378,11 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             if rbum_cert_conf.sk_dynamic && add_req.vcode.is_none() {
                 return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "vcode is required when dynamic model", "400-rbum-cert-vcode-require"));
             }
-
+            let ak_str = add_req.ak.to_string();
             if !rbum_cert_conf.ak_rule.is_empty()
                 && !Regex::new(&rbum_cert_conf.ak_rule)
                     .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{e}"), "400-rbum-cert-conf-ak-rule-invalid"))?
-                    .is_match(add_req.ak.as_ref())
+                    .is_match(&ak_str)
                     .unwrap_or(false)
             {
                 return Err(funs.err().bad_request(
@@ -560,10 +560,11 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 .await?;
 
                 if let Some(ak) = &modify_req.ak {
+                    let ak_str = ak.to_string();
                     if !rbum_cert_conf.ak_rule.is_empty()
                         && !Regex::new(&rbum_cert_conf.ak_rule)
                             .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("ak rule is invalid:{e}"), "400-rbum-cert-conf-ak-rule-invalid"))?
-                            .is_match(ak.as_ref())
+                            .is_match(&ak_str)
                             .unwrap_or(false)
                     {
                         return Err(funs.err().bad_request(
@@ -575,11 +576,12 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                     }
                 }
                 if let Some(sk) = &modify_req.sk {
+                    let sk_str = sk.to_string();
                     if rbum_cert_conf.sk_need
                         && !rbum_cert_conf.sk_rule.is_empty()
                         && !Regex::new(&rbum_cert_conf.sk_rule)
                             .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
-                            .is_match(sk.as_ref())
+                            .is_match(&sk_str)
                             .unwrap_or(false)
                         && !modify_req.ignore_check_sk
                     {

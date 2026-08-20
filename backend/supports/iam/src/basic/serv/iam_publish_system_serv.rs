@@ -404,7 +404,7 @@ impl IamPublishSystemServ {
         if let Some(existing) = Self::find_one_item(
             &IamPublishSystemFilterReq {
                 basic: RbumBasicFilterReq {
-                    name: Some(name.to_string()),
+                    names: Some(vec![name.to_string()]),
                     own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
