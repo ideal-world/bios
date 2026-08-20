@@ -13,7 +13,7 @@ use tardis::{
 use crate::{
     dto::{
         flow_external_dto::{
-            FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp, FlowExternalUpdateRelationshipResp
+            FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalChildApproveInst, FlowExternalDeleteRelObjResp, FlowExternalFetchAuthAccountResp, FlowExternalFetchRelObjResp, FlowExternalKind, FlowExternalModifyFieldResp, FlowExternalNotifyChangesResp, FlowExternalParams, FlowExternalQueryFieldResp, FlowExternalReq, FlowExternalResp, FlowExternalUpdateRelationshipResp
         },
         flow_state_dto::{FlowGuardConf, FlowSysStateKind},
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
@@ -434,6 +434,7 @@ impl FlowExternalServ {
         target_state_id: String,
         original_state: String,
         approve_op: FlowExternalApproveOp,
+        child_approve_insts: Vec<FlowExternalChildApproveInst>,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<FlowExternalNotifyChangesResp> {
@@ -453,6 +454,7 @@ impl FlowExternalServ {
             target_state_id: Some(target_state_id),
             original_state: Some(original_state),
             sys_time: Some(Utc::now().timestamp_millis()),
+            child_approve_insts,
             ..Default::default()
         };
         let original_resp = funs.web_client().post(&external_url, &body, header).await?;
