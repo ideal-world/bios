@@ -1790,11 +1790,12 @@ impl IamCertServ {
             .ok()
             .and_then(|certs| certs.into_iter().next().map(|cert| cert.rel_rbum_id));
             if let Some(rel_rbum_id) = rel_rbum_id {
+                mock_ctx.owner = rel_rbum_id.clone();
                 if RbumCertServ::cert_is_locked(&rel_rbum_id, funs).await? {
                     add_ip(ip, &mock_ctx).await?;
                     let _ = IamLogClient::add_ctx_task(
                         LogParamTag::IamAccount,
-                        None,
+                        Some(rel_rbum_id.clone()),
                         "密码锁定账号".to_string(),
                         Some("PasswordLockAccount".to_string()),
                         &mock_ctx,
@@ -1802,7 +1803,7 @@ impl IamCertServ {
                     .await;
                     let _ = IamLogClient::add_ctx_task(
                         LogParamTag::SecurityVisit,
-                        None,
+                        Some(rel_rbum_id.clone()),
                         "连续登录失败".to_string(),
                         Some("ContinuLoginFail".to_string()),
                         &mock_ctx,
