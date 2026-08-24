@@ -5,6 +5,7 @@ use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::log::{debug, warn};
@@ -49,7 +50,7 @@ impl FlowCiInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
-        let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
+        let result = FlowInstServ::start(&add_req.0, add_req.0.current_state_name.clone(), &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -64,7 +65,7 @@ impl FlowCiInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
-        let inst_id = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
+        let inst_id = FlowInstServ::start(&add_req.0, add_req.0.current_state_name.clone(), &funs, &ctx.0).await?;
         let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
@@ -158,6 +159,8 @@ impl FlowCiInstApi {
         funs.commit().await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
+        let funs = flow_constants::get_tardis_inst();
+        FlowInstServ::do_delete_by_obj_id_and_tag(&tag.0, &rel_business_obj_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -228,19 +231,27 @@ impl FlowCiInstApi {
         if let (Some(tenant_id), Some(app_id)) = (tenant_id.0, app_id.0) {
             ctx.0.own_paths = format!("{}/{}", tenant_id, app_id);
         }
-        let mut transfer = transfer_req.0;
-        let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
-        FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
-        let result = FlowInstServ::transfer(
-            &inst,
-            &transfer,
-            false,
-            FlowExternalCallbackOp::Default,
-            loop_check_helper::InstancesTransition::default(),
-            &ctx.0,
-            &funs,
-        )
-        .await?;
+        let lock_key = format!("flow:spin:transfer:{}", flow_inst_id.0);
+        let token = FlowCacheClient::spin_lock_acquire(&lock_key, &funs, &CacheSpinLockConfig::default()).await?;
+        let try_result: TardisResult<FlowInstTransferResp> = {
+            let mut transfer = transfer_req.0;
+            let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
+            FlowInstServ::check_transfer_vars(&inst, &mut transfer, &funs, &ctx.0).await?;
+            let result = FlowInstServ::transfer(
+                &inst,
+                &transfer,
+                false,
+                FlowExternalCallbackOp::Default,
+                loop_check_helper::InstancesTransition::default(),
+                &ctx.0,
+                &funs,
+            )
+            .await?;
+            Ok(result)
+        };
+        let funs_cache = flow_constants::get_tardis_inst();
+        let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, &funs_cache).await;
+        let result = try_result?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -556,6 +567,7 @@ impl FlowCiInstApi {
         current_state_id: Query<Option<String>>,
         current_state_sys_kind: Query<Option<FlowSysStateKind>>,
         with_sub: Query<Option<bool>>,
+        is_child: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         mut ctx: TardisContextExtractor,
@@ -647,6 +659,10 @@ impl FlowCiInstApi {
     ) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        let lock_key = format!("flow:spin:transfer:{}", flow_inst_id.0);
+        if FlowCacheClient::spin_lock_exists(&lock_key, &funs).await? {
+            return Err(funs.err().conflict("flow_inst", "modify_inst_artifacts", "instance is locked by transfer", "409-flow-inst-transfer-lock").into());
+        }
         funs.begin().await?;
         FlowInstServ::modify_inst_artifacts_with_validation(&flow_inst_id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;

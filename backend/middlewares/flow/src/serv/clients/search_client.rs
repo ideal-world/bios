@@ -142,6 +142,7 @@ impl FlowSearchClient {
                 rel_business_obj_ids: Some(vec![rel_business_obj_id.to_string()]),
                 main: Some(false),
                 finish: Some(false),
+                with_sub: Some(true),
                 ..Default::default()
             },
             funs,
@@ -928,6 +929,7 @@ impl FlowSearchClient {
             ("PROJECT_MS".to_string(), ("idp_product".to_string(), "idp_feed_project_ms".to_string())),
             ("PROJ".to_string(), ("idp_product".to_string(), "idp_project".to_string())),
             ("REQ".to_string(), ("idp_product".to_string(), "idp_feed_req".to_string())),
+            ("PROJ_REQ".to_string(), ("idp_product".to_string(), "idp_feed_req".to_string())),
             ("TASK".to_string(), ("idp_product".to_string(), "idp_feed_task".to_string())),
             ("TICKET".to_string(), ("ticket".to_string(), "ticket_inst".to_string())),
             ("TP".to_string(), ("idp_test".to_string(), "idp_test_plan".to_string())),
@@ -948,6 +950,7 @@ impl FlowSearchClient {
             ("PROJECT_MS".to_string(), "status".to_string()),
             ("PROJ".to_string(), "status".to_string()),
             ("REQ".to_string(), "status".to_string()),
+            ("PROJ_REQ".to_string(), "status".to_string()),
             ("TASK".to_string(), "status".to_string()),
             ("TICKET".to_string(), "status".to_string()),
             ("TP".to_string(), "status".to_string()),
