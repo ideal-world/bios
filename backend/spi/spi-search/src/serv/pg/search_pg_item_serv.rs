@@ -39,7 +39,7 @@ const INNER_FIELD: [&str; 8] = ["key", "title", "kind", "content", "owner", "own
 const TMP_SYNC_TABLE_FLAG: &str = "tmp_sync_ids";
 /// 同步对账临时表建表 DDL（{schema}.starsys_tmp_sync_ids）
 /// key 列对应 Search 业务表主键 key；一次同步覆盖一个 tag+kind 全量，无需 own_paths 维度
-const TMP_SYNC_TABLE_CREATE: &str = r#"id BIGSERIAL PRIMARY KEY,
+const TMP_SYNC_TABLE_CREATE: &str = r#"
     batch_id character varying NOT NULL,
     tag character varying NOT NULL,
     kind character varying NOT NULL,
