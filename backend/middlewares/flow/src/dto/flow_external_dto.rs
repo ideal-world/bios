@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tardis::web::poem_openapi::{
-    self,
-    types::{ParseFromJSON, ToJSON},
+use tardis::{
+    chrono::{DateTime, Utc},
+    web::poem_openapi::{
+        self,
+        types::{ParseFromJSON, ToJSON},
+    },
 };
 
 use super::{
+    flow_inst_dto::FlowInstStateKind,
     flow_state_dto::{FlowGuardConf, FlowSysStateKind},
     flow_transition_dto::FlowTransitionActionByVarChangeInfoChangedKind,
 };
@@ -94,6 +98,23 @@ pub struct FlowExternalReq {
     ///
     /// guard Config
     pub guard_conf: Option<FlowGuardConf>,
+    /// 子审批流信息列表（审批通过/驳回时传入）
+    ///
+    /// Child approval instance infos
+    pub child_approve_insts: Vec<FlowExternalChildApproveInst>,
+}
+
+/// 子审批流通知信息
+///
+/// Child approval instance notify info
+#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
+pub struct FlowExternalChildApproveInst {
+    /// 子审批流关联业务ID
+    pub rel_business_obj_id: String,
+    /// 子审批流结果
+    pub result: Option<FlowInstStateKind>,
+    /// 子审批流结束时间
+    pub finish_time: Option<DateTime<Utc>>,
 }
 
 /// Type of request initiated, ex: query field, modification field, status change notification...

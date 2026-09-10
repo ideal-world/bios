@@ -25,7 +25,7 @@ use crate::{
     domain::{flow_inst, flow_model_version, flow_state},
     dto::{
         flow_cond_dto::BasicQueryCondInfo,
-        flow_external_dto::{FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalParams},
+        flow_external_dto::{FlowExternalApproveOp, FlowExternalCallbackOp, FlowExternalChildApproveInst, FlowExternalParams},
         flow_inst_dto::{
             FLowInstStateApprovalConf, FLowInstStateConf, FLowInstStateFormConf, FlowApprovalResultKind, FlowInstAbortReq, FlowInstArtifacts, FlowInstArtifactsModifyApiReq, FlowInstArtifactsModifyReq, FlowInstBatchBindReq, FlowInstBatchBindResp, FlowInstCommentInfo, FlowInstCommentReq, FlowInstDetailInSearch, FlowInstDetailResp, FlowInstFilterReq, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstFindTransitionsResp, FlowInstOperateReq, FlowInstQueryResult, FlowInstRelChildObj, FlowInstStartReq, FlowInstStateKind, FlowInstSummaryResp, FlowInstSummaryResult, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext, ModifyObjSearchExtReq
         },
@@ -508,6 +508,7 @@ impl FlowInstServ {
                                 target_state_id,
                                 original_state,
                                 FlowExternalApproveOp::ApproveStart,
+                                vec![],
                                 &ctx_clone,
                                 &funs,
                             )
@@ -1308,7 +1309,20 @@ impl FlowInstServ {
                 })?;
                 FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &flow_inst_detail.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 // 通知工作项审批驳回
-                FlowExternalServ::do_approve_notify_changes(&main_inst.tag, &main_inst.id, &main_inst.rel_business_obj_id, main_inst.current_state_id.clone(), main_inst.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_name.clone(), FlowExternalApproveOp::ApproveRejection, ctx, funs).await?;
+                let child_approve_insts = Self::find_child_approve_notify_infos(&flow_inst_detail.id, funs, ctx).await?;
+                FlowExternalServ::do_approve_notify_changes(
+                    &main_inst.tag,
+                    &main_inst.id,
+                    &main_inst.rel_business_obj_id,
+                    main_inst.current_state_id.clone(),
+                    main_inst.current_state_name.clone().unwrap_or_default(),
+                    funs.conf::<FlowConfig>().specifed_approving_state_name.clone(),
+                    FlowExternalApproveOp::ApproveRejection,
+                    child_approve_insts,
+                    ctx,
+                    funs,
+                )
+                .await?;
             }
         }
         // 携带子审批流的审批流
@@ -3948,7 +3962,7 @@ impl FlowInstServ {
                     // 关联子流程的处理
                     let root_config = FlowConfigServ::get_root_config(&main_inst.tag, funs, ctx).await?;
                     let rel_child_objs = main_inst.artifacts.clone().unwrap_or_default().rel_child_objs.unwrap_or_default();
-                    if let Some(root_inst_id) = root_inst_id {
+                    if let Some(root_inst_id) = root_inst_id.clone() {
                         Self::modify_inst_artifacts(
                             &root_inst_id,
                             &FlowInstArtifactsModifyReq {
@@ -4141,9 +4155,54 @@ impl FlowInstServ {
         }
         if inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
             let new_inst_detail = Self::get(&inst_detail.id, funs, ctx).await?;
-            FlowExternalServ::do_approve_notify_changes(&new_inst_detail.tag, &new_inst_detail.id, &new_inst_detail.rel_business_obj_id, new_inst_detail.current_state_id.clone(), new_inst_detail.current_state_name.clone().unwrap_or_default(), funs.conf::<FlowConfig>().specifed_approving_state_name.clone(), FlowExternalApproveOp::ApprovePass, ctx, funs).await?;
+            let child_approve_insts = if let Some(root_inst_id) = &root_inst_id {
+                Self::find_child_approve_notify_infos(root_inst_id, funs, ctx).await?
+            } else {
+                vec![]
+            };
+            FlowExternalServ::do_approve_notify_changes(
+                &new_inst_detail.tag,
+                &new_inst_detail.id,
+                &new_inst_detail.rel_business_obj_id,
+                new_inst_detail.current_state_id.clone(),
+                new_inst_detail.current_state_name.clone().unwrap_or_default(),
+                funs.conf::<FlowConfig>().specifed_approving_state_name.clone(),
+                FlowExternalApproveOp::ApprovePass,
+                child_approve_insts,
+                ctx,
+                funs,
+            )
+            .await?;
         }
         Ok(())
+    }
+
+    /// 收集审批流对应的子审批流通知信息（rel_business_obj_id / result / finish_time）
+    async fn find_child_approve_notify_infos(approve_inst_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<FlowExternalChildApproveInst>> {
+        let approve_inst = Self::get(approve_inst_id, funs, ctx).await?;
+        let child_insts = if approve_inst.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+            Self::find_detail_items(
+                &FlowInstFilterReq {
+                    rel_inst_ids: Some(vec![approve_inst.id.clone()]),
+                    main: Some(false),
+                    with_sub: Some(true),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        } else {
+            vec![approve_inst]
+        };
+        Ok(child_insts
+            .into_iter()
+            .map(|inst| FlowExternalChildApproveInst {
+                rel_business_obj_id: inst.rel_business_obj_id,
+                result: inst.artifacts.and_then(|artifacts| artifacts.state),
+                finish_time: inst.finish_time,
+            })
+            .collect())
     }
 
     // 当离开该节点时
