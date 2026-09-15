@@ -963,7 +963,14 @@ impl IamSetServ {
     }
 
     /// 按账号权限过滤组织树：根据上下文 groups 对应的组织节点，补全父节点与子节点。
-    pub async fn get_org_tree_with_auth_by_account(set_id: &str, _account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    /// 若 ``filter.sys_codes`` 有值，则按该条件做逐级查询，并与有权限节点取交集。
+    pub async fn get_org_tree_with_auth_by_account(
+        set_id: &str,
+        _account_id: &str,
+        filter: &mut RbumSetTreeFilterReq,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumSetTreeResp> {
         let org_cate_sys_codes = ctx
             .groups
             .iter()
@@ -1009,20 +1016,35 @@ impl IamSetServ {
         if all_sys_codes.is_empty() {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
-        let all_sys_codes = all_sys_codes.into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
+        let all_sys_codes = all_sys_codes.into_iter().collect::<HashSet<String>>();
+        let has_parent_sys_code = filter.sys_codes.as_ref().is_some_and(|codes| !codes.is_empty());
 
-        Self::get_tree(
-            set_id,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: true,
-                sys_codes: Some(all_sys_codes),
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await
+        let mut tree = if has_parent_sys_code {
+            Self::get_tree(set_id, filter, funs, ctx).await?
+        } else {
+            Self::get_tree(
+                set_id,
+                &mut RbumSetTreeFilterReq {
+                    fetch_cate_item: filter.fetch_cate_item,
+                    hide_item_with_disabled: filter.hide_item_with_disabled,
+                    sys_codes: Some(all_sys_codes.iter().cloned().collect()),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        };
+        if has_parent_sys_code {
+            tree.main.retain(|node| all_sys_codes.contains(&node.sys_code));
+            if let Some(ext) = tree.ext.as_mut() {
+                let remain_ids = tree.main.iter().map(|node| node.id.clone()).collect::<HashSet<String>>();
+                ext.items.retain(|id, _| remain_ids.contains(id));
+                ext.item_number_agg.retain(|id, _| remain_ids.contains(id));
+            }
+        }
+        Ok(tree)
     }
 
     /// 按账号权限过滤产品组树；无相关节点时返回 `None`。

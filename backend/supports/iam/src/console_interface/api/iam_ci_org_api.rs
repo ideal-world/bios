@@ -26,10 +26,10 @@ impl IamCiOrgApi {
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
-    /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
+    /// * ``only_related=true`` : query only the tree nodes with related resources(including children nodes). Can be used together with ``parent_sys_code``
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：仅查询下一级，当树太大时可以用来逐级查询
-    /// * ``only_related=true``：打开此参数时失效parent_sys_code参数，用于查询只有相关资源的树节点（包括子节点）
+    /// * ``only_related=true``：查询只有相关资源的树节点（包括子节点），可与 parent_sys_code 同时使用
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,
@@ -50,33 +50,28 @@ impl IamCiOrgApi {
             IamSetServ::get_default_org_code_by_tenant(&funs, &ctx)?
         };
         let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx).await?;
+        let mut parent_sys_codes = parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]);
+        if let Some(parent_cate_ids) = parent_cate_ids.0 {
+            let mut tmp_parent_sys_codes = vec![];
+            let parent_cate_ids: Vec<_> = parent_cate_ids.split(',').collect();
+            for parent_cate_id in parent_cate_ids {
+                tmp_parent_sys_codes.push(RbumSetCateServ::get_sys_code(&parent_cate_id, &funs, &ctx).await?);
+            }
+            parent_sys_codes = Some(tmp_parent_sys_codes);
+        }
+        let mut tree_filter = RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            hide_item_with_disabled: true,
+            sys_codes: parent_sys_codes,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        };
         let only_related = only_related.0.unwrap_or(false);
         let result = if only_related {
-            IamSetServ::get_org_tree_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?
+            IamSetServ::get_org_tree_with_auth_by_account(&set_id, &ctx.owner, &mut tree_filter, &funs, &ctx).await?
         } else {
-            let mut parent_sys_codes = parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]);
-            if let Some(parent_cate_ids) = parent_cate_ids.0 {
-                let mut tmp_parent_sys_codes = vec![];
-                let parent_cate_ids: Vec<_> = parent_cate_ids.split(',').collect();
-                for parent_cate_id in parent_cate_ids {
-                    tmp_parent_sys_codes.push(RbumSetCateServ::get_sys_code(&parent_cate_id, &funs, &ctx).await?);
-                }
-                parent_sys_codes = Some(tmp_parent_sys_codes);
-            }
-            IamSetServ::get_tree(
-                &set_id,
-                &mut RbumSetTreeFilterReq {
-                    fetch_cate_item: true,
-                    hide_item_with_disabled: true,
-                    sys_codes: parent_sys_codes,
-                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
-                    sys_code_query_depth: Some(1),
-                    ..Default::default()
-                },
-                &funs,
-                &ctx,
-            )
-            .await?
+            IamSetServ::get_tree(&set_id, &mut tree_filter, &funs, &ctx).await?
         };
         ctx.execute_task().await?;
         TardisResp::ok(result)
