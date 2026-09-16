@@ -10,6 +10,12 @@ set_cate_sys_code_node_len = 4
 [csm.spi-search]
 [csm.spi-stats]
 [csm.spi-plugin]
+[csm.spi-plugin.rbum]
+# The storage encryption key of the sensitive relationship attributes, see the configuration of the spi-all service
+#
+# 敏感关联属性存储加密密钥，参见 spi-all 服务的配置
+secret_attr_key = ""
+secret_attr_encrypt = true
 
 [fw]
 [fw.app]

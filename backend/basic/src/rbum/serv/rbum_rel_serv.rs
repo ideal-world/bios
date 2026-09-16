@@ -6,14 +6,13 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::sea_query::*;
-use tardis::db::sea_orm::IdenStatic;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::web::poem_openapi::types::Type;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
-use crate::rbum::domain::rbum_kind;
 use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate};
 use crate::rbum::dto::rbum_filer_dto::RbumKindAttrFilterReq;
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
@@ -25,8 +24,9 @@ use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailRe
 use crate::rbum::dto::rbum_rel_dto::RbumRelEnvCheckReq;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelCheckReq, RbumRelDetailResp, RbumRelModifyReq, RbumRelSimpleFindReq};
 use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp, RbumRelEnvModifyReq};
+use crate::rbum::helper::secret_helper;
 use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind, RbumSetCateLevelQueryKind};
-use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
 use crate::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
@@ -1155,6 +1155,15 @@ impl RbumRelServ {
         query
     }
 
+    /// The id query of the sensitive kind attributes, the sensitive attributes are not used for the relationship matching
+    ///
+    /// 敏感类型属性的id查询，敏感属性不参与关联匹配
+    fn package_secret_kind_attr_query() -> SelectStatement {
+        let mut query = Query::select();
+        query.column(rbum_kind_attr::Column::Id).from(rbum_kind_attr::Entity).and_where(Expr::col(rbum_kind_attr::Column::Secret).eq(true));
+        query
+    }
+
     /// Check whether the relationship of the specified condition exists
     ///
     /// 检查指定的条件的关联是否存在
@@ -1315,6 +1324,11 @@ impl RbumRelServ {
     ///  )
     ///
     /// ```
+    ///
+    /// NOTE: The sensitive attributes (``rbum_kind_attr.secret = true``) are stored as ciphertext,
+    /// so they do not participate in the relationship matching.
+    ///
+    /// NOTE： 敏感属性（``rbum_kind_attr.secret = true``）是密文存储，不参与关联匹配。
     async fn do_check_rel(
         tag: &str,
         from_rbum_kinds: Option<Vec<RbumRelFromKind>>,
@@ -1353,6 +1367,7 @@ impl RbumRelServ {
                     .expr_as(Expr::col(rbum_rel_attr::Column::RelRbumRelId).count(), Alias::new("attr_count"))
                     .from(rbum_rel_attr::Entity)
                     .and_where(Expr::col(rbum_rel_attr::Column::RecordOnly).eq(false))
+                    .and_where(Expr::col(rbum_rel_attr::Column::RelRbumKindAttrId).not_in_subquery(Self::package_secret_kind_attr_query()))
                     .group_by_col(rbum_rel_attr::Column::RelRbumRelId)
                     .take(),
                 attr_table_without_cond.clone(),
@@ -1381,6 +1396,7 @@ impl RbumRelServ {
                     .expr_as(Expr::col(rbum_rel_attr::Column::RelRbumRelId).count(), Alias::new("attr_count"))
                     .from(rbum_rel_attr::Entity)
                     .and_where(Expr::col(rbum_rel_attr::Column::RecordOnly).eq(false))
+                    .and_where(Expr::col(rbum_rel_attr::Column::RelRbumKindAttrId).not_in_subquery(Self::package_secret_kind_attr_query()))
                     .cond_where(attr_conds)
                     .group_by_col(rbum_rel_attr::Column::RelRbumRelId)
                     .take(),
@@ -1403,7 +1419,8 @@ impl RbumRelServ {
                 rbum_rel_attr::Entity,
                 all![
                     Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId)).equals((rbum_rel::Entity, rbum_rel::Column::Id)),
-                    Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::RecordOnly)).eq(false)
+                    Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::RecordOnly)).eq(false),
+                    Expr::col((rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumKindAttrId)).not_in_subquery(Self::package_secret_kind_attr_query())
                 ],
             );
 
@@ -1554,10 +1571,14 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
     }
 
     async fn package_add(add_req: &RbumRelAttrAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_attr::ActiveModel> {
-        let rbum_rel_attr_name = if let Some(rel_rbum_kind_attr_id) = &add_req.rel_rbum_kind_attr_id {
-            funs.db()
-                .get_dto::<NameResp>(
-                    Query::select().column(rbum_kind_attr::Column::Name).from(rbum_kind_attr::Entity).and_where(Expr::col(rbum_kind_attr::Column::Id).eq(rel_rbum_kind_attr_id)),
+        let (rbum_rel_attr_name, kind_attr_is_secret) = if let Some(rel_rbum_kind_attr_id) = &add_req.rel_rbum_kind_attr_id {
+            let kind_attr = funs
+                .db()
+                .get_dto::<KindAttrSecretResp>(
+                    Query::select()
+                        .columns([rbum_kind_attr::Column::Name, rbum_kind_attr::Column::Secret])
+                        .from(rbum_kind_attr::Entity)
+                        .and_where(Expr::col(rbum_kind_attr::Column::Id).eq(rel_rbum_kind_attr_id)),
                 )
                 .await?
                 .ok_or_else(|| {
@@ -1567,10 +1588,10 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
                         &format!("not found rbum_kind_attr {}", rel_rbum_kind_attr_id),
                         "404-rbum-rel-not-exist-kind-attr",
                     )
-                })?
-                .name
+                })?;
+            (kind_attr.name, kind_attr.secret)
         } else if let Some(name) = &add_req.name {
-            name.to_string()
+            (name.to_string(), false)
         } else {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
@@ -1603,7 +1624,7 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
         Ok(rbum_rel_attr::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             is_from: Set(add_req.is_from),
-            value: Set(add_req.value.to_string()),
+            value: Set(Self::package_secret_value(&add_req.value, kind_attr_is_secret, funs)?),
             name: Set(rbum_rel_attr_name),
             record_only: Set(add_req.record_only),
             rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -1612,12 +1633,13 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumRelAttrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_attr::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumRelAttrModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_rel_attr::ActiveModel> {
         let mut rbum_rel_attr = rbum_rel_attr::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
         };
-        rbum_rel_attr.value = Set(modify_req.value.to_string());
+        let kind_attr_is_secret = Self::find_kind_attr_is_secret(id, funs).await?;
+        rbum_rel_attr.value = Set(Self::package_secret_value(&modify_req.value, kind_attr_is_secret, funs)?);
         Ok(rbum_rel_attr)
     }
 
@@ -1652,9 +1674,160 @@ impl RbumCrudOperation<rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, RbumRelAtt
         query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
     }
+
+    /// NOTE: The value of the sensitive attribute is decrypted, so that all the reading paths return the plaintext
+    ///
+    /// NOTE： 解密敏感属性值，保证所有读取路径返回明文
+    async fn peek_rbum(id: &str, filter: &RbumRelExtFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAttrDetailResp> {
+        let mut resp = Self::do_peek_rbum(id, filter, funs, ctx).await?;
+        resp.value = secret_helper::decrypt_or_original(&resp.value, funs);
+        Ok(resp)
+    }
+
+    /// NOTE: The value of the sensitive attribute is decrypted, so that all the reading paths return the plaintext
+    ///
+    /// NOTE： 解密敏感属性值，保证所有读取路径返回明文
+    async fn get_rbum(id: &str, filter: &RbumRelExtFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAttrDetailResp> {
+        let mut resp = Self::do_get_rbum(id, filter, funs, ctx).await?;
+        resp.value = secret_helper::decrypt_or_original(&resp.value, funs);
+        Ok(resp)
+    }
+
+    /// NOTE: The value of the sensitive attribute is decrypted, so that all the reading paths return the plaintext
+    ///
+    /// NOTE： 解密敏感属性值，保证所有读取路径返回明文
+    async fn find_rbums(
+        filter: &RbumRelExtFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAttrDetailResp>> {
+        let mut resp = Self::do_find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Self::decrypt_attr_values(&mut resp, funs);
+        Ok(resp)
+    }
+
+    /// NOTE: The value of the sensitive attribute is decrypted, so that all the reading paths return the plaintext
+    ///
+    /// NOTE： 解密敏感属性值，保证所有读取路径返回明文
+    async fn paginate_rbums(
+        filter: &RbumRelExtFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAttrDetailResp>> {
+        let mut resp = Self::do_paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Self::decrypt_attr_values(&mut resp.records, funs);
+        Ok(resp)
+    }
+
+    /// NOTE: The value of the sensitive attribute is decrypted, so that all the reading paths return the plaintext
+    ///
+    /// NOTE： 解密敏感属性值，保证所有读取路径返回明文
+    async fn find_detail_rbums(
+        filter: &RbumRelExtFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAttrDetailResp>> {
+        let mut resp = Self::do_find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Self::decrypt_attr_values(&mut resp, funs);
+        Ok(resp)
+    }
+
+    /// NOTE: The value of the sensitive attribute is decrypted, so that all the reading paths return the plaintext
+    ///
+    /// NOTE： 解密敏感属性值，保证所有读取路径返回明文
+    async fn paginate_detail_rbums(
+        filter: &RbumRelExtFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAttrDetailResp>> {
+        let mut resp = Self::do_paginate_detail_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Self::decrypt_attr_values(&mut resp.records, funs);
+        Ok(resp)
+    }
+}
+
+/// The name and the secret flag of the resource kind attribute
+///
+/// 资源类型属性的名称及敏感标识
+#[derive(Debug, sea_orm::FromQueryResult)]
+struct KindAttrSecretResp {
+    pub name: String,
+    pub secret: bool,
 }
 
 impl RbumRelAttrServ {
+    /// Encrypt the value of the sensitive attribute before storing
+    ///
+    /// 存储前加密敏感属性值
+    ///
+    /// NOTE: The sensitive attribute does not participate in the relationship matching, see [`RbumRelServ::do_check_rel`].
+    ///
+    /// NOTE： 敏感属性不参与关联匹配，参见 [`RbumRelServ::do_check_rel`]。
+    fn package_secret_value(value: &str, kind_attr_is_secret: bool, funs: &TardisFunsInst) -> TardisResult<String> {
+        if !kind_attr_is_secret {
+            return Ok(value.to_string());
+        }
+        secret_helper::encrypt(value, funs)
+    }
+
+    /// Find whether the kind attribute corresponding to the relationship attribute is secret
+    ///
+    /// 查询关联属性对应的类型属性是否为敏感属性
+    async fn find_kind_attr_is_secret(id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        #[derive(Debug, sea_orm::FromQueryResult)]
+        struct AttrResp {
+            pub rel_rbum_kind_attr_id: String,
+        }
+        let attr = funs
+            .db()
+            .get_dto::<AttrResp>(
+                Query::select().column(rbum_rel_attr::Column::RelRbumKindAttrId).from(rbum_rel_attr::Entity).and_where(Expr::col(rbum_rel_attr::Column::Id).eq(id)),
+            )
+            .await?;
+        let Some(attr) = attr else {
+            return Ok(false);
+        };
+        if attr.rel_rbum_kind_attr_id.is_empty() {
+            return Ok(false);
+        }
+        #[derive(Debug, sea_orm::FromQueryResult)]
+        struct SecretResp {
+            pub secret: bool,
+        }
+        Ok(funs
+            .db()
+            .get_dto::<SecretResp>(
+                Query::select()
+                    .column(rbum_kind_attr::Column::Secret)
+                    .from(rbum_kind_attr::Entity)
+                    .and_where(Expr::col(rbum_kind_attr::Column::Id).eq(&attr.rel_rbum_kind_attr_id)),
+            )
+            .await?
+            .map(|resp| resp.secret)
+            .unwrap_or(false))
+    }
+
+    /// Decrypt the values of the relationship attributes
+    ///
+    /// 解密关联属性的值
+    fn decrypt_attr_values(attrs: &mut [RbumRelAttrDetailResp], funs: &TardisFunsInst) {
+        for attr in attrs.iter_mut() {
+            attr.value = secret_helper::decrypt_or_original(&attr.value, funs);
+        }
+    }
+
     /// Find relationship attributes and filter out those with secret=true
     ///
     /// 隐藏掉 rel_kind_attr_id 为 secert=true 的数据

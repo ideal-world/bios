@@ -72,6 +72,18 @@ pub struct RbumConfig {
     ///
     /// BIOS 上下文的请求头名称
     pub head_key_bios_ctx: String,
+    /// The key of the storage encryption for the sensitive relationship attributes
+    ///
+    /// 敏感关联属性存储加密密钥
+    ///
+    /// The length must be 16 bytes, and an empty value means that the sensitive relationship attributes are stored in plaintext.
+    ///
+    /// 长度必须为 16 字节，为空表示敏感关联属性以明文存储。
+    pub secret_attr_key: String,
+    /// Whether to encrypt the sensitive relationship attributes when storing
+    ///
+    /// 是否加密存储敏感关联属性
+    pub secret_attr_encrypt: bool,
 }
 
 impl Default for RbumConfig {
@@ -89,6 +101,8 @@ impl Default for RbumConfig {
             cache_key_cert_err_times_: "rbum:cert:err_times:".to_string(),
             event_domains: HashMap::from([("rbum_".to_string(), "cud".to_string())]),
             head_key_bios_ctx: "Bios-Ctx".to_string(),
+            secret_attr_key: "".to_string(),
+            secret_attr_encrypt: true,
         }
     }
 }
@@ -117,6 +131,17 @@ impl RbumConfigManager {
         let conf = RBUM_CONFIG.lock().unwrap_or_else(|e| panic!("rbum config lock error: {e:?}"));
         let conf = conf.get(code).unwrap_or_else(|| panic!("not found rbum config code {code}"));
         fun(conf)
+    }
+
+    /// Get the configuration of the specified module code, and return ``None`` when the module code is not registered
+    ///
+    /// 获取指定模块编码的配置，未注册时返回 ``None``
+    pub fn try_get_config<F, T>(code: &str, fun: F) -> Option<T>
+    where
+        F: Fn(&RbumConfig) -> T,
+    {
+        let conf = RBUM_CONFIG.lock().unwrap_or_else(|e| panic!("rbum config lock error: {e:?}"));
+        conf.get(code).map(fun)
     }
 }
 

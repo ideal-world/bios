@@ -9,3 +9,4 @@ pub mod plugin_enumeration;
 pub mod plugin_initializer;
 pub(crate) use crate::plugin_initializer::get_tardis_inst;
 mod serv;
+pub use serv::plugin_rel_serv;

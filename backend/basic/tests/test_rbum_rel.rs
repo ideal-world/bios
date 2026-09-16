@@ -5,9 +5,13 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
+use tardis::db::sea_orm;
+use tardis::db::sea_orm::sea_query::{Expr, Query};
 use tardis::log::info;
 use tardis::TardisFuns;
+use tardis::TardisFunsInst;
 
+use bios_basic::rbum::domain::rbum_rel_attr;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumRelExtFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
@@ -20,6 +24,7 @@ use bios_basic::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvModify
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemAddReq;
+use bios_basic::rbum::rbum_config::{RbumConfig, RbumConfigManager};
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumRelEnvKind, RbumRelFromKind, RbumScopeLevelKind, RbumWidgetTypeKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -32,6 +37,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_rel(context).await?;
     test_rbum_rel_with_set(context).await?;
     test_rbum_rel_attr(context).await?;
+    test_rbum_rel_attr_secret_encryption(context).await?;
     test_rbum_rel_env(context).await?;
     test_rbum_rel_use(context).await?;
     Ok(())
@@ -673,6 +679,302 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     funs.rollback().await?;
 
     Ok(())
+}
+
+/// Test the storage encryption of the sensitive relationship attributes
+///
+/// 测试敏感关联属性的存储加密
+async fn test_rbum_rel_attr_secret_encryption(context: &TardisContext) -> TardisResult<()> {
+    // Enable the storage encryption of the current module
+    //
+    // 开启当前模块的存储加密
+    RbumConfigManager::add(
+        "",
+        RbumConfig {
+            secret_attr_key: "0123456789abcdef".to_string(),
+            ..Default::default()
+        },
+    )?;
+
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : Prepare : RbumKindServ::add_rbum");
+    let kind_reldb_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("mysql-secret-attr".to_string()),
+            name: TrimString("关系型数据库（敏感属性）".to_string()),
+            module: None,
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+            parent_id: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : Prepare : RbumKindAttrServ::add_rbum");
+    let kind_attr_db_type_id = RbumKindAttrServ::add_rbum(
+        &mut RbumKindAttrAddReq {
+            name: TrimString("db_type".to_string()),
+            module: None,
+            label: "db_type".to_string(),
+            note: None,
+            sort: None,
+            position: None,
+            capacity: None,
+            overload: None,
+            secret: None,
+            main_column: None,
+            idx: None,
+            data_type: RbumDataTypeKind::String,
+            widget_type: RbumWidgetTypeKind::Input,
+            widget_columns: None,
+            hide: None,
+            show_by_conds: None,
+            default_value: None,
+            dyn_default_value: None,
+            options: None,
+            dyn_options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            parent_attr_name: None,
+            action: None,
+            ext: None,
+            rel_rbum_kind_id: kind_reldb_id.to_string(),
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    let kind_attr_db_password_id = RbumKindAttrServ::add_rbum(
+        &mut RbumKindAttrAddReq {
+            name: TrimString("db_password".to_string()),
+            module: None,
+            label: "db_password".to_string(),
+            note: None,
+            sort: None,
+            position: None,
+            capacity: None,
+            overload: None,
+            secret: Some(true),
+            main_column: None,
+            idx: None,
+            data_type: RbumDataTypeKind::String,
+            widget_type: RbumWidgetTypeKind::Input,
+            widget_columns: None,
+            hide: None,
+            show_by_conds: None,
+            default_value: None,
+            dyn_default_value: None,
+            options: None,
+            dyn_options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            parent_attr_name: None,
+            action: None,
+            ext: None,
+            rel_rbum_kind_id: kind_reldb_id.to_string(),
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_reldb_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("mysql-secret-attr-dev".to_string()),
+            name: TrimString("Mysql测试集群（敏感属性）".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : Prepare Item : RbumItemServ::add_rbum");
+    let item_from_id = RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            id: None,
+            code: None,
+            name: TrimString("实例11".to_string()),
+            scope_level: Some(RbumScopeLevelKind::L2),
+            disabled: None,
+            rel_rbum_kind_id: kind_reldb_id.to_string(),
+            rel_rbum_domain_id: domain_reldb_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    let item_to_id = RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            id: None,
+            code: None,
+            name: TrimString("实例12".to_string()),
+            scope_level: Some(RbumScopeLevelKind::L2),
+            disabled: None,
+            rel_rbum_kind_id: kind_reldb_id.to_string(),
+            rel_rbum_domain_id: domain_reldb_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : Prepare Rel : RbumRelServ::add_rbum");
+    let rel_id = RbumRelServ::add_rbum(
+        &mut RbumRelAddReq {
+            tag: "bind-secret-attr".to_string(),
+            note: None,
+            from_rbum_kind: RbumRelFromKind::Item,
+            from_rbum_id: item_from_id.to_string(),
+            to_rbum_item_id: item_to_id.to_string(),
+            to_own_paths: context.own_paths.to_string(),
+            to_is_outside: false,
+            ext: None,
+            disabled: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : Prepare : RbumRelAttrServ::add_rbum");
+    // The sensitive attribute is encrypted regardless of ``record_only``
+    //
+    // 敏感属性无论 record_only 取值如何都会被加密
+    let secret_attr_id = RbumRelAttrServ::add_rbum(
+        &mut RbumRelAttrAddReq {
+            is_from: true,
+            value: "pwd123456".to_string(),
+            name: None,
+            rel_rbum_rel_id: rel_id.to_string(),
+            rel_rbum_kind_attr_id: Some(kind_attr_db_password_id.to_string()),
+            record_only: false,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    let normal_attr_id = RbumRelAttrServ::add_rbum(
+        &mut RbumRelAttrAddReq {
+            is_from: true,
+            value: "mysql".to_string(),
+            name: None,
+            rel_rbum_rel_id: rel_id.to_string(),
+            rel_rbum_kind_attr_id: Some(kind_attr_db_type_id.to_string()),
+            record_only: true,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : The sensitive attribute is stored as ciphertext, and the normal attribute is stored as plaintext");
+    let secret_stored_value = find_stored_attr_value(&secret_attr_id, &funs).await?;
+    assert!(secret_stored_value.starts_with("ENC(sm4v1:"));
+    assert_ne!(secret_stored_value, "pwd123456");
+    assert_eq!(find_stored_attr_value(&normal_attr_id, &funs).await?, "mysql");
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : The sensitive attribute does not participate in the relationship matching");
+    assert!(
+        RbumRelServ::check_rel(
+            &RbumRelCheckReq {
+                tag: "bind-secret-attr".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: item_from_id.to_string(),
+                to_rbum_item_id: item_to_id.to_string(),
+                from_attrs: Default::default(),
+                to_attrs: Default::default(),
+                envs: Default::default(),
+            },
+            &funs,
+            context,
+        )
+        .await?
+    );
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : All the reading paths return the plaintext");
+    let filter = RbumRelExtFilterReq {
+        rel_rbum_rel_id: Some(rel_id.to_string()),
+        ..Default::default()
+    };
+    assert_eq!(
+        RbumRelAttrServ::get_rbum(&secret_attr_id, &RbumRelExtFilterReq::default(), &funs, context).await?.value,
+        "pwd123456"
+    );
+    assert_eq!(
+        RbumRelAttrServ::peek_rbum(&secret_attr_id, &RbumRelExtFilterReq::default(), &funs, context).await?.value,
+        "pwd123456"
+    );
+    assert!(RbumRelAttrServ::find_rbums(&filter, None, None, &funs, context).await?.iter().all(|attr| !attr.value.starts_with("ENC(sm4v1:")));
+    assert!(RbumRelAttrServ::paginate_rbums(&filter, 1, 10, None, None, &funs, context).await?.records.iter().all(|attr| !attr.value.starts_with("ENC(sm4v1:")));
+    assert_eq!(
+        RbumRelAttrServ::find_detail_rbums(&filter, None, None, &funs, context)
+            .await?
+            .iter()
+            .find(|attr| attr.id == secret_attr_id)
+            .expect("The sensitive attribute should exist")
+            .value,
+        "pwd123456"
+    );
+
+    info!("【test_rbum_rel_attr_secret_encryption】 : The ciphertext is not encrypted again when modifying");
+    RbumRelAttrServ::modify_rbum(&secret_attr_id, &mut RbumRelAttrModifyReq { value: "pwd654321".to_string() }, &funs, context).await?;
+    let secret_stored_value_after_modify = find_stored_attr_value(&secret_attr_id, &funs).await?;
+    assert_ne!(secret_stored_value, secret_stored_value_after_modify);
+    assert_eq!(
+        RbumRelAttrServ::get_rbum(&secret_attr_id, &RbumRelExtFilterReq::default(), &funs, context).await?.value,
+        "pwd654321"
+    );
+    RbumRelAttrServ::modify_rbum(
+        &secret_attr_id,
+        &mut RbumRelAttrModifyReq {
+            value: secret_stored_value_after_modify.clone(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(find_stored_attr_value(&secret_attr_id, &funs).await?, secret_stored_value_after_modify);
+
+    funs.rollback().await?;
+
+    // Restore the configuration of the current module
+    //
+    // 还原当前模块的配置
+    RbumConfigManager::add("", RbumConfig::default())?;
+
+    Ok(())
+}
+
+/// Find the stored value of the relationship attribute, without decryption
+///
+/// 查询关联属性的存储值，不做解密
+async fn find_stored_attr_value(id: &str, funs: &TardisFunsInst) -> TardisResult<String> {
+    #[derive(Debug, sea_orm::FromQueryResult)]
+    struct ValueResp {
+        pub value: String,
+    }
+    Ok(funs
+        .db()
+        .get_dto::<ValueResp>(Query::select().column(rbum_rel_attr::Column::Value).from(rbum_rel_attr::Entity).and_where(Expr::col(rbum_rel_attr::Column::Id).eq(id)))
+        .await?
+        .expect("The relationship attribute should exist")
+        .value)
 }
 
 async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {

@@ -37,3 +37,31 @@ pub struct PluginBsCertInfoResp {
     pub private: bool,
     pub rel: Option<RbumRelAggResp>,
 }
+
+/// The result of encrypting the sensitive relationship attributes which are stored in plaintext
+///
+/// 明文存储的插件关联关系敏感属性的加密结果
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct PluginRelSecretMigrateResp {
+    /// Is it a dry run
+    ///
+    /// 是否仅预演
+    pub dry_run: bool,
+    /// The total number of the sensitive attributes which are stored in plaintext
+    ///
+    /// 明文存储的敏感属性总数
+    pub total_size: u64,
+    /// The number of the records that have been encrypted (always 0 in the dry run)
+    ///
+    /// 已加密的记录数（预演时恒为 0）
+    pub processed_size: u64,
+    /// The number of the records that failed to be converted
+    ///
+    /// 转换失败的记录数
+    pub failed_size: u64,
+    /// The id samples of the records to be encrypted
+    ///
+    /// 待加密记录的id样例
+    pub sample_ids: Vec<String>,
+}

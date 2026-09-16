@@ -12,7 +12,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp};
+use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp, PluginRelSecretMigrateResp};
 use crate::serv::plugin_bs_serv::PluginBsServ;
 use crate::serv::plugin_rel_serv::PluginRelServ;
 #[derive(Clone)]
@@ -245,6 +245,61 @@ impl PluginCiBsApi {
         let funs = crate::get_tardis_inst();
         let result = PluginRelServ::show_rel_attr(&rel_id.0, &attr_name.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
+    }
+
+    /// Encrypt the sensitive attributes of the plugin relationship which are stored in plaintext
+    ///
+    /// 加密以明文存储的插件关联关系敏感属性
+    ///
+    /// NOTE: It is used for the data migration of the existing records, and the encrypted records are ignored, so it can be executed repeatedly.
+    /// It only counts and returns the samples without writing when ``dry_run`` is true.
+    ///
+    /// NOTE： 用于存量数据的迁移，已加密的记录会被忽略，可以重复执行。
+    /// 当 ``dry_run`` 为 true 时只统计并返回样例，不做写入。
+    #[oai(path = "/rel/secret/encrypt", method = "put")]
+    async fn migrate_rel_secret_attr(&self, dry_run: Query<Option<bool>>, page_size: Query<Option<u32>>, ctx: TardisContextExtractor) -> TardisApiResult<PluginRelSecretMigrateResp> {
+        let mut funs = crate::get_tardis_inst();
+        funs.begin().await?;
+        let result = PluginRelServ::migrate_plaintext_secret_attrs(page_size.0.unwrap_or(100), dry_run.0.unwrap_or(true), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(PluginRelSecretMigrateResp {
+            dry_run: result.dry_run,
+            total_size: result.total_size,
+            processed_size: result.processed_size,
+            failed_size: result.failed_size,
+            sample_ids: result.sample_ids,
+        })
+    }
+
+    /// Decrypt the sensitive attributes of the plugin relationship which are stored as ciphertext
+    ///
+    /// 解密以密文存储的插件关联关系敏感属性
+    ///
+    /// NOTE: It is used for the data rollback, such as rolling back to a version that does not support the encryption,
+    /// or rotating the encryption key (decrypt first, then encrypt with the new key).
+    /// The decrypted records are ignored, so it can be executed repeatedly.
+    /// It only counts and returns the samples without writing when ``dry_run`` is true.
+    ///
+    /// NOTE： 用于数据回退，例如回退到不支持加密的版本，或轮换加密密钥（先解密再换新密钥加密）。
+    /// 已解密的记录会被忽略，可以重复执行。当 ``dry_run`` 为 true 时只统计并返回样例，不做写入。
+    #[oai(path = "/rel/secret/decrypt", method = "put")]
+    async fn decrypt_rel_secret_attr(
+        &self,
+        dry_run: Query<Option<bool>>,
+        page_size: Query<Option<u32>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<PluginRelSecretMigrateResp> {
+        let mut funs = crate::get_tardis_inst();
+        funs.begin().await?;
+        let result = PluginRelServ::decrypt_secret_attrs(page_size.0.unwrap_or(100), dry_run.0.unwrap_or(true), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(PluginRelSecretMigrateResp {
+            dry_run: result.dry_run,
+            total_size: result.total_size,
+            processed_size: result.processed_size,
+            failed_size: result.failed_size,
+            sample_ids: result.sample_ids,
+        })
     }
 
     /// Delete Plugin Service Rel App/Tenant

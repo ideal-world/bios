@@ -1,5 +1,12 @@
 [cs]
 
+# Storage encryption of the sensitive relationship attributes of the plugin
+#
+# 插件敏感关联属性存储加密
+[csm.spi-plugin.rbum]
+secret_attr_key = "bios-plugin-sm41"
+secret_attr_encrypt = true
+
 [fw.web_server]
 port = 8080
 # tls_key = """

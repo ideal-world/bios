@@ -1,5 +1,22 @@
 [cs]
 
+# Storage encryption of the sensitive relationship attributes of the plugin
+#
+# 插件敏感关联属性存储加密
+[csm.spi-plugin.rbum]
+# The length must be 16 bytes, and an empty value means that the sensitive relationship attributes are stored in plaintext
+#
+# Prefer to inject it by the environment variable in production, such as: TARDIS_CSM.SPI-PLUGIN.RBUM.SECRET_ATTR_KEY
+#
+# 长度必须为 16 字节，为空表示敏感关联属性以明文存储
+#
+# 生产环境建议通过环境变量注入，如：TARDIS_CSM.SPI-PLUGIN.RBUM.SECRET_ATTR_KEY
+secret_attr_key = ""
+# The switch of the storage encryption, the stored ciphertext can still be decrypted when it is turned off
+#
+# 存储加密开关，关闭后已存储的密文依然可以解密
+secret_attr_encrypt = true
+
 [fw]
 [fw.app]
 id = "bios-spi-serv-all"
