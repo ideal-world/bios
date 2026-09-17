@@ -72,16 +72,19 @@ impl IamCtOrgApi {
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    /// * ``only_related=true`` : query only the tree nodes with related resources(including children nodes). Can be used together with ``parent_sys_code``
     ///
     /// 根据当前租户查找组织树
     ///
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：仅查询下一级。当树太大时，可以逐级查询
+    /// * ``only_related=true``：查询只有相关资源的树节点（包括子节点），可与 parent_sys_code 同时使用
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,
         parent_sys_code: Query<Option<String>>,
         set_id: Query<Option<String>>,
+        only_related: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<RbumSetTreeResp> {
@@ -89,19 +92,19 @@ impl IamCtOrgApi {
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         try_set_real_ip_from_req_to_ctx(request, &ctx).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let result = IamSetServ::get_tree(
-            &set_id,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: true,
-                sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-                sys_code_query_depth: Some(1),
-                ..Default::default()
-            },
-            &funs,
-            &ctx,
-        )
-        .await?;
+        let only_related = only_related.0.unwrap_or(false);
+        let mut tree_filter = RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        };
+        let result = if only_related {
+            IamSetServ::get_org_tree_with_auth_by_account(&set_id, &ctx.owner, &mut tree_filter, &funs, &ctx).await?
+        } else {
+            IamSetServ::get_tree(&set_id, &mut tree_filter, &funs, &ctx).await?
+        };
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }

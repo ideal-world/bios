@@ -813,7 +813,7 @@ impl IamSetServ {
             tree_filter.sys_code_query_depth = Some(1);
         }
         let tree = if only_related {
-            Self::get_tree_with_auth_by_account_opt(&set_id, &t_ctx.owner, funs, &t_ctx).await?
+            Self::get_apps_tree_with_auth_by_account_opt(&set_id, &t_ctx.owner, funs, &t_ctx).await?
         } else {
             Some(Self::get_tree(&set_id, &mut tree_filter, funs, &t_ctx).await?)
         };
@@ -856,7 +856,8 @@ impl IamSetServ {
         ext.item_domains.extend(src.item_domains);
     }
 
-    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    /// 按账号权限过滤产品组树：仅返回账号所属节点及其关联应用所在节点（含父级补全）。
+    pub async fn get_apps_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let account_ids = vec![account_id.to_string()];
         let app_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamAccountApp, true, account_id, None, None, funs, ctx).await?;
 
@@ -961,7 +962,93 @@ impl IamSetServ {
         .await
     }
 
-    pub async fn get_tree_with_auth_by_account_opt(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumSetTreeResp>> {
+    /// 按账号权限过滤组织树：根据上下文 groups 对应的组织节点，补全父节点与子节点。
+    /// 若 ``filter.sys_codes`` 有值，则按该条件做逐级查询，并与有权限节点取交集。
+    pub async fn get_org_tree_with_auth_by_account(
+        set_id: &str,
+        _account_id: &str,
+        filter: &mut RbumSetTreeFilterReq,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumSetTreeResp> {
+        let org_cate_sys_codes = ctx
+            .groups
+            .iter()
+            .filter_map(|group| {
+                group.split_once(SET_AND_ITEM_SPLIT_FLAG).and_then(|(group_set_id, sys_code)| {
+                    if group_set_id == set_id && !sys_code.is_empty() {
+                        Some(sys_code.to_string())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect::<Vec<String>>();
+        if org_cate_sys_codes.is_empty() {
+            return Ok(RbumSetTreeResp { main: vec![], ext: None });
+        }
+
+        // 补全子节点
+        let org_tree_sub = Self::get_tree(
+            set_id,
+            &mut RbumSetTreeFilterReq {
+                fetch_cate_item: true,
+                sys_codes: Some(org_cate_sys_codes.clone()),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
+        let mut all_sys_codes = org_tree_sub.main.iter().filter(|cate| !cate.sys_code.is_empty()).map(|cate| cate.sys_code.clone()).collect::<Vec<String>>();
+        // 仅对 groups 对应节点补全父节点
+        for cate_sys_code in org_cate_sys_codes.iter() {
+            if cate_sys_code.is_empty() {
+                continue;
+            }
+            let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(cate_sys_code, funs)?;
+            if !parent_sys_codes.is_empty() {
+                all_sys_codes.extend(parent_sys_codes);
+            }
+        }
+        if all_sys_codes.is_empty() {
+            return Ok(RbumSetTreeResp { main: vec![], ext: None });
+        }
+        let all_sys_codes = all_sys_codes.into_iter().collect::<HashSet<String>>();
+        let has_parent_sys_code = filter.sys_codes.as_ref().is_some_and(|codes| !codes.is_empty());
+
+        let mut tree = if has_parent_sys_code {
+            Self::get_tree(set_id, filter, funs, ctx).await?
+        } else {
+            Self::get_tree(
+                set_id,
+                &mut RbumSetTreeFilterReq {
+                    fetch_cate_item: filter.fetch_cate_item,
+                    hide_item_with_disabled: filter.hide_item_with_disabled,
+                    sys_codes: Some(all_sys_codes.iter().cloned().collect()),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        };
+        if has_parent_sys_code {
+            tree.main.retain(|node| all_sys_codes.contains(&node.sys_code));
+            if let Some(ext) = tree.ext.as_mut() {
+                let remain_ids = tree.main.iter().map(|node| node.id.clone()).collect::<HashSet<String>>();
+                ext.items.retain(|id, _| remain_ids.contains(id));
+                ext.item_number_agg.retain(|id, _| remain_ids.contains(id));
+            }
+        }
+        Ok(tree)
+    }
+
+    /// 按账号权限过滤产品组树；无相关节点时返回 `None`。
+    pub async fn get_apps_tree_with_auth_by_account_opt(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumSetTreeResp>> {
         let account_ids = vec![account_id.to_string()];
         let app_ids = IamRelServ::find_from_id_rels(&IamRelKind::IamAccountApp, true, account_id, None, None, funs, ctx).await?;
 
