@@ -102,7 +102,7 @@ impl Default for RbumConfig {
             event_domains: HashMap::from([("rbum_".to_string(), "cud".to_string())]),
             head_key_bios_ctx: "Bios-Ctx".to_string(),
             secret_attr_key: "".to_string(),
-            secret_attr_encrypt: true,
+            secret_attr_encrypt: false,
         }
     }
 }
