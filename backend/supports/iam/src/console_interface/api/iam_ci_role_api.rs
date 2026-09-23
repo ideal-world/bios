@@ -2,7 +2,7 @@ use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleBatchModifyPermKindReq, IamRoleModifyReq, IamRoleRelAccountCertResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::iam_enumeration::IamRoleKind;
+use crate::iam_enumeration::{IamPermKind, IamRoleKind};
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
@@ -43,13 +43,14 @@ impl IamCiRoleApi {
         let mut funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let perm_kind = IamPermKind::parse(&modify_req.0.perm_kind)?;
         funs.begin().await?;
         let role_ids = IamRoleServ::find_id_items(&modify_req.0.filter, None, None, &funs, &ctx.0).await?;
         for role_id in role_ids {
             IamRoleServ::modify_item(
                 &role_id,
                 &mut IamRoleModifyReq {
-                    perm_kind: Some(modify_req.0.perm_kind.clone()),
+                    perm_kind: Some(perm_kind.clone()),
                     ..Default::default()
                 },
                 &funs,

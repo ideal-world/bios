@@ -56,7 +56,8 @@ pub struct IamRoleAggModifyReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleBatchModifyPermKindReq {
     pub filter: IamRoleFilterReq,
-    pub perm_kind: IamPermKind,
+    /// 权限类型，支持大小写不敏感：read / READ / all / ALL
+    pub perm_kind: String,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default, Clone)]

@@ -1186,6 +1186,7 @@ impl IamSubDeployServ {
                             &mut IamResModifyReq {
                                 name: Some(TrimString(res_item.name)),
                                 code: Some(TrimString(res_item.code)),
+                                perm_kind: Some(res_item.perm_kind),
                                 method: Some(TrimString(res_item.method)),
                                 icon: Some(res_item.icon),
                                 sort: Some(res_item.sort),

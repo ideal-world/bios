@@ -172,6 +172,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             && modify_req.hide.is_none()
             && modify_req.action.is_none()
             && modify_req.method.is_none()
+            && modify_req.perm_kind.is_none()
             && modify_req.crypto_req.is_none()
             && modify_req.crypto_resp.is_none()
             && modify_req.double_auth.is_none()
@@ -198,6 +199,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         }
         if let Some(method) = &modify_req.method {
             iam_res.method = Set(method.to_string());
+        }
+        if let Some(perm_kind) = &modify_req.perm_kind {
+            iam_res.perm_kind = Set(perm_kind.as_str().to_string());
         }
         if let Some(crypto_req) = modify_req.crypto_req {
             iam_res.crypto_req = Set(crypto_req);

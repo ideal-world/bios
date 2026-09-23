@@ -1232,21 +1232,25 @@ impl IamCertServ {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
             let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, account_id, &funs, &ctx).await?;
             let mut app_role_read = HashMap::new();
-            app_role_read.insert(IamBasicConfigApi::iam_basic_role_app_read_id(funs), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            let role_app_read_id = IamBasicConfigApi::iam_basic_role_app_read_id(funs);
+            app_role_read.insert(role_app_read_id.clone(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
             for (app_id, app_name) in app_items {
                 if old_app_ids.contains(&app_id) {
-                    continue;
+                    if let Some(existing_app) = apps.iter_mut().find(|app| app.app_id == app_id) {
+                        existing_app.roles.insert(role_app_read_id.clone(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+                    }
+                } else {
+                    old_app_ids.push(app_id.clone());
+                    apps.push(IamAccountAppInfoResp {
+                        app_id: app_id.clone(),
+                        app_name: app_name.clone(),
+                        app_own_paths: format!("{}/{}", tenant_id, app_id),
+                        app_kind: IamAppKind::Product,
+                        app_icon: "".to_string(),
+                        roles: app_role_read.clone(),
+                        groups: HashMap::new(),
+                    });
                 }
-                old_app_ids.push(app_id.clone());
-                apps.push(IamAccountAppInfoResp {
-                    app_id: app_id.clone(),
-                    app_name: app_name.clone(),
-                    app_own_paths: format!("{}/{}", tenant_id, app_id),
-                    app_kind: IamAppKind::Product,
-                    app_icon: "".to_string(),
-                    roles: app_role_read.clone(),
-                    groups: HashMap::new(),
-                });
             }
             // todo 拥有全部应用数据权限 则可以查看跨租户的应用，以及当前租户的应用权限 `后续需要优化`
             if IamResServ::is_res_code_with_context(funs.conf::<IamConfig>().app_res_data_guard_code.clone(), &ctx, funs).await? {

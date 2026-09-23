@@ -179,19 +179,31 @@ impl TryGetable for IamResKind {
 }
 
 /// 权限类型，用于标记当前资源或角色是否为只读
-#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, strum::EnumString)]
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Serialize, poem_openapi::Enum, strum::EnumString)]
 pub enum IamPermKind {
     /// 只读
     #[strum(serialize = "read")]
     #[oai(rename = "read")]
-    #[serde(rename = "read")]
     Read,
     /// 全部权限
     #[default]
     #[strum(serialize = "all")]
     #[oai(rename = "all")]
-    #[serde(rename = "all")]
     All,
+}
+
+impl<'de> Deserialize<'de> for IamPermKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "read" => Ok(IamPermKind::Read),
+            "all" | "" => Ok(IamPermKind::All),
+            _ => Err(serde::de::Error::custom(format!("invalid IamPermKind: {s}"))),
+        }
+    }
 }
 
 impl IamPermKind {
@@ -203,9 +215,9 @@ impl IamPermKind {
     }
 
     pub fn parse(kind: &str) -> TardisResult<IamPermKind> {
-        match kind {
-            "read" | "Read" => Ok(IamPermKind::Read),
-            "all" | "All" | "" => Ok(IamPermKind::All),
+        match kind.to_lowercase().as_str() {
+            "read" => Ok(IamPermKind::Read),
+            "all" | "" => Ok(IamPermKind::All),
             _ => Err(TardisError::format_error(&format!("invalid IamPermKind: {kind}"), "406-rbum-*-enum-init-error")),
         }
     }

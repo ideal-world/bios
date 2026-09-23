@@ -1151,6 +1151,7 @@ impl IamSetServ {
     }
 
     pub async fn get_menu_tree_by_roles(set_id: &str, role_ids: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let mut role_ids = role_ids.clone();
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
         let mut res_ids = HashSet::new();
@@ -1187,11 +1188,53 @@ impl IamSetServ {
             .into_iter()
             .collect::<HashSet<String>>()
         };
+        // 如果只读角色存在，则过滤掉role_ids中只读角色的父级角色
+        if !read_role_ids.is_empty() {
+            for read_role_id in &read_role_ids {
+                let read_role = IamRoleServ::get_item(
+                    read_role_id,
+                    &IamRoleFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                if !read_role.extend_role_id.is_empty() {
+                    role_ids.retain(|id| *id != read_role.extend_role_id);
+                }
+            }
+        }
         // 只读角色的关联资源先单独收集，后续再按资源 perm_kind 过滤
         let mut read_role_res_ids = HashSet::new();
         for role_id in role_ids {
-            let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &global_ctx).await?;
-            if read_role_ids.contains(role_id) {
+            let rel_res_ids = IamRoleServ::find_simple_rels(
+                &role_id,
+                None,
+                None,
+                Some(vec![
+                    RbumScopeLevelKind::Root.to_int(),
+                    RbumScopeLevelKind::L1.to_int(),
+                    RbumScopeLevelKind::L2.to_int(),
+                    RbumScopeLevelKind::L3.to_int(),
+                ]),
+                Some(vec![
+                    RbumScopeLevelKind::Private.to_int(),
+                    RbumScopeLevelKind::Root.to_int(),
+                    RbumScopeLevelKind::L1.to_int(),
+                    RbumScopeLevelKind::L2.to_int(),
+                    RbumScopeLevelKind::L3.to_int(),
+                ]),
+                funs,
+                &global_ctx,
+            )
+            .await?.into_iter().map(|r| r.rel_id.clone()).collect_vec();
+            if read_role_ids.contains(&role_id) {
                 read_role_res_ids.extend(rel_res_ids.into_iter());
             } else {
                 // 非只读角色：关联资源全部可见

@@ -79,6 +79,8 @@ pub struct IamResModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
+    /// 资源权限类型，read 为只读，all 为全部权限
+    pub perm_kind: Option<IamPermKind>,
     pub method: Option<TrimString>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
