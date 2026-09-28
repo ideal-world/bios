@@ -352,6 +352,24 @@ pub struct IamOauth2UserInfoResp {
     pub disabled: bool,
 }
 
+/// OAuth2 应用列表响应，仅返回接入方需要的应用字段。
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2AppResp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub kind: crate::basic::dto::iam_app_dto::IamAppKind,
+    pub description: Option<String>,
+}
+
+/// OAuth2 产品负责人列表响应。
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2ProductOwnerResp {
+    pub id: String,
+    pub name: String,
+    pub avatar: String,
+}
+
 /// OAuth2 令牌内省请求
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamOauth2IntrospectReq {

@@ -1,32 +1,37 @@
+use std::collections::HashSet;
+
 use bios_basic::rbum::{
     dto::{
         rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq, RbumCertConfSummaryResp},
-        rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq},
+        rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemRelFilterReq},
     },
-    rbum_enumeration::RbumCertConfStatusKind,
+    rbum_enumeration::{RbumCertConfStatusKind, RbumRelFromKind},
     serv::{rbum_cert_serv::RbumCertConfServ, rbum_crud_serv::RbumCrudOperation as _, rbum_item_serv::RbumItemCrudOperation as _},
 };
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     chrono::Utc,
+    web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     basic::{
         dto::{
+            iam_app_dto::IamAppSummaryResp,
             iam_cert_conf_dto::{IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceExt, IamCertConfOAuth2ServiceResp},
             iam_cert_dto::{
-                IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2IntrospectResp, IamOauth2TokenResp,
-                IamOauth2UserInfoResp,
+                IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2AppResp, IamOauth2IntrospectResp,
+                IamOauth2ProductOwnerResp, IamOauth2TokenResp, IamOauth2UserInfoResp,
             },
-            iam_filer_dto::IamAccountFilterReq,
+            iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq},
         },
-        serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_key_cache_serv::IamIdentCacheServ},
+        serv::{iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_cert_serv::IamCertServ, iam_key_cache_serv::IamIdentCacheServ, iam_role_serv::IamRoleServ},
     },
     iam_config::{IamBasicConfigApi as _, IamConfig},
-    iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind, OAuth2ResponseType, Oauth2GrantType, Oauth2TokenType},
+    iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
+    iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamRoleKind, OAuth2ResponseType, Oauth2GrantType, Oauth2TokenType},
 };
 
 /// userinfo / introspect 返回的身份提供方标识
@@ -296,7 +301,16 @@ impl IamCertOAuth2ServiceServ {
         let access_token_expire_sec = conf.expire_sec;
 
         // 7. 存储访问令牌（复用现有的令牌缓存系统）
-        IamIdentCacheServ::add_token(&access_token, &IamCertTokenKind::TokenOauth2, &code_info.ctx.owner, None, access_token_expire_sec, conf.coexist_num, funs).await?;
+        IamIdentCacheServ::add_token(
+            &access_token,
+            &IamCertTokenKind::TokenOauth2,
+            &code_info.ctx.owner,
+            None,
+            access_token_expire_sec,
+            conf.coexist_num,
+            funs,
+        )
+        .await?;
 
         // 8. 存储刷新令牌
         let refresh_token_info = IamOAuth2RefreshTokenInfo {
@@ -401,6 +415,217 @@ impl IamCertOAuth2ServiceServ {
     pub async fn get_userinfo(access_token: &str, funs: &TardisFunsInst) -> TardisResult<IamOauth2UserInfoResp> {
         let account_id = Self::resolve_account_id_by_access_token(access_token, funs).await?;
         Self::build_userinfo_by_account_id(&account_id, None, funs).await
+    }
+
+    /// 查询当前上下文账号可见的应用，包含直接关联应用和应用集合授权应用。
+    pub async fn find_apps(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Vec<IamOauth2AppResp>> {
+        Ok(Self::find_visible_app_summaries(ctx, funs)
+            .await?
+            .into_iter()
+            .map(|app| IamOauth2AppResp {
+                id: app.id,
+                name: app.name,
+                icon: app.icon,
+                kind: app.kind,
+                description: app.description,
+            })
+            .collect())
+    }
+
+    /// 查询指定应用的产品负责人。调用方只能查询当前账号可见的应用。
+    pub async fn find_product_owners(
+        app_id: &str,
+        page_number: u32,
+        page_size: u32,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<TardisPage<IamOauth2ProductOwnerResp>> {
+        let visible_app = Self::find_visible_app_summaries(ctx, funs)
+            .await?
+            .into_iter()
+            .find(|app| app.id == app_id)
+            .ok_or_else(|| funs.err().not_found("oauth2", "product_owners", "app is not found", "404-oauth2-app-not-found"))?;
+
+        // The app path was returned by the visibility query above. It may belong
+        // to another tenant when the account has platform-level Apps access.
+        let app_ctx = TardisContext {
+            own_paths: visible_app.own_paths.clone(),
+            ..ctx.clone()
+        };
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..app_ctx.clone()
+        };
+
+        let empty_page = || TardisPage {
+            page_size: page_size as u64,
+            page_number: page_number as u64,
+            total_size: 0,
+            records: Vec::new(),
+        };
+
+        let Some(base_role) = IamRoleServ::find_one_item(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: false,
+                    ignore_scope: true,
+                    enabled: Some(true),
+                    codes: Some(vec![RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE.to_string()]),
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(true),
+                in_embed: Some(true),
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?
+        else {
+            return Ok(empty_page());
+        };
+
+        let Some(role) = IamRoleServ::find_one_item(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(app_ctx.own_paths.clone()),
+                    with_sub_own_paths: false,
+                    ignore_scope: true,
+                    enabled: Some(true),
+                    codes: Some(vec![format!("{}:{}", app_id, RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE)]),
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                in_base: Some(false),
+                in_embed: Some(true),
+                extend_role_id: Some(base_role.id),
+                ..Default::default()
+            },
+            funs,
+            &global_ctx,
+        )
+        .await?
+        else {
+            return Ok(empty_page());
+        };
+        let role_id = role.id;
+        // Filter disabled accounts before pagination so the page metadata and
+        // page windows describe the data actually exposed by this endpoint.
+        let accounts = IamAccountServ::paginate_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    optional: false,
+                    tag: Some(IamRelKind::IamAccountRole.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(role_id),
+                    own_paths: Some(app_ctx.own_paths.clone()),
+                    disabled: Some(false),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            page_number,
+            page_size,
+            Some(false),
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?;
+        let TardisPage {
+            page_size,
+            page_number,
+            total_size,
+            records: account_records,
+        } = accounts;
+        let records = account_records
+            .into_iter()
+            .map(|account| IamOauth2ProductOwnerResp {
+                id: account.id,
+                name: account.name,
+                avatar: account.icon,
+            })
+            .collect();
+
+        Ok(TardisPage {
+            page_size,
+            page_number,
+            total_size,
+            records,
+        })
+    }
+
+    async fn find_visible_app_summaries(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Vec<IamAppSummaryResp>> {
+        let query_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+        let direct_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    optional: false,
+                    tag: Some(IamRelKind::IamAccountApp.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(query_ctx.owner.clone()),
+                    disabled: Some(false),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &query_ctx,
+        )
+        .await?;
+
+        let mut visible_app_ids = direct_apps.iter().map(|app| app.id.clone()).collect::<HashSet<_>>();
+        let extra_apps = IamAccountServ::get_account_apps_from_all_sets(&query_ctx.owner, &visible_app_ids, funs, &query_ctx).await?;
+        let extra_app_ids = extra_apps.into_iter().map(|app| app.app_id).filter(|app_id| visible_app_ids.insert(app_id.clone())).collect::<Vec<_>>();
+
+        if extra_app_ids.is_empty() {
+            return Ok(direct_apps);
+        }
+
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..query_ctx
+        };
+        let extra_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    enabled: Some(true),
+                    ids: Some(extra_app_ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &global_ctx,
+        )
+        .await?;
+
+        let mut apps = direct_apps;
+        apps.extend(extra_apps);
+        Ok(apps)
     }
 
     /// 根据账号 ID 构建用户信息（供基于登录上下文 `TardisContext` 的 userinfo 端点复用）
