@@ -362,12 +362,20 @@ pub struct IamOauth2AppResp {
     pub description: Option<String>,
 }
 
-/// OAuth2 产品负责人列表响应。
+/// OAuth2 应用角色成员列表响应。
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
-pub struct IamOauth2ProductOwnerResp {
+pub struct IamOauth2RoleMemberResp {
     pub id: String,
     pub name: String,
     pub avatar: String,
+}
+
+/// 通过 Redis 与 Gateway Auth 共享的 OAuth2 访问令牌元数据。
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2TokenMeta {
+    pub version: u8,
+    pub client_id: String,
+    pub scopes: Vec<String>,
 }
 
 /// OAuth2 令牌内省请求

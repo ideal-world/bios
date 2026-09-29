@@ -4,7 +4,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
 use crate::basic::dto::iam_cert_dto::{
-    IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2AppResp, IamOauth2IntrospectResp, IamOauth2ProductOwnerResp,
+    IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2AppResp, IamOauth2IntrospectResp, IamOauth2RoleMemberResp,
     IamOauth2TokenResp, IamOauth2UserInfoResp,
 };
 use crate::basic::serv::iam_cert_oauth2_service_serv::IamCertOAuth2ServiceServ;
@@ -99,15 +99,15 @@ impl IamCpCertOAuth2ServiceServ {
         IamCertOAuth2ServiceServ::find_apps(ctx, funs).await
     }
 
-    /// Return product owners for a visible application.
-    pub async fn find_product_owners(
+    /// 查询当前账号可见应用的内置产品管理角色成员。
+    pub async fn find_role_members(
         app_id: &str,
         page_number: u32,
         page_size: u32,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
-    ) -> TardisResult<TardisPage<IamOauth2ProductOwnerResp>> {
-        IamCertOAuth2ServiceServ::find_product_owners(app_id, page_number, page_size, ctx, funs).await
+    ) -> TardisResult<TardisPage<IamOauth2RoleMemberResp>> {
+        IamCertOAuth2ServiceServ::find_role_members(app_id, page_number, page_size, ctx, funs).await
     }
 
     /// Introspect an OAuth2 token

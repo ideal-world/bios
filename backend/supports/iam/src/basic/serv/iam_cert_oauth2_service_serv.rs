@@ -20,10 +20,10 @@ use crate::{
     basic::{
         dto::{
             iam_app_dto::IamAppSummaryResp,
-            iam_cert_conf_dto::{IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceExt, IamCertConfOAuth2ServiceResp},
+            iam_cert_conf_dto::{IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceExt, IamCertConfOAuth2ServiceResp, IamCertConfOAuth2ServiceScopeModifyReq},
             iam_cert_dto::{
                 IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2AppResp, IamOauth2IntrospectResp,
-                IamOauth2ProductOwnerResp, IamOauth2TokenResp, IamOauth2UserInfoResp,
+                IamOauth2RoleMemberResp, IamOauth2TokenMeta, IamOauth2TokenResp, IamOauth2UserInfoResp,
             },
             iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq},
         },
@@ -39,6 +39,80 @@ const OAUTH2_PROVIDER: &str = "bios-iam";
 
 const REDIS_CODE_KEY: &str = "iam:oauth2:service:code:";
 const REDIS_REFRESH_TOKEN_KEY: &str = "iam:oauth2:service:refresh_token:";
+const OAUTH2_FIXED_SCOPE_CODES: [&str; 3] = ["iam.userinfo.read", "iam.app.read", "iam.app.role_member.read"];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OAuth2ScopeValidationError {
+    Empty,
+    Unsupported,
+    NotAllowed,
+}
+
+fn normalize_oauth2_allowed_scopes(scopes: &[String]) -> Result<Vec<String>, OAuth2ScopeValidationError> {
+    let mut normalized = HashSet::new();
+    for scope in scopes {
+        if !OAUTH2_FIXED_SCOPE_CODES.contains(&scope.as_str()) {
+            return Err(OAuth2ScopeValidationError::Unsupported);
+        }
+        normalized.insert(scope.as_str());
+    }
+
+    Ok(OAUTH2_FIXED_SCOPE_CODES.iter().filter(|scope| normalized.contains(**scope)).map(|scope| scope.to_string()).collect())
+}
+
+fn validate_oauth2_scopes(requested: &str, allowed: &[String]) -> Result<Vec<String>, OAuth2ScopeValidationError> {
+    let requested = requested.split_ascii_whitespace().collect::<HashSet<_>>();
+    if requested.is_empty() {
+        return Err(OAuth2ScopeValidationError::Empty);
+    }
+
+    let allowed = normalize_oauth2_allowed_scopes(allowed)?;
+    for scope in &requested {
+        if !OAUTH2_FIXED_SCOPE_CODES.contains(scope) {
+            return Err(OAuth2ScopeValidationError::Unsupported);
+        }
+        if !allowed.iter().any(|allowed_scope| allowed_scope == scope) {
+            return Err(OAuth2ScopeValidationError::NotAllowed);
+        }
+    }
+
+    Ok(OAUTH2_FIXED_SCOPE_CODES.iter().filter(|scope| requested.contains(**scope)).map(|scope| scope.to_string()).collect())
+}
+
+fn narrow_oauth2_scopes(granted: &[String], requested: Option<&str>) -> Result<Vec<String>, OAuth2ScopeValidationError> {
+    let granted = normalize_oauth2_allowed_scopes(granted)?;
+    if granted.is_empty() {
+        return Err(OAuth2ScopeValidationError::Empty);
+    }
+
+    match requested {
+        Some(requested) => validate_oauth2_scopes(requested, &granted),
+        None => Ok(granted),
+    }
+}
+
+fn intersect_oauth2_scopes(granted: &[String], allowed: &[String]) -> Result<Vec<String>, OAuth2ScopeValidationError> {
+    let granted = normalize_oauth2_allowed_scopes(granted)?;
+    let allowed = normalize_oauth2_allowed_scopes(allowed)?;
+    let scopes = OAUTH2_FIXED_SCOPE_CODES
+        .iter()
+        .filter(|scope| granted.iter().any(|granted_scope| granted_scope == **scope) && allowed.iter().any(|allowed_scope| allowed_scope == **scope))
+        .map(|scope| scope.to_string())
+        .collect::<Vec<_>>();
+    if scopes.is_empty() {
+        return Err(OAuth2ScopeValidationError::NotAllowed);
+    }
+    Ok(scopes)
+}
+
+fn scope_validation_error(funs: &TardisFunsInst, operation: &str, error: OAuth2ScopeValidationError) -> tardis::basic::error::TardisError {
+    let (message, code) = match error {
+        OAuth2ScopeValidationError::Empty => ("scope is required", "400-oauth2-scope-required"),
+        OAuth2ScopeValidationError::Unsupported => ("unsupported OAuth2 scope", "400-oauth2-unsupported-scope"),
+        OAuth2ScopeValidationError::NotAllowed => ("scope is not allowed for this client", "400-oauth2-scope-not-allowed"),
+    };
+    funs.err().bad_request("oauth2", operation, message, code)
+}
 
 pub struct IamCertOAuth2ServiceServ;
 
@@ -64,6 +138,7 @@ pub struct IamOAuth2RefreshTokenInfo {
 
 impl IamCertOAuth2ServiceServ {
     pub async fn add_cert_conf(add_req: &IamCertConfOAuth2ServiceAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let scopes = normalize_oauth2_allowed_scopes(&add_req.scope).map_err(|error| scope_validation_error(funs, "add_client", error))?;
         let client_id = TardisFuns::crypto.key.generate_ak()?;
         let client_secret = TardisFuns::crypto.key.generate_sk(&client_id)?;
         RbumCertConfServ::add_rbum(
@@ -80,7 +155,7 @@ impl IamCertOAuth2ServiceServ {
                     client_id,
                     client_secret,
                     redirect_uris: add_req.redirect_uris.clone(),
-                    scope: vec![],
+                    scope: scopes,
                 })?),
                 sk_need: Some(false),
                 sk_dynamic: Some(false),
@@ -97,6 +172,54 @@ impl IamCertOAuth2ServiceServ {
                 status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: add_req.rel_rbum_item_id.clone(),
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    /// 只更新允许的 scope，不更换客户端凭证或回调地址。
+    pub async fn modify_allowed_scopes(id: &str, modify_req: &IamCertConfOAuth2ServiceScopeModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let scopes = normalize_oauth2_allowed_scopes(&modify_req.scope).map_err(|error| scope_validation_error(funs, "modify_client_scopes", error))?;
+        let cert_conf = RbumCertConfServ::get_rbum(
+            id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq::default(),
+                kind: Some(TrimString(IamCertExtKind::OAuth2Service.to_string())),
+                supplier: None,
+                status: Some(RbumCertConfStatusKind::Enabled),
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
+                rel_rbum_item_id: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&cert_conf.ext)?;
+        ext.scope = scopes;
+        RbumCertConfServ::modify_rbum(
+            id,
+            &mut RbumCertConfModifyReq {
+                name: None,
+                note: None,
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                ext: Some(TardisFuns::json.obj_to_string(&ext)?),
+                sk_need: None,
+                sk_encrypted: None,
+                repeatable: None,
+                is_basic: None,
+                rest_by_kinds: None,
+                expire_sec: None,
+                sk_lock_cycle_sec: None,
+                sk_lock_err_times: None,
+                sk_lock_duration_sec: None,
+                coexist_num: None,
+                conn_uri: None,
+                status: None,
             },
             funs,
             ctx,
@@ -130,6 +253,7 @@ impl IamCertOAuth2ServiceServ {
             client_secret: ext.client_secret,
             access_token_expire_sec: cert_conf.expire_sec,
             redirect_uris: ext.redirect_uris,
+            scope: normalize_oauth2_allowed_scopes(&ext.scope).map_err(|error| scope_validation_error(funs, "get_client", error))?,
         })
     }
 
@@ -161,6 +285,7 @@ impl IamCertOAuth2ServiceServ {
                 client_secret: ext.client_secret,
                 access_token_expire_sec: cert_conf.expire_sec,
                 redirect_uris: ext.redirect_uris.clone(),
+                scope: normalize_oauth2_allowed_scopes(&ext.scope).map_err(|error| scope_validation_error(funs, "list_clients", error))?,
             });
         }
 
@@ -219,6 +344,9 @@ impl IamCertOAuth2ServiceServ {
 
         let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
 
+        let requested_scope = add_req.scope.to_string();
+        let scopes = validate_oauth2_scopes(&requested_scope, &ext.scope).map_err(|error| scope_validation_error(funs, "generate_code", error))?;
+
         // 3. 验证重定向URI（必须在已注册列表中）
         if !ext.redirect_uris.iter().any(|uri| *uri == add_req.redirect_uri.to_string()) {
             return Err(funs.err().bad_request("oauth2", "generate_code", "invalid_redirect_uri", "400-oauth2-invalid-redirect-uri"));
@@ -229,7 +357,7 @@ impl IamCertOAuth2ServiceServ {
             ctx: ctx.clone(),
             client_id: add_req.client_id.to_string(),
             redirect_uri: add_req.redirect_uri.to_string(),
-            scope: add_req.scope.to_string(),
+            scope: scopes.join(" "),
             state: add_req.state.clone(),
             created_at: Utc::now().timestamp(),
             used: false,
@@ -282,6 +410,8 @@ impl IamCertOAuth2ServiceServ {
             }
         }
 
+        let scopes = validate_oauth2_scopes(&code_info.scope, &ext.scope).map_err(|error| scope_validation_error(funs, "verify_code", error))?;
+
         // 5. 标记授权码为已使用
         let mut used_code_info = code_info.clone();
         used_code_info.used = true;
@@ -301,11 +431,11 @@ impl IamCertOAuth2ServiceServ {
         let access_token_expire_sec = conf.expire_sec;
 
         // 7. 存储访问令牌（复用现有的令牌缓存系统）
-        IamIdentCacheServ::add_token(
+        Self::add_oauth2_token(
             &access_token,
-            &IamCertTokenKind::TokenOauth2,
+            &req.client_id,
+            &scopes,
             &code_info.ctx.owner,
-            None,
             access_token_expire_sec,
             conf.coexist_num,
             funs,
@@ -316,7 +446,7 @@ impl IamCertOAuth2ServiceServ {
         let refresh_token_info = IamOAuth2RefreshTokenInfo {
             user_id: code_info.ctx.owner.clone(),
             client_id: req.client_id.clone(),
-            scope: code_info.scope.clone(),
+            scope: scopes.join(" "),
             expires_at: Utc::now().timestamp() + iam_config.oauth2_refresh_token_expire_sec as i64,
         };
         funs.cache()
@@ -332,7 +462,7 @@ impl IamCertOAuth2ServiceServ {
             token_type: Oauth2TokenType::Bearer,
             expires_in: access_token_expire_sec as i64,
             refresh_token: Some(refresh_token),
-            scope: Some(code_info.scope),
+            scope: Some(scopes.join(" ")),
         })
     }
 
@@ -355,23 +485,40 @@ impl IamCertOAuth2ServiceServ {
             return Err(funs.err().unauthorized("oauth2", "refresh_token", "invalid_client", "401-oauth2-invalid-client"));
         }
 
-        if Utc::now().timestamp() > refresh_token_info.expires_at {
+        let now = Utc::now().timestamp();
+        if now >= refresh_token_info.expires_at {
             return Err(funs.err().unauthorized("oauth2", "refresh_token", "refresh_token_expired", "401-oauth2-refresh-token-expired"));
         }
 
         // 4. 获取凭证配置
         let conf = Self::get_cert_conf_by_client_id(&refresh_token_info.client_id, funs).await?;
+        let ext = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceExt>(&conf.ext)?;
+        if req.client_secret.as_deref() != Some(ext.client_secret.as_str()) {
+            return Err(funs.err().unauthorized("oauth2", "refresh_token", "invalid_client", "401-oauth2-invalid-client"));
+        }
+        let granted = refresh_token_info.scope.split_ascii_whitespace().map(str::to_string).collect::<Vec<_>>();
+        let current_grant = intersect_oauth2_scopes(&granted, &ext.scope).map_err(|error| scope_validation_error(funs, "refresh_token", error))?;
+        let scopes = narrow_oauth2_scopes(&current_grant, req.scope.as_deref()).map_err(|error| scope_validation_error(funs, "refresh_token", error))?;
+        let mut narrowed_refresh_token_info = refresh_token_info.clone();
+        narrowed_refresh_token_info.scope = scopes.join(" ");
+        funs.cache()
+            .set_ex(
+                &format!("{}{}", REDIS_REFRESH_TOKEN_KEY, req.refresh_token),
+                &TardisFuns::json.obj_to_string(&narrowed_refresh_token_info)?,
+                (refresh_token_info.expires_at - now) as u64,
+            )
+            .await?;
         let access_token_expire_sec = conf.expire_sec;
 
         // 5. 生成新的访问令牌
         let new_access_token = TardisFuns::crypto.key.generate_token()?;
 
         // 6. 存储新的访问令牌
-        IamIdentCacheServ::add_token(
+        Self::add_oauth2_token(
             &new_access_token,
-            &IamCertTokenKind::TokenOauth2,
+            &refresh_token_info.client_id,
+            &scopes,
             &refresh_token_info.user_id,
-            None,
             access_token_expire_sec,
             conf.coexist_num,
             funs,
@@ -383,8 +530,37 @@ impl IamCertOAuth2ServiceServ {
             token_type: Oauth2TokenType::Bearer,
             expires_in: access_token_expire_sec as i64,
             refresh_token: Some(req.refresh_token.clone()), // 保持相同的刷新令牌
-            scope: Some(refresh_token_info.scope),
+            scope: Some(scopes.join(" ")),
         })
+    }
+
+    async fn add_oauth2_token(
+        access_token: &str,
+        client_id: &str,
+        scopes: &[String],
+        account_id: &str,
+        expire_sec: i64,
+        coexist_num: i16,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
+        let key = format!("{}{}", crate::iam_constants::IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX, access_token);
+        let meta = IamOauth2TokenMeta {
+            version: 1,
+            client_id: client_id.to_string(),
+            scopes: scopes.to_vec(),
+        };
+        let value = TardisFuns::json.obj_to_string(&meta)?;
+        if expire_sec > 0 {
+            funs.cache().set_ex(&key, &value, expire_sec as u64).await?;
+        } else {
+            funs.cache().set(&key, &value).await?;
+        }
+
+        if let Err(error) = IamIdentCacheServ::add_token(access_token, &IamCertTokenKind::TokenOauth2, account_id, None, expire_sec, coexist_num, funs).await {
+            let _ = funs.cache().del(&key).await;
+            return Err(error);
+        }
+        Ok(())
     }
 
     /// 保持向后兼容的简化方法
@@ -432,19 +608,19 @@ impl IamCertOAuth2ServiceServ {
             .collect())
     }
 
-    /// 查询指定应用的产品负责人。调用方只能查询当前账号可见的应用。
-    pub async fn find_product_owners(
+    /// 查询指定应用的内置产品管理角色成员；调用方只能查询当前账号可见的应用。
+    pub async fn find_role_members(
         app_id: &str,
         page_number: u32,
         page_size: u32,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
-    ) -> TardisResult<TardisPage<IamOauth2ProductOwnerResp>> {
+    ) -> TardisResult<TardisPage<IamOauth2RoleMemberResp>> {
         let visible_app = Self::find_visible_app_summaries(ctx, funs)
             .await?
             .into_iter()
             .find(|app| app.id == app_id)
-            .ok_or_else(|| funs.err().not_found("oauth2", "product_owners", "app is not found", "404-oauth2-app-not-found"))?;
+            .ok_or_else(|| funs.err().not_found("oauth2", "role_members", "app is not found", "404-oauth2-app-not-found"))?;
 
         // The app path was returned by the visibility query above. It may belong
         // to another tenant when the account has platform-level Apps access.
@@ -550,7 +726,7 @@ impl IamCertOAuth2ServiceServ {
         } = accounts;
         let records = account_records
             .into_iter()
-            .map(|account| IamOauth2ProductOwnerResp {
+            .map(|account| IamOauth2RoleMemberResp {
                 id: account.id,
                 name: account.name,
                 avatar: account.icon,
@@ -702,5 +878,90 @@ impl IamCertOAuth2ServiceServ {
                 sub: None,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod oauth2_scope_tests {
+    use super::{intersect_oauth2_scopes, narrow_oauth2_scopes, normalize_oauth2_allowed_scopes, validate_oauth2_scopes, OAUTH2_FIXED_SCOPE_CODES};
+    use crate::basic::dto::{
+        iam_cert_conf_dto::{IamCertConfOAuth2ServiceAddOrModifyReq, IamCertConfOAuth2ServiceExt},
+        iam_cert_dto::IamOauth2TokenMeta,
+    };
+    use crate::iam_constants::IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX;
+    use tardis::TardisFuns;
+
+    fn scopes(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| value.to_string()).collect()
+    }
+
+    #[test]
+    fn requested_scopes_are_deduplicated_and_canonicalized() {
+        let allowed = scopes(&["iam.app.role_member.read", "iam.app.read", "iam.userinfo.read", "iam.app.read"]);
+
+        assert_eq!(
+            validate_oauth2_scopes("iam.app.read iam.userinfo.read iam.app.role_member.read iam.app.read", &allowed).unwrap(),
+            scopes(&["iam.userinfo.read", "iam.app.read", "iam.app.role_member.read"])
+        );
+    }
+
+    #[test]
+    fn empty_or_unknown_client_scope_is_not_wildcard() {
+        assert!(validate_oauth2_scopes("iam.userinfo.read", &[]).is_err());
+        assert!(normalize_oauth2_allowed_scopes(&scopes(&["all"])).is_err());
+        assert!(validate_oauth2_scopes("all", &scopes(&["all"])).is_err());
+    }
+
+    #[test]
+    fn requested_scope_must_be_allowed_by_client() {
+        let allowed = scopes(&["iam.userinfo.read"]);
+
+        assert!(validate_oauth2_scopes("iam.app.read", &allowed).is_err());
+        assert!(validate_oauth2_scopes("iam.userinfo.read iam.app.read", &allowed).is_err());
+    }
+
+    #[test]
+    fn refresh_keeps_or_reduces_granted_scope_only() {
+        let granted = scopes(&["iam.userinfo.read", "iam.app.read", "iam.app.role_member.read"]);
+
+        assert_eq!(narrow_oauth2_scopes(&granted, None).unwrap(), granted);
+        assert_eq!(narrow_oauth2_scopes(&granted, Some("iam.app.read")).unwrap(), scopes(&["iam.app.read"]));
+        assert_eq!(
+            intersect_oauth2_scopes(&granted, &scopes(&["iam.userinfo.read", "iam.app.role_member.read"])).unwrap(),
+            scopes(&["iam.userinfo.read", "iam.app.role_member.read"])
+        );
+        assert!(!intersect_oauth2_scopes(&granted, &scopes(&["iam.userinfo.read"])).unwrap().contains(&"iam.app.role_member.read".to_string()));
+        assert!(narrow_oauth2_scopes(&granted, Some("all")).is_err());
+        assert!(narrow_oauth2_scopes(&granted, Some("iam.app.read iam.userinfo.read iam.app.role_member.read")).is_ok());
+        assert!(narrow_oauth2_scopes(&scopes(&["iam.userinfo.read"]), Some("iam.userinfo.read iam.app.read")).is_err());
+    }
+
+    #[test]
+    fn oauth2_token_metadata_matches_gateway_redis_contract() {
+        let meta = IamOauth2TokenMeta {
+            version: 1,
+            client_id: "test-client".to_string(),
+            scopes: scopes(&["iam.userinfo.read", "iam.app.read"]),
+        };
+        let encoded = TardisFuns::json.obj_to_string(&meta).unwrap();
+        let decoded = TardisFuns::json.str_to_obj::<IamOauth2TokenMeta>(&encoded).unwrap();
+
+        assert_eq!(decoded.version, 1);
+        assert_eq!(decoded.client_id, "test-client");
+        assert_eq!(decoded.scopes, meta.scopes);
+        assert_eq!(IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX, "iam:cache:token:oauth2:meta:");
+        assert_eq!(OAUTH2_FIXED_SCOPE_CODES, ["iam.userinfo.read", "iam.app.read", "iam.app.role_member.read"]);
+    }
+
+    #[test]
+    fn old_client_requests_and_configs_default_to_no_scopes() {
+        let add_req = TardisFuns::json.str_to_obj::<IamCertConfOAuth2ServiceAddOrModifyReq>(r#"{"name":"Hub","redirect_uris":["https://hub.example/callback"]}"#).unwrap();
+        let existing_ext = TardisFuns::json
+            .str_to_obj::<IamCertConfOAuth2ServiceExt>(r#"{"client_id":"client","client_secret":"secret","redirect_uris":["https://hub.example/callback"]}"#)
+            .unwrap();
+
+        assert!(add_req.scope.is_empty());
+        assert!(existing_ext.scope.is_empty());
+        assert!(validate_oauth2_scopes("iam.userinfo.read", &existing_ext.scope).is_err());
     }
 }

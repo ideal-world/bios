@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::payload::{Form, Json};
 use tardis::web::poem_openapi::ApiResponse;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
-use crate::basic::dto::iam_cert_dto::{IamOauth2AppResp, IamOauth2IntrospectReq, IamOauth2IntrospectResp, IamOauth2ProductOwnerResp, IamOauth2TokenResp, IamOauth2UserInfoResp};
+use crate::basic::dto::iam_cert_dto::{IamOauth2AppResp, IamOauth2IntrospectReq, IamOauth2IntrospectResp, IamOauth2RoleMemberResp, IamOauth2TokenResp, IamOauth2UserInfoResp};
 use crate::console_passport::dto::iam_cp_cert_dto::{IamCpOAuth2ServiceAuthorizeReq, IamCpOAuth2ServiceAuthorizeResp, IamCpOAuth2ServiceTokenReq};
 use crate::console_passport::serv::iam_cp_cert_oauth2_service_serv::IamCpCertOAuth2ServiceServ;
 use crate::iam_constants;
@@ -121,26 +121,26 @@ impl IamCpOAuth2ServiceApi {
         TardisResp::ok(resp)
     }
 
-    /// OAuth2 产品负责人资源端点
+    /// OAuth2 应用角色成员资源端点
     ///
     /// 只能查询当前账号可见应用的内置 `app_admin_product` 角色账号。
-    #[oai(path = "/apps/:app_id/product-owners", method = "get")]
-    async fn product_owners(
+    #[oai(path = "/apps/:app_id/role-members", method = "get")]
+    async fn role_members(
         &self,
         app_id: Path<String>,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<TardisPage<IamOauth2ProductOwnerResp>> {
+    ) -> TardisApiResult<TardisPage<IamOauth2RoleMemberResp>> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let page_number = page_number.0.unwrap_or(1).max(1);
         let page_size = page_size.0.unwrap_or(100);
         if page_size == 0 || page_size > 100 {
-            return Err(funs.err().bad_request("oauth2", "product_owners", "page_size must be between 1 and 100", "400-oauth2-invalid-page-size").into());
+            return Err(funs.err().bad_request("oauth2", "role_members", "page_size must be between 1 and 100", "400-oauth2-invalid-page-size").into());
         }
-        let resp = IamCpCertOAuth2ServiceServ::find_product_owners(&app_id.0, page_number, page_size, &ctx.0, &funs).await?;
+        let resp = IamCpCertOAuth2ServiceServ::find_role_members(&app_id.0, page_number, page_size, &ctx.0, &funs).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
     }
