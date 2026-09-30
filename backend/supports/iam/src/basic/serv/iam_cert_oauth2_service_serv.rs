@@ -39,6 +39,7 @@ const OAUTH2_PROVIDER: &str = "bios-iam";
 
 const REDIS_CODE_KEY: &str = "iam:oauth2:service:code:";
 const REDIS_REFRESH_TOKEN_KEY: &str = "iam:oauth2:service:refresh_token:";
+const OAUTH2_ALL_SCOPE: &str = "all";
 const OAUTH2_FIXED_SCOPE_CODES: [&str; 3] = ["iam.userinfo.read", "iam.app.read", "iam.app.role_member.read"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,11 +51,20 @@ enum OAuth2ScopeValidationError {
 
 fn normalize_oauth2_allowed_scopes(scopes: &[String]) -> Result<Vec<String>, OAuth2ScopeValidationError> {
     let mut normalized = HashSet::new();
+    let mut has_all = false;
     for scope in scopes {
+        if scope == OAUTH2_ALL_SCOPE {
+            has_all = true;
+            continue;
+        }
         if !OAUTH2_FIXED_SCOPE_CODES.contains(&scope.as_str()) {
             return Err(OAuth2ScopeValidationError::Unsupported);
         }
         normalized.insert(scope.as_str());
+    }
+
+    if has_all {
+        return Ok(vec![OAUTH2_ALL_SCOPE.to_string()]);
     }
 
     Ok(OAUTH2_FIXED_SCOPE_CODES.iter().filter(|scope| normalized.contains(**scope)).map(|scope| scope.to_string()).collect())
@@ -67,11 +77,18 @@ fn validate_oauth2_scopes(requested: &str, allowed: &[String]) -> Result<Vec<Str
     }
 
     let allowed = normalize_oauth2_allowed_scopes(allowed)?;
-    for scope in &requested {
-        if !OAUTH2_FIXED_SCOPE_CODES.contains(scope) {
-            return Err(OAuth2ScopeValidationError::Unsupported);
+    let allowed_all = allowed.iter().any(|scope| scope == OAUTH2_ALL_SCOPE);
+    if requested.iter().any(|scope| *scope != OAUTH2_ALL_SCOPE && !OAUTH2_FIXED_SCOPE_CODES.contains(scope)) {
+        return Err(OAuth2ScopeValidationError::Unsupported);
+    }
+    if requested.contains(OAUTH2_ALL_SCOPE) {
+        if allowed_all {
+            return Ok(vec![OAUTH2_ALL_SCOPE.to_string()]);
         }
-        if !allowed.iter().any(|allowed_scope| allowed_scope == scope) {
+        return Err(OAuth2ScopeValidationError::NotAllowed);
+    }
+    for scope in &requested {
+        if !allowed_all && !allowed.iter().any(|allowed_scope| allowed_scope == scope) {
             return Err(OAuth2ScopeValidationError::NotAllowed);
         }
     }
@@ -94,6 +111,20 @@ fn narrow_oauth2_scopes(granted: &[String], requested: Option<&str>) -> Result<V
 fn intersect_oauth2_scopes(granted: &[String], allowed: &[String]) -> Result<Vec<String>, OAuth2ScopeValidationError> {
     let granted = normalize_oauth2_allowed_scopes(granted)?;
     let allowed = normalize_oauth2_allowed_scopes(allowed)?;
+    let granted_all = granted.iter().any(|scope| scope == OAUTH2_ALL_SCOPE);
+    let allowed_all = allowed.iter().any(|scope| scope == OAUTH2_ALL_SCOPE);
+    if granted_all {
+        return if allowed_all {
+            Ok(vec![OAUTH2_ALL_SCOPE.to_string()])
+        } else if allowed.is_empty() {
+            Err(OAuth2ScopeValidationError::NotAllowed)
+        } else {
+            Ok(allowed)
+        };
+    }
+    if allowed_all {
+        return if granted.is_empty() { Err(OAuth2ScopeValidationError::NotAllowed) } else { Ok(granted) };
+    }
     let scopes = OAUTH2_FIXED_SCOPE_CODES
         .iter()
         .filter(|scope| granted.iter().any(|granted_scope| granted_scope == **scope) && allowed.iter().any(|allowed_scope| allowed_scope == **scope))
@@ -906,10 +937,21 @@ mod oauth2_scope_tests {
     }
 
     #[test]
-    fn empty_or_unknown_client_scope_is_not_wildcard() {
+    fn empty_or_unknown_scope_is_rejected() {
         assert!(validate_oauth2_scopes("iam.userinfo.read", &[]).is_err());
-        assert!(normalize_oauth2_allowed_scopes(&scopes(&["all"])).is_err());
-        assert!(validate_oauth2_scopes("all", &scopes(&["all"])).is_err());
+        assert!(normalize_oauth2_allowed_scopes(&scopes(&["iam.scope.unknown"])).is_err());
+        assert!(validate_oauth2_scopes("iam.scope.unknown", &scopes(&["all"])).is_err());
+    }
+
+    #[test]
+    fn all_scope_is_a_formal_client_wildcard_and_mixed_scopes_canonicalize_to_all() {
+        assert_eq!(normalize_oauth2_allowed_scopes(&scopes(&["all", "iam.app.read"])).unwrap(), scopes(&["all"]));
+        assert_eq!(validate_oauth2_scopes("all", &scopes(&["all"])).unwrap(), scopes(&["all"]));
+        assert_eq!(validate_oauth2_scopes("iam.app.read", &scopes(&["all"])).unwrap(), scopes(&["iam.app.read"]));
+        assert_eq!(validate_oauth2_scopes("all iam.app.read", &scopes(&["all"])).unwrap(), scopes(&["all"]));
+        assert!(validate_oauth2_scopes("all", &scopes(&["iam.app.read"])).is_err());
+        assert!(validate_oauth2_scopes("all iam.app.read", &scopes(&["iam.app.read"])).is_err());
+        assert!(validate_oauth2_scopes("all iam.scope.unknown", &scopes(&["all"])).is_err());
     }
 
     #[test]
@@ -934,6 +976,13 @@ mod oauth2_scope_tests {
         assert!(narrow_oauth2_scopes(&granted, Some("all")).is_err());
         assert!(narrow_oauth2_scopes(&granted, Some("iam.app.read iam.userinfo.read iam.app.role_member.read")).is_ok());
         assert!(narrow_oauth2_scopes(&scopes(&["iam.userinfo.read"]), Some("iam.userinfo.read iam.app.read")).is_err());
+
+        assert_eq!(intersect_oauth2_scopes(&scopes(&["all"]), &scopes(&["iam.app.read"])).unwrap(), scopes(&["iam.app.read"]));
+        assert_eq!(intersect_oauth2_scopes(&scopes(&["iam.app.read"]), &scopes(&["all"])).unwrap(), scopes(&["iam.app.read"]));
+        assert_eq!(intersect_oauth2_scopes(&scopes(&["all"]), &scopes(&["all"])).unwrap(), scopes(&["all"]));
+        assert_eq!(narrow_oauth2_scopes(&scopes(&["all"]), Some("iam.app.read")).unwrap(), scopes(&["iam.app.read"]));
+        assert_eq!(narrow_oauth2_scopes(&scopes(&["all"]), Some("all iam.app.read")).unwrap(), scopes(&["all"]));
+        assert!(narrow_oauth2_scopes(&scopes(&["iam.app.read"]), Some("all")).is_err());
     }
 
     #[test]
