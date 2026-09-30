@@ -65,8 +65,12 @@ fn assert_forbidden(result: &AuthResult) {
 }
 
 fn add_account_rule(uri: &str, account: &str) -> TardisResult<()> {
+    add_account_rule_for_method("GET", uri, account)
+}
+
+fn add_account_rule_for_method(method: &str, uri: &str, account: &str) -> TardisResult<()> {
     auth_res_serv::add_res(
-        "GET",
+        method,
         uri,
         Some(TardisFuns::json.str_to_obj(&format!(r##"{{"accounts":"#{account}#"}}"##))?),
         false,
@@ -105,6 +109,32 @@ async fn oauth2_scopes_are_enforced_and_still_intersect_with_rbac() -> TardisRes
     let result = auth_request("GET", "/cp/oauth2/apps/app-123/role-members", "role-member-scope", &config).await?;
     assert!(result.e.is_none(), "the role-member scope should allow one dynamic app id segment");
     assert_forbidden(&auth_request("GET", "/cp/oauth2/apps/app-123/role-members", "app-read", &config).await?);
+
+    let all_scope = metadata(&["all"]);
+    set_token("all-scope", "TokenOauth2", Some(&all_scope), &config).await?;
+    assert!(auth_request("GET", "/cp/oauth2/apps", "all-scope", &config).await?.e.is_none());
+    assert!(auth_request("GET", "/cp/oauth2/userinfo", "all-scope", &config).await?.e.is_none());
+    assert!(auth_request("GET", "/cp/oauth2/apps/app-123/role-members", "all-scope", &config).await?.e.is_none());
+    add_account_rule("iam-res://cp/oauth2/future-resource", "account1")?;
+    assert!(auth_request("GET", "/cp/oauth2/future-resource", "all-scope", &config).await?.e.is_none());
+    assert_forbidden(&auth_request("GET", "/cp/oauth2/future-resource", "app-read", &config).await?);
+    auth_res_serv::remove_res("get", "iam-res://cp/oauth2/future-resource")?;
+    add_account_rule("iam-res://cp/oauth2/future-resource", "another-account")?;
+    assert_forbidden(&auth_request("GET", "/cp/oauth2/future-resource", "all-scope", &config).await?);
+    auth_res_serv::remove_res("get", "iam-res://cp/oauth2/future-resource")?;
+    auth_res_serv::add_res(
+        "POST",
+        "iam-res://cp/oauth2/future-write",
+        Some(TardisFuns::json.str_to_obj(r##"{"accounts":"#account1#"}"##)?),
+        false,
+        false,
+        false,
+        false,
+        true,
+    )?;
+    assert!(auth_request("POST", "/cp/oauth2/future-write", "all-scope", &config).await?.e.is_none());
+    assert_forbidden(&auth_request("POST", "/cp/oauth2/future-write", "app-read", &config).await?);
+    auth_res_serv::remove_res("post", "iam-res://cp/oauth2/future-write")?;
 
     assert_forbidden(&auth_request("POST", "/cp/oauth2/apps", "app-read", &config).await?);
     assert_forbidden(&auth_request("GET", "/cp/oauth2/apps/app-123/role-members/extra", "role-member-scope", &config).await?);
