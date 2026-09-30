@@ -1,9 +1,11 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
 use crate::basic::dto::iam_cert_dto::{
-    IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2IntrospectResp, IamOauth2TokenResp, IamOauth2UserInfoResp,
+    IamCertOAuth2ServiceCodeAddReq, IamCertOAuth2ServiceCodeVerifyReq, IamCertOAuth2ServiceRefreshTokenReq, IamOauth2AppResp, IamOauth2IntrospectResp, IamOauth2RoleMemberResp,
+    IamOauth2TokenResp, IamOauth2UserInfoResp,
 };
 use crate::basic::serv::iam_cert_oauth2_service_serv::IamCertOAuth2ServiceServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{IamCpOAuth2ServiceAuthorizeReq, IamCpOAuth2ServiceAuthorizeResp, IamCpOAuth2ServiceTokenReq};
@@ -90,6 +92,22 @@ impl IamCpCertOAuth2ServiceServ {
     /// 根据登录上下文返回当前账号的用户信息
     pub async fn get_userinfo_by_ctx(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOauth2UserInfoResp> {
         IamCertOAuth2ServiceServ::build_userinfo_by_account_id(&ctx.owner, Some(&ctx.own_paths), funs).await
+    }
+
+    /// Return the applications visible to the logged-in account.
+    pub async fn find_apps(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Vec<IamOauth2AppResp>> {
+        IamCertOAuth2ServiceServ::find_apps(ctx, funs).await
+    }
+
+    /// 查询当前账号可见应用的内置产品管理角色成员。
+    pub async fn find_role_members(
+        app_id: &str,
+        page_number: u32,
+        page_size: u32,
+        ctx: &TardisContext,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<TardisPage<IamOauth2RoleMemberResp>> {
+        IamCertOAuth2ServiceServ::find_role_members(app_id, page_number, page_size, ctx, funs).await
     }
 
     /// Introspect an OAuth2 token

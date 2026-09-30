@@ -105,7 +105,17 @@ pub struct IamCertConfOAuth2ServiceAddOrModifyReq {
     /// This is the callback address for the third-party access
     /// 第三方接入的回调地址
     pub redirect_uris: Vec<String>,
+    /// 客户端允许申请的 OAuth2 scope。
+    #[oai(default)]
+    #[serde(default)]
+    pub scope: Vec<String>,
     pub rel_rbum_item_id: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCertConfOAuth2ServiceScopeModifyReq {
+    /// 客户端允许申请的 OAuth2 scope。
+    pub scope: Vec<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -120,6 +130,8 @@ pub struct IamCertConfOAuth2ServiceResp {
     /// The callback addresses for the third-party access
     /// 第三方接入的回调地址列表
     pub redirect_uris: Vec<String>,
+    /// 客户端允许申请的 OAuth2 scope。
+    pub scope: Vec<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -127,6 +139,7 @@ pub struct IamCertConfOAuth2ServiceExt {
     pub client_id: String,
     pub client_secret: String,
     pub redirect_uris: Vec<String>,
+    #[serde(default)]
     pub scope: Vec<String>,
 }
 

@@ -8,7 +8,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp, IamCertConfOAuth2AddOrModifyReq, IamCertConfOAuth2Resp, IamCertConfOAuth2ServiceAddOrModifyReq,
-    IamCertConfOAuth2ServiceResp,
+    IamCertConfOAuth2ServiceResp, IamCertConfOAuth2ServiceScopeModifyReq,
 };
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -261,6 +261,25 @@ impl IamCsCertConfigOAuth2ServiceApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
+    }
+
+    /// Update OAuth2 Service Cert Conf scopes without rotating client credentials.
+    /// 修改 OAuth2 服务客户端允许的 scope，保留 client_id、secret 和 redirect_uris。
+    #[oai(path = "/:id", method = "put")]
+    async fn modify_oauth2_service_scopes(
+        &self,
+        id: Path<String>,
+        modify_req: Json<IamCertConfOAuth2ServiceScopeModifyReq>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertOAuth2ServiceServ::modify_allowed_scopes(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
     }
 
     /// Get OAuth2 Service Cert Conf
