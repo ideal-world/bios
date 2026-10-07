@@ -19,7 +19,9 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
-use crate::basic::domain::{iam_account, iam_app, iam_config, iam_publish_system, iam_res, iam_role, iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license, iam_tenant, iam_third_party_app};
+use crate::basic::domain::{
+    iam_account, iam_app, iam_config, iam_publish_system, iam_res, iam_role, iam_sub_deploy, iam_sub_deploy_host, iam_sub_deploy_license, iam_tenant, iam_third_party_app,
+};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, InitResItemIds, JsonMenu};
@@ -32,8 +34,8 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_cert_manage_api, iam_ca_res_api, iam_ca_role_api};
 use crate::console_common::api::{
-    iam_cc_account_api, iam_cc_account_task_api, iam_cc_app_api, iam_cc_app_set_api, iam_cc_cert_api, iam_cc_config_api, iam_cc_org_api, iam_cc_org_task_api, iam_cc_res_api,
-    iam_cc_role_api, iam_cc_sub_deploy_api, iam_cc_system_api, iam_cc_tenant_api, iam_cc_publish_system_api, iam_cc_third_party_app_api,
+    iam_cc_account_api, iam_cc_account_task_api, iam_cc_app_api, iam_cc_app_set_api, iam_cc_cert_api, iam_cc_config_api, iam_cc_org_api, iam_cc_org_task_api,
+    iam_cc_publish_system_api, iam_cc_res_api, iam_cc_role_api, iam_cc_sub_deploy_api, iam_cc_system_api, iam_cc_tenant_api, iam_cc_third_party_app_api,
 };
 use crate::console_interface::api::{
     iam_ci_account_api, iam_ci_app_api, iam_ci_app_set_api, iam_ci_cert_api, iam_ci_open_api, iam_ci_org_api, iam_ci_res_api, iam_ci_role_api, iam_ci_sub_deploy_api,
@@ -160,6 +162,12 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
     // TaskProcessor::subscribe_task(&funs).await?;
     invoke_initializer::init(funs.module_code(), funs.conf::<IamConfig>().invoke.clone())?;
+    // 新授权表对已有部署同样创建；已有表结构的变更仍由 SQL 迁移处理。
+    let db_kind = TardisFuns::reldb().backend();
+    let compatible = TardisFuns::reldb().compatible_type();
+    let mut provider_table = crate::basic::domain::iam_oauth2_provider_grant::ActiveModel::init(db_kind, None, compatible);
+    provider_table.0.if_not_exists();
+    funs.db().init(provider_table).await?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(ctx) = ctx {

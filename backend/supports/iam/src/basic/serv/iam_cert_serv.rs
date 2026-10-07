@@ -1161,7 +1161,7 @@ impl IamCertServ {
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
-        if kind != "Ldap" {
+        if kind != "Ldap" && kind != IamCertExtKind::OAuth2.to_string() {
             supplier = "";
         }
         RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(kind, supplier, false, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs)
