@@ -168,6 +168,9 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
     let mut provider_table = crate::basic::domain::iam_oauth2_provider_grant::ActiveModel::init(db_kind, None, compatible);
     provider_table.0.if_not_exists();
     funs.db().init(provider_table).await?;
+    let mut task_table = crate::basic::domain::iam_oauth2_task_grant::ActiveModel::init(db_kind, None, compatible);
+    task_table.0.if_not_exists();
+    funs.db().init(task_table).await?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(ctx) = ctx {

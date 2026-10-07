@@ -34,6 +34,8 @@ async fn get_provider_token_refreshes_expired_bios_grant_through_mock_provider()
     let _containers = init_test_container::init(None).await?;
     let _ = bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst()).await?;
     let funs = iam_constants::get_tardis_inst();
+    assert!(funs.conf::<bios_iam::iam_config::IamConfig>().oauth2_task_executor_account_id.is_empty());
+
     let request_bodies = Arc::new(Mutex::new(Vec::new()));
     let request_bodies_for_endpoint = request_bodies.clone();
     let endpoint_funs = Arc::new(iam_constants::get_tardis_inst());

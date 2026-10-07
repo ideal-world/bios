@@ -1,4 +1,5 @@
 pub mod iam_account;
+pub mod iam_oauth2_task_grant;
 pub mod iam_oauth2_provider_grant;
 pub mod iam_app;
 pub mod iam_config;

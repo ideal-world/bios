@@ -117,6 +117,8 @@ pub struct IamConfig {
     /// 必须不小于本地登录 token 的有效期，否则会出现「登录 token 未失效但 Provider token 缓存已过期」的问题；
     /// 实际生效值会与登录 token 默认时长（`RBUM_CERT_CONF_TOKEN_EXPIRE_SEC`）取较大者。
     pub oauth2_provider_token_cache_expire_sec: u32,
+    /// 允许兑换后台任务授权的专用服务账号；为空时禁用委托能力。
+    pub oauth2_task_executor_account_id: String,
     /// 后台授权持久化的 AES-256-GCM 密钥，64 位十六进制，由部署密钥管理。
     pub oauth2_provider_grant_key: String,
 
@@ -277,6 +279,7 @@ impl Default for IamConfig {
             strict_security_mode: false,
             crypto_pri_key: "".to_string(),
             crypto_conf: CryptoConf::default(),
+            oauth2_task_executor_account_id: String::new(),
             oauth2_provider_grant_key: String::new(),
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),

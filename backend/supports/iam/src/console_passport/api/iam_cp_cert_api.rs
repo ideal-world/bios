@@ -16,19 +16,23 @@ use crate::basic::dto::iam_cert_dto::{
     IamCertGenericValidateSkReq, IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserNameNewReq,
     IamCertUserPwdModifyReq, IamCertUserPwdRestReq, IamContextFetchReq,
 };
+use crate::basic::dto::iam_oauth2_task_grant_dto::{
+    IamOAuth2TaskGrantCreateReq, IamOAuth2TaskGrantCurrentReq, IamOAuth2TaskGrantExchangeReq, IamOAuth2TaskGrantRef, IamOAuth2TaskGrantToken,
+};
 use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_oauth2_task_grant_serv::IamOAuth2TaskGrantServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{
-    IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2BindCheckReq,
-    IamCpOAuth2LoginReq, IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpTokenSwitchReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq,
-    IamCpUserPwdLoginReq,
+    IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2BindCheckReq, IamCpOAuth2LoginReq,
+    IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpTokenSwitchReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
 };
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
@@ -39,6 +43,7 @@ use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdSe
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKernelKind, IamCertOAuth2Supplier};
 use bios_basic::helper::request_helper::try_set_real_ip_from_req_to_ctx;
+use bios_basic::rbum::helper::rbum_event_helper;
 use tardis::web::poem::Request;
 #[derive(Clone, Default)]
 pub struct IamCpCertApi;
@@ -49,6 +54,54 @@ pub struct IamCpCertLdapApi;
 /// 通行证控制台凭证API
 #[poem_openapi::OpenApi(prefix_path = "/cp", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpCertApi {
+    /// 将当前用户的授权委托给指定后台任务。
+    #[oai(path = "/cert/oauth2/task-grants", method = "post")]
+    async fn create_oauth_task_grant(&self, req: Json<IamOAuth2TaskGrantCreateReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamOAuth2TaskGrantRef> {
+        let mut funs = iam_constants::get_tardis_inst();
+        IamOAuth2TaskGrantServ::validate_create(&req.0, &funs, &ctx.0).await?;
+        let provider_grant_id = if req.0.requires_external_oauth {
+            Some(IamCertOAuth2Serv::ensure_provider_grant(&ctx.0.owner, &ctx.0.own_paths, &funs).await?)
+        } else {
+            None
+        };
+        funs.begin().await?;
+        let grant = IamOAuth2TaskGrantServ::create(&req.0, provider_grant_id.as_deref(), &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx.0).await? {
+            rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx.0).await?;
+        }
+        TardisResp::ok(grant)
+    }
+
+    /// 获取当前任务授权槽位；仅返回引用，不返回任何凭证。
+    #[oai(path = "/cert/oauth2/task-grants/current", method = "post")]
+    async fn current_oauth_task_grant(&self, req: Json<IamOAuth2TaskGrantCurrentReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamOAuth2TaskGrantRef>> {
+        let funs = iam_constants::get_tardis_inst();
+        TardisResp::ok(IamOAuth2TaskGrantServ::current(&req.0.task_id, &funs, &ctx.0).await?)
+    }
+
+    /// 兑换任务授权，仅允许配置的调度账号调用。
+    #[oai(path = "/cert/oauth2/task-grants/exchange", method = "post")]
+    async fn exchange_oauth_task_grant(&self, req: Json<IamOAuth2TaskGrantExchangeReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamOAuth2TaskGrantToken> {
+        let funs = iam_constants::get_tardis_inst();
+        TardisResp::ok(IamOAuth2TaskGrantServ::exchange(&req.0, &funs, &ctx.0).await?)
+    }
+
+    /// 撤销任务授权。
+    #[oai(path = "/cert/oauth2/task-grants/:grant_id", method = "delete")]
+    async fn revoke_oauth_task_grant(&self, grant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamOAuth2TaskGrantServ::revoke(&grant_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        if let Some(notify_events) = rbum_event_helper::get_notify_event_with_ctx(&ctx.0).await? {
+            rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx.0).await?;
+        }
+        TardisResp::ok(Void {})
+    }
+
     /// Fetch TardisContext By Token
     ///
     /// This api is for testing only!
