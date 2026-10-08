@@ -352,6 +352,32 @@ pub struct IamOauth2UserInfoResp {
     pub disabled: bool,
 }
 
+/// OAuth2 应用列表响应，仅返回接入方需要的应用字段。
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2AppResp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub kind: crate::basic::dto::iam_app_dto::IamAppKind,
+    pub description: Option<String>,
+}
+
+/// OAuth2 应用角色成员列表响应。
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2RoleMemberResp {
+    pub id: String,
+    pub name: String,
+    pub avatar: String,
+}
+
+/// 通过 Redis 与 Gateway Auth 共享的 OAuth2 访问令牌元数据。
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IamOauth2TokenMeta {
+    pub version: u8,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+}
+
 /// OAuth2 令牌内省请求
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamOauth2IntrospectReq {

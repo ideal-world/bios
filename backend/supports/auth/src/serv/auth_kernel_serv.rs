@@ -17,9 +17,19 @@ use crate::dto::auth_kernel_dto::{AuthResult, ResContainerLeafInfo, SignWebHookR
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
-    auth_constants::DOMAIN_CODE,
+    auth_constants::{DOMAIN_CODE, OAUTH2_ALL_SCOPE, OAUTH2_APP_READ_SCOPE, OAUTH2_APP_ROLE_MEMBER_READ_SCOPE, OAUTH2_TOKEN_META_KEY_PREFIX, OAUTH2_USERINFO_READ_SCOPE},
     dto::auth_kernel_dto::{AuthContext, AuthReq},
 };
+
+const OAUTH2_TOKEN_KIND: &str = "TokenOauth2";
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OAuth2TokenMeta {
+    version: u8,
+    client_id: String,
+    scopes: Vec<String>,
+}
 
 #[derive(Deserialize)]
 struct IamCacheExtraRoleInfoValue {
@@ -38,15 +48,87 @@ pub async fn auth(req: &mut AuthReq, is_mix_req: bool) -> TardisResult<AuthResul
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     match ident(req, &config, &cache_client).await {
-        Ok(ident) => match do_auth(&ident).await {
-            Ok(res_container_leaf_info) => match decrypt(req, &config, &res_container_leaf_info, is_mix_req).await {
-                Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, &config)),
+        Ok(ident) => match check_oauth2_scope(req, &ident, &config, &cache_client).await {
+            Ok(()) => match do_auth(&ident).await {
+                Ok(res_container_leaf_info) => match decrypt(req, &config, &res_container_leaf_info, is_mix_req).await {
+                    Ok((body, headers)) => Ok(AuthResult::ok(Some(&ident), body, headers, &config)),
+                    Err(e) => Ok(AuthResult::err(e, &config)),
+                },
                 Err(e) => Ok(AuthResult::err(e, &config)),
             },
             Err(e) => Ok(AuthResult::err(e, &config)),
         },
         Err(e) => Ok(AuthResult::err(e, &config)),
     }
+}
+
+async fn check_oauth2_scope(req: &AuthReq, ident: &AuthContext, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<()> {
+    let Some(token) = req
+        .headers
+        .get(&config.head_key_token)
+        .or_else(|| req.headers.get(&config.head_key_token.to_lowercase()))
+        .or_else(|| req.query.get(&config.head_key_token))
+        .or_else(|| req.query.get(&config.head_key_token.to_lowercase()))
+    else {
+        return Ok(());
+    };
+
+    let Some(token_info) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? else {
+        return Err(oauth2_scope_denied());
+    };
+    if token_info.split(',').next() != Some(OAUTH2_TOKEN_KIND) {
+        return Ok(());
+    }
+
+    let metadata = cache_client.get(&format!("{OAUTH2_TOKEN_META_KEY_PREFIX}{token}")).await?.ok_or_else(oauth2_scope_denied)?;
+
+    let Ok(metadata) = TardisFuns::json.str_to_obj::<OAuth2TokenMeta>(&metadata) else {
+        return Err(oauth2_scope_denied());
+    };
+    if metadata.version != 1 || metadata.client_id.trim().is_empty() || metadata.scopes.is_empty() || metadata.scopes.iter().any(|scope| !is_supported_oauth2_scope(scope)) {
+        return Err(oauth2_scope_denied());
+    }
+    if metadata.scopes.iter().any(|scope| scope == OAUTH2_ALL_SCOPE) {
+        return Ok(());
+    }
+
+    let required_scope = if ident.rbum_uri.starts_with("iam-res://") {
+        required_oauth2_scope(&req.method, &req.path)
+    } else {
+        None
+    }
+    .ok_or_else(oauth2_scope_denied)?;
+    if !metadata.scopes.iter().any(|scope| scope == required_scope) {
+        return Err(oauth2_scope_denied());
+    }
+
+    Ok(())
+}
+
+fn required_oauth2_scope(method: &str, path: &str) -> Option<&'static str> {
+    if !method.eq_ignore_ascii_case("get") {
+        return None;
+    }
+    match path {
+        "cp/oauth2/userinfo" => Some(OAUTH2_USERINFO_READ_SCOPE),
+        "cp/oauth2/apps" => Some(OAUTH2_APP_READ_SCOPE),
+        _ => {
+            let segments = path.split('/').collect::<Vec<_>>();
+            (segments.len() == 5 && segments[0] == "cp" && segments[1] == "oauth2" && segments[2] == "apps" && !segments[3].is_empty() && segments[4] == "role-members")
+                .then_some(OAUTH2_APP_ROLE_MEMBER_READ_SCOPE)
+        }
+    }
+}
+
+fn is_supported_oauth2_scope(scope: &str) -> bool {
+    matches!(
+        scope,
+        OAUTH2_ALL_SCOPE | OAUTH2_USERINFO_READ_SCOPE | OAUTH2_APP_READ_SCOPE | OAUTH2_APP_ROLE_MEMBER_READ_SCOPE
+    )
+}
+
+fn oauth2_scope_denied() -> TardisError {
+    TardisError::forbidden("[Auth] OAuth2 scope does not permit this resource", "403-auth-oauth2-scope-denied")
 }
 
 fn check(req: &mut AuthReq) -> TardisResult<bool> {

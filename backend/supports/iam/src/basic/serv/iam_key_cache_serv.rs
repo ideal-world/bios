@@ -26,7 +26,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
-use crate::iam_constants::{self, IAM_AVATAR};
+use crate::iam_constants::{self, IAM_AVATAR, IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX};
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 #[derive(Serialize)]
 struct IamCacheExtraRoleInfoValue {
@@ -99,6 +99,7 @@ impl IamIdentCacheServ {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
+            funs.cache().del(format!("{}{}", IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX, token).as_str()).await?;
             Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
@@ -142,6 +143,8 @@ impl IamIdentCacheServ {
             .await;
 
             mock_ctx.execute_task().await?;
+        } else {
+            funs.cache().del(format!("{}{}", IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX, token).as_str()).await?;
         }
         Ok(())
     }
@@ -315,6 +318,7 @@ impl IamIdentCacheServ {
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         for (token, _) in tokens.iter() {
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
+            funs.cache().del(format!("{}{}", IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX, token).as_str()).await?;
         }
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;

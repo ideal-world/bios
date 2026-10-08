@@ -61,6 +61,8 @@ pub const EVENT_STOP_TASK_EXTERNAL: &str = "iam/stop_task_external";
 pub const EVENT_SET_TASK_PROCESS_DATA_EXTERNAL: &str = "iam/set_task_process_data";
 pub const IAM_AVATAR: &str = env!("CARGO_PKG_NAME");
 
+pub const IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX: &str = "iam:cache:token:oauth2:meta:";
+
 pub const DEFAULT_V_CODE_CD_IN_SEC: u32 = 60;
 
 pub fn get_tardis_inst() -> TardisFunsInst {
