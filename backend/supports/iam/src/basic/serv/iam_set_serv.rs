@@ -1795,6 +1795,7 @@ impl IamSetServ {
                 item_kinds: value_ext.item_kinds,
                 item_domains: value_ext.item_domains,
                 item_data_guards: HashMap::new(),
+                item_perm_kinds: HashMap::new(),
             })
         } else {
             None
@@ -1807,6 +1808,7 @@ impl IamSetServ {
             } else {
                 vec![]
             };
+            let unique_res_ids = res_set_item_ids.iter().unique().cloned().collect_vec();
             let global_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
@@ -1880,6 +1882,27 @@ impl IamSetServ {
                 data_guard_map.insert(res_set_item_id.clone(), data_guard);
             }
             ext.item_data_guards = data_guard_map;
+
+            if !unique_res_ids.is_empty() {
+                ext.item_perm_kinds = IamResServ::find_items(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(unique_res_ids),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    &global_ctx,
+                )
+                .await?
+                .into_iter()
+                .map(|res| (res.id, res.perm_kind))
+                .collect();
+            }
         }
         Ok(result)
     }
