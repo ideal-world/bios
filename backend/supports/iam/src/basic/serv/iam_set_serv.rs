@@ -1270,7 +1270,7 @@ impl IamSetServ {
         // 按角色权限类型收集菜单资源：
         // - perm_kind = all：保留该角色关联的全部资源
         // - perm_kind = read：只保留该角色关联资源中 perm_kind = read 的只读资源
-        // 多个角色取并集，全部权限角色关联的资源不会被只读角色裁掉
+        // 只读角色明确裁掉的资源不再返回，即使默认角色也绑定了同一资源
         let read_role_ids = if role_ids.is_empty() {
             HashSet::new()
         } else {
@@ -1345,7 +1345,7 @@ impl IamSetServ {
             if read_role_ids.contains(&role_id) {
                 read_role_res_ids.extend(rel_res_ids.into_iter());
             } else {
-                // 非只读角色：关联资源全部可见
+                // 非只读角色：关联资源先全部收入，随后再减去只读角色裁掉的资源
                 res_ids.extend(rel_res_ids.into_iter());
             }
         }
@@ -1354,7 +1354,7 @@ impl IamSetServ {
             let read_res_ids = IamResServ::find_id_items(
                 &IamResFilterReq {
                     basic: RbumBasicFilterReq {
-                        ids: Some(read_role_res_ids.into_iter().collect()),
+                        ids: Some(read_role_res_ids.iter().cloned().collect()),
                         with_sub_own_paths: true,
                         own_paths: Some("".to_string()),
                         ignore_scope: true,
@@ -1368,8 +1368,14 @@ impl IamSetServ {
                 funs,
                 &global_ctx,
             )
-            .await?;
-            res_ids.extend(read_res_ids.into_iter());
+            .await?
+            .into_iter()
+            .collect::<HashSet<String>>();
+            // 只读角色关联、但资源本身不是只读的，视为明确裁掉
+            let denied_res_ids = read_role_res_ids.difference(&read_res_ids).cloned().collect::<HashSet<String>>();
+            res_ids.extend(read_res_ids);
+            // 被只读角色裁掉的资源不再返回，即使默认角色也绑定了它
+            res_ids.retain(|id| !denied_res_ids.contains(id));
         }
         let mut filter = RbumSetTreeFilterReq {
             fetch_cate_item: true,
