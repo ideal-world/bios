@@ -85,6 +85,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             kind: Set(add_req.kind.as_ref().unwrap_or(&IamRoleKind::Tenant).to_int()),
+            perm_kind: Set(add_req.perm_kind.clone().unwrap_or_default().as_str().to_string()),
             in_embed: Set(add_req.in_embed.unwrap_or(false)),
             in_base: Set(add_req.in_base.unwrap_or(false)),
             deletable: Set(add_req.deletable.unwrap_or(true)),
@@ -152,7 +153,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamRoleModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_role::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.sort.is_none() {
+        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.kind.is_none() && modify_req.perm_kind.is_none() {
             return Ok(None);
         }
         let mut iam_role = iam_role::ActiveModel {
@@ -167,6 +168,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
         if let Some(kind) = &modify_req.kind {
             iam_role.kind = Set(kind.to_int());
+        }
+        if let Some(perm_kind) = &modify_req.perm_kind {
+            iam_role.perm_kind = Set(perm_kind.as_str().to_string());
         }
         Ok(Some(iam_role))
     }
@@ -347,12 +351,16 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         query.column((iam_role::Entity, iam_role::Column::Icon));
         query.column((iam_role::Entity, iam_role::Column::Sort));
         query.column((iam_role::Entity, iam_role::Column::Kind));
+        query.column((iam_role::Entity, iam_role::Column::PermKind));
         query.column((iam_role::Entity, iam_role::Column::InBase));
         query.column((iam_role::Entity, iam_role::Column::InEmbed));
         query.column((iam_role::Entity, iam_role::Column::Deletable));
         query.column((iam_role::Entity, iam_role::Column::ExtendRoleId));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_role::Column::Kind).eq(kind.to_int()));
+        }
+        if let Some(perm_kind) = &filter.perm_kind {
+            query.and_where(Expr::col(iam_role::Column::PermKind).eq(perm_kind.as_str()));
         }
         if let Some(in_embed) = &filter.in_embed {
             query.and_where(Expr::col(iam_role::Column::InEmbed).eq(*in_embed));
@@ -442,6 +450,7 @@ impl IamRoleServ {
                         icon: Some(base_role.icon),
                         sort: Some(base_role.sort),
                         kind: Some(base_role.kind),
+                        perm_kind: Some(base_role.perm_kind),
                         scope_level: Some(RbumScopeLevelKind::Private),
                         in_embed: Some(base_role.in_embed),
                         extend_role_id: Some(base_role.id),
@@ -486,6 +495,7 @@ impl IamRoleServ {
                         icon: Some(app_role.icon),
                         sort: Some(app_role.sort),
                         kind: Some(app_role.kind),
+                        perm_kind: Some(app_role.perm_kind),
                         scope_level: Some(RbumScopeLevelKind::Private),
                         in_embed: Some(app_role.in_embed),
                         extend_role_id: Some(app_role.id),
@@ -569,6 +579,7 @@ impl IamRoleServ {
                         icon: Some(app_role.icon.clone()),
                         sort: Some(app_role.sort),
                         kind: Some(app_role.kind.clone()),
+                        perm_kind: Some(app_role.perm_kind.clone()),
                         scope_level: Some(RbumScopeLevelKind::Private),
                         in_embed: Some(app_role.in_embed),
                         extend_role_id: Some(app_role_id.clone()),
@@ -636,6 +647,7 @@ impl IamRoleServ {
                                     icon: Some(app_role_clone.icon.clone()),
                                     sort: Some(app_role_clone.sort),
                                     kind: Some(app_role_clone.kind.clone()),
+                                    perm_kind: Some(app_role_clone.perm_kind.clone()),
                                     scope_level: Some(RbumScopeLevelKind::Private),
                                     in_embed: Some(app_role_clone.in_embed),
                                     extend_role_id: Some(app_role_clone.id.clone()),

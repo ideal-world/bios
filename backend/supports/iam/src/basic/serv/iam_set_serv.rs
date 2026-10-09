@@ -22,12 +22,12 @@ use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_set_dto::{IamResSetTreeExtResp, IamResSetTreeResp, IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::basic::dto::iam_tenant_dto::IamTenantSummaryResp;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
+use crate::iam_enumeration::{IamPermKind, IamRelKind, IamSetCateKind, IamSetKind};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -36,6 +36,8 @@ use super::clients::iam_stats_client::IamStatsClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_rel_serv::IamRelServ;
+use super::iam_res_serv::IamResServ;
+use super::iam_role_serv::IamRoleServ;
 use super::iam_sub_deploy_serv::IamSubDeployServ;
 
 const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
@@ -1157,7 +1159,28 @@ impl IamSetServ {
         Ok(Some(result))
     }
 
+    /// 账号是否挂在平台层 Apps set（根产品组）。
+    ///
+    /// set item 没有 scope_level，租户上下文会按 `own_paths LIKE '{tenant}%'` 过滤，看不到 `own_paths` 为空的根节点挂载。
+    async fn account_bound_on_platform_apps_set(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let sys_ctx = TardisContext {
+            own_paths: String::new(),
+            ..ctx.clone()
+        };
+        let code = Self::get_default_code(&IamSetKind::Apps, "");
+        if let Some(platform_set_id) = RbumSetServ::get_rbum_set_id_by_code(&code, true, funs, &sys_ctx).await? {
+            let items = Self::find_set_items(Some(platform_set_id), None, Some(account_id.to_string()), None, true, Some(true), funs, &sys_ctx).await?;
+            Ok(!items.is_empty())
+        } else {
+            Ok(false)
+        }
+    }
+
     pub async fn get_app_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<(String, String)>> {
+        // 挂在平台根产品组时，登录传入的是租户 set。根节点等价于拥有该 set 下全部应用。
+        if Self::account_bound_on_platform_apps_set(account_id, funs, ctx).await? {
+            return Self::get_all_apps_in_set(set_id, funs, ctx).await;
+        }
         // 获取 account_id 对应的 set_cate
         let rbum_set_cate_code = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -1236,6 +1259,7 @@ impl IamSetServ {
     }
 
     pub async fn get_menu_tree_by_roles(set_id: &str, role_ids: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let mut role_ids = role_ids.clone();
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
         let mut res_ids = HashSet::new();
@@ -1243,9 +1267,115 @@ impl IamSetServ {
         global_ctx.own_paths = "".to_string();
         // TODO default empty res
         res_ids.insert("".to_string());
+        // 按角色权限类型收集菜单资源：
+        // - perm_kind = all：保留该角色关联的全部资源
+        // - perm_kind = read：只保留该角色关联资源中 perm_kind = read 的只读资源
+        // 只读角色明确裁掉的资源不再返回，即使默认角色也绑定了同一资源
+        let read_role_ids = if role_ids.is_empty() {
+            HashSet::new()
+        } else {
+            // 先筛出本次角色中的只读角色，避免对每个角色单独查 perm_kind
+            IamRoleServ::find_id_items(
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(role_ids.clone()),
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    perm_kind: Some(IamPermKind::Read),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                &global_ctx,
+            )
+            .await?
+            .into_iter()
+            .collect::<HashSet<String>>()
+        };
+        // 如果只读角色存在，则过滤掉role_ids中只读角色的父级角色
+        if !read_role_ids.is_empty() {
+            for read_role_id in &read_role_ids {
+                let read_role = IamRoleServ::get_item(
+                    read_role_id,
+                    &IamRoleFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                if !read_role.extend_role_id.is_empty() {
+                    role_ids.retain(|id| *id != read_role.extend_role_id);
+                }
+            }
+        }
+        // 只读角色的关联资源先单独收集，后续再按资源 perm_kind 过滤
+        let mut read_role_res_ids = HashSet::new();
         for role_id in role_ids {
-            let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &global_ctx).await?;
-            res_ids.extend(rel_res_ids.into_iter());
+            let rel_res_ids = IamRoleServ::find_simple_rels(
+                &role_id,
+                None,
+                None,
+                Some(vec![
+                    RbumScopeLevelKind::Root.to_int(),
+                    RbumScopeLevelKind::L1.to_int(),
+                    RbumScopeLevelKind::L2.to_int(),
+                    RbumScopeLevelKind::L3.to_int(),
+                ]),
+                Some(vec![
+                    RbumScopeLevelKind::Private.to_int(),
+                    RbumScopeLevelKind::Root.to_int(),
+                    RbumScopeLevelKind::L1.to_int(),
+                    RbumScopeLevelKind::L2.to_int(),
+                    RbumScopeLevelKind::L3.to_int(),
+                ]),
+                funs,
+                &global_ctx,
+            )
+            .await?.into_iter().map(|r| r.rel_id.clone()).collect_vec();
+            if read_role_ids.contains(&role_id) {
+                read_role_res_ids.extend(rel_res_ids.into_iter());
+            } else {
+                // 非只读角色：关联资源先全部收入，随后再减去只读角色裁掉的资源
+                res_ids.extend(rel_res_ids.into_iter());
+            }
+        }
+        if !read_role_res_ids.is_empty() {
+            // 只读角色仅能看到其关联资源中标记为只读的资源
+            let read_res_ids = IamResServ::find_id_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(read_role_res_ids.iter().cloned().collect()),
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    perm_kind: Some(IamPermKind::Read),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                &global_ctx,
+            )
+            .await?
+            .into_iter()
+            .collect::<HashSet<String>>();
+            // 只读角色关联、但资源本身不是只读的，视为明确裁掉
+            let denied_res_ids = read_role_res_ids.difference(&read_res_ids).cloned().collect::<HashSet<String>>();
+            res_ids.extend(read_res_ids);
+            // 被只读角色裁掉的资源不再返回，即使默认角色也绑定了它
+            res_ids.retain(|id| !denied_res_ids.contains(id));
         }
         let mut filter = RbumSetTreeFilterReq {
             fetch_cate_item: true,
@@ -1779,6 +1909,7 @@ impl IamSetServ {
                 item_kinds: value_ext.item_kinds,
                 item_domains: value_ext.item_domains,
                 item_data_guards: HashMap::new(),
+                item_perm_kinds: HashMap::new(),
             })
         } else {
             None
@@ -1791,6 +1922,7 @@ impl IamSetServ {
             } else {
                 vec![]
             };
+            let unique_res_ids = res_set_item_ids.iter().unique().cloned().collect_vec();
             let global_ctx = TardisContext {
                 own_paths: "".to_string(),
                 ..ctx.clone()
@@ -1864,6 +1996,27 @@ impl IamSetServ {
                 data_guard_map.insert(res_set_item_id.clone(), data_guard);
             }
             ext.item_data_guards = data_guard_map;
+
+            if !unique_res_ids.is_empty() {
+                ext.item_perm_kinds = IamResServ::find_items(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(unique_res_ids),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    &global_ctx,
+                )
+                .await?
+                .into_iter()
+                .map(|res| (res.id, res.perm_kind))
+                .collect();
+            }
         }
         Ok(result)
     }
