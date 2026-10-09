@@ -99,15 +99,16 @@ impl IamCpCertOAuth2ServiceServ {
         IamCertOAuth2ServiceServ::find_apps(ctx, funs).await
     }
 
-    /// 查询当前账号可见应用的内置产品管理角色成员。
+    /// 查询当前账号可见应用的指定角色成员。
     pub async fn find_role_members(
         app_id: &str,
+        role_code: &str,
         page_number: u32,
         page_size: u32,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<TardisPage<IamOauth2RoleMemberResp>> {
-        IamCertOAuth2ServiceServ::find_role_members(app_id, page_number, page_size, ctx, funs).await
+        IamCertOAuth2ServiceServ::find_role_members(app_id, role_code, page_number, page_size, ctx, funs).await
     }
 
     /// Introspect an OAuth2 token

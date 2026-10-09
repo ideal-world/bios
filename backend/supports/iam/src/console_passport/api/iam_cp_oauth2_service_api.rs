@@ -123,11 +123,12 @@ impl IamCpOAuth2ServiceApi {
 
     /// OAuth2 应用角色成员资源端点
     ///
-    /// 只能查询当前账号可见应用的内置 `app_admin_product` 角色账号。
+    /// 只能查询当前账号可见应用的指定角色账号。
     #[oai(path = "/apps/:app_id/role-members", method = "get")]
     async fn role_members(
         &self,
         app_id: Path<String>,
+        role_code: Query<String>,
         page_number: Query<Option<u32>>,
         page_size: Query<Option<u32>>,
         ctx: TardisContextExtractor,
@@ -140,7 +141,11 @@ impl IamCpOAuth2ServiceApi {
         if page_size == 0 || page_size > 100 {
             return Err(funs.err().bad_request("oauth2", "role_members", "page_size must be between 1 and 100", "400-oauth2-invalid-page-size").into());
         }
-        let resp = IamCpCertOAuth2ServiceServ::find_role_members(&app_id.0, page_number, page_size, &ctx.0, &funs).await?;
+        let role_code = role_code.0;
+        if role_code.trim().is_empty() {
+            return Err(funs.err().bad_request("oauth2", "role_members", "role_code is required", "400-oauth2-role-code-required").into());
+        }
+        let resp = IamCpCertOAuth2ServiceServ::find_role_members(&app_id.0, &role_code, page_number, page_size, &ctx.0, &funs).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(resp)
     }

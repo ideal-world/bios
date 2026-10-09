@@ -30,7 +30,6 @@ use crate::{
         serv::{iam_account_serv::IamAccountServ, iam_app_serv::IamAppServ, iam_cert_serv::IamCertServ, iam_key_cache_serv::IamIdentCacheServ, iam_role_serv::IamRoleServ},
     },
     iam_config::{IamBasicConfigApi as _, IamConfig},
-    iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
     iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind, IamRoleKind, OAuth2ResponseType, Oauth2GrantType, Oauth2TokenType},
 };
 
@@ -639,14 +638,20 @@ impl IamCertOAuth2ServiceServ {
             .collect())
     }
 
-    /// 查询指定应用的内置产品管理角色成员；调用方只能查询当前账号可见的应用。
+    /// 查询指定应用的指定角色成员；调用方只能查询当前账号可见的应用。
     pub async fn find_role_members(
         app_id: &str,
+        role_code: &str,
         page_number: u32,
         page_size: u32,
         ctx: &TardisContext,
         funs: &TardisFunsInst,
     ) -> TardisResult<TardisPage<IamOauth2RoleMemberResp>> {
+        let role_code = role_code.trim();
+        if role_code.is_empty() {
+            return Err(funs.err().bad_request("oauth2", "role_members", "role_code is required", "400-oauth2-role-code-required"));
+        }
+
         let visible_app = Self::find_visible_app_summaries(ctx, funs)
             .await?
             .into_iter()
@@ -671,50 +676,46 @@ impl IamCertOAuth2ServiceServ {
             records: Vec::new(),
         };
 
-        let Some(base_role) = IamRoleServ::find_one_item(
-            &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: false,
-                    ignore_scope: true,
-                    enabled: Some(true),
-                    codes: Some(vec![RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE.to_string()]),
-                    ..Default::default()
-                },
-                kind: Some(IamRoleKind::App),
-                in_base: Some(true),
-                in_embed: Some(true),
-                ..Default::default()
-            },
-            funs,
-            &global_ctx,
-        )
-        .await?
-        else {
-            return Ok(empty_page());
-        };
-
-        let Some(role) = IamRoleServ::find_one_item(
+        let role = IamRoleServ::find_one_item(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(app_ctx.own_paths.clone()),
                     with_sub_own_paths: false,
                     ignore_scope: true,
                     enabled: Some(true),
-                    codes: Some(vec![format!("{}:{}", app_id, RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE)]),
+                    codes: Some(vec![format!("{}:{}", app_id, role_code)]),
                     ..Default::default()
                 },
                 kind: Some(IamRoleKind::App),
-                in_base: Some(false),
-                in_embed: Some(true),
-                extend_role_id: Some(base_role.id),
                 ..Default::default()
             },
             funs,
             &global_ctx,
         )
-        .await?
-        else {
+        .await?;
+        let role = match role {
+            Some(role) => Some(role),
+            None => {
+                IamRoleServ::find_one_item(
+                    &IamRoleFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some(app_ctx.own_paths.clone()),
+                            with_sub_own_paths: false,
+                            ignore_scope: true,
+                            enabled: Some(true),
+                            codes: Some(vec![role_code.to_string()]),
+                            ..Default::default()
+                        },
+                        kind: Some(IamRoleKind::App),
+                        ..Default::default()
+                    },
+                    funs,
+                    &global_ctx,
+                )
+                .await?
+            }
+        };
+        let Some(role) = role else {
             return Ok(empty_page());
         };
         let role_id = role.id;
