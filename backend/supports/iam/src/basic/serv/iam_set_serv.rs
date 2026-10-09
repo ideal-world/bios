@@ -1159,7 +1159,28 @@ impl IamSetServ {
         Ok(Some(result))
     }
 
+    /// 账号是否挂在平台层 Apps set（根产品组）。
+    ///
+    /// set item 没有 scope_level，租户上下文会按 `own_paths LIKE '{tenant}%'` 过滤，看不到 `own_paths` 为空的根节点挂载。
+    async fn account_bound_on_platform_apps_set(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let sys_ctx = TardisContext {
+            own_paths: String::new(),
+            ..ctx.clone()
+        };
+        let code = Self::get_default_code(&IamSetKind::Apps, "");
+        if let Some(platform_set_id) = RbumSetServ::get_rbum_set_id_by_code(&code, true, funs, &sys_ctx).await? {
+            let items = Self::find_set_items(Some(platform_set_id), None, Some(account_id.to_string()), None, true, Some(true), funs, &sys_ctx).await?;
+            Ok(!items.is_empty())
+        } else {
+            Ok(false)
+        }
+    }
+
     pub async fn get_app_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<(String, String)>> {
+        // 挂在平台根产品组时，登录传入的是租户 set。根节点等价于拥有该 set 下全部应用。
+        if Self::account_bound_on_platform_apps_set(account_id, funs, ctx).await? {
+            return Self::get_all_apps_in_set(set_id, funs, ctx).await;
+        }
         // 获取 account_id 对应的 set_cate
         let rbum_set_cate_code = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
