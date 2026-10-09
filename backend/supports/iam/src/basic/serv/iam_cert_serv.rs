@@ -63,6 +63,10 @@ lazy_static! {
 pub struct IamCertServ;
 
 impl IamCertServ {
+    pub fn is_account_enabled_and_unlocked(disabled: bool, lock_status: &IamAccountLockStateKind) -> bool {
+        !disabled && lock_status == &IamAccountLockStateKind::Unlocked
+    }
+
     pub fn get_new_pwd() -> String {
         // TODO 等待 bios_basic::field::nanoid_len(10) 支持自定义 alphabet
         // TardisFuns::field.nanoid_len(10)
@@ -1161,7 +1165,7 @@ impl IamCertServ {
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
-        if kind != "Ldap" {
+        if kind != "Ldap" && kind != IamCertExtKind::OAuth2.to_string() {
             supplier = "";
         }
         RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(kind, supplier, false, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs)
@@ -1223,7 +1227,7 @@ impl IamCertServ {
         if account_agg.disabled {
             return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-iam-account-disabled"));
         }
-        if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
+        if !Self::is_account_enabled_and_unlocked(account_agg.disabled, &account_agg.lock_status) {
             return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
         let mut old_app_ids = account_agg.apps.iter().map(|app| app.app_id.clone()).collect::<Vec<String>>();
