@@ -48,6 +48,7 @@ async fn test_single_level(context: &TardisContext, _account_name: &str, role_na
             in_embed: None,
             in_base: None,
             deletable: None,
+            perm_kind: None,
         },
         &funs,
         context,

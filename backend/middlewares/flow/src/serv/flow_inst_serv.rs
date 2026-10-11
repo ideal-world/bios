@@ -160,7 +160,6 @@ impl FlowInstServ {
                     })?;
                     FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &start_req.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
                 }
-
                 Ok(inst_id)
             }
         } else {
@@ -1361,6 +1360,37 @@ impl FlowInstServ {
                             .await?;
                             break;
                         }
+                    }
+                }
+            }
+        }
+        if flow_inst_detail.main {
+            if let Some(rel_child_objs) = flow_inst_detail.artifacts.clone().map(|artifacts| artifacts.rel_child_objs.unwrap_or_default()) {
+                let child_main_insts = Self::find_items(
+                    &FlowInstFilterReq {
+                        rel_business_obj_ids: Some(rel_child_objs.into_iter().map(|rel_child_obj| rel_child_obj.obj_id.clone()).collect()),
+                        main: Some(true),
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                for child_main_inst in child_main_insts {
+                    Self::modify_inst_artifacts(&child_main_inst.id, &FlowInstArtifactsModifyReq {
+                        state: Some(FlowInstStateKind::default()),
+                        ..Default::default()
+                    }, funs, ctx).await?;
+                    let modify_serach_ext = TardisFuns::json.obj_to_string(&ModifyObjSearchExtReq {
+                        tag: child_main_inst.tag.clone(),
+                        current_state_id: Some("".to_string()),
+                        rel_state: Some("".to_string()),
+                        rel_transition_state_name: Some("".to_string()),
+                        ..Default::default()
+                    })?;
+                    FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyBusinessObj, &child_main_inst.rel_business_obj_id, &modify_serach_ext, funs, ctx).await?;
+                    if flow_inst_detail.rel_inst_id.as_ref().is_none_or(|id| id.is_empty()) {
+                        FlowSearchClient::add_search_task(&FlowSearchTaskKind::ModifyReviewInstance, &child_main_inst.id, &modify_serach_ext, funs, ctx).await?;
                     }
                 }
             }

@@ -11,6 +11,8 @@ pub struct Model {
     pub sort: i64,
 
     pub kind: i16,
+    /// 角色权限类型，read 表示只读，all 表示全部权限
+    pub perm_kind: String,
 
     pub in_base: bool,
     pub in_embed: bool,

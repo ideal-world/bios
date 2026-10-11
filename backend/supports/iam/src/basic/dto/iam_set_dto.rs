@@ -10,6 +10,8 @@ use tardis::web::poem_openapi;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
+use crate::iam_enumeration::IamPermKind;
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateAddReq {
     // #[oai(validator(min_length = "1", max_length = "255"))]
@@ -107,6 +109,12 @@ pub struct IamResSetTreeExtResp {
     ///
     /// Format: ``item.id -> data guard items``
     pub item_data_guards: HashMap<String, Vec<RbumSetItemRelInfoResp>>,
+    /// 资源项权限类型
+    ///
+    /// Resource item permission kind
+    ///
+    /// Format: ``rel_rbum_item_id -> perm_kind``
+    pub item_perm_kinds: HashMap<String, IamPermKind>,
 }
 
 impl From<RbumSetTreeResp> for IamResSetTreeResp {
@@ -118,6 +126,7 @@ impl From<RbumSetTreeResp> for IamResSetTreeResp {
                 item_kinds: value_ext.item_kinds,
                 item_domains: value_ext.item_domains,
                 item_data_guards: HashMap::new(),
+                item_perm_kinds: HashMap::new(),
             })
         } else {
             None

@@ -180,6 +180,62 @@ impl TryGetable for IamResKind {
     }
 }
 
+/// 权限类型，用于标记当前资源或角色是否为只读
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum IamPermKind {
+    /// 只读
+    #[strum(serialize = "read")]
+    #[oai(rename = "read")]
+    Read,
+    /// 全部权限
+    #[default]
+    #[strum(serialize = "all")]
+    #[oai(rename = "all")]
+    All,
+}
+
+impl<'de> Deserialize<'de> for IamPermKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "read" => Ok(IamPermKind::Read),
+            "all" | "" => Ok(IamPermKind::All),
+            _ => Err(serde::de::Error::custom(format!("invalid IamPermKind: {s}"))),
+        }
+    }
+}
+
+impl IamPermKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            IamPermKind::Read => "read",
+            IamPermKind::All => "all",
+        }
+    }
+
+    pub fn parse(kind: &str) -> TardisResult<IamPermKind> {
+        match kind.to_lowercase().as_str() {
+            "read" => Ok(IamPermKind::Read),
+            "all" | "" => Ok(IamPermKind::All),
+            _ => Err(TardisError::format_error(&format!("invalid IamPermKind: {kind}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+}
+
+impl TryGetable for IamPermKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        IamPermKind::parse(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implement")
+    }
+}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamSetKind {
     Org,

@@ -2556,7 +2556,7 @@ impl FlowModelServ {
 
     pub async fn find_rel_template_ids(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<Vec<String>>> {
         if let Some(app_id) = Self::get_app_id_by_ctx(ctx) {
-            Ok(Some(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &RbumRelFromKind::Item, &app_id, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec()))
+            Ok(Some(FlowRelServ::find_from_simple_rels(&FlowRelKind::FlowAppTemplate, &RbumRelFromKind::Item, &app_id, Some(true), None, funs, ctx).await?.into_iter().map(|r| r.rel_id).collect_vec()))
         } else {
             Ok(None)
         }

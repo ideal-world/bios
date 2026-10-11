@@ -9,7 +9,7 @@ use tardis::web::poem_openapi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
-use crate::iam_enumeration::{IamRelKind, IamResKind};
+use crate::iam_enumeration::{IamRelKind, IamResKind, IamPermKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAggAddAndBindReq {
@@ -33,6 +33,8 @@ pub struct IamResAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub kind: IamResKind,
+    /// 资源权限类型，read 为只读，all 为全部权限。非必填，默认为 all
+    pub perm_kind: Option<IamPermKind>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "1", max_length = "255"))]
@@ -77,6 +79,8 @@ pub struct IamResModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
+    /// 资源权限类型，read 为只读，all 为全部权限
+    pub perm_kind: Option<IamPermKind>,
     pub method: Option<TrimString>,
     pub icon: Option<String>,
     pub sort: Option<i64>,
@@ -117,6 +121,7 @@ pub struct IamResSummaryResp {
     pub code: String,
     pub name: String,
     pub kind: IamResKind,
+    pub perm_kind: IamPermKind,
 
     pub own_paths: String,
     pub owner: String,
@@ -154,6 +159,7 @@ pub struct IamResDetailResp {
     pub code: String,
     pub name: String,
     pub kind: IamResKind,
+    pub perm_kind: IamPermKind,
 
     pub own_paths: String,
     pub owner: String,

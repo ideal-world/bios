@@ -623,14 +623,14 @@ impl IamCpCertApi {
 impl IamCpCertLdapApi {
     /// Login by LDAP
     /// LDAP登录
-    #[oai(path = "/login", method = "put")]
-    async fn login_or_register_by_ldap(&self, login_req: Json<IamCpLdapLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let resp = IamCpCertLdapServ::login_or_register(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
-        funs.commit().await?;
-        TardisResp::ok(resp)
-    }
+    // #[oai(path = "/login", method = "put")]
+    // async fn login_or_register_by_ldap(&self, login_req: Json<IamCpLdapLoginReq>, request: &Request) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
+    //     let mut funs = iam_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     let resp = IamCpCertLdapServ::login_or_register(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
+    //     funs.commit().await?;
+    //     TardisResp::ok(resp)
+    // }
     /// Check userpwd cert binding with ldap cert
     /// 检查用户名密码证书是否绑定LDAP证书
     #[oai(path = "/check-bind", method = "post")]

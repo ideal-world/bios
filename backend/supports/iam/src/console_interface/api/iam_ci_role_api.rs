@@ -1,8 +1,8 @@
 use crate::basic::dto::iam_app_dto::IamAppKind;
 use crate::basic::dto::iam_filer_dto::{IamAppFilterReq, IamRoleFilterReq};
-use crate::basic::dto::iam_role_dto::{IamRoleRelAccountCertResp, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleBatchModifyPermKindReq, IamRoleModifyReq, IamRoleRelAccountCertResp, IamRoleSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::iam_enumeration::IamRoleKind;
+use crate::iam_enumeration::{IamPermKind, IamRoleKind};
 use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
@@ -23,6 +23,7 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 #[derive(Clone, Default)]
@@ -35,6 +36,33 @@ pub struct IamCiRoleApi;
 /// 允许管理aksk（应用之间的一种认证方式）
 #[poem_openapi::OpenApi(prefix_path = "/ci/role", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiRoleApi {
+    /// Batch modify role perm_kind by filter
+    /// 按过滤条件批量修改角色权限类型
+    #[oai(path = "/batch/perm_kind", method = "put")]
+    async fn batch_modify_perm_kind(&self, modify_req: Json<IamRoleBatchModifyPermKindReq>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let perm_kind = IamPermKind::parse(&modify_req.0.perm_kind)?;
+        funs.begin().await?;
+        let role_ids = IamRoleServ::find_id_items(&modify_req.0.filter, None, None, &funs, &ctx.0).await?;
+        for role_id in role_ids {
+            IamRoleServ::modify_item(
+                &role_id,
+                &mut IamRoleModifyReq {
+                    perm_kind: Some(perm_kind.clone()),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?;
+        }
+        funs.commit().await?;
+        ctx.0.execute_task().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Get role system admin
     ///
     /// 获取角色租户管理员

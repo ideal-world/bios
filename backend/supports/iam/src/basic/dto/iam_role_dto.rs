@@ -9,7 +9,8 @@ use tardis::web::poem_openapi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::basic::dto::iam_account_dto::IamAccountDetailResp;
-use crate::iam_enumeration::IamRoleKind;
+use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::iam_enumeration::{IamPermKind, IamRoleKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAggAddReq {
@@ -31,6 +32,8 @@ pub struct IamRoleAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub kind: Option<IamRoleKind>,
+    /// 角色权限类型，read 为只读，all 为全部权限。非必填，默认为 all
+    pub perm_kind: Option<IamPermKind>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
@@ -50,12 +53,21 @@ pub struct IamRoleAggModifyReq {
     pub res_ids: Option<Vec<String>>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamRoleBatchModifyPermKindReq {
+    pub filter: IamRoleFilterReq,
+    /// 权限类型，支持大小写不敏感：read / READ / all / ALL
+    pub perm_kind: String,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default, Clone)]
 pub struct IamRoleModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
 
     pub kind: Option<IamRoleKind>,
+    /// 角色权限类型，read 为只读，all 为全部权限
+    pub perm_kind: Option<IamPermKind>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
@@ -69,6 +81,7 @@ pub struct IamRoleBoneResp {
     pub id: String,
     pub name: String,
     pub kind: IamRoleKind,
+    pub perm_kind: IamPermKind,
     pub scope_level: RbumScopeLevelKind,
     pub code: String,
     pub icon: String,
@@ -88,6 +101,7 @@ pub struct IamRoleSummaryResp {
     pub update_time: DateTime<Utc>,
 
     pub kind: IamRoleKind,
+    pub perm_kind: IamPermKind,
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
@@ -111,6 +125,7 @@ pub struct IamRoleDetailResp {
     pub update_time: DateTime<Utc>,
 
     pub kind: IamRoleKind,
+    pub perm_kind: IamPermKind,
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
