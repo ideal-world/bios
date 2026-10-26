@@ -1,12 +1,14 @@
 use crate::basic::domain::iam_oauth2_provider_grant;
 use crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2TokenInfo;
 use crate::iam_config::IamConfig;
+use std::future::Future;
 use std::time::Duration;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::crypto::crypto_aead::algorithm::Aes256Gcm;
 use tardis::db::sea_orm::{sea_query::OnConflict, ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
+use tardis::tokio::time::{sleep, timeout_at, Instant};
 use tardis::{TardisFuns, TardisFunsInst};
 
 pub(crate) struct ProviderGrantCredential {
@@ -18,6 +20,9 @@ pub(crate) struct ProviderGrantCredential {
 }
 
 pub struct IamOAuth2ProviderGrantServ;
+
+// 与 Provider 操作共用截止时间；租约 TTL 仍长于整个操作窗口。
+pub(crate) const PROVIDER_OPERATION_TIMEOUT: Duration = Duration::from_secs(40);
 
 impl IamOAuth2ProviderGrantServ {
     fn authorization_required() -> TardisError {
@@ -176,20 +181,31 @@ impl IamOAuth2ProviderGrantServ {
     }
 
     pub(crate) async fn acquire_lease(account_id: &str, funs: &TardisFunsInst) -> TardisResult<String> {
-        Self::try_acquire_lease(account_id, funs).await?.ok_or_else(Self::lease_in_progress_error)
+        Self::acquire_lease_until(account_id, Instant::now() + PROVIDER_OPERATION_TIMEOUT, funs).await
     }
 
-    pub(crate) async fn acquire_lease_with_wait(account_id: &str, funs: &TardisFunsInst) -> TardisResult<String> {
-        let result = tardis::tokio::time::timeout(Duration::from_secs(5), async {
+    pub(crate) async fn acquire_lease_until(account_id: &str, deadline: Instant, funs: &TardisFunsInst) -> TardisResult<String> {
+        Self::wait_for_lease(deadline, || Self::try_acquire_lease(account_id, funs)).await
+    }
+
+    /// 竞争者等待后重新进入原有校验及读取流程，不复用其他调用方的凭据。
+    async fn wait_for_lease<F, Fut>(deadline: Instant, mut acquire: F) -> TardisResult<String>
+    where
+        F: FnMut() -> Fut,
+        Fut: Future<Output = TardisResult<Option<String>>>,
+    {
+        timeout_at(deadline, async {
+            let mut delay = Duration::from_millis(25);
             loop {
-                if let Some(lease) = Self::try_acquire_lease(account_id, funs).await? {
+                if let Some(lease) = acquire().await? {
                     return Ok(lease);
                 }
-                tardis::tokio::time::sleep(Duration::from_millis(50)).await;
+                sleep(delay).await;
+                delay = (delay * 2).min(Duration::from_millis(200));
             }
         })
-        .await;
-        result.unwrap_or_else(|_| Err(Self::lease_in_progress_error()))
+        .await
+        .unwrap_or_else(|_| Err(Self::lease_in_progress_error()))
     }
 
     async fn try_acquire_lease(account_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
@@ -213,6 +229,43 @@ impl IamOAuth2ProviderGrantServ {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tardis::tokio;
+
+    #[tokio::test]
+    async fn lease_wait_recovers_after_contention() {
+        let mut attempts = 0;
+        let lease = IamOAuth2ProviderGrantServ::wait_for_lease(Instant::now() + Duration::from_secs(1), || {
+            attempts += 1;
+            std::future::ready(Ok((attempts == 2).then(|| "lease-owner".to_string())))
+        })
+        .await
+        .unwrap();
+        assert_eq!(lease, "lease-owner");
+        assert_eq!(attempts, 2);
+    }
+
+    #[tokio::test]
+    async fn lease_wait_bounds_both_contention_and_stalled_cache_requests() {
+        let busy = IamOAuth2ProviderGrantServ::wait_for_lease(Instant::now() + Duration::from_millis(10), || std::future::ready(Ok(None))).await.unwrap_err();
+        assert_eq!(busy.code, "503");
+        assert_eq!(busy.message, "OAuth credential refresh is in progress; retry later");
+        let stalled =
+            IamOAuth2ProviderGrantServ::wait_for_lease(Instant::now() + Duration::from_millis(10), || std::future::pending::<TardisResult<Option<String>>>()).await.unwrap_err();
+        assert_eq!(stalled.code, "503");
+    }
+
+    #[tokio::test]
+    async fn lease_wait_does_not_retry_cache_failures() {
+        let mut attempts = 0;
+        let error = IamOAuth2ProviderGrantServ::wait_for_lease(Instant::now() + Duration::from_secs(1), || {
+            attempts += 1;
+            std::future::ready(Err(TardisError::internal_error("cache unavailable", "500-cache-unavailable")))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(attempts, 1);
+        assert_eq!(error.message, "cache unavailable");
+    }
 
     #[test]
     fn provider_identity_is_scoped_to_account_configuration_and_subject() {

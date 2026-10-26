@@ -7,6 +7,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
+use tardis::tokio::time::{timeout_at, Instant};
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
@@ -31,7 +32,7 @@ use tardis::web::poem_openapi;
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
-use super::iam_oauth2_provider_grant_serv::{IamOAuth2ProviderGrantServ, ProviderGrantCredential};
+use super::iam_oauth2_provider_grant_serv::{IamOAuth2ProviderGrantServ, ProviderGrantCredential, PROVIDER_OPERATION_TIMEOUT};
 use super::iam_tenant_serv::IamTenantServ;
 use super::oauth2_spi::iam_cert_oauth2_spi_bios_iam::IamCertOAuth2SpiBiosIam;
 use super::oauth2_spi::iam_cert_oauth2_spi_wechat_mp::IamCertOAuth2SpiWeChatMp;
@@ -593,21 +594,30 @@ impl IamCertOAuth2Serv {
         Ok(current)
     }
 
-    async fn current_bios_provider_token_unlocked(account_id: &str, own_paths: &str, cert_conf_id: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
+    // 租约前仅允许只读快照；缓存回填必须在取得租约后进行。
+    async fn current_bios_provider_token_unlocked(
+        account_id: &str,
+        own_paths: &str,
+        cert_conf_id: &str,
+        write_cache: bool,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<IamCertOAuth2TokenInfo> {
         match IamOAuth2ProviderGrantServ::get_cached_token(account_id, funs).await {
             Ok(Some(cached)) => {
                 Self::ensure_bios_provider_conf(&cached, cert_conf_id, funs)?;
                 let Some(durable) = IamOAuth2ProviderGrantServ::load_by_identity(account_id, cert_conf_id, &cached.open_id, funs).await? else {
                     return Ok(cached);
                 };
-                if !Self::same_provider_token(&cached, &durable.token) {
+                if write_cache && !Self::same_provider_token(&cached, &durable.token) {
                     let _ = IamOAuth2ProviderGrantServ::cache_token(account_id, &durable.token, funs).await;
                 }
                 Ok(durable.token)
             }
             cached_result => {
                 if let Some(durable) = Self::recover_current_bios_credential_unlocked(account_id, own_paths, cert_conf_id, funs).await? {
-                    let _ = IamOAuth2ProviderGrantServ::cache_token(account_id, &durable.token, funs).await;
+                    if write_cache {
+                        let _ = IamOAuth2ProviderGrantServ::cache_token(account_id, &durable.token, funs).await;
+                    }
                     return Ok(durable.token);
                 }
                 match cached_result {
@@ -657,9 +667,10 @@ impl IamCertOAuth2Serv {
             return Self::get_cached_provider_token(&cert_supplier, account_id, funs).await;
         }
         let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
-        let lease = IamOAuth2ProviderGrantServ::acquire_lease(account_id, funs).await?;
-        let result = tardis::tokio::time::timeout(std::time::Duration::from_secs(40), async {
-            let cached = Self::current_bios_provider_token_unlocked(account_id, tenant_id, &cert_conf_id, funs).await?;
+        let deadline = Instant::now() + PROVIDER_OPERATION_TIMEOUT;
+        let lease = IamOAuth2ProviderGrantServ::acquire_lease_until(account_id, deadline, funs).await?;
+        let result = timeout_at(deadline, async {
+            let cached = Self::current_bios_provider_token_unlocked(account_id, tenant_id, &cert_conf_id, true, funs).await?;
             Self::ensure_bios_provider_conf(&cached, &cert_conf_id, funs)?;
             if Self::bios_provider_token_expired(&cached) {
                 Self::refresh_provider_token_unlocked(cert_supplier.clone(), account_id, tenant_id, &cached, true, funs).await
@@ -687,10 +698,20 @@ impl IamCertOAuth2Serv {
             return Self::refresh_provider_token_unlocked(cert_supplier, account_id, tenant_id, &cached, true, funs).await;
         }
         let cert_conf_id = Self::get_oauth2_cert_conf_id(&cert_supplier, tenant_id, funs).await?;
-        let lease = IamOAuth2ProviderGrantServ::acquire_lease(account_id, funs).await?;
-        let result = tardis::tokio::time::timeout(std::time::Duration::from_secs(40), async {
-            let cached = Self::current_bios_provider_token_unlocked(account_id, tenant_id, &cert_conf_id, funs).await?;
+        let deadline = Instant::now() + PROVIDER_OPERATION_TIMEOUT;
+        // 只合并本请求开始后已完成的刷新；独立的新请求仍执行显式刷新。
+        // 快照失败时仍进入锁内原有的持久化凭据恢复流程。
+        let previous = timeout_at(deadline, Self::current_bios_provider_token_unlocked(account_id, tenant_id, &cert_conf_id, false, funs))
+            .await
+            .map_err(|_| TardisError::gateway_timeout("OAuth credential refresh timed out", "504-iam-oauth-refresh-timeout"))?
+            .ok();
+        let lease = IamOAuth2ProviderGrantServ::acquire_lease_until(account_id, deadline, funs).await?;
+        let result = timeout_at(deadline, async {
+            let cached = Self::current_bios_provider_token_unlocked(account_id, tenant_id, &cert_conf_id, true, funs).await?;
             Self::ensure_bios_provider_conf(&cached, &cert_conf_id, funs)?;
+            if previous.as_ref().is_some_and(|previous| !Self::same_provider_token(previous, &cached)) && !Self::bios_provider_token_expired(&cached) {
+                return Ok(cached);
+            }
             Self::refresh_provider_token_unlocked(cert_supplier.clone(), account_id, tenant_id, &cached, true, funs).await
         })
         .await
@@ -778,9 +799,10 @@ impl IamCertOAuth2Serv {
     pub async fn ensure_provider_grant(account_id: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<String> {
         let supplier = IamCertOAuth2Supplier::BiosIam;
         let cert_conf_id = Self::get_oauth2_cert_conf_id(&supplier, own_paths, funs).await.map_err(Self::normalize_provider_grant_error)?;
-        let lease = IamOAuth2ProviderGrantServ::acquire_lease(account_id, funs).await?;
-        let result = tardis::tokio::time::timeout(std::time::Duration::from_secs(40), async {
-            let mut token = Self::current_bios_provider_token_unlocked(account_id, own_paths, &cert_conf_id, funs).await?;
+        let deadline = Instant::now() + PROVIDER_OPERATION_TIMEOUT;
+        let lease = IamOAuth2ProviderGrantServ::acquire_lease_until(account_id, deadline, funs).await?;
+        let result = timeout_at(deadline, async {
+            let mut token = Self::current_bios_provider_token_unlocked(account_id, own_paths, &cert_conf_id, true, funs).await?;
             if Self::bios_provider_token_expired(&token) {
                 token = Self::refresh_provider_token_unlocked(supplier.clone(), account_id, own_paths, &token, true, funs).await?;
             }
@@ -819,8 +841,9 @@ impl IamCertOAuth2Serv {
     pub async fn get_validated_grant_token(provider_grant_id: &str, account_id: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
         let supplier = IamCertOAuth2Supplier::BiosIam;
         let cert_conf_id = Self::get_oauth2_cert_conf_id(&supplier, own_paths, funs).await.map_err(Self::normalize_provider_grant_error)?;
-        let lease = IamOAuth2ProviderGrantServ::acquire_lease_with_wait(account_id, funs).await?;
-        let result = tardis::tokio::time::timeout(std::time::Duration::from_secs(40), async {
+        let deadline = Instant::now() + PROVIDER_OPERATION_TIMEOUT;
+        let lease = IamOAuth2ProviderGrantServ::acquire_lease_until(account_id, deadline, funs).await?;
+        let result = timeout_at(deadline, async {
             let provider = IamOAuth2ProviderGrantServ::load_by_id(provider_grant_id, funs).await?;
             if provider.account_id != account_id || provider.cert_conf_id != cert_conf_id {
                 return Err(Self::provider_authorization_required_error());

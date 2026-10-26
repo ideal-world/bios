@@ -190,6 +190,7 @@ async fn setup_task_grant_fixture(funs: &TardisFunsInst) -> TardisResult<TaskGra
                 id: None,
                 code: None,
                 name: TrimString::from("Workflow user"),
+                perm_kind: None,
                 icon: None,
                 sort: None,
                 kind: Some(bios_iam::iam_enumeration::IamRoleKind::App),
