@@ -89,6 +89,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cp_account_api::IamCpAccountApi,
                     iam_cp_app_api::IamCpAppApi,
                     iam_cp_cert_api::IamCpCertApi,
+                    iam_cp_cert_api::IamTaskRuntimeApi,
                     #[cfg(feature = "ldap_client")]
                     iam_cp_cert_api::IamCpCertLdapApi,
                     iam_cp_oauth2_service_api::IamCpOAuth2ServiceApi,

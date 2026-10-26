@@ -7,7 +7,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::iam_config::{IamBasicConfigApi, IamConfig};
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::{IamAccountStatusKind, IamRelKind};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::helper::rbum_event_helper;
@@ -58,14 +58,8 @@ fn valid_task_id(task_id: &str) -> bool {
     !task_id.trim().is_empty() && task_id.len() <= 256
 }
 
-fn validate_exchange(grant: &iam_oauth2_task_grant::Model, executor: &str, configured_executor: &str, scope: &str, task_id: &str) -> TardisResult<()> {
-    if configured_executor.is_empty()
-        || executor != configured_executor
-        || executor != grant.executor_account_id
-        || scope != grant.own_paths
-        || task_id != grant.task_id
-        || grant.revoked
-    {
+fn validate_exchange(grant: &iam_oauth2_task_grant::Model, executor: &str, scope: &str, task_id: &str) -> TardisResult<()> {
+    if executor != grant.account_id || scope != grant.own_paths || task_id != grant.task_id || grant.revoked {
         return Err(authorization_required());
     }
     Ok(())
@@ -87,7 +81,92 @@ fn validate_expected_grant(
     }
 }
 
+pub fn validate_task_service_token(expected: &str, supplied: Option<&str>) -> TardisResult<()> {
+    if expected.trim().is_empty() || supplied != Some(expected) {
+        return Err(TardisError::unauthorized("task service authentication required", "401-iam-oauth-task-service-required"));
+    }
+    Ok(())
+}
+
 impl IamOAuth2TaskGrantServ {
+    pub async fn runtime(
+        req: &crate::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeReq,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<crate::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeResp> {
+        let grant = Self::find_by_id(&req.grant_id, funs).await?.ok_or_else(authorization_required)?;
+        let ctx = TardisContext {
+            owner: grant.account_id.clone(),
+            own_paths: req.own_paths.clone(),
+            ..Default::default()
+        };
+        // 复用完整兑换校验，包括当前用户权限、外部身份与过期凭据刷新。
+        Self::exchange(
+            &IamOAuth2TaskGrantExchangeReq {
+                grant_id: req.grant_id.clone(),
+                task_id: req.task_id.clone(),
+            },
+            funs,
+            &ctx,
+        )
+        .await?;
+        let details = IamAccountServ::get_account_detail_aggs(
+            &grant.account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(String::new()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            false,
+            true,
+            false,
+            funs,
+            &ctx,
+        )
+        .await?;
+        let app = details.apps.into_iter().find(|app| app.app_id == grant.app_id && app.app_own_paths == grant.own_paths).ok_or_else(authorization_required)?;
+        let runtime_ctx = TardisContext {
+            owner: grant.account_id.clone(),
+            own_paths: grant.own_paths.clone(),
+            roles: app.roles.into_keys().collect(),
+            groups: app.groups.into_keys().collect(),
+            ..Default::default()
+        };
+        Self::revalidate_grant(
+            &grant,
+            &IamOAuth2TaskGrantExchangeReq {
+                grant_id: req.grant_id.clone(),
+                task_id: req.task_id.clone(),
+            },
+            funs,
+            &ctx,
+        )
+        .await?;
+        let bios_token = TardisFuns::crypto.key.generate_token()?;
+        let ttl = 3600;
+        // 任务 token 独立保存应用上下文，不修改用户当前登录的租户，也不续期。
+        funs.cache().set_ex(&format!("iam:task-token:{bios_token}"), &TardisFuns::json.obj_to_string(&runtime_ctx)?, ttl).await?;
+        crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ::add_token(
+            &bios_token,
+            &crate::iam_enumeration::IamCertTokenKind::TokenTask,
+            &grant.account_id,
+            None,
+            ttl as i64,
+            0,
+            funs,
+        )
+        .await?;
+        Ok(crate::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeResp {
+            account_id: grant.account_id,
+            own_paths: grant.own_paths,
+            bios_token,
+            roles: runtime_ctx.roles,
+            groups: runtime_ctx.groups,
+        })
+    }
+
     /// 委托只接受应用直接成员关系和应用直接角色关系，不使用应用集合或任务启动时的权限快照。
     async fn require_membership(account_id: &str, scope: &str, funs: &TardisFunsInst) -> TardisResult<String> {
         let parts = scope.split('/').collect::<Vec<_>>();
@@ -251,7 +330,7 @@ impl IamOAuth2TaskGrantServ {
     }
 
     async fn prepare_create(req: &IamOAuth2TaskGrantCreateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, Option<iam_oauth2_task_grant::Model>)> {
-        if funs.conf::<IamConfig>().oauth2_task_executor_account_id.is_empty() || !valid_task_id(&req.task_id) {
+        if !valid_task_id(&req.task_id) {
             return Err(authorization_required());
         }
         let app_id = Self::require_membership(&ctx.owner, &ctx.own_paths, funs).await?;
@@ -317,7 +396,6 @@ impl IamOAuth2TaskGrantServ {
             account_id: Set(ctx.owner.clone()),
             app_id: Set(app_id),
             provider_grant_id: Set(provider_grant_id),
-            executor_account_id: Set(funs.conf::<IamConfig>().oauth2_task_executor_account_id.clone()),
             revoked: Set(false),
             create_time: Set(now),
             own_paths: Set(ctx.own_paths.clone()),
@@ -372,7 +450,7 @@ impl IamOAuth2TaskGrantServ {
 
     pub async fn exchange(req: &IamOAuth2TaskGrantExchangeReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOAuth2TaskGrantToken> {
         let grant = Self::find_by_id(&req.grant_id, funs).await?.ok_or_else(authorization_required)?;
-        validate_exchange(&grant, &ctx.owner, &funs.conf::<IamConfig>().oauth2_task_executor_account_id, &ctx.own_paths, &req.task_id)?;
+        validate_exchange(&grant, &ctx.owner, &ctx.own_paths, &req.task_id)?;
         Self::require_membership(&grant.account_id, &grant.own_paths, funs).await?;
         if grant.provider_grant_id.is_empty() {
             Self::revalidate_grant(&grant, req, funs, ctx).await?;
@@ -392,19 +470,13 @@ impl IamOAuth2TaskGrantServ {
     async fn revalidate_grant(grant: &iam_oauth2_task_grant::Model, req: &IamOAuth2TaskGrantExchangeReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::require_membership(&grant.account_id, &grant.own_paths, funs).await?;
         let current = Self::find_by_id(&grant.id, funs).await?.ok_or_else(authorization_required)?;
-        validate_exchange(
-            &current,
-            &ctx.owner,
-            &funs.conf::<IamConfig>().oauth2_task_executor_account_id,
-            &ctx.own_paths,
-            &req.task_id,
-        )
+        validate_exchange(&current, &ctx.owner, &ctx.own_paths, &req.task_id)
     }
 
     /// 调用方负责事务；普通撤销保留最新槽位作为下一次 CAS 基线。
     pub async fn revoke(grant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let grant = Self::find_by_id(grant_id, funs).await?.ok_or_else(authorization_required)?;
-        if grant.own_paths != ctx.own_paths || (grant.account_id != ctx.owner && grant.executor_account_id != ctx.owner) {
+        if grant.own_paths != ctx.own_paths || grant.account_id != ctx.owner {
             return Err(authorization_required());
         }
         if grant.revoked {
@@ -450,7 +522,6 @@ mod task_grant_tests {
             account_id: account_id.into(),
             app_id: "app".into(),
             provider_grant_id: String::new(),
-            executor_account_id: "scheduler".into(),
             revoked: false,
             create_time: String::new(),
             own_paths: "tenant/app".into(),
@@ -496,15 +567,25 @@ mod task_grant_tests {
     }
 
     #[test]
-    fn exchange_requires_the_configured_executor_and_live_grant() {
-        let current = grant("alice");
-        assert!(validate_exchange(&current, "scheduler", "scheduler", "tenant/app", "binding/item").is_ok());
-        assert!(validate_exchange(&current, "bob", "scheduler", "tenant/app", "binding/item").is_err());
-        assert!(validate_exchange(&current, "scheduler", "new-scheduler", "tenant/app", "binding/item").is_err());
-        assert!(validate_exchange(&current, "scheduler", "scheduler", "other/app", "binding/item").is_err());
-        assert!(validate_exchange(&current, "scheduler", "scheduler", "tenant/app", "another/item").is_err());
-        let mut revoked = current;
-        revoked.revoked = true;
-        assert!(validate_exchange(&revoked, "scheduler", "scheduler", "tenant/app", "binding/item").is_err());
+    fn every_task_owner_can_exchange_only_their_own_live_grant() {
+        for owner in ["alice", "bob"] {
+            let current = grant(owner);
+            assert!(validate_exchange(&current, owner, "tenant/app", "binding/item").is_ok());
+            assert!(validate_exchange(&current, "unrelated-user", "tenant/app", "binding/item").is_err());
+            assert!(validate_exchange(&current, owner, "other/app", "binding/item").is_err());
+            assert!(validate_exchange(&current, owner, "tenant/app", "another/item").is_err());
+            let mut revoked = current;
+            revoked.revoked = true;
+            assert!(validate_exchange(&revoked, owner, "tenant/app", "binding/item").is_err());
+        }
+    }
+
+    #[test]
+    fn runtime_service_authentication_is_independent_of_iam_accounts() {
+        assert!(validate_task_service_token("service-secret", Some("service-secret")).is_ok());
+        for supplied in [None, Some(""), Some("alice"), Some("wrong-secret")] {
+            assert!(validate_task_service_token("service-secret", supplied).is_err());
+        }
+        assert!(validate_task_service_token("", Some("")).is_err());
     }
 }

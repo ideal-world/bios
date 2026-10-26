@@ -88,6 +88,8 @@ pub enum IamCertTokenKind {
     TokenOauth2,
     /// 旧版 AK/SK 接口签发的令牌，不受 OAuth2 scope 管理。
     TokenCiAkSk,
+    /// 后台任务按授权用户兑换的短期应用凭据。
+    TokenTask,
 }
 
 impl IamCertTokenKind {

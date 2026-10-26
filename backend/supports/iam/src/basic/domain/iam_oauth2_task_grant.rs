@@ -12,7 +12,6 @@ pub struct Model {
     pub account_id: String,
     pub app_id: String,
     pub provider_grant_id: String,
-    pub executor_account_id: String,
     pub revoked: bool,
     pub create_time: String,
     pub own_paths: String,

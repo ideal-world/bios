@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -6,7 +6,7 @@ use bios_basic::rbum::helper::rbum_event_helper;
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::test::init_test_container;
-use bios_iam::basic::domain::iam_oauth2_task_grant;
+use bios_iam::basic::domain::{iam_oauth2_provider_grant, iam_oauth2_task_grant};
 use bios_iam::basic::dto::iam_account_dto::IamAccountAddReq;
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfOAuth2AddOrModifyReq;
@@ -27,10 +27,16 @@ use bios_iam::{
 };
 use tardis::basic::{dto::TardisContext, field::TrimString, result::TardisResult};
 use tardis::chrono::Utc;
+use tardis::crypto::crypto_aead::algorithm::Aes256Gcm;
 use tardis::db::sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use tardis::serde_json::json;
+use tardis::serde_json::{json, Value};
 use tardis::tokio;
-use tardis::web::poem::{endpoint::make, http::StatusCode, listener::TcpAcceptor, Body, Request, Response, Route, Server};
+use tardis::web::{
+    poem::{endpoint::make, http::StatusCode, listener::TcpAcceptor, Body, EndpointExt, Request, Response, Route, Server},
+    poem_openapi::OpenApiService,
+    uniform_error_mw::UniformError,
+    web_resp::TardisResp,
+};
 use tardis::{TardisFuns, TardisFunsInst};
 
 fn task_grant_req(task_id: &str, requires_external_oauth: bool, expected_grant_id: Option<&str>, takeover: bool) -> IamOAuth2TaskGrantCreateReq {
@@ -106,18 +112,77 @@ async fn task_grant_checks_persisted_authorization_cas_and_transactions() -> Tar
 }
 
 async fn task_grant_checks_persisted_authorization_cas_and_transactions_fixture() -> TardisResult<()> {
-    std::env::set_var("TARDIS_CSM.IAM.OAUTH2_TASK_EXECUTOR_ACCOUNT_ID", "scheduler");
+    std::env::set_var("TARDIS_CSM.IAM.OAUTH2_TASK_SERVICE_TOKEN", "scheduler");
+    std::env::set_var("BIOS_OAUTH2_TASK_SERVICE_TOKEN", "scheduler");
     std::env::set_var("TARDIS_CSM.IAM.OAUTH2_PROVIDER_GRANT_KEY", "07".repeat(32));
     let _containers = Box::pin(init_test_container::init(None)).await?;
     let funs = iam_constants::get_tardis_inst();
     Box::pin(bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst())).await?;
-    assert_eq!(funs.conf::<bios_iam::iam_config::IamConfig>().oauth2_task_executor_account_id, "scheduler");
+    assert_eq!(funs.conf::<bios_iam::iam_config::IamConfig>().oauth2_task_service_token, "scheduler");
+    let (runtime_api_address, runtime_api_shutdown, runtime_api_task) = start_task_runtime_api().await;
+    for service_token in [None, Some("wrong"), Some("alice")] {
+        let (http_code, body) = task_runtime_http_request(runtime_api_address, "missing-grant", "binding/http-auth", "tenant/app", service_token).await.unwrap();
+        assert!(http_code == 401 || body_code(&body).starts_with("401"), "{body}");
+    }
     let fixture = Box::pin(setup_task_grant_fixture(&funs)).await?;
     let internal_replacement_id = Box::pin(verify_authorization_and_rollback(&funs, &fixture)).await?;
-    Box::pin(verify_takeover_authorization(&funs, &fixture)).await?;
+    Box::pin(verify_takeover_authorization(&funs, &fixture, runtime_api_address)).await?;
     Box::pin(verify_concurrent_first_create(&funs, &fixture)).await?;
-    Box::pin(verify_provider_delivery(&funs, &fixture, &internal_replacement_id)).await?;
+    Box::pin(verify_provider_delivery(&funs, &fixture, &internal_replacement_id, runtime_api_address)).await?;
+    let _ = runtime_api_shutdown.send(());
+    runtime_api_task.await.expect("task runtime API server task");
     Ok(())
+}
+
+async fn start_task_runtime_api() -> (std::net::SocketAddr, tokio::sync::oneshot::Sender<()>, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let acceptor = TcpAcceptor::from_tokio(listener).unwrap();
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+    let api = Route::new()
+        .nest(
+            "/iam",
+            OpenApiService::new(bios_iam::console_passport::api::iam_cp_cert_api::IamTaskRuntimeApi, "Task runtime", "1"),
+        )
+        .with(UniformError);
+    let task = tokio::spawn(async move {
+        Server::new_with_acceptor(acceptor)
+            .run_with_graceful_shutdown(
+                api,
+                async move {
+                    let _ = shutdown_rx.await;
+                },
+                Some(Duration::from_secs(1)),
+            )
+            .await
+            .unwrap();
+    });
+    (address, shutdown_tx, task)
+}
+
+async fn task_runtime_http_request(address: std::net::SocketAddr, grant_id: &str, task_id: &str, own_paths: &str, service_token: Option<&str>) -> TardisResult<(u16, Value)> {
+    let headers = service_token.map(|token| vec![("X-Bios-Task-Service-Token".to_string(), token.to_string())]).unwrap_or_default();
+    let funs = iam_constants::get_tardis_inst();
+    let response = funs
+        .web_client()
+        .post::<_, TardisResp<Value>>(
+            &format!("http://{address}/iam/internal/oauth2/task-grants/exchange"),
+            &json!({ "grant_id": grant_id, "task_id": task_id, "own_paths": own_paths }),
+            headers,
+        )
+        .await
+        .map_err(|error| tardis::basic::error::TardisError::internal_error(&error.to_string(), "test-task-runtime-http"))?;
+    let body =
+        tardis::serde_json::to_value(response.body).map_err(|error| tardis::basic::error::TardisError::internal_error(&error.to_string(), "test-task-runtime-http-response"))?;
+    Ok((response.code, body))
+}
+
+fn body_code(body: &Value) -> &str {
+    body.as_object().and_then(|body| body.get("code")).and_then(Value::as_str).unwrap_or_default()
+}
+
+fn runtime_data(body: &Value) -> Value {
+    body.get("data").cloned().unwrap_or(Value::Null)
 }
 
 async fn setup_task_grant_fixture(funs: &TardisFunsInst) -> TardisResult<TaskGrantFixture> {
@@ -211,7 +276,7 @@ async fn setup_task_grant_fixture(funs: &TardisFunsInst) -> TardisResult<TaskGra
     IamAppServ::add_rel_account(&app_id, &user_ctx.owner, false, funs, &user_ctx).await?;
     IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, &user_ctx.owner, &role_id, None, None, true, false, funs, &user_ctx).await?;
     let scheduler_ctx = TardisContext {
-        owner: "scheduler".into(),
+        owner: user_ctx.owner.clone(),
         own_paths: user_ctx.own_paths.clone(),
         ..Default::default()
     };
@@ -359,7 +424,7 @@ async fn verify_authorization_and_rollback(funs: &TardisFunsInst, fixture: &Task
     Ok(internal_replacement.grant_id)
 }
 
-async fn verify_takeover_authorization(funs: &TardisFunsInst, fixture: &TaskGrantFixture) -> TardisResult<()> {
+async fn verify_takeover_authorization(funs: &TardisFunsInst, fixture: &TaskGrantFixture, runtime_api_address: std::net::SocketAddr) -> TardisResult<()> {
     let user_ctx = &fixture.user_ctx;
     let scheduler_ctx = &fixture.scheduler_ctx;
     let system_ctx = &fixture.system_ctx;
@@ -379,6 +444,30 @@ async fn verify_takeover_authorization(funs: &TardisFunsInst, fixture: &TaskGran
     other_user_ctx.roles = vec![funs.iam_basic_role_app_admin_id()];
     IamAppServ::add_rel_account(&app_id, &other_account_id, false, &funs, &other_user_ctx).await?;
     IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, &other_account_id, &role_id, None, None, true, false, &funs, &other_user_ctx).await?;
+
+    // 两个普通用户均能创建和执行自己的任务，无全局 executor 配置。
+    for (index, owner) in [user_ctx, &other_user_ctx].into_iter().enumerate() {
+        let task_id = format!("binding/owner-{index}");
+        let grant = create_task_grant(task_grant_req(&task_id, false, None, false), None, owner.clone()).await?;
+        let (http_code, body) = task_runtime_http_request(runtime_api_address, &grant.grant_id, &task_id, &owner.own_paths, Some("scheduler")).await?;
+        assert_eq!(http_code, 200);
+        assert!(body_code(&body).starts_with("200"), "{body}");
+        let runtime: bios_iam::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeResp = tardis::serde_json::from_value(runtime_data(&body)).unwrap();
+        assert_eq!(runtime.account_id, owner.owner);
+        let req = bios_iam::basic::dto::iam_cert_dto::IamContextFetchReq {
+            token: runtime.bios_token.clone(),
+            app_id: Some(app_id.clone()),
+        };
+        let resolved = bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ::get_context(&req, funs).await?;
+        assert_eq!(resolved.owner, owner.owner);
+        assert_eq!(resolved.own_paths, owner.own_paths);
+        let wrong_app = bios_iam::basic::dto::iam_cert_dto::IamContextFetchReq {
+            token: runtime.bios_token.clone(),
+            app_id: Some("other-app".into()),
+        };
+        assert!(bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ::get_context(&wrong_app, funs).await.is_err());
+        assert!(funs.cache().ttl(&format!("iam:task-token:{}", runtime.bios_token)).await? > 0);
+    }
 
     assert_eq!(
         current_task_grant("binding/takeover", funs, &other_user_ctx).await.unwrap_err().code,
@@ -511,7 +600,7 @@ async fn verify_concurrent_first_create(funs: &TardisFunsInst, fixture: &TaskGra
     Ok(())
 }
 
-async fn verify_provider_delivery(funs: &TardisFunsInst, fixture: &TaskGrantFixture, internal_replacement_id: &str) -> TardisResult<()> {
+async fn verify_provider_delivery(funs: &TardisFunsInst, fixture: &TaskGrantFixture, internal_replacement_id: &str, runtime_api_address: std::net::SocketAddr) -> TardisResult<()> {
     let system_ctx = &fixture.system_ctx;
     let tenant_ctx = &fixture.tenant_ctx;
     let user_ctx = &fixture.user_ctx;
@@ -519,11 +608,17 @@ async fn verify_provider_delivery(funs: &TardisFunsInst, fixture: &TaskGrantFixt
     let app_id = &fixture.app_id;
     let revoked = Arc::new(AtomicBool::new(false));
     let delay_userinfo = Arc::new(AtomicBool::new(false));
-    let token_endpoint = make(move |request: Request| async move {
-        let _body = request.into_body().into_string().await.unwrap();
-        Response::builder().status(StatusCode::OK).content_type("application/json").body(Body::from_string(json!({
+    let token_calls = Arc::new(AtomicUsize::new(0));
+    let token_calls_for_provider = token_calls.clone();
+    let token_endpoint = make(move |request: Request| {
+        let token_calls = token_calls_for_provider.clone();
+        async move {
+            token_calls.fetch_add(1, Ordering::SeqCst);
+            let _body = request.into_body().into_string().await.unwrap();
+            Response::builder().status(StatusCode::OK).content_type("application/json").body(Body::from_string(json!({
                 "code": "200", "msg": "", "data": {"access_token": "rotated-access", "token_type": "Bearer", "expires_in": 3600, "refresh_token": "rotated-refresh", "scope": "iam.app.read"}
             }).to_string()))
+        }
     });
     let revoked_for_provider = revoked.clone();
     let delay_userinfo_for_provider = delay_userinfo.clone();
@@ -588,21 +683,69 @@ async fn verify_provider_delivery(funs: &TardisFunsInst, fixture: &TaskGrantFixt
     };
     funs.cache().set_ex(&cache_key, &TardisFuns::json.obj_to_string(&token)?, 300).await?;
     let provider_grant_id = IamCertOAuth2Serv::ensure_provider_grant(&user_ctx.owner, &user_ctx.own_paths, &funs).await?;
-    let grant = create_task_grant(task_grant_req("binding/external", true, None, false), Some(provider_grant_id), (*user_ctx).clone()).await?;
+    let grant = create_task_grant(task_grant_req("binding/external", true, None, false), Some(provider_grant_id.clone()), (*user_ctx).clone()).await?;
+    // 授权完成后让真实持久化凭据过期，确保刷新发生在后台 HTTP 兑换时。
+    let mut expired = token.clone();
+    expired.access_token = "expired-access".into();
+    expired.expires_at_ms = Some(Utc::now().timestamp_millis() - 1_000);
+    let nonce = TardisFuns::crypto.aead.random_nonce::<Aes256Gcm>();
+    let (ciphertext, _) = TardisFuns::crypto.aead.encrypt::<Aes256Gcm>(&[7; 32], provider_grant_id.as_bytes(), &nonce, TardisFuns::json.obj_to_string(&expired)?.as_bytes())?;
+    let sealed = format!("{}:{}", TardisFuns::crypto.hex.encode(nonce), TardisFuns::crypto.hex.encode(ciphertext));
+    funs.db()
+        .execute_one(
+            "UPDATE iam_oauth2_provider_grant SET encrypted_token = $1 WHERE id = $2",
+            vec![sealed.into(), provider_grant_id.clone().into()],
+        )
+        .await?;
+    funs.cache().set_ex(&cache_key, &TardisFuns::json.obj_to_string(&expired)?, 300).await?;
+    let calls_before_runtime = token_calls.load(Ordering::SeqCst);
+    delay_userinfo.store(true, Ordering::SeqCst);
+    let (exchange_one, exchange_two) = tokio::join!(
+        task_runtime_http_request(runtime_api_address, &grant.grant_id, "binding/external", &user_ctx.own_paths, Some("scheduler"),),
+        task_runtime_http_request(runtime_api_address, &grant.grant_id, "binding/external", &user_ctx.own_paths, Some("scheduler"),),
+    );
+    delay_userinfo.store(false, Ordering::SeqCst);
+    let (exchange_one_code, exchange_one_body) = exchange_one.unwrap();
+    let (exchange_two_code, exchange_two_body) = exchange_two.unwrap();
+    assert_eq!(exchange_one_code, 200);
+    assert_eq!(exchange_two_code, 200);
+    assert!(body_code(&exchange_one_body).starts_with("200"), "{exchange_one_body}");
+    assert!(body_code(&exchange_two_body).starts_with("200"), "{exchange_two_body}");
+    let exchange_one: bios_iam::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeResp = tardis::serde_json::from_value(runtime_data(&exchange_one_body)).unwrap();
+    let exchange_two: bios_iam::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeResp = tardis::serde_json::from_value(runtime_data(&exchange_two_body)).unwrap();
+    assert_eq!(exchange_one.account_id, user_ctx.owner);
+    assert_eq!(exchange_two.account_id, user_ctx.owner);
+    assert_eq!(exchange_one.own_paths, user_ctx.own_paths);
+    assert_eq!(exchange_two.own_paths, user_ctx.own_paths);
+    assert!(!exchange_one.bios_token.trim().is_empty());
+    assert!(!exchange_two.bios_token.trim().is_empty());
+    let persisted_token = funs.cache().get(&cache_key).await?.expect("refreshed provider token should remain persisted in Redis");
+    let persisted_token: IamCertOAuth2TokenInfo = TardisFuns::json.str_to_obj(&persisted_token)?;
+    assert_eq!(persisted_token.access_token, "rotated-access");
+    assert_eq!(persisted_token.refresh_token.as_deref(), Some("rotated-refresh"));
+    assert_eq!(
+        token_calls.load(Ordering::SeqCst) - calls_before_runtime,
+        1,
+        "concurrent runtime exchanges must share one refresh"
+    );
+    let persisted = iam_oauth2_provider_grant::Entity::find_by_id(&provider_grant_id).one(funs.db().raw_conn()).await?.unwrap();
+    let (nonce, ciphertext) = persisted.encrypted_token.split_once(':').unwrap();
+    let plaintext = TardisFuns::crypto.aead.decrypt::<Aes256Gcm>(
+        &[7; 32],
+        provider_grant_id.as_bytes(),
+        TardisFuns::crypto.hex.decode(nonce)?,
+        TardisFuns::crypto.hex.decode(ciphertext)?,
+    )?;
+    let stored: IamCertOAuth2TokenInfo = tardis::serde_json::from_slice(&plaintext).unwrap();
+    assert_eq!(stored.access_token, "rotated-access");
+    assert_eq!(stored.refresh_token.as_deref(), Some("rotated-refresh"));
+    assert!(stored.expires_at_ms.unwrap() > Utc::now().timestamp_millis());
     let req = IamOAuth2TaskGrantExchangeReq {
         grant_id: grant.grant_id.clone(),
         task_id: "binding/external".into(),
     };
-    delay_userinfo.store(true, Ordering::SeqCst);
-    let (exchange_one, exchange_two) = tokio::join!(
-        Box::pin(exchange_task_grant(&req, funs, scheduler_ctx)),
-        Box::pin(exchange_task_grant(&req, funs, scheduler_ctx)),
-    );
-    delay_userinfo.store(false, Ordering::SeqCst);
-    assert_eq!(exchange_one?.access_token.as_deref(), Some("rotated-access"));
-    assert_eq!(exchange_two?.access_token.as_deref(), Some("rotated-access"));
     let wrong_user = TardisContext {
-        owner: user_ctx.owner.clone(),
+        owner: "unrelated-account".into(),
         own_paths: user_ctx.own_paths.clone(),
         ..Default::default()
     };

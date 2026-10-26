@@ -55,7 +55,7 @@ async fn create_grant(req: IamOAuth2TaskGrantCreateReq, ctx: TardisContext) -> T
 #[tokio::test]
 #[ignore = "requires Docker for isolated PostgreSQL, Redis and RabbitMQ"]
 async fn task_grant_concurrent_replacement_and_initializer_index_are_stable() -> TardisResult<()> {
-    std::env::set_var("TARDIS_CSM.IAM.OAUTH2_TASK_EXECUTOR_ACCOUNT_ID", "scheduler");
+    std::env::set_var("TARDIS_CSM.IAM.OAUTH2_TASK_SERVICE_TOKEN", "scheduler");
     std::env::set_var("TARDIS_CSM.IAM.OAUTH2_PROVIDER_GRANT_KEY", "09".repeat(32));
     let _containers = init_test_container::init(None).await?;
     let funs = iam_constants::get_tardis_inst();

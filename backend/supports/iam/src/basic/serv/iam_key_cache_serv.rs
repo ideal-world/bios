@@ -8,6 +8,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
@@ -51,7 +52,7 @@ impl IamIdentCacheServ {
         } else {
             format!("{token_kind},{rel_iam_item_id}")
         };
-        log::trace!("add token: token={}", token);
+        log::trace!("add token for account: {}", rel_iam_item_id);
         if expire_sec > 0 {
             funs.cache()
                 .set_ex(
@@ -62,6 +63,10 @@ impl IamIdentCacheServ {
                 .await?;
         } else {
             funs.cache().set(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(), token_value.as_str()).await?;
+        }
+        // 短期任务凭据不属于交互登录会话；避免会话数量限制和过期 hash 堆积。
+        if *token_kind == IamCertTokenKind::TokenTask {
+            return Ok(());
         }
         funs.cache()
             .hset(
@@ -432,6 +437,18 @@ impl IamIdentCacheServ {
     pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
             let account_id = token_info.split(',').nth(1).unwrap_or("");
+            if token_info.split(',').next() == Some("TokenTask") {
+                let encoded = funs
+                    .cache()
+                    .get(&format!("iam:task-token:{}", fetch_req.token))
+                    .await?
+                    .ok_or_else(|| TardisError::unauthorized("task token expired", "401-iam-task-token-expired"))?;
+                let ctx: TardisContext = TardisFuns::json.str_to_obj(&encoded)?;
+                if ctx.owner != account_id || fetch_req.app_id.as_deref() != ctx.own_paths.split('/').nth(1) {
+                    return Err(TardisError::forbidden("task token application mismatch", "403-iam-task-token-scope"));
+                }
+                return Ok(ctx);
+            }
             if let Some(context) = funs
                 .cache()
                 .hget(

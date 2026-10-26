@@ -315,6 +315,15 @@ pub async fn get_token_context(token: &str, app_id: &str, config: &AuthConfig, c
     let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
         trace!("Token info: {}", token_value);
         let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
+        if account_info.first() == Some(&"TokenTask") {
+            let encoded =
+                cache_client.get(&format!("iam:task-token:{token}")).await?.ok_or_else(|| TardisError::unauthorized("task token expired", "401-auth-task-token-expired"))?;
+            let ctx: TardisContext = TardisFuns::json.str_to_obj(&encoded)?;
+            if account_info.get(1).copied() != Some(ctx.owner.as_str()) || ctx.own_paths.split('/').nth(1) != Some(app_id) || app_id.is_empty() {
+                return Err(TardisError::forbidden("task token application mismatch", "403-auth-task-token-scope"));
+            }
+            return Ok(ctx);
+        }
         if account_info.len() > 2 {
             cache_client
                 .set_ex(
@@ -364,12 +373,7 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
     Ok(context)
 }
 
-async fn get_global_context_with_extra_roles(
-    account_id: &str,
-    app_id: &str,
-    config: &AuthConfig,
-    cache_client: &TardisCacheClient,
-) -> TardisResult<Option<TardisContext>> {
+async fn get_global_context_with_extra_roles(account_id: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<Option<TardisContext>> {
     if let Some(global_context_str) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), "").await? {
         let mut global_context = TardisFuns::json.str_to_obj::<TardisContext>(&global_context_str)?;
         if !global_context.roles.is_empty() {
@@ -380,7 +384,7 @@ async fn get_global_context_with_extra_roles(
                     if let Some(extra_role_app_id) = extra_role_app_id {
                         let extra_role_info = match TardisFuns::json.str_to_obj::<IamCacheExtraRoleInfoValue>(&extra_role_app_id) {
                             Ok(v) => v,
-                            Err(_) => IamCacheExtraRoleInfoValue{
+                            Err(_) => IamCacheExtraRoleInfoValue {
                                 own_paths: "".to_string(),
                                 role_id: extra_role_app_id,
                             },

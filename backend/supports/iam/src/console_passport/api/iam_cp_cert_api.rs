@@ -21,8 +21,8 @@ use crate::basic::dto::iam_oauth2_task_grant_dto::{
 };
 use crate::basic::serv::clients::iam_log_client::{IamLogClient, LogParamTag};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
+use crate::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
@@ -81,7 +81,7 @@ impl IamCpCertApi {
         TardisResp::ok(IamOAuth2TaskGrantServ::current(&req.0.task_id, &funs, &ctx.0).await?)
     }
 
-    /// 兑换任务授权，仅允许配置的调度账号调用。
+    /// 兑换当前用户自己的任务授权。
     #[oai(path = "/cert/oauth2/task-grants/exchange", method = "post")]
     async fn exchange_oauth_task_grant(&self, req: Json<IamOAuth2TaskGrantExchangeReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamOAuth2TaskGrantToken> {
         let funs = iam_constants::get_tardis_inst();
@@ -660,5 +660,24 @@ impl IamCpCertLdapApi {
         let resp = IamCpCertLdapServ::bind_or_create_user_pwd_by_ldap(&login_req.0, try_get_real_ip_from_req(request).await?, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(resp)
+    }
+}
+
+/// 后台服务接口不使用用户登录态；服务凭据与任务用户身份分离。
+#[derive(Clone, Default)]
+pub struct IamTaskRuntimeApi;
+
+#[poem_openapi::OpenApi(prefix_path = "/internal/oauth2/task-grants", tag = "bios_basic::ApiTag::Interface")]
+impl IamTaskRuntimeApi {
+    #[oai(path = "/exchange", method = "post")]
+    async fn exchange_runtime(
+        &self,
+        req: Json<crate::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeReq>,
+        request: &Request,
+    ) -> TardisApiResult<crate::basic::dto::iam_oauth2_task_grant_dto::IamOAuth2TaskRuntimeResp> {
+        let funs = iam_constants::get_tardis_inst();
+        let configured = std::env::var("BIOS_OAUTH2_TASK_SERVICE_TOKEN").unwrap_or_else(|_| funs.conf::<crate::iam_config::IamConfig>().oauth2_task_service_token.clone());
+        crate::basic::serv::iam_oauth2_task_grant_serv::validate_task_service_token(&configured, request.headers().get("X-Bios-Task-Service-Token").and_then(|v| v.to_str().ok()))?;
+        TardisResp::ok(IamOAuth2TaskGrantServ::runtime(&req.0, &funs).await?)
     }
 }

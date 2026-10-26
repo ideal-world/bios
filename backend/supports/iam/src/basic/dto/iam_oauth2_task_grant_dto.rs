@@ -31,3 +31,21 @@ pub struct IamOAuth2TaskGrantToken {
 pub struct IamOAuth2TaskGrantCurrentReq {
     pub task_id: String,
 }
+
+/// 仅由受信后台服务兑换，授权用户从持久化 grant 读取。
+#[derive(Clone, Debug, Serialize, Deserialize, poem_openapi::Object)]
+pub struct IamOAuth2TaskRuntimeReq {
+    pub grant_id: String,
+    pub task_id: String,
+    pub own_paths: String,
+}
+
+/// 本次后台运行的短期本地凭据；不包含 refresh token。
+#[derive(Serialize, Deserialize, poem_openapi::Object)]
+pub struct IamOAuth2TaskRuntimeResp {
+    pub account_id: String,
+    pub own_paths: String,
+    pub bios_token: String,
+    pub roles: Vec<String>,
+    pub groups: Vec<String>,
+}
