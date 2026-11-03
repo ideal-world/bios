@@ -69,6 +69,9 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
             access_token: session_token.to_string(),
             refresh_token: None,
             token_expires_ms: None,
+            expires_at_ms: None,
+            scope: None,
+            provider_cert_conf_id: None,
             union_id,
         })
     }

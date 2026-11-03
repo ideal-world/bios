@@ -81,6 +81,7 @@ impl IamCcRoleApi {
                     name: item.name,
                     code: item.code,
                     kind: item.kind,
+                    perm_kind: item.perm_kind,
                     scope_level: item.scope_level,
                     icon: item.icon,
                     in_base: item.in_base,

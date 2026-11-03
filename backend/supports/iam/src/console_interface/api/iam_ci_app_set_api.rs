@@ -107,7 +107,7 @@ impl IamCiAppSetApi {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let only_related = only_related.0.unwrap_or(false);
         let result = if only_related {
-            IamSetServ::get_tree_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?
+            IamSetServ::get_apps_tree_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?
         } else {
             IamSetServ::get_tree(
                 &set_id,

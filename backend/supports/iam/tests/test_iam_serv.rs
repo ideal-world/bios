@@ -59,6 +59,7 @@ async fn test_iam_serv() -> TardisResult<()> {
 
     let (app1_admin_context, app2_admin_context, tenant3_admin_context) = test_ca_basic::test(&system_admin_context).await?;
     test_ca_app::test(&app1_admin_context, &app2_admin_context).await?;
+    test_iam_oauth2::test_role_members(&app1_admin_context, &app2_admin_context).await?;
 
     test_cc_account::test(
         &system_admin_context,

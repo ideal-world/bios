@@ -9,6 +9,8 @@ pub struct Model {
     pub id: String,
     #[index]
     pub kind: i16,
+    /// 资源权限类型，read 表示只读，all 表示全部权限
+    pub perm_kind: String,
     pub icon: String,
     pub sort: i64,
     // 资源方法 例如：*、GET、POST、PUT、DELETE

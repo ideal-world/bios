@@ -75,6 +75,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         Ok(iam_res::ActiveModel {
             id: Set(id.to_string()),
             kind: Set(add_req.kind.to_int()),
+            perm_kind: Set(add_req.perm_kind.clone().unwrap_or_default().as_str().to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             method: Set(add_req.method.as_ref().unwrap_or(&TrimString("*".to_string())).to_string()),
@@ -171,6 +172,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             && modify_req.hide.is_none()
             && modify_req.action.is_none()
             && modify_req.method.is_none()
+            && modify_req.perm_kind.is_none()
             && modify_req.crypto_req.is_none()
             && modify_req.crypto_resp.is_none()
             && modify_req.double_auth.is_none()
@@ -197,6 +199,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         }
         if let Some(method) = &modify_req.method {
             iam_res.method = Set(method.to_string());
+        }
+        if let Some(perm_kind) = &modify_req.perm_kind {
+            iam_res.perm_kind = Set(perm_kind.as_str().to_string());
         }
         if let Some(crypto_req) = modify_req.crypto_req {
             iam_res.crypto_req = Set(crypto_req);
@@ -433,6 +438,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamResFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_res::Entity, iam_res::Column::Kind));
+        query.column((iam_res::Entity, iam_res::Column::PermKind));
         query.column((iam_res::Entity, iam_res::Column::Icon));
         query.column((iam_res::Entity, iam_res::Column::Sort));
         query.column((iam_res::Entity, iam_res::Column::Method));
@@ -447,6 +453,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::Ext));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_res::Column::Kind).eq(kind.to_int()));
+        }
+        if let Some(perm_kind) = &filter.perm_kind {
+            query.and_where(Expr::col(iam_res::Column::PermKind).eq(perm_kind.as_str()));
         }
         Ok(())
     }
@@ -1055,6 +1064,7 @@ impl IamMenuServ {
                     code: TrimString(code.to_string()),
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Menu,
+                    perm_kind: None,
                     icon: None,
                     sort: None,
                     method: None,
@@ -1091,6 +1101,7 @@ impl IamMenuServ {
                     code: TrimString(code.to_string()),
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Ele,
+                    perm_kind: None,
                     icon: None,
                     sort: None,
                     method: None,
