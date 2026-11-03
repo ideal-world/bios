@@ -1636,7 +1636,7 @@ impl IamSetServ {
             &sys_ctx,
         )
         .await?;
-        if role.disabled || role.kind != IamRoleKind::App || !role.in_base || !role.own_paths.is_empty() {
+        if role.disabled || !role.in_base || !role.own_paths.is_empty() {
             return Err(funs.err().bad_request(
                 "iam_apps_set_account_role",
                 "save",
