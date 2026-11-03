@@ -4,6 +4,7 @@ use std::{collections::{HashMap, HashSet}, str::FromStr as _};
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::rbum_filer_dto::RbumBasicFilterReq,
+    helper::rbum_scope_helper,
     rbum_enumeration::RbumRelFromKind,
     serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
@@ -32,7 +33,7 @@ use crate::{
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
         flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::{
-            FLowStateKindConf, FlowStateCountersignKind, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
+            FLowStateKindConf, FlowGuardConf, FlowStateCountersignKind, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
             FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind,
         },
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFilterReq},
@@ -46,6 +47,7 @@ use crate::{
 
 use super::{
     clients::{
+        iam_clients::FlowIamClient,
         log_client::LogParamOp,
         search_client::{FlowSearchClient, FlowSearchTaskKind},
     },
@@ -410,6 +412,7 @@ impl FlowInstServ {
         if let Some(check_vars) = &start_req.check_vars {
             current_vars.extend(check_vars.clone());
         }
+        Self::grant_temp_product_for_absent_operators(&current_version_id, start_req.operator_map.as_ref(), &create_vars, funs, ctx).await?;
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             code: Set(Some("".to_string())),
@@ -545,6 +548,127 @@ impl FlowInstServ {
         .await?;
 
         Ok(Some(inst_id))
+    }
+
+    /// 为不在当前产品中的审批节点操作人创建临时产品访问。`expire_at = 0` 表示不过期。
+    async fn grant_temp_product_for_absent_operators(
+        flow_version_id: &str,
+        operator_map: Option<&HashMap<String, Vec<String>>>,
+        create_vars: &HashMap<String, Value>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let Some(tenant_id) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) else {
+            return Ok(());
+        };
+        let Some(product_id) = rbum_scope_helper::get_path_item(2, &ctx.own_paths) else {
+            return Ok(());
+        };
+        let operator_ids = Self::collect_flow_operator_ids(flow_version_id, operator_map, create_vars, funs, ctx).await?;
+        if operator_ids.is_empty() {
+            return Ok(());
+        }
+        let absent_account_ids = FlowSearchClient::find_account_ids_not_in_current_product(&operator_ids, funs, ctx).await?;
+        for account_id in absent_account_ids {
+            FlowIamClient::grant_temp_product(&account_id, &product_id, &tenant_id, 0, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    /// 汇总审批流全部录入、审批节点的操作人：节点配置的指定账号、角色、组织，以及发起时写入的 operator_map。
+    async fn collect_flow_operator_ids(
+        flow_version_id: &str,
+        operator_map: Option<&HashMap<String, Vec<String>>>,
+        create_vars: &HashMap<String, Value>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        let operator_map = operator_map.cloned().unwrap_or_default();
+        let mut operator_ids = HashSet::new();
+        for account_id in operator_map.values().flatten() {
+            if !account_id.is_empty() {
+                operator_ids.insert(account_id.clone());
+            }
+        }
+        let states = FlowStateServ::find_detail_items(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                flow_version_ids: Some(vec![flow_version_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for state in states {
+            let (mut guard_conf, guard_by_creator, guard_by_assigned, mut agent_conf) = match state.state_kind {
+                FlowStateKind::Form => {
+                    let form = state.kind_conf().unwrap_or_default().form.unwrap_or_default();
+                    (
+                        form.guard_custom_conf.unwrap_or_default(),
+                        form.guard_by_creator,
+                        form.guard_by_assigned,
+                        (form.auto_transfer_when_empty_kind == Some(FlowStatusAutoStrategyKind::SpecifyAgent)).then(|| form.auto_transfer_when_empty_guard_custom_conf.unwrap_or_default()),
+                    )
+                }
+                FlowStateKind::Approval => {
+                    let approval = state.kind_conf().unwrap_or_default().approval.unwrap_or_default();
+                    (
+                        approval.guard_custom_conf.unwrap_or_default(),
+                        approval.guard_by_creator,
+                        approval.guard_by_assigned,
+                        (approval.auto_transfer_when_empty_kind == Some(FlowStatusAutoStrategyKind::SpecifyAgent))
+                            .then(|| approval.auto_transfer_when_empty_guard_custom_conf.unwrap_or_default()),
+                    )
+                }
+                _ => continue,
+            };
+            if state.own_paths != ctx.own_paths {
+                guard_conf.get_local_conf(funs, ctx).await?;
+                if let Some(agent_conf) = agent_conf.as_mut() {
+                    agent_conf.get_local_conf(funs, ctx).await?;
+                }
+            }
+            if guard_by_creator && !ctx.owner.is_empty() {
+                guard_conf.guard_by_spec_account_ids.push(ctx.owner.clone());
+            }
+            if guard_by_assigned && !operator_map.contains_key(&state.id) {
+                Self::push_assigned_account_ids(create_vars, &mut guard_conf);
+            }
+            for account_id in FlowSearchClient::search_guard_accounts(&guard_conf, funs, ctx).await? {
+                if !account_id.is_empty() {
+                    operator_ids.insert(account_id);
+                }
+            }
+            if let Some(agent_conf) = agent_conf {
+                for account_id in FlowSearchClient::search_guard_accounts(&agent_conf, funs, ctx).await? {
+                    if !account_id.is_empty() {
+                        operator_ids.insert(account_id);
+                    }
+                }
+            }
+        }
+        Ok(operator_ids.into_iter().collect_vec())
+    }
+
+    fn push_assigned_account_ids(create_vars: &HashMap<String, Value>, guard_conf: &mut FlowGuardConf) {
+        let Some(assigned) = create_vars.get("assigned_to") else {
+            return;
+        };
+        let assigned_values = assigned.as_array().cloned().unwrap_or_else(|| vec![assigned.clone()]);
+        for value in assigned_values {
+            if let Some(account_id) = value.as_str() {
+                if !account_id.is_empty() {
+                    guard_conf.guard_by_spec_account_ids.push(account_id.to_string());
+                }
+            }
+        }
     }
 
     // 创建实例（干跑） 返回终止的状态ID

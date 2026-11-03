@@ -93,6 +93,7 @@ pub async fn test_role_members(app1_context: &TardisContext, app2_context: &Tard
             in_embed: Some(false),
             in_base: Some(false),
             deletable: Some(true),
+            perm_kind: None,
         },
         &funs,
         app1_context,

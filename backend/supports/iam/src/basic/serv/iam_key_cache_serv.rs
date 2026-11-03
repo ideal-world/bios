@@ -327,6 +327,8 @@ impl IamIdentCacheServ {
         }
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
+        // 临时产品授权没有下次登录的重建来源，不在下线时删除，只能由 CI 回收。
+        // 临时产品授权不在下线时删除。账号上下文下次登录会重建，临时产品记录没有重建来源，只能由 CI 回收。
 
         let mock_ctx = TardisContext { ..Default::default() };
         add_ip(ip, &mock_ctx).await?;

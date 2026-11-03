@@ -1,4 +1,9 @@
-use std::{collections::HashMap, fmt::Display, str::FromStr, vec};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    str::FromStr,
+    vec,
+};
 
 use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind, serv::rbum_item_serv::RbumItemCrudOperation};
 use bios_sdk_invoke::{
@@ -917,6 +922,54 @@ impl FlowSearchClient {
         .map(|result| result.records.into_iter().map(|record| record.key).collect_vec())
         .unwrap_or_default();
         Ok(result)
+    }
+
+    /// 查询用户 ID 列表中不在当前产品中的用户 ID。
+    ///
+    /// 按 tag=`iam_account`、key=用户 ID 查询账号，读取 ext.`app`（产品 ID 到产品信息的映射），
+    /// 将其 key 与当前上下文中的产品 ID 比较，返回未关联当前产品的用户 ID。
+    pub async fn find_account_ids_not_in_current_product(account_ids: &[String], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        if account_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let product_id = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L2.to_int(), &ctx.own_paths).unwrap_or_default();
+        let mut in_product_ids = HashSet::new();
+        for account_id_chunk in account_ids.chunks(999) {
+            let records = SpiSearchClient::search(
+                &SearchItemSearchReq {
+                    tag: "iam_account".to_string(),
+                    ctx: SearchItemSearchCtxReq::default(),
+                    query: SearchItemQueryReq {
+                        keys: Some(account_id_chunk.iter().cloned().map(|account_id| account_id.into()).collect_vec()),
+                        ..Default::default()
+                    },
+                    adv_by_or: None,
+                    adv_query: None,
+                    sort: None,
+                    page: SearchItemSearchPageReq {
+                        number: 1,
+                        size: account_id_chunk.len() as u16,
+                        fetch_total: false,
+                    },
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .map(|page| page.records)
+            .unwrap_or_default();
+            for record in records {
+                let in_current_product = record
+                    .ext
+                    .get("app")
+                    .and_then(|app| app.as_object())
+                    .is_some_and(|app| !product_id.is_empty() && app.contains_key(&product_id));
+                if in_current_product {
+                    in_product_ids.insert(record.key);
+                }
+            }
+        }
+        Ok(account_ids.iter().filter(|account_id| !in_product_ids.contains(*account_id)).cloned().collect_vec())
     }
 
     pub fn get_tag_search_map() -> HashMap<String, (String, String)> {

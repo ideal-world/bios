@@ -40,6 +40,12 @@ pub struct IamConfig {
     //     is_global<bool>:is global account
     // }
     pub cache_key_account_info_: String,
+    /// `{prefix}{account_id}`，Hash field 为产品 ID，value 为临时产品授权 JSON。
+    pub cache_key_temp_product_: String,
+    /// 全系统一份临时 API Set，member 为 `{res_uri}##{res_action}`。
+    pub cache_key_temp_api: String,
+    /// 临时 API Set 的版本号，与认证侧 `cache_key_temp_api_version` 一致。
+    pub cache_key_temp_api_version: String,
     // extra_role_id -> {
     //     <app_id>: app extend role id,
     // }
@@ -234,6 +240,9 @@ impl Default for IamConfig {
             cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
+            cache_key_temp_product_: "iam:cache:temp:product:".to_string(),
+            cache_key_temp_api: "iam:cache:temp:api".to_string(),
+            cache_key_temp_api_version: "iam:cache:temp:api:version".to_string(),
             cache_key_role_info_: "iam:cache:role:info:".to_string(),
             cache_key_extra_role_info_: "iam:cache:extra:role:info:".to_string(),
             extra_role_codes: vec![

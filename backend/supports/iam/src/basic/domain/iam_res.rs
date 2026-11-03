@@ -11,6 +11,8 @@ pub struct Model {
     pub kind: i16,
     /// 资源权限类型，read 表示只读，all 表示全部权限
     pub perm_kind: String,
+    /// 按钮展示范围，all 表示全场景展示，platform 表示仅平台层展示
+    pub show_scope: String,
     pub icon: String,
     pub sort: i64,
     // 资源方法 例如：*、GET、POST、PUT、DELETE

@@ -57,13 +57,15 @@ impl IamCtAppSetApi {
     ///
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
-    /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
+    /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes).
+    ///   If the account is bound to the platform Apps root set, it implies full access to the tenant's product groups and the whole tree is returned
     ///
     ///  根据当前租户查询应用树
     ///
     /// * 无参数：查询整个树
     /// * ``parent_sys_code=true``：查询下一级，当树太大时可以用来逐级查询
-    /// * ``only_related=true``：打开此参数时失效parent_sys_code参数，用来查询只有相关资源的树节点（包括子节点）
+    /// * ``only_related=true``：打开此参数时失效parent_sys_code参数，用来查询只有相关资源的树节点（包括子节点）；
+    ///   账号挂载在平台根产品组时等价于拥有当前租户全部产品组，返回完整树
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(
         &self,

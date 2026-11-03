@@ -1,13 +1,17 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
+use bios_basic::rbum::{helper::rbum_scope_helper, rbum_enumeration::RbumScopeLevelKind};
 use bios_sdk_invoke::{clients::spi_kv_client::SpiKvClient, invoke_constants::TARDIS_CONTEXT};
 use itertools::Itertools;
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
     log::debug,
-    tokio, TardisFuns, TardisFunsInst,
+    tokio,
+    web::poem_openapi::types::{ParseFromJSON, ToJSON},
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -19,7 +23,10 @@ use crate::{
         flow_transition_dto::{FlowTransitionActionByVarChangeInfoChangedKind, FlowTransitionDetailResp, TagRelKind},
     },
     flow_constants,
+    serv::clients::log_client::{FlowLogClient, LogParamContent, LogParamTag},
 };
+
+const EXTERNAL_CALL_LOG_DETAIL_LIMIT: usize = 4 * 1024;
 
 pub struct FlowExternalServ;
 
@@ -55,12 +62,7 @@ impl FlowExternalServ {
             ..Default::default()
         };
         debug!("do_fetch_rel_obj body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalFetchRelObjResp> = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_fetch_rel_obj", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalFetchRelObjResp> = Self::post_external(&external_url, &body, header, "do_fetch_rel_obj", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_fetch_rel_obj", "illegal response", "500-external-illegal-response"));
         }
@@ -183,12 +185,7 @@ impl FlowExternalServ {
             ..Default::default()
         };
         debug!("do_modify_field body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalModifyFieldResp> = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_modify_field", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalModifyFieldResp> = Self::post_external(&external_url, &body, header, "do_modify_field", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_modify_field", "illegal response", "500-external-illegal-response"));
         }
@@ -257,9 +254,7 @@ impl FlowExternalServ {
             params,
             ..Default::default()
         };
-        let original_resp = funs.web_client().post(&external_url, &body, header).await?;
-        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> =
-            original_resp.body.ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> = Self::post_external(&external_url, &body, header, "do_notify_changes", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"));
         }
@@ -294,12 +289,7 @@ impl FlowExternalServ {
             ..Default::default()
         };
         debug!("do_query_field body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalQueryFieldResp> = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_query_field", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalQueryFieldResp> = Self::post_external(&external_url, &body, header, "do_query_field", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_query_field", "illegal response", "500-external-illegal-response"));
         }
@@ -326,12 +316,7 @@ impl FlowExternalServ {
             ..Default::default()
         };
         debug!("do_delete_rel_obj body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalDeleteRelObjResp> = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalDeleteRelObjResp> = Self::post_external(&external_url, &body, header, "do_delete_rel_obj", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_delete_rel_obj", "illegal response", "500-external-illegal-response"));
         }
@@ -373,12 +358,7 @@ impl FlowExternalServ {
             ..Default::default()
         };
         debug!("do_delete_rel_obj body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalUpdateRelationshipResp> = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_update_related_obj", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalUpdateRelationshipResp> = Self::post_external(&external_url, &body, header, "do_update_related_obj", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_update_related_obj", "illegal response", "500-external-illegal-response"));
         }
@@ -409,12 +389,7 @@ impl FlowExternalServ {
             ..Default::default()
         };
         debug!("do_fetch_auth_account body: {:?}", body);
-        let resp: FlowExternalResp<FlowExternalFetchAuthAccountResp> = funs
-            .web_client()
-            .post(&external_url, &body, header)
-            .await?
-            .body
-            .ok_or_else(|| funs.err().internal_error("flow_external", "do_fetch_auth_account", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalFetchAuthAccountResp> = Self::post_external(&external_url, &body, header, "do_fetch_auth_account", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_fetch_auth_account", "illegal response", "500-external-illegal-response"));
         }
@@ -457,9 +432,7 @@ impl FlowExternalServ {
             child_approve_insts,
             ..Default::default()
         };
-        let original_resp = funs.web_client().post(&external_url, &body, header).await?;
-        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> =
-            original_resp.body.ok_or_else(|| funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"))?;
+        let resp: FlowExternalResp<FlowExternalNotifyChangesResp> = Self::post_external(&external_url, &body, header, "do_notify_changes", funs, ctx).await?;
         if resp.code != *"200" {
             return Err(funs.err().internal_error("flow_external", "do_notify_changes", "illegal response", "500-external-illegal-response"));
         }
@@ -468,6 +441,122 @@ impl FlowExternalServ {
         } else {
             Ok(FlowExternalNotifyChangesResp::default())
         }
+    }
+
+    async fn post_external<T>(
+        external_url: &str,
+        body: &FlowExternalReq,
+        header: Vec<(String, String)>,
+        action: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<FlowExternalResp<T>>
+    where
+        T: ParseFromJSON + ToJSON + Serialize + DeserializeOwned + Send + Sync,
+    {
+        let started = Instant::now();
+        let http_result = funs.web_client().post::<_, FlowExternalResp<T>>(external_url, body, header).await;
+        let elapsed_ms = started.elapsed().as_millis() as u64;
+        let (outcome, returned) = match http_result {
+            Err(err) => {
+                let flow_result = if err.code == "406" { "ILLEGAL" } else { "TRANSPORT_FAIL" };
+                let flow_message = err.message.clone();
+                let detail = err.to_string();
+                (
+                    ExternalCallOutcome {
+                        flow_result,
+                        flow_message,
+                        detail,
+                        resp_code: None,
+                        http_code: None,
+                        truncated: false,
+                    },
+                    Err(err),
+                )
+            }
+            Ok(http_resp) => {
+                let http_code = http_resp.code;
+                match http_resp.body {
+                    Some(resp) => {
+                        let flow_result = if resp.code == "200" { "SUCCESS" } else { "BIZ_FAIL" };
+                        let raw_detail = TardisFuns::json.obj_to_string(&resp).unwrap_or_default();
+                        let (detail, truncated) = truncate_detail(raw_detail);
+                        (
+                            ExternalCallOutcome {
+                                flow_result,
+                                flow_message: resp.message.clone(),
+                                detail,
+                                resp_code: Some(resp.code.clone()),
+                                http_code: Some(http_code),
+                                truncated,
+                            },
+                            Ok(resp),
+                        )
+                    }
+                    None => (
+                        ExternalCallOutcome {
+                            flow_result: "ILLEGAL",
+                            flow_message: "illegal response".to_string(),
+                            detail: "illegal response".to_string(),
+                            resp_code: None,
+                            http_code: Some(http_code),
+                            truncated: false,
+                        },
+                        Err(funs.err().internal_error("flow_external", action, "illegal response", "500-external-illegal-response")),
+                    ),
+                }
+            }
+        };
+        Self::spawn_external_call_log(body, outcome, elapsed_ms, ctx);
+        returned
+    }
+
+    fn spawn_external_call_log(req: &FlowExternalReq, outcome: ExternalCallOutcome, elapsed_ms: u64, ctx: &TardisContext) {
+        let kind_name = external_kind_name(&req.kind);
+        let content = LogParamContent {
+            subject: Some("外部服务".to_string()),
+            name: Some(kind_name.clone()),
+            sub_id: Some(req.curr_bus_obj_id.clone()),
+            sub_kind: Some(req.curr_tag.clone()),
+            operand_id: Some(req.inst_id.clone()),
+            flow_result: Some(outcome.flow_result.to_string()),
+            flow_message: Some(outcome.flow_message),
+            detail: Some(outcome.detail),
+            ..Default::default()
+        };
+        let ext = serde_json::json!({
+            "resp_code": outcome.resp_code,
+            "http_code": outcome.http_code,
+            "elapsed_ms": elapsed_ms,
+            "callback_op": req.callback_op.map(callback_op_name),
+            "manual_op": req.manual_op,
+            "truncated": outcome.truncated,
+        });
+        let key = Some(req.inst_id.clone());
+        let rel_key = rbum_scope_helper::get_path_item(RbumScopeLevelKind::L1.to_int(), &ctx.own_paths);
+        let ctx = ctx.clone();
+        tokio::spawn(async move {
+            let funs = flow_constants::get_tardis_inst();
+            if let Err(err) = FlowLogClient::addv2_item(
+                LogParamTag::FlowExternalCall,
+                key,
+                content,
+                Some(ext),
+                Some("flow_external_call".to_string()),
+                Some(kind_name),
+                None,
+                rel_key,
+                None,
+                false,
+                &funs,
+                &ctx,
+                false,
+            )
+            .await
+            {
+                tardis::log::error!("[BIOS.Flow] failed to record external call log: {}", err);
+            }
+        });
     }
 
     async fn get_external_url(tag: &str, ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
@@ -485,5 +574,49 @@ impl FlowExternalServ {
         }
         let headers = vec![base_ctx];
         Ok(headers)
+    }
+}
+
+struct ExternalCallOutcome {
+    flow_result: &'static str,
+    flow_message: String,
+    detail: String,
+    resp_code: Option<String>,
+    http_code: Option<u16>,
+    truncated: bool,
+}
+
+fn truncate_detail(detail: String) -> (String, bool) {
+    if detail.len() <= EXTERNAL_CALL_LOG_DETAIL_LIMIT {
+        return (detail, false);
+    }
+    let mut end = EXTERNAL_CALL_LOG_DETAIL_LIMIT;
+    while end > 0 && !detail.is_char_boundary(end) {
+        end -= 1;
+    }
+    (detail[..end].to_string(), true)
+}
+
+fn external_kind_name(kind: &FlowExternalKind) -> String {
+    match kind {
+        FlowExternalKind::FetchRelObj => "FetchRelObj",
+        FlowExternalKind::ModifyField => "ModifyField",
+        FlowExternalKind::NotifyChanges => "NotifyChanges",
+        FlowExternalKind::QueryField => "QueryField",
+        FlowExternalKind::DeleteObj => "DeleteObj",
+        FlowExternalKind::FetchAuthAccount => "FetchAuthAccount",
+        FlowExternalKind::UpdateRelationship => "UpdateRelationship",
+        FlowExternalKind::ApproveStatusChange => "ApproveStatusChange",
+    }
+    .to_string()
+}
+
+fn callback_op_name(op: FlowExternalCallbackOp) -> &'static str {
+    match op {
+        FlowExternalCallbackOp::Default => "Default",
+        FlowExternalCallbackOp::PostAction => "PostAction",
+        FlowExternalCallbackOp::VerifyContent => "VerifyContent",
+        FlowExternalCallbackOp::ConditionalTrigger => "ConditionalTrigger",
+        FlowExternalCallbackOp::Auto => "Auto",
     }
 }

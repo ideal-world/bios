@@ -3,7 +3,7 @@ use crate::api::{auth_crypto_api, auth_kernel_api, auth_mgr_api};
 use crate::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    serv::{auth_crypto_serv, auth_res_serv},
+    serv::{auth_crypto_serv, auth_res_serv, auth_temp_serv},
 };
 use std::time::Duration;
 #[cfg(feature = "web-server")]
@@ -83,6 +83,7 @@ pub async fn init_data() -> TardisResult<JoinHandle<()>> {
         };
         auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth, need_only_aksk, need_login).unwrap_or_default();
     }
+    auth_temp_serv::sync_temp_api_cache().await?;
     let handle = tardis::tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(config.cache_key_res_changed_timer_sec as u64));
         loop {
@@ -111,6 +112,9 @@ pub async fn init_data() -> TardisResult<JoinHandle<()>> {
                         }
                     }
                 }
+            }
+            if let Err(error) = auth_temp_serv::sync_temp_api_cache().await {
+                trace!("[Auth] sync temp api cache failed: {error}");
             }
             interval.tick().await;
         }

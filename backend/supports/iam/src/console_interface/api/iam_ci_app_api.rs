@@ -1,8 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppAggModifyReq, IamAppBatchModifySetCateReq};
-use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
+use crate::basic::dto::iam_account_dto::IamAccountDetailResp;
+use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppAggModifyReq, IamAppBatchModifySetCateReq, IamAppKind};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamRoleFilterReq};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
 
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -12,7 +15,7 @@ use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
-use bios_basic::rbum::helper::rbum_scope_helper::check_without_owner_and_unsafe_fill_ctx;
+use bios_basic::rbum::helper::rbum_scope_helper::{check_without_owner_and_unsafe_fill_ctx, degrade_own_paths};
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -352,6 +355,128 @@ impl IamCiAppApi {
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Find accounts of roles in a product
+    /// 查询产品中指定角色的人员
+    ///
+    /// 传入产品 ID 与角色编码（支持逗号分隔的多个角色编码）。角色编码可以是产品内角色，也可以是其上级模板角色；
+    /// 存在产品内派生角色时，按派生角色查询。返回同时属于该产品、且在该产品上下文中关联这些角色的账号（去重）。
+    /// 同时并入产品所属产品组上 `IamAccountAppsSetRole` 的关联账号；产品未挂载产品组时使用平台根产品组。
+    #[oai(path = "/:id/role_codes/:role_codes/account", method = "get")]
+    async fn find_role_accounts(
+        &self,
+        id: Path<String>,
+        role_codes: Path<String>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<IamAccountDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
+        try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        let role_codes = role_codes.0.split(',').map(|code| code.trim().to_string()).filter(|code| !code.is_empty()).collect::<Vec<String>>();
+        if role_codes.is_empty() {
+            return Err(funs.err().bad_request("iam_ci_app", "find_role_accounts", "role_codes is required", "400-iam-role-codes-required").into());
+        }
+        let product = IamAppServ::find_one_item(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![id.0.clone()]),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamAppKind::Product),
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?
+        .ok_or_else(|| funs.err().not_found("iam_ci_app", "find_role_accounts", "product is not found", "404-iam-app-not-exist"))?;
+        let app_ctx = degrade_own_paths(ctx.0.clone(), &product.own_paths)?;
+        let roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    codes: Some(role_codes),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            &funs,
+            &app_ctx,
+        )
+        .await?;
+        if roles.is_empty() {
+            return Err(funs.err().not_found("iam_ci_app", "find_role_accounts", "role is not found", "404-iam-role-not-found").into());
+        }
+        let mut result: HashMap<String, IamAccountDetailResp> = HashMap::new();
+        for role in &roles {
+            let effective_role_id = match IamRoleServ::get_embed_sub_role_id(&role.id, &funs, &app_ctx).await {
+                Ok(sub_role_id) => sub_role_id,
+                Err(err) if err.code == "404-iam-role-not-found" => role.id.clone(),
+                Err(err) => return Err(err.into()),
+            };
+            let accounts = IamAccountServ::find_detail_items(
+                &IamAccountFilterReq {
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: true,
+                        tag: Some(IamRelKind::IamAccountApp.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(product.id.clone()),
+                        ..Default::default()
+                    }),
+                    rel2: Some(RbumItemRelFilterReq {
+                        rel_by_from: true,
+                        tag: Some(IamRelKind::IamAccountRole.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(effective_role_id),
+                        own_paths: Some(app_ctx.own_paths.clone()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                None,
+                None,
+                &funs,
+                &app_ctx,
+            )
+            .await?;
+            for account in accounts {
+                result.entry(account.id.clone()).or_insert(account);
+            }
+            let set_account_ids = IamSetServ::find_apps_set_role_account_ids(&product.id, &product.own_paths, &role.id, &funs, &ctx.0).await?;
+            let existed_ids = result.keys().cloned().collect::<HashSet<_>>();
+            let missing_ids = set_account_ids.into_iter().filter(|account_id| !existed_ids.contains(account_id)).collect::<Vec<_>>();
+            if !missing_ids.is_empty() {
+                let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.0.clone())?;
+                let set_accounts = IamAccountServ::find_detail_items(
+                    &IamAccountFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(missing_ids),
+                            ignore_scope: true,
+                            own_paths: Some("".to_string()),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    &funs,
+                    &sys_ctx,
+                )
+                .await?;
+                for account in set_accounts {
+                    result.entry(account.id.clone()).or_insert(account);
+                }
+            }
+        }
+        let result = result.into_values().collect::<Vec<_>>();
+        ctx.0.execute_task().await?;
+        TardisResp::ok(result)
     }
 
     /// delete App Rel tenant
