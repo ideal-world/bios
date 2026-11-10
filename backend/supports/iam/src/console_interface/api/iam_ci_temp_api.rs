@@ -25,7 +25,7 @@ impl IamCiTempApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        IamCiTempServ::grant_product(&grant_req.0.account_id, &grant_req.0.product_id, &grant_req.0.tenant_id, grant_req.0.expire_at, &funs).await?;
+        IamCiTempServ::grant_product(&grant_req.0.account_id, &grant_req.0.product_id, &grant_req.0.tenant_id, grant_req.0.expire_at, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -35,7 +35,7 @@ impl IamCiTempApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        IamCiTempServ::revoke_product(&account_id.0, &product_id.0, &funs).await?;
+        IamCiTempServ::revoke_product(&account_id.0, &product_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -45,6 +45,7 @@ impl IamCiTempApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
+        IamCiTempServ::require_platform_ak(&ctx.0.ak, &funs).await?;
         IamCiTempServ::replace_apis(&api_req.0.apis, &funs).await?;
         TardisResp::ok(Void {})
     }
@@ -61,6 +62,6 @@ pub struct IamCiTempProductGrantReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCiTempApiReplaceReq {
-    /// `{res_uri}##{res_action}`，与正式资源标识一致，可带 `*`、`**`。
+    /// `{res_uri}##{res_action}`。路径和动作可以带 `*`、`**`，scheme 和 host 不可以。
     pub apis: Vec<String>,
 }

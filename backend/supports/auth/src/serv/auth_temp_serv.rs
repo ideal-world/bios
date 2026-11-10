@@ -7,6 +7,7 @@ use tardis::{
     cache::AsyncCommands,
     chrono::Utc,
     log::warn,
+    url::Url,
     TardisFuns,
 };
 
@@ -56,6 +57,10 @@ pub async fn sync_temp_api_cache() -> TardisResult<()> {
             warn!("[Auth] skip invalid temp api member [{member}]");
             continue;
         };
+        if uri_wildcards_scheme_or_host(&uri) {
+            warn!("[Auth] skip temp api member [{member}] : scheme or host wildcard");
+            continue;
+        }
         if let Err(error) = auth_res_serv::insert_res_pattern(&mut root, &action, &uri) {
             warn!("[Auth] skip temp api member [{member}] : {error}");
         }
@@ -138,6 +143,13 @@ async fn load_grant(account_id: &str, app_id: &str) -> TardisResult<Option<TempP
 
 fn grant_expired(grant: &TempProductGrant) -> bool {
     grant.expire_at > 0 && Utc::now().timestamp() >= grant.expire_at
+}
+
+fn uri_wildcards_scheme_or_host(uri: &str) -> bool {
+    let Ok(url) = Url::parse(uri) else {
+        return false;
+    };
+    url.scheme().contains('*') || url.host_str().unwrap_or("").contains('*')
 }
 
 fn split_api_member(member: &str) -> Option<(String, String)> {

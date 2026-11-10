@@ -25,6 +25,7 @@ use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
+use crate::basic::dto::iam_account_dto::IamAccountDetailResp;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_set_dto::{IamAppsSetAccountRoleReq, IamAppsSetAccountRoleResp, IamResSetTreeExtResp, IamResSetTreeResp, IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::basic::dto::iam_tenant_dto::IamTenantSummaryResp;
@@ -1376,24 +1377,31 @@ impl IamSetServ {
     /// 查询产品所属产品组上，指定角色通过 `IamAccountAppsSetRole` 关联的账号。
     ///
     /// 先取产品挂载的产品组 set。未挂载或 set id 为空时，回退到平台根产品组。
-    /// 关联的 `ext` 为 set id，`to` 为角色，`from` 为账号。
+    /// 关联的 `ext` 为 set id，`to` 为角色，`from` 为账号。多个角色共用一次当前产品组查询和一次平台根产品组查询。
     ///
     /// 组装规则：
-    /// 1. 优先返回当前产品组 set 下当前角色关联的账号；
-    /// 2. 再取平台根产品组 set 下当前角色关联的账号，剔除其中在当前产品组 set 下已绑定任意角色的账号；
+    /// 1. 优先返回当前产品组 set 下这些角色关联的账号；
+    /// 2. 再取平台根产品组 set 下这些角色关联的账号，剔除其中在当前产品组 set 下已绑定任意角色的账号；
     /// 3. 两部分合并去重后返回。
+    ///
+    /// 产品挂在租户下时，只保留平台账号（关系 `own_paths` 为空）以及该租户及其下级的账号。
+    /// 关系写入时 `own_paths` 取账号的 `own_paths`。
     pub async fn find_apps_set_role_account_ids(
         product_id: &str,
         product_own_paths: &str,
-        role_id: &str,
+        role_ids: &[String],
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
+        if role_ids.is_empty() {
+            return Ok(vec![]);
+        }
         let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
         let Some(set_id) = Self::resolve_product_apps_set_id(product_id, product_own_paths, funs, &sys_ctx).await? else {
             return Ok(vec![]);
         };
-        // 当前产品组 set 下所有角色（不限当前角色）的关联关系
+        let role_id_set = role_ids.iter().map(String::as_str).collect::<HashSet<_>>();
+        // 当前产品组 set 下所有角色（不限本次角色）的关联关系，用于识别当前角色，以及排除已被当前产品组覆盖的平台层账号
         let current_set_rels = RbumRelServ::find_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -1413,18 +1421,17 @@ impl IamSetServ {
             &sys_ctx,
         )
         .await?;
-        // 当前产品组下当前角色关联的账号
         let mut result: HashSet<String> = current_set_rels
             .iter()
-            .filter(|rel| rel.to_rbum_item_id == role_id)
+            .filter(|rel| role_id_set.contains(rel.to_rbum_item_id.as_str()))
+            .filter(|rel| Self::account_own_paths_visible_to_product(&rel.own_paths, product_own_paths))
             .map(|rel| rel.from_rbum_id.clone())
             .collect();
         // 当前产品组与平台根产品组为同一个 set 时，无需再合并平台层关联
         let platform_set_id = RbumSetServ::get_rbum_set_id_by_code(&Self::get_default_code(&IamSetKind::Apps, ""), true, funs, &sys_ctx).await?;
-        if platform_set_id.is_none() || platform_set_id.as_ref() == Some(&set_id) {
+        let Some(platform_set_id) = platform_set_id.filter(|platform_set_id| platform_set_id != &set_id) else {
             return Ok(result.into_iter().collect());
-        }
-        // 平台根产品组 set 下当前角色关联的账号
+        };
         let platform_set_rels = RbumRelServ::find_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -1434,8 +1441,8 @@ impl IamSetServ {
                 },
                 tag: Some(IamRelKind::IamAccountAppsSetRole.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
-                to_rbum_item_id: Some(role_id.to_string()),
-                ext_eq: Some(platform_set_id.unwrap()),
+                to_rbum_item_ids: Some(role_ids.to_vec()),
+                ext_eq: Some(platform_set_id),
                 disabled: Some(false),
                 ..Default::default()
             },
@@ -1445,10 +1452,76 @@ impl IamSetServ {
             &sys_ctx,
         )
         .await?;
-        // 当前产品组下已绑定任意角色的账号集合，用于过滤平台层关联账号
         let current_set_account_ids = current_set_rels.iter().map(|rel| rel.from_rbum_id.clone()).collect::<HashSet<_>>();
-        result.extend(platform_set_rels.into_iter().map(|rel| rel.from_rbum_id).filter(|account_id| !current_set_account_ids.contains(account_id)));
+        result.extend(
+            platform_set_rels
+                .into_iter()
+                .filter(|rel| Self::account_own_paths_visible_to_product(&rel.own_paths, product_own_paths))
+                .map(|rel| rel.from_rbum_id)
+                .filter(|account_id| !current_set_account_ids.contains(account_id)),
+        );
         Ok(result.into_iter().collect())
+    }
+
+    /// 产品租户可见的账号路径。
+    ///
+    /// 产品在平台层时不收口。产品在租户下时，保留平台账号，以及该租户路径本身和它的下级路径。
+    pub fn account_own_paths_visible_to_product(account_own_paths: &str, product_own_paths: &str) -> bool {
+        let tenant_own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), product_own_paths).unwrap_or_default();
+        if tenant_own_paths.is_empty() {
+            return true;
+        }
+        account_own_paths.is_empty() || account_own_paths == tenant_own_paths || account_own_paths.starts_with(&format!("{tenant_own_paths}/"))
+    }
+
+    /// 按产品租户范围补账号详情。候选 id 已经过关系过滤，这里再用 `own_paths` 限制查询范围。
+    ///
+    /// 平台产品一次查出全部候选。租户产品分两次：平台账号精确匹配空路径，租户账号匹配该租户前缀，再按路径边界丢掉前缀相撞的记录。
+    pub async fn find_product_visible_account_details(
+        account_ids: &[String],
+        product_own_paths: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamAccountDetailResp>> {
+        if account_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+        let tenant_own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), product_own_paths).unwrap_or_default();
+        let ids = account_ids.to_vec();
+        if tenant_own_paths.is_empty() {
+            return Self::find_account_details_by_own_paths(ids, "", true, funs, &sys_ctx).await;
+        }
+        let mut accounts = Self::find_account_details_by_own_paths(ids.clone(), "", false, funs, &sys_ctx).await?;
+        accounts.extend(Self::find_account_details_by_own_paths(ids, &tenant_own_paths, true, funs, &sys_ctx).await?);
+        accounts.retain(|account| Self::account_own_paths_visible_to_product(&account.own_paths, product_own_paths));
+        Ok(accounts)
+    }
+
+    async fn find_account_details_by_own_paths(
+        account_ids: Vec<String>,
+        own_paths: &str,
+        with_sub_own_paths: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamAccountDetailResp>> {
+        IamAccountServ::find_detail_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(account_ids),
+                    ignore_scope: true,
+                    own_paths: Some(own_paths.to_string()),
+                    with_sub_own_paths,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await
     }
 
     /// 产品挂载的 Apps set。未挂到产品组时使用平台根产品组。
@@ -2553,5 +2626,20 @@ impl IamSetServ {
             }
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::IamSetServ;
+
+    #[test]
+    fn product_tenant_account_paths_stay_in_tenant() {
+        assert!(IamSetServ::account_own_paths_visible_to_product("", "tenant/app"));
+        assert!(IamSetServ::account_own_paths_visible_to_product("tenant", "tenant/app"));
+        assert!(IamSetServ::account_own_paths_visible_to_product("tenant/app", "tenant/app"));
+        assert!(!IamSetServ::account_own_paths_visible_to_product("tenant2", "tenant/app"));
+        assert!(!IamSetServ::account_own_paths_visible_to_product("other", "tenant/app"));
+        assert!(IamSetServ::account_own_paths_visible_to_product("other", ""));
     }
 }

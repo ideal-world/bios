@@ -4,6 +4,7 @@ use crate::dto::flow_model_dto::{
     FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelBatchDisableReq, FlowModelCopyOrReferenceCiReq, FlowModelExistRelByTemplateIdsReq, FlowModelFilterReq, FlowModelFindRelStateResp, FlowModelInitCopyReq, FlowModelKind, FlowModelModifyReq, FlowModelSyncModifiedFieldReq
 };
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::helper::task_handler_helper;
 use crate::serv::flow_config_serv::FlowConfigServ;
 use crate::serv::flow_log_serv::FlowLogServ;
@@ -254,7 +255,7 @@ impl FlowCiModelApi {
             FlowConfigServ::add_or_modify_root_config(req.0.rel_template_id.clone().unwrap_or_default(), req.0.target_template_id.clone(), "review", &funs, &ctx.0).await?;
         }
 
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -277,7 +278,7 @@ impl FlowCiModelApi {
         let result = FlowModelServ::copy_models_by_template_id(&from_template_id.0, &to_template_id.0, &funs, &ctx.0).await?;
         // 添加或修改审批配置
         FlowConfigServ::add_or_modify_root_config(from_template_id.0.clone(), Some(to_template_id.0.clone()), "review", &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -297,7 +298,7 @@ impl FlowCiModelApi {
                 ..Default::default()
             }, &funs, &ctx.0).await?;
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
@@ -376,7 +377,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::sync_modified_field(&modify_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
@@ -389,7 +390,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::batch_disable_model(req.0.rel_template_id, req.0.main, req.0.tags, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
@@ -402,7 +403,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::sync_model_template(&funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
@@ -437,7 +438,7 @@ impl FlowCiModelApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowModelServ::init_copy_model(&req, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)

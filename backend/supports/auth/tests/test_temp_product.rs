@@ -110,6 +110,16 @@ async fn temp_product_access_keeps_formal_auth_and_adds_a_fallback() -> TardisRe
         Some("[Auth] Only AK/SK authentication is allowed")
     );
 
+    replace_temp_apis(&config, &["iam-res://cp/account/*##get", "iam-res://**##*"]).await?;
+    let host_wildcard = auth_request("GET", "/cp/by-role", "token-temp", Some(PRODUCT), &config).await?;
+    assert_eq!(
+        host_wildcard.e.as_ref().map(|error| error.message.as_str()),
+        Some("[Auth] Permission denied"),
+        "a scheme or host wildcard already stored in redis must not open every api"
+    );
+    let path_wildcard = auth_request("GET", "/cp/account/item", "token-temp", Some(PRODUCT), &config).await?;
+    assert!(path_wildcard.e.is_none(), "a path wildcard stays in effect beside a rejected host wildcard");
+
     Ok(())
 }
 

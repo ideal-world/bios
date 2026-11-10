@@ -459,7 +459,7 @@ impl FlowExternalServ {
         let elapsed_ms = started.elapsed().as_millis() as u64;
         let (outcome, returned) = match http_result {
             Err(err) => {
-                let flow_result = if err.code == "406" { "ILLEGAL" } else { "TRANSPORT_FAIL" };
+                let flow_result = if err.code.starts_with("406") { "ILLEGAL" } else { "TRANSPORT_FAIL" };
                 let flow_message = err.message.clone();
                 let detail = err.to_string();
                 (

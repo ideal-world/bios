@@ -363,6 +363,7 @@ impl IamCiAppApi {
     /// 传入产品 ID 与角色编码（支持逗号分隔的多个角色编码）。角色编码可以是产品内角色，也可以是其上级模板角色；
     /// 存在产品内派生角色时，按派生角色查询。返回同时属于该产品、且在该产品上下文中关联这些角色的账号（去重）。
     /// 同时并入产品所属产品组上 `IamAccountAppsSetRole` 的关联账号；产品未挂载产品组时使用平台根产品组。
+    /// 多个角色的产品组关联一次查询。产品组账号只返回平台账号，以及产品所属租户（含下级）的账号。
     #[oai(path = "/:id/role_codes/:role_codes/account", method = "get")]
     async fn find_role_accounts(
         &self,
@@ -447,31 +448,14 @@ impl IamCiAppApi {
             for account in accounts {
                 result.entry(account.id.clone()).or_insert(account);
             }
-            let set_account_ids = IamSetServ::find_apps_set_role_account_ids(&product.id, &product.own_paths, &role.id, &funs, &ctx.0).await?;
-            let existed_ids = result.keys().cloned().collect::<HashSet<_>>();
-            let missing_ids = set_account_ids.into_iter().filter(|account_id| !existed_ids.contains(account_id)).collect::<Vec<_>>();
-            if !missing_ids.is_empty() {
-                let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.0.clone())?;
-                let set_accounts = IamAccountServ::find_detail_items(
-                    &IamAccountFilterReq {
-                        basic: RbumBasicFilterReq {
-                            ids: Some(missing_ids),
-                            ignore_scope: true,
-                            own_paths: Some("".to_string()),
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    None,
-                    None,
-                    &funs,
-                    &sys_ctx,
-                )
-                .await?;
-                for account in set_accounts {
-                    result.entry(account.id.clone()).or_insert(account);
-                }
+        }
+        let role_ids = roles.iter().map(|role| role.id.clone()).collect::<Vec<_>>();
+        let set_account_ids = IamSetServ::find_apps_set_role_account_ids(&product.id, &product.own_paths, &role_ids, &funs, &ctx.0).await?;
+        let missing_ids = set_account_ids.into_iter().filter(|account_id| !result.contains_key(account_id)).collect::<Vec<_>>();
+        if !missing_ids.is_empty() {
+            let set_accounts = IamSetServ::find_product_visible_account_details(&missing_ids, &product.own_paths, &funs, &ctx.0).await?;
+            for account in set_accounts {
+                result.entry(account.id.clone()).or_insert(account);
             }
         }
         let result = result.into_values().collect::<Vec<_>>();
