@@ -155,6 +155,7 @@ impl SmsClient {
                 }
             }
             RequestBody::None => {
+                request_builder = request_builder.header("Content-Type", "application/json");
                 request_builder = request_builder.body(String::new());
             }
         }
@@ -185,7 +186,7 @@ impl SmsClient {
         let mut headers = HeaderMap::new();
 
         let canonical_query_string = build_sored_encoded_query_string(query_params); // 参数编码拼接处理
-                                                                                     // 签名
+        // 签名
         self.signature(
             action,
             method.clone(),
@@ -203,6 +204,7 @@ impl SmsClient {
         } else {
             url = format!("http://{}{}", self.base_url.as_str(), canonical_uri);
         }
+        tardis::log::debug!("[SMS] call_api: method={}, url={}, headers={:?}", method, url, headers);
         let response = self.send_request(method, &url, headers, query_params, &body, &body_content).await?;
 
         Ok(response)
