@@ -51,7 +51,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, add_req.0.current_state_name.clone(), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -67,7 +67,7 @@ impl FlowCiInstApi {
         funs.begin().await?;
         let inst_id = FlowInstServ::start(&add_req.0, add_req.0.current_state_name.clone(), &funs, &ctx.0).await?;
         let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -135,7 +135,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -156,7 +156,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         FlowInstServ::delete_by_obj_id_and_tag(&tag.0, &rel_business_obj_id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         let funs = flow_constants::get_tardis_inst();
@@ -251,7 +251,14 @@ impl FlowCiInstApi {
         };
         let funs_cache = flow_constants::get_tardis_inst();
         let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, &funs_cache).await;
-        let result = try_result?;
+        let result = match try_result {
+            Ok(result) => result,
+            Err(error) => {
+                FlowInstServ::clear_temp_product_effects();
+                return Err(error.into());
+            }
+        };
+        FlowInstServ::flush_temp_product_effects(&ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -282,18 +289,26 @@ impl FlowCiInstApi {
             flow_inst_transfer.push((inst, transfer_req));
         }
         for (inst, transfer_req) in flow_inst_transfer {
-            result.push(
-                FlowInstServ::transfer(
-                    &inst,
-                    &transfer_req,
-                    false,
-                    FlowExternalCallbackOp::Default,
-                    loop_check_helper::InstancesTransition::default(),
-                    &ctx.0,
-                    &funs,
-                )
-                .await?,
-            );
+            match FlowInstServ::transfer(
+                &inst,
+                &transfer_req,
+                false,
+                FlowExternalCallbackOp::Default,
+                loop_check_helper::InstancesTransition::default(),
+                &ctx.0,
+                &funs,
+            )
+            .await
+            {
+                Ok(response) => {
+                    FlowInstServ::flush_temp_product_effects(&ctx.0).await?;
+                    result.push(response);
+                }
+                Err(error) => {
+                    FlowInstServ::clear_temp_product_effects();
+                    return Err(error.into());
+                }
+            }
         }
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -317,7 +332,7 @@ impl FlowCiInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -339,7 +354,7 @@ impl FlowCiInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -376,7 +391,7 @@ impl FlowCiInstApi {
                 &ctx.0,
             )
             .await?;
-            funs.commit().await?;
+            FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
             inst_id
         };
         task_handler_helper::execute_async_task(&ctx.0).await?;
@@ -393,7 +408,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowInstServ::batch_bind(&add_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -451,7 +466,7 @@ impl FlowCiInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -476,7 +491,7 @@ impl FlowCiInstApi {
         let try_result: TardisResult<()> = {
             funs.begin().await?;
             FlowInstServ::batch_operate(&flow_inst_id.0, &operate_req.0, &funs, &ctx.0).await?;
-            funs.commit().await?;
+            FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
             Ok(())
         };
         let funs_cache = flow_constants::get_tardis_inst();
@@ -534,10 +549,21 @@ impl FlowCiInstApi {
                         funs.begin().await.unwrap_or_default();
                         let result = FlowEventServ::do_front_change(&curr_inst, loop_check_helper::InstancesTransition::default(), &inst_ctx, &funs).await;
                         if result.is_ok() {
-                            funs.commit().await.unwrap_or_default();
+                            match funs.commit().await {
+                                Ok(()) => {
+                                    if let Err(error) = FlowInstServ::flush_temp_product_effects(&inst_ctx).await {
+                                        tardis::log::error!("flush temp product effects error:{:?}", error);
+                                    }
+                                }
+                                Err(error) => {
+                                    FlowInstServ::clear_temp_product_effects();
+                                    tardis::log::error!("commit front change error:{:?}", error);
+                                }
+                            }
                             let _ = task_handler_helper::execute_async_task(&inst_ctx).await;
                             let _ = inst_ctx.execute_task().await;
                         } else {
+                            FlowInstServ::clear_temp_product_effects();
                             funs.rollback().await.unwrap_or_default();
                         }
                     });
@@ -629,7 +655,7 @@ impl FlowCiInstApi {
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         funs.begin().await?;
         let result = FlowInstServ::sync_deleted_instances(&funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -665,7 +691,7 @@ impl FlowCiInstApi {
         }
         funs.begin().await?;
         FlowInstServ::modify_inst_artifacts_with_validation(&flow_inst_id.0, &modify_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

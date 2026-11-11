@@ -177,6 +177,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
             disabled: None,
             kind: IamResKind::Api,
             perm_kind: None,
+            show_scope: None,
             action: None,
             scope_level: None,
             crypto_req: None,

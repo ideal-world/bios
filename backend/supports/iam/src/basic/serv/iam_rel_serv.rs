@@ -157,7 +157,23 @@ impl IamRelServ {
                 ctx,
             )
             .await?;
-            if res.kind == IamResKind::Api {
+            let role = IamRoleServ::get_item(
+                role_id,
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            // 只读角色仅在被绑定资源也是只读时写入 API 鉴权
+            if role.perm_kind.grants_bound_res(&res.perm_kind) && res.kind == IamResKind::Api {
                 // If add is an API resource, the API resource is bound to the role in the cache
                 // See example (3)
                 IamResCacheServ::add_or_modify_res_rel(
@@ -181,7 +197,7 @@ impl IamRelServ {
                     funs,
                 )
                 .await?;
-            } else {
+            } else if role.perm_kind.grants_bound_res(&res.perm_kind) {
                 // If add is a menu or element resource
                 // See example (2) / (5)
                 // 1) Find the list of associated API resources
@@ -263,6 +279,8 @@ impl IamRelServ {
             // Find the list of roles associated with a menu or element resource
             let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
             let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, &sys_ctx).await?;
+            // 只读角色仅在菜单或按钮本身只读时，才复制到这条 API 的鉴权
+            let rel_role_ids = IamRoleServ::retain_ids_granting_res(&rel_role_ids, &res_other.perm_kind, funs, &sys_ctx).await?;
             // Create API bindings to associated roles in the cache
             IamResCacheServ::add_or_modify_res_rel(
                 &res_api.code,

@@ -1235,13 +1235,16 @@ impl IamCertServ {
         if !tenant_id.is_empty() {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
             let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, account_id, &funs, &ctx).await?;
-            let mut app_role_read = HashMap::new();
             let role_app_read_id = IamBasicConfigApi::iam_basic_role_app_read_id(funs);
-            app_role_read.insert(role_app_read_id.clone(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            let set_account_roles = IamSetServ::load_apps_set_account_roles(account_id, funs, ctx).await?.resolve(&set_id, &role_app_read_id);
+            let mut app_role_read = HashMap::new();
+            app_role_read.insert(role_app_read_id, iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
             for (app_id, app_name) in app_items {
                 if old_app_ids.contains(&app_id) {
                     if let Some(existing_app) = apps.iter_mut().find(|app| app.app_id == app_id) {
-                        existing_app.roles.insert(role_app_read_id.clone(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+                        for (role_id, role_code) in &set_account_roles {
+                            existing_app.roles.insert(role_id.clone(), role_code.clone());
+                        }
                     }
                 } else {
                     old_app_ids.push(app_id.clone());
@@ -1251,7 +1254,7 @@ impl IamCertServ {
                         app_own_paths: format!("{}/{}", tenant_id, app_id),
                         app_kind: IamAppKind::Product,
                         app_icon: "".to_string(),
-                        roles: app_role_read.clone(),
+                        roles: set_account_roles.clone(),
                         groups: HashMap::new(),
                     });
                 }
@@ -1335,7 +1338,7 @@ impl IamCertServ {
         Ok(account_info)
     }
 
-    async fn add_all_porject_auth(account_id: &str, token: String, access_token: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub(crate) async fn add_all_porject_auth(account_id: &str, token: String, access_token: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_agg = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
@@ -1390,10 +1393,6 @@ impl IamCertServ {
         existing_app_ids.extend(old_app_ids);
         let extra_apps = IamAccountServ::get_account_apps_from_all_sets(account_id, &existing_app_ids, funs, ctx).await?;
         apps.extend(extra_apps);
-        // 将apps中的roles替换为app_role_read
-        for app in apps.iter_mut() {
-            app.roles = app_role_read.clone();
-        }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),

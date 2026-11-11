@@ -7,6 +7,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::dto::flow_config_dto::FlowConfigModifyReq;
 
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::helper::task_handler_helper;
 use crate::serv::flow_config_serv::FlowConfigServ;
 #[derive(Clone)]
@@ -21,7 +22,7 @@ impl FlowCsConfigApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowConfigServ::modify_config(&req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -33,7 +34,7 @@ impl FlowCsConfigApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowConfigServ::get_config(&funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

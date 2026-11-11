@@ -8,6 +8,7 @@ use tardis::web::{
     web_resp::{TardisApiResult, TardisResp},
 };
 
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::{
     dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelKind, FlowModelSingleCopyOrReferenceCaReq},
     flow_constants,
@@ -83,7 +84,7 @@ impl FlowCaModelApi {
                 .await?;
             }
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -105,7 +106,7 @@ impl FlowCaModelApi {
         let update_states = req.update_states.as_ref().map(|update_states| update_states.get(&req.0.tag).cloned().unwrap_or_default());
         let new_model = FlowModelServ::copy_or_reference_main_model(&req.0.rel_model_id, &req.0.op, FlowModelKind::AsModel, None, &update_states, None, &funs, &ctx.0).await?;
         FlowModelServ::batch_disable_model(None, Some(false), Some(vec![req.0.tag]), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(new_model)

@@ -14,6 +14,7 @@ use tardis::web::{
 
 use crate::dto::flow_sub_deploy_dto::{FlowSubDeployOneExportAggResp, FlowSubDeployOneImportReq, FlowSubDeployTowExportAggResp, FlowSubDeployTowImportReq};
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::serv::flow_sub_deploy_serv::FlowSubDeployServ;
 
 #[derive(Clone, Default)]
@@ -79,7 +80,7 @@ impl FlowCiSubDeployApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         funs.begin().await?;
         FlowSubDeployServ::sub_deploy_import(import_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
     }

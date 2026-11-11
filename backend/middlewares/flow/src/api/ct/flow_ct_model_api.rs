@@ -12,6 +12,7 @@ use tardis::{
     },
 };
 
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::{
     dto::flow_model_dto::{FlowModelAggResp, FlowModelAssociativeOperationKind, FlowModelCopyOrReferenceReq, FlowModelFindRelNameByTemplateIdsReq, FlowModelKind},
     flow_constants,
@@ -72,7 +73,7 @@ impl FlowCtModelApi {
             result.insert(rel_model_id.clone(), new_model);
             FlowModelServ::batch_disable_model(None, Some(false), Some(vec![tag.clone()]), &funs, &ctx.0).await?;
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -92,7 +93,7 @@ impl FlowCtModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowModelServ::copy_models_by_template_id(&from_template_id.0, &to_template_id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -108,7 +109,7 @@ impl FlowCtModelApi {
         for rel in FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelTemplate, &rel_template_id.0, None, None, &funs, &ctx.0).await? {
             FlowModelServ::delete_item(&rel.rel_id, &funs, &ctx.0).await?;
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)

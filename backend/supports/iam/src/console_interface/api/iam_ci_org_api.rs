@@ -103,10 +103,24 @@ impl IamCiOrgApi {
         let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx).await?;
         let sys_codes = if let Some(cate_id) = cate_id.0 {
             Some(vec![RbumSetCateServ::get_sys_code(&cate_id, &funs, &ctx).await?])
-        }else {
+        } else {
             None
         };
-        let result = IamSetServ::paginate_set_items(Some(set_id), None, None, None, false, None, sys_codes, sys_code_query_kind.0, page_number.0, page_size.0, &funs, &ctx).await?;
+        let result = IamSetServ::paginate_set_items(
+            Some(set_id),
+            None,
+            None,
+            None,
+            false,
+            None,
+            sys_codes,
+            sys_code_query_kind.0,
+            page_number.0,
+            page_size.0,
+            &funs,
+            &ctx,
+        )
+        .await?;
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
