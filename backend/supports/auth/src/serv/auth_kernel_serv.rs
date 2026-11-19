@@ -316,10 +316,16 @@ pub async fn get_token_context(token: &str, app_id: &str, config: &AuthConfig, c
         trace!("Token info: {}", token_value);
         let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
         if account_info.first() == Some(&"TokenTask") {
-            let encoded =
-                cache_client.get(&format!("iam:task-token:{token}")).await?.ok_or_else(|| TardisError::unauthorized("task token expired", "401-auth-task-token-expired"))?;
+            // 工作流续期兑换签发的任务 token 存放在独立前缀 iam:renewal-token:（照 task grant 的 iam:task-token: 模式），解析语义一致。
+            let task_encoded = cache_client.get(&format!("iam:task-token:{token}")).await?;
+            let is_renewal = task_encoded.is_none();
+            let encoded = match task_encoded {
+                Some(encoded) => Some(encoded),
+                None => cache_client.get(&format!("iam:renewal-token:{token}")).await?,
+            }
+            .ok_or_else(|| TardisError::unauthorized("task token expired", "401-auth-task-token-expired"))?;
             let ctx: TardisContext = TardisFuns::json.str_to_obj(&encoded)?;
-            if account_info.get(1).copied() != Some(ctx.owner.as_str()) || ctx.own_paths.split('/').nth(1) != Some(app_id) || app_id.is_empty() {
+            if account_info.get(1).copied() != Some(ctx.owner.as_str()) || !task_token_scope_matches(&ctx.own_paths, app_id, is_renewal) {
                 return Err(TardisError::forbidden("task token application mismatch", "403-auth-task-token-scope"));
             }
             return Ok(ctx);
@@ -701,4 +707,30 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
         headers: auth_resp.headers,
         body: auth_resp.body,
     })
+}
+
+// 续期 token 保留注册时的精确应用边界；旧 task token 仍要求应用上下文。
+fn task_token_scope_matches(own_paths: &str, app_id: &str, is_renewal: bool) -> bool {
+    own_paths.split('/').nth(1).unwrap_or_default() == app_id && (is_renewal || !app_id.is_empty())
+}
+
+#[cfg(test)]
+mod renewal_scope_tests {
+    use super::task_token_scope_matches;
+    #[test]
+    fn renewal_personal_tenant_and_app_scope_remain_exact() {
+        for scope in ["", "tenant"] {
+            assert!(task_token_scope_matches(scope, "", true));
+            assert!(!task_token_scope_matches(scope, "app", true));
+        }
+        assert!(task_token_scope_matches("tenant/app", "app", true));
+        assert!(!task_token_scope_matches("tenant/app", "other", true));
+        assert!(!task_token_scope_matches("tenant/app", "", true));
+    }
+    #[test]
+    fn existing_task_tokens_still_require_their_app() {
+        assert!(task_token_scope_matches("tenant/app", "app", false));
+        assert!(!task_token_scope_matches("tenant/app", "", false));
+        assert!(!task_token_scope_matches("tenant", "", false));
+    }
 }

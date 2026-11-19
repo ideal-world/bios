@@ -438,11 +438,12 @@ impl IamIdentCacheServ {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
             let account_id = token_info.split(',').nth(1).unwrap_or("");
             if token_info.split(',').next() == Some("TokenTask") {
-                let encoded = funs
-                    .cache()
-                    .get(&format!("iam:task-token:{}", fetch_req.token))
-                    .await?
-                    .ok_or_else(|| TardisError::unauthorized("task token expired", "401-iam-task-token-expired"))?;
+                // 续期兑换签发的任务 token 使用独立缓存前缀 iam:renewal-token:（照 task grant 的 iam:task-token: 模式），解析语义一致。
+                let encoded = match funs.cache().get(&format!("iam:task-token:{}", fetch_req.token)).await? {
+                    Some(encoded) => Some(encoded),
+                    None => funs.cache().get(&format!("iam:renewal-token:{}", fetch_req.token)).await?,
+                }
+                .ok_or_else(|| TardisError::unauthorized("task token expired", "401-iam-task-token-expired"))?;
                 let ctx: TardisContext = TardisFuns::json.str_to_obj(&encoded)?;
                 if ctx.owner != account_id || fetch_req.app_id.as_deref() != ctx.own_paths.split('/').nth(1) {
                     return Err(TardisError::forbidden("task token application mismatch", "403-iam-task-token-scope"));

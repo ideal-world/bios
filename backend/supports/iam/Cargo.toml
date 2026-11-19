@@ -56,6 +56,7 @@ nanoid = { version = "0.4" }
 
 strum = { workspace = true, features = ["derive"] }
 [dev-dependencies]
+bios-auth = { version = "0.2.0", path = "../auth" }
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { version = "0.2.0", path = "../../basic", features = ["default", "test"] }
 bios-sdk-invoke = { version = "0.2.0", path = "../../../frontend/sdks/invoke", features = [

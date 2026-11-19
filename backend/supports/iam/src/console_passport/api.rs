@@ -4,3 +4,4 @@ pub mod iam_cp_cert_api;
 pub mod iam_cp_oauth2_service_api;
 pub mod iam_cp_role_api;
 pub mod iam_cp_tenant_api;
+pub mod iam_cp_token_renewal_api;

@@ -41,7 +41,7 @@ use crate::console_interface::api::{
     iam_ci_account_api, iam_ci_app_api, iam_ci_app_set_api, iam_ci_cert_api, iam_ci_open_api, iam_ci_org_api, iam_ci_res_api, iam_ci_role_api, iam_ci_sub_deploy_api,
     iam_ci_system_api,
 };
-use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_oauth2_service_api, iam_cp_tenant_api};
+use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_oauth2_service_api, iam_cp_tenant_api, iam_cp_token_renewal_api};
 use crate::console_system::api::{
     iam_cs_account_api, iam_cs_account_attr_api, iam_cs_app_set_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api,
     iam_cs_sub_deploy_api, iam_cs_tenant_api,
@@ -90,6 +90,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cp_app_api::IamCpAppApi,
                     iam_cp_cert_api::IamCpCertApi,
                     iam_cp_cert_api::IamTaskRuntimeApi,
+                    iam_cp_token_renewal_api::IamCpTokenRenewalApi,
+                    iam_cp_token_renewal_api::IamTokenRenewalRuntimeApi,
                     #[cfg(feature = "ldap_client")]
                     iam_cp_cert_api::IamCpCertLdapApi,
                     iam_cp_oauth2_service_api::IamCpOAuth2ServiceApi,
@@ -172,6 +174,9 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
     let mut task_table = crate::basic::domain::iam_oauth2_task_grant::ActiveModel::init(db_kind, None, compatible);
     task_table.0.if_not_exists();
     funs.db().init(task_table).await?;
+    let mut token_renewal_table = crate::basic::domain::iam_token_renewal::ActiveModel::init(db_kind, None, compatible);
+    token_renewal_table.0.if_not_exists();
+    funs.db().init(token_renewal_table).await?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(ctx) = ctx {

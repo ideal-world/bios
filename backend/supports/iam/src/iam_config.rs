@@ -14,7 +14,7 @@ use tardis::web::poem::http::HeaderName;
 
 use crate::iam_constants;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct IamConfig {
     pub rbum: RbumConfig,
@@ -121,6 +121,19 @@ pub struct IamConfig {
     pub oauth2_task_service_token: String,
     /// 后台授权持久化的 AES-256-GCM 密钥，64 位十六进制，由部署密钥管理。
     pub oauth2_provider_grant_key: String,
+
+    // 工作流运行级凭证续期（token renewal）配置；服务 token 复用 oauth2_task_service_token，不新增。
+    // 数值字段允许"数字或数字字符串"两种形态：toml 正常数字不受影响，同时测试可用
+    // TARDIS_CSM.IAM.* 环境变量覆盖（config crate 的 Environment 来源只产生字符串值）。
+    /// 续期授权的绝对时长上限（秒）；注册申请的 `ttl_sec` 超过该值会被截断，默认 7 天。
+    #[serde(deserialize_with = "de_u32_flexible")]
+    pub token_renewal_ttl_cap_sec: u32,
+    /// 每次兑换签发的新登录 token 有效期（秒）；授权的绝对截止时间不因兑换向后延长，默认 3600。
+    #[serde(deserialize_with = "de_u32_flexible")]
+    pub token_renewal_mint_ttl_sec: u32,
+    /// 单个续期授权每小时允许的兑换次数上限，超限兑换按拒绝处理；0 表示不限制，默认 240。
+    #[serde(deserialize_with = "de_u32_flexible")]
+    pub token_renewal_exchange_hourly_limit: u32,
 
     // open-api 插件配置
     pub openapi_plugin_time_range: String,
@@ -281,6 +294,10 @@ impl Default for IamConfig {
             crypto_conf: CryptoConf::default(),
             oauth2_task_service_token: String::new(),
             oauth2_provider_grant_key: String::new(),
+            // 工作流运行级凭证续期默认配置
+            token_renewal_ttl_cap_sec: 7 * 24 * 3600, // 7天
+            token_renewal_mint_ttl_sec: 3600,         // 1小时
+            token_renewal_exchange_hourly_limit: 240,  // 每小时 240 次
             cache_key_gateway_rule_info_: "sg:plugin:".to_string(),
             gateway_openapi_path: "/op-api".to_string(),
             vcode_cd_in_sec: crate::iam_constants::DEFAULT_V_CODE_CD_IN_SEC,
@@ -457,5 +474,67 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_project_read_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_project_read_id.clone())
+    }
+}
+
+impl std::fmt::Debug for IamConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("IamConfig { [REDACTED] }") }
+}
+
+/// 宽松 u32 反序列化：接受数字或数字字符串（如 `2` 与 `"2"`）。
+/// config crate 的 `Environment` 来源只产生字符串值，测试需要用 env 覆盖数值配置。
+fn de_u32_flexible<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct FlexU32Visitor;
+    impl<'de> serde::de::Visitor<'de> for FlexU32Visitor {
+        type Value = u32;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("a u32 number or a numeric string")
+        }
+        fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<u32, E> {
+            u32::try_from(value).map_err(|_| E::custom("u32 out of range"))
+        }
+        fn visit_i64<E: serde::de::Error>(self, value: i64) -> Result<u32, E> {
+            u32::try_from(value).map_err(|_| E::custom("u32 out of range"))
+        }
+        fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<u32, E> {
+            // 不回显原始值：配置可能被误填为秘密/凭证，错误信息只保留固定说明。
+            value.trim().parse::<u32>().map_err(|_| E::custom("invalid numeric string for u32"))
+        }
+    }
+    deserializer.deserialize_any(FlexU32Visitor)
+}
+
+#[cfg(test)]
+mod flexible_u32_tests {
+    use super::*;
+
+    fn parse(value: serde_json::Value) -> Result<u32, serde_json::Error> {
+        #[derive(serde::Deserialize)]
+        struct Wrapper {
+            #[serde(deserialize_with = "de_u32_flexible")]
+            value: u32,
+        }
+        serde_json::from_value::<Wrapper>(serde_json::json!({ "value": value })).map(|wrapper| wrapper.value)
+    }
+
+    #[test]
+    fn accepts_numbers_and_numeric_strings() {
+        assert_eq!(parse(serde_json::json!(2)).unwrap(), 2);
+        assert_eq!(parse(serde_json::json!("2")).unwrap(), 2);
+        assert_eq!(parse(serde_json::json!(" 42 ")).unwrap(), 42);
+        assert_eq!(parse(serde_json::json!(240)).unwrap(), 240);
+        assert_eq!(parse(serde_json::json!("0")).unwrap(), 0);
+    }
+
+    #[test]
+    fn rejects_negative_overflow_and_non_numeric_values_without_echoing_them() {
+        for invalid in [serde_json::json!(-1), serde_json::json!(u32::MAX as u64 + 1), serde_json::json!("-1"), serde_json::json!("not-a-number")] {
+            let rendered = format!("{:?}", parse(invalid.clone()).unwrap_err());
+            assert!(!rendered.contains("not-a-number"), "error must not echo raw config value: {rendered}");
+            assert!(rendered.contains("invalid numeric string for u32") || rendered.contains("u32 out of range"), "unexpected error: {rendered}");
+        }
     }
 }
