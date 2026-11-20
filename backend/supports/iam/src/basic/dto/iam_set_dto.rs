@@ -69,6 +69,27 @@ pub struct IamSetItemAddReq {
     pub rel_rbum_item_id: String,
 }
 
+/// 按产品组 set 与账号配置写入应用上下文的角色
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAppsSetAccountRoleReq {
+    pub tenant_id: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub account_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub role_id: String,
+}
+
+/// 产品组与账号按实际规则生效的上下文角色
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAppsSetAccountRoleResp {
+    pub set_id: String,
+    pub account_id: String,
+    pub account_name: String,
+    pub role_id: String,
+    pub role_code: String,
+    pub role_name: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct IamResSetTreeResp {

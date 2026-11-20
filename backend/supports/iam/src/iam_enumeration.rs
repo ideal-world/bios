@@ -133,6 +133,9 @@ pub enum IamRelKind {
 
     /// 发布系统与租户关联
     IamPublishSystemTenant,
+
+    /// 产品组与账号的上下文角色配置。from 为账号，to 为角色，ext 为 set id
+    IamAccountAppsSetRole,
 }
 
 #[derive(Display, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
@@ -218,6 +221,15 @@ impl IamPermKind {
         }
     }
 
+    /// 角色是否应写入该被绑定资源对应的 API 鉴权。
+    /// `all` 角色始终写入；`read` 角色仅当被绑定资源也是 `read` 时写入。
+    pub fn grants_bound_res(&self, bound_res_perm: &IamPermKind) -> bool {
+        match self {
+            IamPermKind::All => true,
+            IamPermKind::Read => bound_res_perm == &IamPermKind::Read,
+        }
+    }
+
     pub fn parse(kind: &str) -> TardisResult<IamPermKind> {
         match kind.to_lowercase().as_str() {
             "read" => Ok(IamPermKind::Read),
@@ -231,6 +243,62 @@ impl TryGetable for IamPermKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         IamPermKind::parse(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implement")
+    }
+}
+
+/// 按钮展示范围，用于标记资源在全场景展示还是仅在平台层展示
+#[derive(Display, Clone, Debug, Default, PartialEq, Eq, Serialize, poem_openapi::Enum, strum::EnumString)]
+pub enum IamResShowScope {
+    /// 全场景展示
+    #[default]
+    #[strum(serialize = "all")]
+    #[oai(rename = "all")]
+    All,
+    /// 仅平台层展示
+    #[strum(serialize = "platform")]
+    #[oai(rename = "platform")]
+    Platform,
+}
+
+impl<'de> Deserialize<'de> for IamResShowScope {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "all" | "" => Ok(IamResShowScope::All),
+            "platform" => Ok(IamResShowScope::Platform),
+            _ => Err(serde::de::Error::custom(format!("invalid IamResShowScope: {s}"))),
+        }
+    }
+}
+
+impl IamResShowScope {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            IamResShowScope::All => "all",
+            IamResShowScope::Platform => "platform",
+        }
+    }
+
+    pub fn parse(kind: &str) -> TardisResult<IamResShowScope> {
+        match kind.to_lowercase().as_str() {
+            "all" | "" => Ok(IamResShowScope::All),
+            "platform" => Ok(IamResShowScope::Platform),
+            _ => Err(TardisError::format_error(&format!("invalid IamResShowScope: {kind}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+}
+
+impl TryGetable for IamResShowScope {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        IamResShowScope::parse(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
@@ -573,4 +641,17 @@ pub enum OAuth2ResponseType {
     #[strum(serialize = "code")]
     #[oai(rename = "code")]
     Code,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::IamPermKind;
+
+    #[test]
+    fn read_role_grants_only_read_res() {
+        assert!(IamPermKind::All.grants_bound_res(&IamPermKind::All));
+        assert!(IamPermKind::All.grants_bound_res(&IamPermKind::Read));
+        assert!(IamPermKind::Read.grants_bound_res(&IamPermKind::Read));
+        assert!(!IamPermKind::Read.grants_bound_res(&IamPermKind::All));
+    }
 }

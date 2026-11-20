@@ -1,4 +1,5 @@
 pub mod cache_client;
+pub mod iam_clients;
 pub mod kv_client;
 pub mod log_client;
 pub mod reach_client;

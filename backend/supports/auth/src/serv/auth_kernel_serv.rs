@@ -10,7 +10,7 @@ use tardis::{
     TardisFuns,
 };
 
-use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
+use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv, auth_temp_serv};
 #[cfg(feature = "web-server")]
 use crate::dto::auth_kernel_dto::{AuthResp, MixAuthResp, MixRequestBody};
 use crate::dto::auth_kernel_dto::{AuthResult, ResContainerLeafInfo, SignWebHookReq};
@@ -348,6 +348,9 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
         if let Some(global_context) = get_global_context_with_extra_roles(account_id, app_id, config, cache_client).await? {
             return Ok(global_context);
         }
+        if let Some(temp_context) = auth_temp_serv::minimal_context(account_id, app_id).await {
+            return Ok(temp_context);
+        }
         return Err(TardisError::unauthorized(
             &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
             "401-auth-req-token-or-app-not-exist",
@@ -618,6 +621,9 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             }
         }
     } else {
+        return Ok(Some(matched_res));
+    }
+    if auth_temp_serv::allows(ctx).await {
         return Ok(Some(matched_res));
     }
     if ctx.ak.is_some() {

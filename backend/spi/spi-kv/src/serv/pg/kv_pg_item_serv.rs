@@ -200,7 +200,8 @@ pub async fn match_items(match_req: KvItemMatchReq, _funs: &TardisFunsInst, ctx:
     let mut sql_vals: Vec<Value> = vec![];
     let mut order_fragments: Vec<String> = Vec::new();
     if match_req.key_like.unwrap_or(true) {
-        sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
+        let escaped_prefix = match_req.key_prefix.replace('_', "\\_");
+        sql_vals.push(Value::from(format!("{}%", escaped_prefix)));
         where_fragments.push(format!("k LIKE ${}", sql_vals.len()));
     } else {
         sql_vals.push(Value::from(match_req.key_prefix.to_string()));

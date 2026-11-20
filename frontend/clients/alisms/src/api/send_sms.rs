@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::Serialize;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
@@ -35,7 +37,7 @@ impl<'r> SendSmsRequest<'r> {
 
 impl SmsClient {
     pub async fn send_sms(&self, request: SendSmsRequest<'_>) -> TardisResult<SmsResponse> {
-        tardis::log::trace!("send sms request: {:?}", request);
+        tardis::log::debug!("[SMS] request: phone_numbers={}, template_code={}, sign_name={}, template_param={:?}", request.phone_numbers, request.template_code, request.sign_name, request.template_param);
         let action = "SendSms"; // API名称
         let version = "2017-05-25"; // API版本号
         let mut query: Vec<(&str, &str)> = Vec::new();
@@ -48,10 +50,20 @@ impl SmsClient {
         // query 参数
         let query_params: &[(&str, &str)] = &query;
         // 请求体 body 为空时
-        let body = RequestBody::None;
+        let body = RequestBody::Json(HashMap::new());
+        tardis::log::debug!("[SMS] call_api: base_url={}, real_url={}, action={}, version={}, query_params={:?}", self.base_url, self.real_url, action, version, query_params);
         // 发起请求
         let resp = self.call_api(Method::POST, "/", query_params, action, version, body).await?;
-        tardis::log::trace!("send sms response: {:?}", resp);
-        Ok(resp.json::<SmsResponse>().await.map_err(|e| TardisError::internal_error(&format!("parse sms response failed: {}", e), "500-reach-send-failed"))?)
+        let resp_status = resp.status();
+        let resp_headers = resp.headers().clone();
+        tardis::log::debug!("[SMS] response status: {}", resp_status);
+        tardis::log::debug!("[SMS] response headers: {:?}", resp_headers);
+        let body_bytes = resp.bytes().await.map_err(|e| TardisError::internal_error(&format!("read response body failed: {}", e), "500-reach-send-failed"))?;
+        tardis::log::debug!("[SMS] response body: {}", String::from_utf8_lossy(&body_bytes));
+        if body_bytes.is_empty() {
+            tardis::log::debug!("[SMS] ERROR: empty response body, status={}", resp_status);
+            return Err(TardisError::internal_error("sms gateway returned empty response body", "500-reach-send-failed"));
+        }
+        serde_json::from_slice(&body_bytes).map_err(|e| TardisError::internal_error(&format!("parse sms response failed: {}", e), "500-reach-send-failed"))
     }
 }

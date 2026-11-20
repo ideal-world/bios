@@ -455,8 +455,7 @@ impl IamCiAccountApi {
         if ctx.own_paths != "" {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
             let app_items = IamSetServ::get_app_with_auth_by_account(&set_id, &id, &funs, &ctx).await?;
-            let mut app_role_read = HashMap::new();
-            app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+            let set_account_roles = IamSetServ::load_apps_set_account_roles(&id.0, &funs, &ctx).await?.resolve(&set_id, &funs.iam_basic_role_app_read_id());
             for (app_id, app_name) in app_items {
                 if old_app_ids.contains(&app_id) {
                     continue;
@@ -467,7 +466,7 @@ impl IamCiAccountApi {
                     app_kind: IamAppKind::Product,
                     app_own_paths: format!("{}/{}", ctx.own_paths, app_id),
                     app_icon: "".to_string(),
-                    roles: app_role_read.clone(),
+                    roles: set_account_roles.clone(),
                     groups: HashMap::default(),
                 });
             }

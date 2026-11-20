@@ -329,7 +329,8 @@ impl IamCsResApi {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
-        let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        let mut result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        IamSetServ::filter_button_show_scope(&mut result, &funs, &ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }

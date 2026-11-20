@@ -76,6 +76,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             id: Set(id.to_string()),
             kind: Set(add_req.kind.to_int()),
             perm_kind: Set(add_req.perm_kind.clone().unwrap_or_default().as_str().to_string()),
+            show_scope: Set(add_req.show_scope.clone().unwrap_or_default().as_str().to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             method: Set(add_req.method.as_ref().unwrap_or(&TrimString("*".to_string())).to_string()),
@@ -173,6 +174,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             && modify_req.action.is_none()
             && modify_req.method.is_none()
             && modify_req.perm_kind.is_none()
+            && modify_req.show_scope.is_none()
             && modify_req.crypto_req.is_none()
             && modify_req.crypto_resp.is_none()
             && modify_req.double_auth.is_none()
@@ -202,6 +204,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         }
         if let Some(perm_kind) = &modify_req.perm_kind {
             iam_res.perm_kind = Set(perm_kind.as_str().to_string());
+        }
+        if let Some(show_scope) = &modify_req.show_scope {
+            iam_res.show_scope = Set(show_scope.as_str().to_string());
         }
         if let Some(crypto_req) = modify_req.crypto_req {
             iam_res.crypto_req = Set(crypto_req);
@@ -380,6 +385,13 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 }
             }
         }
+        if modify_req.perm_kind.is_some() {
+            match res.kind {
+                IamResKind::Api => Self::refresh_api_auth_cache(&res, funs, ctx).await?,
+                IamResKind::Menu | IamResKind::Ele => Self::refresh_linked_api_auth_cache(&res.id, funs, ctx).await?,
+                _ => {}
+            }
+        }
         let (op_describe, op_kind) = match res.kind {
             IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
             IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
@@ -439,6 +451,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamResFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_res::Entity, iam_res::Column::Kind));
         query.column((iam_res::Entity, iam_res::Column::PermKind));
+        query.column((iam_res::Entity, iam_res::Column::ShowScope));
         query.column((iam_res::Entity, iam_res::Column::Icon));
         query.column((iam_res::Entity, iam_res::Column::Sort));
         query.column((iam_res::Entity, iam_res::Column::Method));
@@ -957,14 +970,49 @@ impl IamResServ {
         )
         .await?;
         for item in res {
-            let mut rel_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &ctx).await?;
-            let res_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &item.id, None, None, funs, ctx).await?;
-            for res_id in res_ids {
-                let res_role_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &res_id, None, None, funs, &ctx).await?;
-                rel_role_ids.extend(res_role_ids);
+            Self::refresh_api_auth_cache(&item, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    /// 按角色与被绑定资源的 perm_kind 重建单条 API 的鉴权缓存。
+    /// 禁用的 API 保持缓存删除结果，不在这里重新写入。
+    pub async fn refresh_api_auth_cache(item: &IamResSummaryResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if item.disabled || item.kind != IamResKind::Api {
+            return Ok(());
+        }
+        let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+        let direct_role_ids = Self::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &item.id, None, None, funs, &sys_ctx).await?;
+        let mut rel_role_ids = IamRoleServ::retain_ids_granting_res(&direct_role_ids, &item.perm_kind, funs, &sys_ctx).await?;
+        let linked_res_ids = Self::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &item.id, None, None, funs, &sys_ctx).await?;
+        if !linked_res_ids.is_empty() {
+            let linked_res = Self::find_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(linked_res_ids),
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ignore_scope: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                &sys_ctx,
+            )
+            .await?;
+            for linked in linked_res {
+                let linked_role_ids = Self::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &linked.id, None, None, funs, &sys_ctx).await?;
+                rel_role_ids.extend(IamRoleServ::retain_ids_granting_res(&linked_role_ids, &linked.perm_kind, funs, &sys_ctx).await?);
             }
-            rel_role_ids = rel_role_ids.iter().map(|r| r.to_string()).collect::<Vec<String>>().into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
-            let rel_req = IamCacheResRelAddOrModifyReq {
+        }
+        let rel_role_ids = rel_role_ids.into_iter().collect::<HashSet<String>>().into_iter().collect::<Vec<String>>();
+        IamResCacheServ::refresh_res_rel(
+            &item.code,
+            &item.method,
+            IamCacheResRelAddOrModifyReq {
                 st: None,
                 et: None,
                 accounts: vec![],
@@ -978,8 +1026,81 @@ impl IamResServ {
                 need_double_auth: Some(item.double_auth),
                 need_only_aksk: Some(item.only_aksk),
                 need_login: Some(item.need_login),
-            };
-            IamResCacheServ::refresh_res_rel(&item.code, &item.method, rel_req, funs).await?;
+            },
+            funs,
+        )
+        .await
+    }
+
+    /// 资源 perm_kind 变化后，重刷该菜单或按钮关联的 API 鉴权。
+    pub async fn refresh_linked_api_auth_cache(res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+        let api_ids = Self::find_to_id_rel_roles(&IamRelKind::IamResApi, res_id, None, None, funs, &sys_ctx).await?;
+        Self::refresh_api_auth_caches_by_ids(&api_ids, funs, &sys_ctx).await
+    }
+
+    /// 角色 perm_kind 变化后，重刷该角色已绑定资源对应的 API 鉴权。
+    pub async fn refresh_auth_cache_by_role(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+        let res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &sys_ctx).await?;
+        if res_ids.is_empty() {
+            return Ok(());
+        }
+        let resources = Self::find_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(res_ids),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &sys_ctx,
+        )
+        .await?;
+        let mut api_ids = HashSet::new();
+        for resource in resources {
+            match resource.kind {
+                IamResKind::Api => Self::refresh_api_auth_cache(&resource, funs, &sys_ctx).await?,
+                IamResKind::Menu | IamResKind::Ele => {
+                    let linked_api_ids = Self::find_to_id_rel_roles(&IamRelKind::IamResApi, &resource.id, None, None, funs, &sys_ctx).await?;
+                    api_ids.extend(linked_api_ids);
+                }
+                _ => {}
+            }
+        }
+        Self::refresh_api_auth_caches_by_ids(&api_ids.into_iter().collect::<Vec<_>>(), funs, &sys_ctx).await
+    }
+
+    async fn refresh_api_auth_caches_by_ids(api_ids: &[String], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if api_ids.is_empty() {
+            return Ok(());
+        }
+        let apis = Self::find_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(api_ids.to_vec()),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                kind: Some(IamResKind::Api),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for api in apis {
+            Self::refresh_api_auth_cache(&api, funs, ctx).await?;
         }
         Ok(())
     }
@@ -1065,6 +1186,7 @@ impl IamMenuServ {
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Menu,
                     perm_kind: None,
+                    show_scope: None,
                     icon: None,
                     sort: None,
                     method: None,
@@ -1102,6 +1224,7 @@ impl IamMenuServ {
                     name: TrimString(name.to_string()),
                     kind: IamResKind::Ele,
                     perm_kind: None,
+                    show_scope: None,
                     icon: None,
                     sort: None,
                     method: None,

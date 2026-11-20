@@ -282,6 +282,9 @@ pub struct FlowInstArtifacts {
     pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,                    // 关联的子业务对象
     pub rel_transition_id: Option<String>,                                   // 关联的子业务对象触发的动作ID
     pub rel_model_version_id: Option<String>,                                // 关联的子业务对象所使用的模型版本
+    /// 启动时实际授予临时产品访问的账号。`None` 表示旧数据，回收时按节点操作人重算。
+    #[serde(default)]
+    pub temp_granted_account_ids: Option<Vec<String>>,
 }
 
 // 流程实例中数据存储更新
@@ -305,6 +308,7 @@ pub struct FlowInstArtifactsModifyReq {
     pub rel_child_objs: Option<Vec<FlowInstRelChildObj>>,              // 关联的子业务对象
     pub rel_transition_id: Option<String>,                             // 关联的子业务对象触发的动作ID
     pub rel_model_version_id: Option<String>,                          // 关联的子业务对象所使用的模型版本
+    pub temp_granted_account_ids: Option<Vec<String>>,                 // 启动时授予临时产品访问的账号
 }
 
 // 流程实例中数据存储更新（API请求，只允许修改 rel_child_objs 和 operator_map）
@@ -335,6 +339,7 @@ impl From<FlowInstArtifactsModifyApiReq> for FlowInstArtifactsModifyReq {
             rel_child_objs: api_req.rel_child_objs,
             rel_transition_id: None,
             rel_model_version_id: None,
+            temp_granted_account_ids: None,
         }
     }
 }

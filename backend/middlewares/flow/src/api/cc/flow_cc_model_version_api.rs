@@ -1,5 +1,6 @@
 use crate::dto::flow_model_version_dto::{FlowModelVersionAddReq, FlowModelVersionDetailResp, FlowModelVersionFilterReq, FlowModelVersionModifyReq, FlowModelVesionState};
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::helper::task_handler_helper;
 use crate::serv::flow_model_version_serv::FlowModelVersionServ;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -26,7 +27,7 @@ impl FlowCcModelVersionApi {
         funs.begin().await?;
         let version_id = FlowModelVersionServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         let result = FlowModelVersionServ::get_item(&version_id, &FlowModelVersionFilterReq::default(), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -46,7 +47,7 @@ impl FlowCcModelVersionApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelVersionServ::modify_item(&flow_version_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void)
@@ -146,7 +147,7 @@ impl FlowCcModelVersionApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowModelVersionServ::create_editing_version(&flow_version_id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

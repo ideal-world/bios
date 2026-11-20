@@ -22,6 +22,12 @@ pub struct AuthConfig {
 
     pub cache_key_token_info: String,
     pub cache_key_account_info: String,
+    /// `{prefix}{account_id}`，Hash field 为产品 ID，value 为临时产品授权 JSON。
+    pub cache_key_temp_product: String,
+    /// 全系统一份临时 API Set，member 为 `{res_uri}##{res_action}`。
+    pub cache_key_temp_api: String,
+    /// 临时 API Set 的版本号。认证按资源变更的同一轮询发现变化后重建内存匹配树。
+    pub cache_key_temp_api_version: String,
     pub cache_key_extra_role_info: String,
     pub cache_key_aksk_info: String,
     pub cache_key_crypto_key: String,
@@ -69,6 +75,9 @@ impl Default for AuthConfig {
 
             cache_key_token_info: "iam:cache:token:info:".to_string(),
             cache_key_account_info: "iam:cache:account:info:".to_string(),
+            cache_key_temp_product: "iam:cache:temp:product:".to_string(),
+            cache_key_temp_api: "iam:cache:temp:api".to_string(),
+            cache_key_temp_api_version: "iam:cache:temp:api:version".to_string(),
             cache_key_extra_role_info: "iam:cache:extra:role:info:".to_string(),
             cache_key_aksk_info: "iam:cache:aksk:info:".to_string(),
             cache_key_crypto_key: "auth:crypto:key:".to_string(),

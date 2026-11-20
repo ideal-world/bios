@@ -122,13 +122,9 @@ impl IamCiRoleApi {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut verify_read_admin = false;
-        for role in &ctx.0.roles {
-            if role.contains(&funs.iam_basic_role_app_read_id()) || role.contains(&funs.iam_basic_role_project_read_id()) {
-                verify_read_admin = true;
-            }
-        }
-        TardisResp::ok(verify_read_admin)
+        let result = IamAccountServ::is_ctx_read_only(&funs, &ctx.0).await?;
+
+        TardisResp::ok(result)
     }
 
     /// Batch add Role Rel Account

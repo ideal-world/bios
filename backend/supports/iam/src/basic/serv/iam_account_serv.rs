@@ -47,7 +47,7 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamPermKind, IamRelKind, IamRoleKind, IamSetKind};
 use crate::integration::ldap::account::account_result::build_account_dn;
 
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
@@ -966,6 +966,44 @@ impl IamAccountServ {
         IamRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
+    /// 判断当前上下文是否为只读
+    /// 先过滤出 kind 为 App 的角色；若过滤后的角色非空且全部为只读角色，则上下文为只读。
+    /// 只读角色包括内置应用只读角色（iam_basic_role_app_read_id），以及 perm_kind 为 read 的角色。
+    pub async fn is_ctx_read_only(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let role_ids = &ctx.roles;
+        if role_ids.is_empty() {
+            return Ok(false);
+        }
+        // 同时存在 xxx 和 xxx:111 时，过滤掉基础角色 xxx，保留扩展子角色 xxx:111
+        let sub_role_base_ids: HashSet<String> = role_ids.iter().filter_map(|id| id.split_once(':').map(|(base, _)| base.to_string())).collect();
+        let effective_role_ids: Vec<String> = role_ids.iter().filter(|id| !sub_role_base_ids.contains(id.as_str())).cloned().collect();
+        if effective_role_ids.is_empty() {
+            return Ok(false);
+        }
+        let app_roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(effective_role_ids),
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                kind: Some(IamRoleKind::App),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if app_roles.is_empty() {
+            return Ok(false);
+        }
+        let app_read_id = funs.iam_basic_role_app_read_id();
+        Ok(app_roles.iter().all(|role| role.id == app_read_id || role.perm_kind == IamPermKind::Read))
+    }
+
     pub async fn delete_tokens(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, get_real_ip_from_ctx(ctx).await?, funs).await
@@ -1095,8 +1133,8 @@ impl IamAccountServ {
         let has_platform_set = IamSetServ::account_has_platform_apps_auth(account_id, funs, ctx).await?;
 
         let mut apps = Vec::new();
-        let mut app_role_read = HashMap::new();
-        app_role_read.insert(funs.iam_basic_role_app_read_id(), iam_constants::RBUM_ITEM_NAME_APP_READ_ROLE.to_string());
+        let apps_set_roles = IamSetServ::load_apps_set_account_roles(account_id, funs, ctx).await?;
+        let app_read_role_id = funs.iam_basic_role_app_read_id();
 
         for set in sets {
             // 平台层 Set 仅作为"拥有全部应用权限"的标记，实际应用分布在各租户 Set 中
@@ -1130,6 +1168,7 @@ impl IamAccountServ {
                 IamSetServ::get_app_with_auth_by_account(&set.id, account_id, funs, &tenant_ctx).await?
             };
 
+            let set_account_roles = apps_set_roles.resolve(&set.id, &app_read_role_id);
             for (app_id, app_name) in app_items {
                 if existing_app_ids.contains(&app_id) {
                     continue;
@@ -1140,7 +1179,7 @@ impl IamAccountServ {
                     app_kind: IamAppKind::Product,
                     app_own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
                     app_icon: "".to_string(),
-                    roles: app_role_read.clone(),
+                    roles: set_account_roles.clone(),
                     groups: HashMap::default(),
                 });
             }

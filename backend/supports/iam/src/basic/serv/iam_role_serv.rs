@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::Add;
 
 use async_trait::async_trait;
@@ -35,12 +35,13 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{self, IAM_AVATAR, RBUM_ITEM_ID_SUB_ROLE_LEN};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamRelKind, IamRoleKind};
+use crate::iam_enumeration::{IamPermKind, IamRelKind, IamRoleKind};
 
 use super::clients::iam_kv_client::IamKvClient;
 use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_cert_serv::IamCertServ;
+use super::iam_res_serv::IamResServ;
 use super::iam_tenant_serv::IamTenantServ;
 
 pub struct IamRoleServ;
@@ -195,6 +196,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 TardisFuns::json.obj_to_string(&role)?.as_str(),
             )
             .await?;
+        if modify_req.perm_kind.is_some() {
+            IamResServ::refresh_auth_cache_by_role(id, funs, ctx).await?;
+        }
         let role_id = id.to_string();
         let ctx_clone = ctx.clone();
         if modify_req.disabled.unwrap_or(false) {
@@ -406,6 +410,35 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 impl IamRoleServ {
     pub fn get_sub_new_id() -> String {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_SUB_ROLE_LEN as usize)
+    }
+
+    /// 按 [`IamPermKind::grants_bound_res`] 筛出应写入 API 鉴权的角色。
+    /// 被绑定资源为 read 时保留全部角色；为 all 时去掉只读角色。
+    pub async fn retain_ids_granting_res(role_ids: &[String], bound_res_perm: &IamPermKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        if role_ids.is_empty() || bound_res_perm == &IamPermKind::Read {
+            return Ok(role_ids.to_vec());
+        }
+        let read_role_ids = Self::find_id_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(role_ids.to_vec()),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                perm_kind: Some(IamPermKind::Read),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .collect::<HashSet<String>>();
+        Ok(role_ids.iter().filter(|id| !read_role_ids.contains(*id)).cloned().collect())
     }
 
     pub async fn extend_copy_role_agg(

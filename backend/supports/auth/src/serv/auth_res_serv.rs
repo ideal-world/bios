@@ -232,6 +232,33 @@ fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &
     }
 }
 
+/// 把一条资源规则写入独立的匹配树。语义与正式资源树的 `add_res` 相同，不写入全局资源容器。
+pub(crate) fn insert_res_pattern(root: &mut ResContainerNode, res_action: &str, res_uri: &str) -> TardisResult<()> {
+    let res_action = res_action.to_lowercase();
+    let res_items = parse_uri(res_uri)?;
+    let mut node = root;
+    for res_item in res_items {
+        if !node.has_child(&res_item) {
+            node.insert_child(&res_item);
+        }
+        node = node.get_child_mut(&res_item);
+        if res_item == "$" {
+            node.insert_leaf(&res_action, &res_action, res_uri, None, false, false, false, false, false);
+        }
+    }
+    Ok(())
+}
+
+/// 用正式资源的匹配规则判断请求是否命中这棵树中的任意一条。
+pub(crate) fn matches_res_pattern(root: &ResContainerNode, res_action: &str, res_uri: &str) -> TardisResult<bool> {
+    let res_action = res_action.to_lowercase();
+    let mut res_items = parse_uri(res_uri)?;
+    res_items.remove(res_items.len() - 1);
+    let mut matched = vec![];
+    do_match_res(&res_action, root, &res_items, false, &mut matched);
+    Ok(!matched.is_empty())
+}
+
 pub fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
     let res_action = res_action.to_lowercase();
     let mut res_items = parse_uri(res_uri)?;

@@ -35,7 +35,7 @@ impl FlowCcInstApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -57,7 +57,7 @@ impl FlowCcInstApi {
         let try_result: TardisResult<String> = {
             funs.begin().await?;
             let result = FlowInstServ::try_start(&add_req.0, None, &funs, &ctx.0).await?;
-            funs.commit().await?;
+            FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
             Ok(result)
         };
         // `commit` consumes `funs`; use a fresh inst for cache unlock (same domain / Redis config).
@@ -81,7 +81,7 @@ impl FlowCcInstApi {
             let inst_id = FlowInstServ::try_start(&req, None, &funs, &ctx.0).await?;
             result.insert(req.rel_business_obj_id.clone(), inst_id);
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -96,7 +96,7 @@ impl FlowCcInstApi {
         funs.begin().await?;
         let inst_id = FlowInstServ::start(&add_req.0, None, &funs, &ctx.0).await?;
         let result = FlowInstServ::get(&inst_id, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -112,7 +112,7 @@ impl FlowCcInstApi {
         for add_req in &add_batch_req.0 {
             FlowInstServ::start(add_req, None, &funs, &ctx.0).await?;
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -175,7 +175,7 @@ impl FlowCcInstApi {
                 FlowInstServ::abort(&flow_inst_id.0, &abort_req.0, &funs, &ctx.0).await?;
             }
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -352,13 +352,19 @@ impl FlowCcInstApi {
                 &funs,
             )
             .await?;
-            funs.commit().await?;
+            FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
             Ok(result)
         };
         // `commit` consumes `funs`; use a fresh inst for cache unlock (same domain / Redis config).
         let funs_cache = flow_constants::get_tardis_inst();
         let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, &funs_cache).await;
-        let result = try_result?;
+        let result = match try_result {
+            Ok(result) => result,
+            Err(error) => {
+                FlowInstServ::clear_temp_product_effects();
+                return Err(error.into());
+            }
+        };
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -387,18 +393,26 @@ impl FlowCcInstApi {
             flow_inst_transfer.push((inst, transfer_req));
         }
         for (inst, transfer_req) in flow_inst_transfer {
-            result.push(
-                FlowInstServ::transfer(
-                    &inst,
-                    &transfer_req,
-                    false,
-                    FlowExternalCallbackOp::Default,
-                    loop_check_helper::InstancesTransition::default(),
-                    &ctx.0,
-                    &funs,
-                )
-                .await?,
-            );
+            match FlowInstServ::transfer(
+                &inst,
+                &transfer_req,
+                false,
+                FlowExternalCallbackOp::Default,
+                loop_check_helper::InstancesTransition::default(),
+                &ctx.0,
+                &funs,
+            )
+            .await
+            {
+                Ok(response) => {
+                    FlowInstServ::flush_temp_product_effects(&ctx.0).await?;
+                    result.push(response);
+                }
+                Err(error) => {
+                    FlowInstServ::clear_temp_product_effects();
+                    return Err(error.into());
+                }
+            }
         }
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
@@ -421,7 +435,7 @@ impl FlowCcInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -442,7 +456,7 @@ impl FlowCcInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::modify_current_vars(&inst, &modify_req.0.vars, loop_check_helper::InstancesTransition::default(), &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -457,7 +471,7 @@ impl FlowCcInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         FlowInstServ::operate(&inst, &operate_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -472,7 +486,7 @@ impl FlowCcInstApi {
         let inst = FlowInstServ::get(&flow_inst_id.0, &funs, &ctx.0).await?;
         funs.begin().await?;
         let result = FlowInstServ::add_comment(&inst, &comment_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

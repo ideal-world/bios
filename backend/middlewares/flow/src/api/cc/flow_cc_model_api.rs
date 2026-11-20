@@ -19,6 +19,7 @@ use crate::dto::flow_model_version_dto::{FlowModelVersionBindState, FlowModelVer
 use crate::dto::flow_state_dto::FlowStateRelModelModifyReq;
 use crate::dto::flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionSortStatesReq};
 use crate::flow_constants;
+use crate::serv::flow_inst_serv::FlowInstServ;
 use crate::helper::task_handler_helper;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -50,7 +51,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         let model_id = FlowModelServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         let result = FlowModelServ::get_item_detail_aggs(&model_id, true, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -64,7 +65,7 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::modify_model(&flow_model_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -114,7 +115,7 @@ impl FlowCcModelApi {
         )
         .await?;
         let new_model = FlowModelServ::get_item_detail_aggs(&new_model_id, true, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(new_model)
@@ -238,7 +239,7 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowModelServ::find_rel_model_map(temp_id.0, tag_ids.0.map(|s| s.split(",").map(|tag| tag.to_string()).collect_vec()), true, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -256,7 +257,7 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::delete_item(&flow_model_id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -285,7 +286,7 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -299,7 +300,7 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::unbind_state(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -343,7 +344,7 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -364,7 +365,7 @@ impl FlowCcModelApi {
         funs.begin().await?;
         funs.begin().await?;
         FlowModelServ::resort_transition(&flow_model_id.0, &req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -415,7 +416,7 @@ impl FlowCcModelApi {
             &ctx.0,
         )
         .await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -548,7 +549,7 @@ impl FlowCcModelApi {
             )
             .await?;
         }
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)
@@ -567,7 +568,7 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         let result = FlowModelServ::add_and_copy(&req.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
+        FlowInstServ::commit_then_flush_temp_product(funs, &ctx.0).await?;
         task_handler_helper::execute_async_task(&ctx.0).await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(result)

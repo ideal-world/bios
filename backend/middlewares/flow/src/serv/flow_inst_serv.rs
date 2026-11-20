@@ -1,9 +1,16 @@
 use core::clone::Clone;
-use std::{collections::{HashMap, HashSet}, str::FromStr as _};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    str::FromStr as _,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
+};
 
 use async_recursion::async_recursion;
 use bios_basic::rbum::{
     dto::rbum_filer_dto::RbumBasicFilterReq,
+    helper::rbum_scope_helper,
     rbum_enumeration::RbumRelFromKind,
     serv::{
         rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD, UPDATE_TIME_FIELD},
@@ -32,7 +39,7 @@ use crate::{
         flow_model_dto::{FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelRelTransitionExt, FlowModelRelTransitionKind},
         flow_model_version_dto::FlowModelVersionFilterReq,
         flow_state_dto::{
-            FLowStateKindConf, FlowStateCountersignKind, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
+            FLowStateKindConf, FlowGuardConf, FlowStateCountersignKind, FlowStateDetailResp, FlowStateFilterReq, FlowStateKind, FlowStateOperatorKind, FlowStateRelModelExt,
             FlowStatusAutoStrategyKind, FlowStatusMultiApprovalKind, FlowSysStateKind,
         },
         flow_transition_dto::{FlowTransitionDetailResp, FlowTransitionFilterReq},
@@ -46,6 +53,8 @@ use crate::{
 
 use super::{
     clients::{
+        cache_client::{CacheSpinLockConfig, FlowCacheClient},
+        iam_clients::FlowIamClient,
         log_client::LogParamOp,
         search_client::{FlowSearchClient, FlowSearchTaskKind},
     },
@@ -58,6 +67,60 @@ use super::{
     flow_rel_serv::{FlowRelKind, FlowRelServ},
     flow_transition_serv::FlowTransitionServ,
 };
+
+enum TempProductEffect {
+    Grant { account_id: String, product_id: String, tenant_id: String },
+    Revoke { inst_id: String },
+}
+
+struct TempProductEffectSlot {
+    effects: Vec<TempProductEffect>,
+    touched: Instant,
+}
+
+fn temp_product_effect_slots() -> &'static Mutex<HashMap<tokio::task::Id, TempProductEffectSlot>> {
+    static SLOTS: OnceLock<Mutex<HashMap<tokio::task::Id, TempProductEffectSlot>>> = OnceLock::new();
+    SLOTS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+thread_local! {
+    static LOCAL_TEMP_PRODUCT_EFFECTS: RefCell<Vec<TempProductEffect>> = RefCell::new(Vec::new());
+}
+
+fn with_temp_product_effects_mut<R>(update: impl FnOnce(&mut Vec<TempProductEffect>) -> R) -> R {
+    let Some(task_id) = tokio::task::try_id() else {
+        return LOCAL_TEMP_PRODUCT_EFFECTS.with(|effects| update(&mut effects.borrow_mut()));
+    };
+    let mut slots = temp_product_effect_slots().lock().unwrap_or_else(|error| error.into_inner());
+    if slots.len() > 256 {
+        let now = Instant::now();
+        slots.retain(|id, slot| *id == task_id || now.saturating_duration_since(slot.touched) < Duration::from_secs(900));
+    }
+    let slot = slots.entry(task_id).or_insert_with(|| TempProductEffectSlot {
+        effects: Vec::new(),
+        touched: Instant::now(),
+    });
+    slot.touched = Instant::now();
+    update(&mut slot.effects)
+}
+
+fn take_temp_product_effects() -> Vec<TempProductEffect> {
+    let Some(task_id) = tokio::task::try_id() else {
+        return LOCAL_TEMP_PRODUCT_EFFECTS.with(|effects| std::mem::take(&mut *effects.borrow_mut()));
+    };
+    let mut slots = temp_product_effect_slots().lock().unwrap_or_else(|error| error.into_inner());
+    slots.remove(&task_id).map(|slot| slot.effects).unwrap_or_default()
+}
+
+#[derive(sea_orm::FromQueryResult)]
+struct FlowInstTempGrantRow {
+    rel_flow_version_id: String,
+    create_vars: Option<Value>,
+    create_ctx: FlowOperationContext,
+    artifacts: Option<Value>,
+    own_paths: String,
+    main: bool,
+}
 
 pub struct FlowInstServ;
 
@@ -410,6 +473,7 @@ impl FlowInstServ {
         if let Some(check_vars) = &start_req.check_vars {
             current_vars.extend(check_vars.clone());
         }
+        let temp_granted_account_ids = Self::grant_temp_product_for_absent_operators(&current_version_id, start_req.operator_map.as_ref(), &create_vars, funs, ctx).await?;
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(inst_id.clone()),
             code: Set(Some("".to_string())),
@@ -441,6 +505,7 @@ impl FlowInstServ {
                 operator_map: start_req.operator_map.clone(),
                 rel_transition_id: start_req.rel_transition_id.clone(),
                 rel_child_objs: start_req.rel_child_objs.clone(),
+                temp_granted_account_ids: Some(temp_granted_account_ids),
                 ..Default::default()
             },
             funs,
@@ -545,6 +610,347 @@ impl FlowInstServ {
         .await?;
 
         Ok(Some(inst_id))
+    }
+
+    /// 算出不在当前产品中的审批操作人，记入提交后的授予队列。IAM 写入在事务提交成功后执行。
+    /// 返回的账号会写入实例，供中止、删除时回收。正常结束不回收。
+    async fn grant_temp_product_for_absent_operators(
+        flow_version_id: &str,
+        operator_map: Option<&HashMap<String, Vec<String>>>,
+        create_vars: &HashMap<String, Value>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        let Some(tenant_id) = rbum_scope_helper::get_path_item(1, &ctx.own_paths) else {
+            return Ok(vec![]);
+        };
+        let Some(product_id) = rbum_scope_helper::get_path_item(2, &ctx.own_paths) else {
+            return Ok(vec![]);
+        };
+        let operator_ids = Self::collect_flow_operator_ids(flow_version_id, operator_map, create_vars, funs, ctx).await?;
+        if operator_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let absent_account_ids = FlowSearchClient::find_account_ids_not_in_current_product(&operator_ids, funs, ctx).await?;
+        let mut granted_account_ids = Vec::with_capacity(absent_account_ids.len());
+        for account_id in absent_account_ids {
+            Self::queue_temp_product_effect(TempProductEffect::Grant {
+                account_id: account_id.clone(),
+                product_id: product_id.clone(),
+                tenant_id: tenant_id.clone(),
+            });
+            granted_account_ids.push(account_id);
+        }
+        Ok(granted_account_ids)
+    }
+
+    fn queue_temp_product_effect(effect: TempProductEffect) {
+        with_temp_product_effects_mut(|effects| effects.push(effect));
+    }
+
+    pub fn clear_temp_product_effects() {
+        let _ = take_temp_product_effects();
+    }
+
+    /// 提交当前数据库事务。成功后再执行本任务排队的临时产品回收与授予，失败则丢弃队列。
+    /// 同一批里先回收、再授予。IAM 失败会返回给调用方。
+    pub async fn commit_then_flush_temp_product(funs: TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Err(error) = funs.commit().await {
+            Self::clear_temp_product_effects();
+            return Err(error);
+        }
+        Self::flush_temp_product_effects(ctx).await
+    }
+
+    /// 执行当前任务已排队的临时产品副作用。不进入 `execute_task` 队列，避免流转里的 spawn 在提交前排空它。
+    pub async fn flush_temp_product_effects(ctx: &TardisContext) -> TardisResult<()> {
+        let effects = take_temp_product_effects();
+        if effects.is_empty() {
+            return Ok(());
+        }
+        let funs = flow_constants::get_tardis_inst();
+        let mut revoke_ids = Vec::new();
+        let mut grants = Vec::new();
+        let mut seen_grants = HashSet::new();
+        for effect in effects {
+            match effect {
+                TempProductEffect::Revoke { inst_id } => {
+                    if !revoke_ids.contains(&inst_id) {
+                        revoke_ids.push(inst_id);
+                    }
+                }
+                TempProductEffect::Grant { account_id, product_id, tenant_id } => {
+                    if seen_grants.insert((account_id.clone(), product_id.clone(), tenant_id.clone())) {
+                        grants.push((account_id, product_id, tenant_id));
+                    }
+                }
+            }
+        }
+        if !revoke_ids.is_empty() {
+            Self::revoke_temp_product_for_removed_approvals(&revoke_ids, &funs, ctx).await?;
+        }
+        for (account_id, product_id, tenant_id) in grants {
+            FlowIamClient::grant_temp_product(&account_id, &product_id, &tenant_id, 0, &funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    /// 中止或删除审批流时回收临时产品访问。
+    /// 同一产品下仍有未中止审批流（进行中或正常结束）使用该账号时保留，正常结束本身不回收。
+    async fn revoke_temp_product_for_removed_approvals(removed_ids: &[String], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if removed_ids.is_empty() {
+            return Ok(());
+        }
+        let removed_rows = Self::load_temp_grant_rows(removed_ids, None, funs).await?;
+        let mut scopes: HashMap<String, (String, String)> = HashMap::new();
+        for row in &removed_rows {
+            if row.main {
+                continue;
+            }
+            if let Some((tenant_id, product_id, scope)) = Self::product_scope(&row.own_paths) {
+                scopes.insert(scope, (tenant_id, product_id));
+            }
+        }
+        let lock_config = CacheSpinLockConfig {
+            lock_ttl_sec: 120,
+            max_wait: Some(Duration::from_secs(60)),
+            ..Default::default()
+        };
+        for (scope, (tenant_id, product_id)) in scopes {
+            let lock_key = format!("flow:spin:temp_revoke:{tenant_id}/{product_id}");
+            let token = FlowCacheClient::spin_lock_acquire(&lock_key, funs, &lock_config).await?;
+            let result = Self::revoke_temp_product_in_scope(&scope, &product_id, removed_ids, funs, ctx).await;
+            let _ = FlowCacheClient::spin_lock_release(&lock_key, &token, funs).await;
+            result?;
+        }
+        Ok(())
+    }
+
+    async fn revoke_temp_product_in_scope(scope: &str, product_id: &str, removed_ids: &[String], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let removed_rows = Self::load_temp_grant_rows(removed_ids, Some(scope), funs).await?;
+        let mut removed_account_ids = HashSet::new();
+        for row in &removed_rows {
+            if row.main {
+                continue;
+            }
+            removed_account_ids.extend(Self::resolve_temp_granted_account_ids(row, funs, ctx).await?);
+        }
+        removed_account_ids.retain(|account_id| !account_id.is_empty());
+        if removed_account_ids.is_empty() {
+            return Ok(());
+        }
+        let keepers = Self::load_temp_grant_keepers(scope, removed_ids, funs).await?;
+        let mut still_needed = HashSet::new();
+        let mut legacy_keepers = Vec::new();
+        for keeper in keepers {
+            match Self::stored_temp_granted_account_ids(&keeper.artifacts) {
+                Some(account_ids) => still_needed.extend(account_ids),
+                None => legacy_keepers.push(keeper),
+            }
+        }
+        if !removed_account_ids.is_subset(&still_needed) {
+            for keeper in legacy_keepers {
+                still_needed.extend(Self::resolve_temp_granted_account_ids(&keeper, funs, ctx).await?);
+            }
+        }
+        for account_id in removed_account_ids {
+            if still_needed.contains(&account_id) {
+                continue;
+            }
+            FlowIamClient::revoke_temp_product(&account_id, product_id, funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    fn product_scope(own_paths: &str) -> Option<(String, String, String)> {
+        let tenant_id = rbum_scope_helper::get_path_item(1, own_paths)?;
+        let product_id = rbum_scope_helper::get_path_item(2, own_paths)?;
+        if tenant_id.is_empty() || product_id.is_empty() {
+            return None;
+        }
+        Some((tenant_id.clone(), product_id.clone(), format!("{tenant_id}/{product_id}")))
+    }
+
+    fn stored_temp_granted_account_ids(artifacts: &Option<Value>) -> Option<Vec<String>> {
+        let artifacts = artifacts.clone()?;
+        TardisFuns::json.json_to_obj::<FlowInstArtifacts>(artifacts).unwrap_or_default().temp_granted_account_ids
+    }
+
+    async fn resolve_temp_granted_account_ids(row: &FlowInstTempGrantRow, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        if let Some(account_ids) = Self::stored_temp_granted_account_ids(&row.artifacts) {
+            return Ok(account_ids);
+        }
+        let artifacts = row
+            .artifacts
+            .clone()
+            .map(|artifacts| TardisFuns::json.json_to_obj::<FlowInstArtifacts>(artifacts).unwrap_or_default())
+            .unwrap_or_default();
+        let create_vars = row
+            .create_vars
+            .clone()
+            .map(|create_vars| TardisFuns::json.json_to_obj::<HashMap<String, Value>>(create_vars).unwrap_or_default())
+            .unwrap_or_default();
+        let inst_ctx = TardisContext {
+            own_paths: row.own_paths.clone(),
+            owner: row.create_ctx.owner.clone(),
+            ak: row.create_ctx.ak.clone(),
+            roles: row.create_ctx.roles.clone(),
+            groups: row.create_ctx.groups.clone(),
+            ..ctx.clone()
+        };
+        let operator_ids = Self::collect_flow_operator_ids(&row.rel_flow_version_id, artifacts.operator_map.as_ref(), &create_vars, funs, &inst_ctx).await?;
+        if operator_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        FlowSearchClient::find_account_ids_not_in_current_product(&operator_ids, funs, &inst_ctx).await
+    }
+
+    async fn load_temp_grant_rows(ids: &[String], scope: Option<&str>, funs: &TardisFunsInst) -> TardisResult<Vec<FlowInstTempGrantRow>> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let mut query = Query::select();
+        query
+            .columns([
+                (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
+                (flow_inst::Entity, flow_inst::Column::CreateVars),
+                (flow_inst::Entity, flow_inst::Column::CreateCtx),
+                (flow_inst::Entity, flow_inst::Column::Artifacts),
+                (flow_inst::Entity, flow_inst::Column::OwnPaths),
+                (flow_inst::Entity, flow_inst::Column::Main),
+            ])
+            .from(flow_inst::Entity)
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_in(ids))
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(false));
+        if let Some(scope) = scope {
+            Self::and_where_product_scope(&mut query, scope);
+        }
+        Ok(funs.db().find_dtos::<FlowInstTempGrantRow>(&query).await?)
+    }
+
+    async fn load_temp_grant_keepers(scope: &str, removed_ids: &[String], funs: &TardisFunsInst) -> TardisResult<Vec<FlowInstTempGrantRow>> {
+        let mut query = Query::select();
+        query
+            .columns([
+                (flow_inst::Entity, flow_inst::Column::RelFlowVersionId),
+                (flow_inst::Entity, flow_inst::Column::CreateVars),
+                (flow_inst::Entity, flow_inst::Column::CreateCtx),
+                (flow_inst::Entity, flow_inst::Column::Artifacts),
+                (flow_inst::Entity, flow_inst::Column::OwnPaths),
+                (flow_inst::Entity, flow_inst::Column::Main),
+            ])
+            .from(flow_inst::Entity)
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Main)).eq(false))
+            .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).ne(true).or(Expr::col((flow_inst::Entity, flow_inst::Column::FinishAbort)).is_null()));
+        Self::and_where_product_scope(&mut query, scope);
+        if !removed_ids.is_empty() {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).is_not_in(removed_ids));
+        }
+        Ok(funs.db().find_dtos::<FlowInstTempGrantRow>(&query).await?)
+    }
+
+    fn and_where_product_scope(query: &mut SelectStatement, scope: &str) {
+        query.and_where(
+            Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths))
+                .eq(scope)
+                .or(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{scope}/%"))),
+        );
+    }
+
+    /// 汇总审批流全部录入、审批节点的操作人：节点配置的指定账号、角色、组织，以及发起时写入的 operator_map。
+    async fn collect_flow_operator_ids(
+        flow_version_id: &str,
+        operator_map: Option<&HashMap<String, Vec<String>>>,
+        create_vars: &HashMap<String, Value>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        let operator_map = operator_map.cloned().unwrap_or_default();
+        let mut operator_ids = HashSet::new();
+        for account_id in operator_map.values().flatten() {
+            if !account_id.is_empty() {
+                operator_ids.insert(account_id.clone());
+            }
+        }
+        let states = FlowStateServ::find_detail_items(
+            &FlowStateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                flow_version_ids: Some(vec![flow_version_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for state in states {
+            let (mut guard_conf, guard_by_creator, guard_by_assigned, mut agent_conf) = match state.state_kind {
+                FlowStateKind::Form => {
+                    let form = state.kind_conf().unwrap_or_default().form.unwrap_or_default();
+                    (
+                        form.guard_custom_conf.unwrap_or_default(),
+                        form.guard_by_creator,
+                        form.guard_by_assigned,
+                        (form.auto_transfer_when_empty_kind == Some(FlowStatusAutoStrategyKind::SpecifyAgent)).then(|| form.auto_transfer_when_empty_guard_custom_conf.unwrap_or_default()),
+                    )
+                }
+                FlowStateKind::Approval => {
+                    let approval = state.kind_conf().unwrap_or_default().approval.unwrap_or_default();
+                    (
+                        approval.guard_custom_conf.unwrap_or_default(),
+                        approval.guard_by_creator,
+                        approval.guard_by_assigned,
+                        (approval.auto_transfer_when_empty_kind == Some(FlowStatusAutoStrategyKind::SpecifyAgent))
+                            .then(|| approval.auto_transfer_when_empty_guard_custom_conf.unwrap_or_default()),
+                    )
+                }
+                _ => continue,
+            };
+            if state.own_paths != ctx.own_paths {
+                guard_conf.get_local_conf(funs, ctx).await?;
+                if let Some(agent_conf) = agent_conf.as_mut() {
+                    agent_conf.get_local_conf(funs, ctx).await?;
+                }
+            }
+            if guard_by_creator && !ctx.owner.is_empty() {
+                guard_conf.guard_by_spec_account_ids.push(ctx.owner.clone());
+            }
+            if guard_by_assigned && !operator_map.contains_key(&state.id) {
+                Self::push_assigned_account_ids(create_vars, &mut guard_conf);
+            }
+            for account_id in FlowSearchClient::search_guard_accounts(&guard_conf, funs, ctx).await? {
+                if !account_id.is_empty() {
+                    operator_ids.insert(account_id);
+                }
+            }
+            if let Some(agent_conf) = agent_conf {
+                for account_id in FlowSearchClient::search_guard_accounts(&agent_conf, funs, ctx).await? {
+                    if !account_id.is_empty() {
+                        operator_ids.insert(account_id);
+                    }
+                }
+            }
+        }
+        Ok(operator_ids.into_iter().collect_vec())
+    }
+
+    fn push_assigned_account_ids(create_vars: &HashMap<String, Value>, guard_conf: &mut FlowGuardConf) {
+        let Some(assigned) = create_vars.get("assigned_to") else {
+            return;
+        };
+        let assigned_values = assigned.as_array().cloned().unwrap_or_else(|| vec![assigned.clone()]);
+        for value in assigned_values {
+            if let Some(account_id) = value.as_str() {
+                if !account_id.is_empty() {
+                    guard_conf.guard_by_spec_account_ids.push(account_id.to_string());
+                }
+            }
+        }
     }
 
     // 创建实例（干跑） 返回终止的状态ID
@@ -1216,14 +1622,33 @@ impl FlowInstServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        funs.db().execute(
-            Query::delete()
-                .from_table(flow_inst::Entity)
-                .and_where(Expr::col(flow_inst::Column::Tag).eq(tag.to_string()))
-                .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).eq(rel_business_obj_id.to_string()))
-                .and_where(Expr::col(flow_inst::Column::OwnPaths).like(format!("{}%", ctx.own_paths))),
-        )
-        .await?;
+        #[derive(sea_orm::FromQueryResult)]
+        struct FlowInstDeleteId {
+            id: String,
+            main: bool,
+        }
+        let rows = funs
+            .db()
+            .find_dtos::<FlowInstDeleteId>(
+                Query::select()
+                    .columns([(flow_inst::Entity, flow_inst::Column::Id), (flow_inst::Entity, flow_inst::Column::Main)])
+                    .from(flow_inst::Entity)
+                    .and_where(Expr::col(flow_inst::Column::Tag).eq(tag.to_string()))
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).eq(rel_business_obj_id.to_string()))
+                    .and_where(Expr::col(flow_inst::Column::OwnPaths).like(format!("{}%", ctx.own_paths))),
+            )
+            .await?;
+        let approval_ids = rows.into_iter().filter(|row| !row.main).map(|row| row.id).collect_vec();
+        Self::revoke_temp_product_for_removed_approvals(&approval_ids, funs, ctx).await?;
+        funs.db()
+            .execute(
+                Query::delete()
+                    .from_table(flow_inst::Entity)
+                    .and_where(Expr::col(flow_inst::Column::Tag).eq(tag.to_string()))
+                    .and_where(Expr::col(flow_inst::Column::RelBusinessObjId).eq(rel_business_obj_id.to_string()))
+                    .and_where(Expr::col(flow_inst::Column::OwnPaths).like(format!("{}%", ctx.own_paths))),
+            )
+            .await?;
         Ok(())
     }
 
@@ -1394,6 +1819,9 @@ impl FlowInstServ {
                     }
                 }
             }
+        }
+        if !flow_inst_detail.main {
+            Self::queue_temp_product_effect(TempProductEffect::Revoke { inst_id: flow_inst_detail.id.clone() });
         }
         Ok(())
     }
@@ -2367,8 +2795,15 @@ impl FlowInstServ {
                     Err(e) => error!("Flow Instance {} do_post_change error:{:?}", flow_inst_cp.id, e),
                 }
                 match FlowEventServ::do_front_change(&new_inst_detail_cp, modified_instance_transations_cp.clone(), &ctx_cp, &funs).await {
-                    Ok(_) => {}
-                    Err(e) => error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e),
+                    Ok(_) => {
+                        if let Err(error) = Self::flush_temp_product_effects(&ctx_cp).await {
+                            error!("Flow Instance {} flush temp product effects error:{:?}", flow_inst_cp.id, error);
+                        }
+                    }
+                    Err(e) => {
+                        Self::clear_temp_product_effects();
+                        error!("Flow Instance {} do_front_change error:{:?}", flow_inst_cp.id, e);
+                    }
                 }
                 match task_handler_helper::execute_async_task(&ctx_cp).await {
                     Ok(_) => {
@@ -2964,7 +3399,17 @@ impl FlowInstServ {
                     Ok(_) => {}
                     Err(e) => error!("Flow Instance {} do_front_change error:{:?}", curr_inst.id, e),
                 }
-                funs.commit().await.unwrap_or_default();
+                match funs.commit().await {
+                    Ok(()) => {
+                        if let Err(error) = Self::flush_temp_product_effects(&ctx_cp).await {
+                            error!("Flow Instance {} flush temp product effects error:{:?}", curr_inst.id, error);
+                        }
+                    }
+                    Err(error) => {
+                        Self::clear_temp_product_effects();
+                        error!("Flow Instance {} commit front change error:{:?}", curr_inst.id, error);
+                    }
+                }
                 match task_handler_helper::execute_async_task(&ctx_cp).await {
                     Ok(_) => {
                         ctx_cp.execute_task().await.unwrap_or_default();
@@ -4325,6 +4770,9 @@ impl FlowInstServ {
         }
         if let Some(rel_transition_id) = &modify_artifacts.rel_transition_id {
             inst_artifacts.rel_transition_id = Some(rel_transition_id.clone());
+        }
+        if let Some(temp_granted_account_ids) = &modify_artifacts.temp_granted_account_ids {
+            inst_artifacts.temp_granted_account_ids = Some(temp_granted_account_ids.clone());
         }
         if let Some((referral_account_id, master_account_ids)) = &modify_artifacts.add_referral_map {
             let mut referral_map = inst_artifacts.referral_map.clone().unwrap_or_default();

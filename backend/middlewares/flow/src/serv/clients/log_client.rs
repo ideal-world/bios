@@ -70,6 +70,7 @@ pub enum LogParamTag {
     DynamicLog,
     ApprovalFlow,
     FlowModel,
+    FlowExternalCall,
 }
 
 impl From<LogParamTag> for String {
@@ -78,6 +79,7 @@ impl From<LogParamTag> for String {
             LogParamTag::DynamicLog => "dynamic_log".to_string(),
             LogParamTag::ApprovalFlow => "approval_flow".to_string(),
             LogParamTag::FlowModel => "flow_model".to_string(),
+            LogParamTag::FlowExternalCall => "flow_external_call".to_string(),
         }
     }
 }
