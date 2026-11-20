@@ -7,14 +7,19 @@ use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
+use tardis::log::warn;
 use tardis::regex::Regex;
 use tardis::tokio::time::{timeout_at, Instant};
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamCertConfOAuth2Resp};
-use crate::basic::dto::iam_cert_dto::IamCertOAuth2AddOrModifyReq;
+use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertOAuth2AddOrModifyReq, IamCertPhoneVCodeAddReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use crate::basic::serv::clients::mail_client::MailClient;
+use crate::basic::serv::clients::sms_client::SmsClient;
+use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
+use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::oauth2_spi::iam_cert_oauth2_spi_github::IamCertOAuth2SpiGithub;
 use crate::iam_config::IamBasicConfigApi;
@@ -258,16 +263,17 @@ impl IamCertOAuth2Serv {
         let cert_user_name = Self::syncable_user_name(account_profile.user_name.as_deref(), funs, &mock_ctx).await?;
         let cert_phone = Self::syncable_kernel_cert_ak(&IamCertKernelKind::PhoneVCode, account_profile.phone.as_deref(), funs, &mock_ctx).await?;
         let cert_mail = Self::syncable_kernel_cert_ak(&IamCertKernelKind::MailVCode, account_profile.mail.as_deref(), funs, &mock_ctx).await?;
+        // FIXME 临时密码
+        let pwd = format!("{}0Pw$", TardisFuns::field.nanoid_len(6));
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
                 name: TrimString(client.get_account_name(oauth_token_info.clone(), funs).await?),
                 cert_user_name: TrimString(cert_user_name),
-                // FIXME 临时密码
-                cert_password: Some(TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6)))),
-                // 首次建号时同步 Provider 侧手机号/邮箱，并向其下发初始密码
-                cert_phone: cert_phone.map(TrimString),
-                cert_mail: cert_mail.map(TrimString),
+                cert_password: Some(TrimString(pwd.clone())),
+                // 手机号/邮箱由 add_synced_certs 以「已验证」状态写入并下发初始密码，不走本地激活流程
+                cert_phone: None,
+                cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
                 scope_level: Some(RbumScopeLevelKind::Root),
@@ -288,6 +294,7 @@ impl IamCertOAuth2Serv {
             &mock_ctx,
         )
         .await?;
+        Self::add_synced_certs(&account_id, cert_phone.as_deref(), cert_mail.as_deref(), &pwd, funs, &mock_ctx).await;
         Self::add_or_modify_cert(
             &IamCertOAuth2AddOrModifyReq {
                 open_id: TrimString(oauth_token_info.open_id.to_string()),
@@ -334,6 +341,40 @@ impl IamCertOAuth2Serv {
             return Ok(None);
         };
         Ok((Self::count_kernel_cert_ak(&cert_conf.id, candidate, funs, ctx).await? == 0).then(|| candidate.to_string()))
+    }
+
+    /// 把 Provider 侧已认证的手机号/邮箱写入新账号，并把初始密码通知到对应渠道
+    ///
+    /// 手机号/邮箱已由 Provider 认证，因此直接写入已激活凭证，不再向用户下发激活验证码；
+    /// 同步失败只记录日志，不影响本次授权建号。
+    async fn add_synced_certs(account_id: &str, phone: Option<&str>, mail: Option<&str>, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) {
+        if let Some(phone) = phone {
+            if let Ok(Some(cert_conf)) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await {
+                let result = IamCertPhoneVCodeServ::add_cert_skip_vcode(
+                    &IamCertPhoneVCodeAddReq {
+                        phone: TrimString(phone.to_string()),
+                    },
+                    account_id,
+                    &cert_conf.id,
+                    funs,
+                    ctx,
+                )
+                .await;
+                if let Err(error) = result {
+                    warn!("sync oauth2 provider phone to account {account_id} failed: {error}");
+                }
+            }
+            let _ = SmsClient::async_send_pwd(phone, pwd, funs, ctx).await;
+        }
+        if let Some(mail) = mail {
+            if let Ok(Some(cert_conf)) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await {
+                let result = IamCertMailVCodeServ::add_cert_skip_activate(&IamCertMailVCodeAddReq { mail: mail.to_string() }, account_id, &cert_conf.id, funs, ctx).await;
+                if let Err(error) = result {
+                    warn!("sync oauth2 provider mail to account {account_id} failed: {error}");
+                }
+            }
+            let _ = MailClient::async_send_pwd(mail, pwd, funs, ctx).await;
+        }
     }
 
     async fn count_kernel_cert_ak(cert_conf_id: &str, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
