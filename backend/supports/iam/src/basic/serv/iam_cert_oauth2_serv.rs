@@ -7,6 +7,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
+use tardis::regex::Regex;
 use tardis::tokio::time::{timeout_at, Instant};
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -18,7 +19,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::oauth2_spi::iam_cert_oauth2_spi_github::IamCertOAuth2SpiGithub;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
-use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
@@ -253,15 +254,20 @@ impl IamCertOAuth2Serv {
         }
         // Register
         mock_ctx.owner = TardisFuns::field.nanoid();
+        let account_profile = client.get_account_profile(&oauth_token_info, funs).await?;
+        let cert_user_name = Self::syncable_user_name(account_profile.user_name.as_deref(), funs, &mock_ctx).await?;
+        let cert_phone = Self::syncable_kernel_cert_ak(&IamCertKernelKind::PhoneVCode, account_profile.phone.as_deref(), funs, &mock_ctx).await?;
+        let cert_mail = Self::syncable_kernel_cert_ak(&IamCertKernelKind::MailVCode, account_profile.mail.as_deref(), funs, &mock_ctx).await?;
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
                 name: TrimString(client.get_account_name(oauth_token_info.clone(), funs).await?),
-                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(&TardisFuns::field.nanoid_len(8).to_lowercase(), funs, &mock_ctx).await?,
+                cert_user_name: TrimString(cert_user_name),
                 // FIXME 临时密码
                 cert_password: Some(TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6)))),
-                cert_phone: None,
-                cert_mail: None,
+                // 首次建号时同步 Provider 侧手机号/邮箱，并向其下发初始密码
+                cert_phone: cert_phone.map(TrimString),
+                cert_mail: cert_mail.map(TrimString),
                 role_ids: None,
                 org_node_ids: None,
                 scope_level: Some(RbumScopeLevelKind::Root),
@@ -296,6 +302,57 @@ impl IamCertOAuth2Serv {
         IamSearchClient::async_add_or_modify_account_search(&account_id, Box::new(false), "", funs, &mock_ctx).await?;
         mock_ctx.execute_task().await?;
         Ok((account_id, oauth_token_info.access_token))
+    }
+
+    /// 计算首次授权建号时可同步的本地用户名
+    ///
+    /// 优先使用 Provider 侧用户名，仅当用户名不满足本地用户凭证规则或已被本地账号占用时才回退为随机用户名。
+    async fn syncable_user_name(candidate: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        if let Some(candidate) = candidate.map(str::trim).filter(|candidate| !candidate.is_empty()) {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                let ak_rule = IamCertServ::get_cert_conf(&cert_conf.id, None, funs, ctx).await?.ak_rule;
+                let ak_rule_matched = ak_rule.is_empty()
+                    || Regex::new(&ak_rule)
+                        .map_err(|e| funs.err().bad_request("rbum_cert", "get_or_add_account", &format!("ak rule is invalid:{e}"), "400-rbum-cert-conf-ak-rule-invalid"))?
+                        .is_match(candidate);
+                if ak_rule_matched && Self::count_kernel_cert_ak(&cert_conf.id, candidate, funs, ctx).await? == 0 {
+                    return Ok(candidate.to_string());
+                }
+            }
+        }
+        Ok(IamCertUserPwdServ::rename_ak_if_duplicate(&TardisFuns::field.nanoid_len(8).to_lowercase(), funs, ctx).await?.to_string())
+    }
+
+    /// 计算首次授权建号时可同步的手机号/邮箱
+    ///
+    /// 与本地已有账号冲突或本地未启用对应凭证配置时返回 `None`，避免抢占他人凭证导致建号失败。
+    async fn syncable_kernel_cert_ak(kind: &IamCertKernelKind, candidate: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+        let Some(candidate) = candidate.map(str::trim).filter(|candidate| !candidate.is_empty()) else {
+            return Ok(None);
+        };
+        let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&kind.to_string(), Some(ctx.own_paths.clone()), funs).await? else {
+            return Ok(None);
+        };
+        Ok((Self::count_kernel_cert_ak(&cert_conf.id, candidate, funs, ctx).await? == 0).then(|| candidate.to_string()))
+    }
+
+    async fn count_kernel_cert_ak(cert_conf_id: &str, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(ak.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![cert_conf_id.to_string()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
     }
 
     /// 将外部 OAuth2 身份（open_id）手动绑定到指定的本地账号
@@ -946,6 +1003,13 @@ pub trait IamCertOAuth2Spi: Send + Sync {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, base_url: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
     async fn get_account_name(&self, oauth2_info: IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<String>;
 
+    /// 首次授权自动建号时可同步到本地账号的资料（用户名/手机号/邮箱）
+    ///
+    /// 默认实现返回空资料，表示当前 Provider 不提供需要同步的资料。
+    async fn get_account_profile(&self, _oauth2_info: &IamCertOAuth2TokenInfo, _funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2AccountProfile> {
+        Ok(IamCertOAuth2AccountProfile::default())
+    }
+
     /// 使用 refresh_token 向 Provider 置换新的 access_token（token 置换）
     ///
     /// 默认实现返回 409，表示当前 Provider 不支持刷新。
@@ -986,6 +1050,14 @@ pub trait IamCertOAuth2Spi: Send + Sync {
             "409-iam-cert-oauth-token-validation-unsupported",
         ))
     }
+}
+
+/// Provider 侧可同步到本地新账号的资料
+#[derive(Clone, Debug, Default)]
+pub struct IamCertOAuth2AccountProfile {
+    pub user_name: Option<String>,
+    pub phone: Option<String>,
+    pub mail: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, poem_openapi::Object)]

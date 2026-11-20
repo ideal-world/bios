@@ -1,5 +1,5 @@
 use crate::basic::dto::iam_cert_dto::{IamOauth2TokenResp, IamOauth2UserInfoResp};
-use crate::basic::serv::iam_cert_oauth2_serv::{IamCertOAuth2Spi, IamCertOAuth2TokenInfo};
+use crate::basic::serv::iam_cert_oauth2_serv::{IamCertOAuth2AccountProfile, IamCertOAuth2Spi, IamCertOAuth2TokenInfo};
 use async_trait::async_trait;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
@@ -84,10 +84,9 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
     }
 
     async fn get_account_name(&self, oauth2_info: IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<String> {
-        let user_info = funs.cache().get(&format!("{}{}", OAUTH2_BIOS_IAM_USER_INFO_CACHE_KEY, oauth2_info.access_token)).await?;
+        let user_info = Self::cached_user_info(&oauth2_info.access_token, funs).await?;
         if let Some(user_info) = user_info {
-            let result = TardisFuns::json.str_to_obj::<IamOauth2UserInfoResp>(&user_info)?;
-            Ok(result.name)
+            Ok(user_info.name)
         } else {
             Err(funs.err().not_found(
                 "oauth_spi_bios_iam",
@@ -96,6 +95,17 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
                 "500-iam-cert-oauth-get-account-name-error",
             ))
         }
+    }
+
+    async fn get_account_profile(&self, oauth2_info: &IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2AccountProfile> {
+        let Some(user_info) = Self::cached_user_info(&oauth2_info.access_token, funs).await? else {
+            return Ok(IamCertOAuth2AccountProfile::default());
+        };
+        Ok(IamCertOAuth2AccountProfile {
+            user_name: Some(user_info.name).filter(|name| !name.trim().is_empty()),
+            phone: user_info.phone,
+            mail: user_info.mail,
+        })
     }
 
     /// 使用 refresh_token 向 bios IAM Provider 置换新的 access_token
@@ -168,6 +178,17 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
     async fn validate_access_token(&self, access_token: &str, base_url: &str, funs: &TardisFunsInst) -> TardisResult<String> {
         let userinfo = self.get_user_info(access_token, "", base_url, funs).await?;
         normalized_subject(&userinfo, funs)
+    }
+}
+
+impl IamCertOAuth2SpiBiosIam {
+    /// 读取 `get_access_token` 时缓存的用户信息（仅在授权完成后的短时间内可用）
+    async fn cached_user_info(access_token: &str, funs: &TardisFunsInst) -> TardisResult<Option<IamOauth2UserInfoResp>> {
+        funs.cache()
+            .get(&format!("{OAUTH2_BIOS_IAM_USER_INFO_CACHE_KEY}{access_token}"))
+            .await?
+            .map(|user_info| TardisFuns::json.str_to_obj::<IamOauth2UserInfoResp>(&user_info))
+            .transpose()
     }
 }
 
