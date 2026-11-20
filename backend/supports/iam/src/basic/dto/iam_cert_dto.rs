@@ -340,6 +340,8 @@ pub struct IamOauth2UserInfoResp {
     pub tenant_id: String,
     /// 账号名称
     pub name: String,
+    /// 登录用户名（Provider 侧用户密码凭证的 ak，若有）
+    pub user_name: Option<String>,
     /// 邮箱（若有）
     pub mail: Option<String>,
     /// 手机号（若有）

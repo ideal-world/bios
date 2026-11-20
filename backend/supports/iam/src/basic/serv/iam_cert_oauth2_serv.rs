@@ -306,7 +306,7 @@ impl IamCertOAuth2Serv {
 
     /// 计算首次授权建号时可同步的本地用户名
     ///
-    /// 优先使用 Provider 侧用户名，仅当用户名不满足本地用户凭证规则或已被本地账号占用时才回退为随机用户名。
+    /// 优先使用 Provider 侧登录用户名，仅当用户名不满足本地用户凭证规则或已被本地账号占用时才回退为随机用户名。
     async fn syncable_user_name(candidate: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if let Some(candidate) = candidate.map(str::trim).filter(|candidate| !candidate.is_empty()) {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
@@ -1003,7 +1003,7 @@ pub trait IamCertOAuth2Spi: Send + Sync {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, base_url: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
     async fn get_account_name(&self, oauth2_info: IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<String>;
 
-    /// 首次授权自动建号时可同步到本地账号的资料（用户名/手机号/邮箱）
+    /// 首次授权自动建号时可同步到本地账号的资料（登录用户名/手机号/邮箱）
     ///
     /// 默认实现返回空资料，表示当前 Provider 不提供需要同步的资料。
     async fn get_account_profile(&self, _oauth2_info: &IamCertOAuth2TokenInfo, _funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2AccountProfile> {
@@ -1055,8 +1055,11 @@ pub trait IamCertOAuth2Spi: Send + Sync {
 /// Provider 侧可同步到本地新账号的资料
 #[derive(Clone, Debug, Default)]
 pub struct IamCertOAuth2AccountProfile {
+    /// Provider 侧登录用户名
     pub user_name: Option<String>,
+    /// Provider 侧手机号
     pub phone: Option<String>,
+    /// Provider 侧邮箱
     pub mail: Option<String>,
 }
 

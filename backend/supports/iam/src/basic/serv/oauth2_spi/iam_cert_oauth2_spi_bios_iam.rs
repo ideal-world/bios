@@ -102,7 +102,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiBiosIam {
             return Ok(IamCertOAuth2AccountProfile::default());
         };
         Ok(IamCertOAuth2AccountProfile {
-            user_name: Some(user_info.name).filter(|name| !name.trim().is_empty()),
+            user_name: user_info.user_name.filter(|name| !name.trim().is_empty()),
             phone: user_info.phone,
             mail: user_info.mail,
         })

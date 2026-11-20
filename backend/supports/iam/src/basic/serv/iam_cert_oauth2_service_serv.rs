@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use bios_basic::rbum::{
     dto::{
         rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq, RbumCertConfSummaryResp},
+        rbum_cert_dto::RbumCertSummaryResp,
         rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemRelFilterReq},
     },
     rbum_enumeration::{RbumCertConfStatusKind, RbumRelFromKind},
@@ -866,7 +867,7 @@ impl IamCertOAuth2ServiceServ {
         let certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(account.own_paths.clone()),
+                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
@@ -881,19 +882,39 @@ impl IamCertOAuth2ServiceServ {
         )
         .await
         .unwrap_or_default();
-        let mail = certs.iter().find(|c| c.kind == IamCertKernelKind::MailVCode.to_string()).map(|c| c.ak.clone());
-        let phone = certs.iter().find(|c| c.kind == IamCertKernelKind::PhoneVCode.to_string()).map(|c| c.ak.clone());
+        let user_name = Self::find_kernel_cert_ak(&certs, &account.own_paths, &IamCertKernelKind::UserPwd, funs).await;
+        let mail = Self::find_kernel_cert_ak(&certs, &account.own_paths, &IamCertKernelKind::MailVCode, funs).await;
+        let phone = Self::find_kernel_cert_ak(&certs, &account.own_paths, &IamCertKernelKind::PhoneVCode, funs).await;
         Ok(IamOauth2UserInfoResp {
             provider: OAUTH2_PROVIDER.to_string(),
             sub: account.id,
             tenant_id: tenant_id_override.map(|t| t.to_string()).unwrap_or(account.own_paths),
             name: account.name,
+            user_name,
             mail,
             phone,
             employee_no: if account.employee_code.is_empty() { None } else { Some(account.employee_code) },
             id_card_no: if account.id_card_no.is_empty() { None } else { Some(account.id_card_no) },
             disabled: account.disabled,
         })
+    }
+
+    /// 从账号凭证中取出指定内置凭证（登录用户名/手机号/邮箱）的 ak
+    ///
+    /// 内置凭证的 `kind` 记录在凭证配置上，`rbum_cert.kind` 本身为空，
+    /// 因此先按内核类型解析出凭证配置 id（全局级优先，再尝试账号所属层级），再用配置 id 匹配凭证。
+    async fn find_kernel_cert_ak(certs: &[RbumCertSummaryResp], own_paths: &str, kind: &IamCertKernelKind, funs: &TardisFunsInst) -> Option<String> {
+        let mut rel_iam_item_ids = vec![None];
+        if !own_paths.is_empty() {
+            rel_iam_item_ids.push(Some(own_paths.to_string()));
+        }
+        let mut cert_conf_ids = Vec::new();
+        for rel_iam_item_id in rel_iam_item_ids {
+            if let Ok(Some(cert_conf)) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&kind.to_string(), rel_iam_item_id, funs).await {
+                cert_conf_ids.push(cert_conf.id);
+            }
+        }
+        certs.iter().find(|cert| cert.rel_rbum_cert_conf_id.as_ref().is_some_and(|cert_conf_id| cert_conf_ids.contains(cert_conf_id))).map(|cert| cert.ak.clone())
     }
 
     /// 令牌内省（Provider 侧 introspect 端点的服务实现）
