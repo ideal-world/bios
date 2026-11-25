@@ -22,6 +22,7 @@ use super::clients::iam_log_client::{IamLogClient, LogParamTag};
 use super::clients::iam_search_client::IamSearchClient;
 use super::iam_account_serv::IamAccountServ;
 use super::iam_role_serv::IamRoleServ;
+use super::iam_tenant_serv::IamTenantServ;
 
 pub struct IamRelServ;
 
@@ -79,7 +80,7 @@ impl IamRelServ {
         RbumRelServ::add_rel(req, funs, ctx).await?;
 
         if rel_kind == &IamRelKind::IamAccountRole {
-            IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
+            IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, &IamTenantServ::get_id_by_ctx(ctx, funs)?, funs).await?;
             let account_name = IamAccountServ::get_item(
                 from_iam_item_id,
                 &IamAccountFilterReq {
@@ -538,7 +539,7 @@ impl IamRelServ {
                 .await;
             }
             IamRelKind::IamAccountRole => {
-                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
+                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, &IamTenantServ::get_id_by_ctx(ctx, funs)?, funs).await?;
                 let account_name = IamAccountServ::get_item(
                     from_iam_item_id,
                     &IamAccountFilterReq {
@@ -595,7 +596,7 @@ impl IamRelServ {
             IamRelKind::IamAccountApp => {
                 // TODO reset account cache
                 // IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, get_real_ip_from_ctx(ctx).await?, funs).await?;
-                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, funs).await?;
+                IamIdentCacheServ::refresh_account_info_by_account_id(from_iam_item_id, &IamTenantServ::get_id_by_ctx(ctx, funs)?, funs).await?;
                 IamSearchClient::async_add_or_modify_account_search(from_iam_item_id, Box::new(true), "", funs, ctx).await?;
             }
             IamRelKind::IamAccountRel => {

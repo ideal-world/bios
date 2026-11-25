@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bios_auth::{
     auth_config::AuthConfig,
-    auth_constants::DOMAIN_CODE,
+    auth_constants::{account_app_context_field, account_tenant_context_field, build_token_info, DOMAIN_CODE},
     dto::auth_kernel_dto::{AuthReq, AuthResp},
 };
 use tardis::{
@@ -293,6 +293,71 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(ctx.owner, "account1");
     assert_eq!(ctx.roles, vec!["r002", "r001"]);
     assert_eq!(ctx.groups, vec!["g002", "g001"]);
+
+    // Verify tenant-bound tokens are isolated from each other
+    for (token, tenant, role) in [("token_tenant_a", "tenant_a", "role_a"), ("token_tenant_b", "tenant_b", "role_b")] {
+        cache_client
+            .set(
+                &format!("{}{token}", config.cache_key_token_info),
+                &build_token_info("default", "accountxxx", None, Some(tenant)),
+            )
+            .await?;
+        cache_client
+            .hset(
+                &format!("{}accountxxx", config.cache_key_account_info),
+                &account_tenant_context_field(tenant),
+                &format!("{{\"own_paths\":\"{tenant}\",\"owner\":\"account1\",\"roles\":[\"{role}\"],\"groups\":[]}}"),
+            )
+            .await?;
+        cache_client
+            .hset(
+                &format!("{}accountxxx", config.cache_key_account_info),
+                &account_app_context_field(tenant, "app1"),
+                &format!("{{\"own_paths\":\"{tenant}/app1\",\"owner\":\"account1\",\"roles\":[\"app_role_{tenant}\"],\"groups\":[]}}"),
+            )
+            .await?;
+    }
+    // legacy account-level field points to another tenant and must not affect bound tokens
+    cache_client
+        .hset(
+            &format!("{}accountxxx", config.cache_key_account_info),
+            "",
+            "{\"own_paths\":\"tenant_legacy\",\"owner\":\"account1\",\"roles\":[\"role_legacy\"],\"groups\":[]}",
+        )
+        .await?;
+
+    let resp = mock_req("GET", "/iam/api/p1", "", vec![("Bios-Token", "token_tenant_a")]).await;
+    assert!(resp.allow);
+    let ctx = decode_context(&resp.headers);
+    assert_eq!(ctx.own_paths, "tenant_a");
+    assert_eq!(ctx.roles, vec!["role_a"]);
+
+    let resp = mock_req("GET", "/iam/api/p1", "", vec![("Bios-Token", "token_tenant_b")]).await;
+    assert!(resp.allow);
+    let ctx = decode_context(&resp.headers);
+    assert_eq!(ctx.own_paths, "tenant_b");
+    assert_eq!(ctx.roles, vec!["role_b"]);
+
+    // app context is also isolated per tenant
+    let resp = mock_req("GET", "/iam/api/p1", "", vec![("Bios-Token", "token_tenant_a"), ("Bios-App", "app1")]).await;
+    assert!(resp.allow);
+    let ctx = decode_context(&resp.headers);
+    assert_eq!(ctx.own_paths, "tenant_a/app1");
+    assert_eq!(ctx.roles, vec!["app_role_tenant_a", "role_a"]);
+
+    let resp = mock_req("GET", "/iam/api/p1", "", vec![("Bios-Token", "token_tenant_b"), ("Bios-App", "app1")]).await;
+    assert!(resp.allow);
+    let ctx = decode_context(&resp.headers);
+    assert_eq!(ctx.own_paths, "tenant_b/app1");
+    assert_eq!(ctx.roles, vec!["app_role_tenant_b", "role_b"]);
+
+    // tokens without tenant binding still fall back to the legacy account-level field
+    cache_client.set(&format!("{}token_legacy", config.cache_key_token_info), "default,accountxxx").await?;
+    let resp = mock_req("GET", "/iam/api/p1", "", vec![("Bios-Token", "token_legacy")]).await;
+    assert!(resp.allow);
+    let ctx = decode_context(&resp.headers);
+    assert_eq!(ctx.own_paths, "tenant_legacy");
+    assert_eq!(ctx.roles, vec!["role_legacy"]);
 
     // Verify the token renewal capability
     cache_client.set_ex(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx,2", 1).await?;

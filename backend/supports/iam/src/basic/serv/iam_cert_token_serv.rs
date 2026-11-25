@@ -102,6 +102,7 @@ impl IamCertTokenServ {
         token_kind: &IamCertTokenKind,
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
+        tenant_id: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -126,11 +127,21 @@ impl IamCertTokenServ {
         {
             if !config.disabled {
                 if let Some(expire_sec) = IamConfigDataTypeKind::parse(&config.data_type)?.to_sec(config.value1) {
-                    return IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, Some(expire_sec), expire_sec, cert_conf.coexist_num, funs).await;
+                    return IamIdentCacheServ::add_token(
+                        token,
+                        token_kind,
+                        rel_iam_item_id,
+                        Some(tenant_id),
+                        Some(expire_sec),
+                        expire_sec,
+                        cert_conf.coexist_num,
+                        funs,
+                    )
+                    .await;
                 }
             }
         }
-        IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, None, cert_conf.expire_sec, cert_conf.coexist_num, funs).await?;
+        IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, Some(tenant_id), None, cert_conf.expire_sec, cert_conf.coexist_num, funs).await?;
 
         Ok(())
     }

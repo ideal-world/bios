@@ -408,12 +408,25 @@ impl IamCiAccountApi {
 
     /// Get Context By Account Id
     /// 根据帐户Id获取上下文
+    ///
+    /// `tenant_id` 用于读取指定租户的上下文；不传时保持旧的账号级读取方式。
     #[oai(path = "/:id/ctx", method = "get")]
-    async fn get_account_context(&self, id: Path<String>, app_id: Query<Option<String>>, mut ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+    async fn get_account_context(
+        &self,
+        id: Path<String>,
+        tenant_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
+        mut ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
         check_without_owner_and_unsafe_fill_ctx(request, &funs, &mut ctx.0)?;
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
-        let mut ctx_resp = IamIdentCacheServ::get_account_context(&id.0, &app_id.0.unwrap_or((&"").to_string()), &funs).await?;
+        let app_id = app_id.0.unwrap_or_default();
+        let mut ctx_resp = match tenant_id.0 {
+            Some(tenant_id) => IamIdentCacheServ::get_account_context_with_tenant(&id.0, &tenant_id, &app_id, &funs).await?,
+            None => IamIdentCacheServ::get_account_context(&id.0, &app_id, &funs).await?,
+        };
         ctx_resp.own_paths = ctx.0.own_paths;
         TardisResp::ok(TardisFuns::crypto.base64.encode(TardisFuns::json.obj_to_string(&ctx_resp).unwrap_or_default()))
     }

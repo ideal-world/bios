@@ -31,13 +31,16 @@ fn main() -> Result<(), BoxError> {
         let local_set = tokio::task::LocalSet::new();
         local_set
             .run_until(async move {
-                if let Some(config_file) = config.config_file {
-                    let config_file_content = tokio::fs::read_to_string(config_file.clone()).await?;
-                    let config = toml::from_str::<spacegate_shell::model::Config>(&config_file_content)?;
-                    spacegate_shell::startup_static(config).await
-                } else {
-                    spacegate_shell::startup_k8s(namespaces.as_deref()).await
-                }
+                let config_file_content = tokio::fs::read_to_string("/Users/lijielong/RustroverProjects/bios/config/simple-gateway.toml".clone()).await?;
+                let config = toml::from_str::<spacegate_shell::model::Config>(&config_file_content)?;
+                spacegate_shell::startup_static(config).await
+                // if let Some(config_file) = config.config_file {
+                //     let config_file_content = tokio::fs::read_to_string(config_file.clone()).await?;
+                //     let config = toml::from_str::<spacegate_shell::model::Config>(&config_file_content)?;
+                //     spacegate_shell::startup_static(config).await
+                // } else {
+                //     spacegate_shell::startup_k8s(namespaces.as_deref()).await
+                // }
             })
             .await
     })

@@ -35,8 +35,10 @@ pub struct IamConfig {
     // account_id -> [token, (token_kind, add_time)]
     pub cache_key_account_rel_: String,
     // account_id -> {
-    //     _: system or tenant context,
-    //     <app_id>: app context,
+    //     tenant:<tenant_id>: system or tenant context（按租户隔离）,
+    //     app:<tenant_id>:<app_id>: app context（按租户隔离）,
+    //     "": legacy 租户上下文（滚动升级兼容）,
+    //     <app_id>: legacy app 上下文（滚动升级兼容）,
     //     is_global<bool>:is global account
     // }
     pub cache_key_account_info_: String,

@@ -17,7 +17,10 @@ use crate::dto::auth_kernel_dto::{AuthResult, ResContainerLeafInfo, SignWebHookR
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
-    auth_constants::{DOMAIN_CODE, OAUTH2_ALL_SCOPE, OAUTH2_APP_READ_SCOPE, OAUTH2_APP_ROLE_MEMBER_READ_SCOPE, OAUTH2_TOKEN_META_KEY_PREFIX, OAUTH2_USERINFO_READ_SCOPE},
+    auth_constants::{
+        account_app_context_field, account_tenant_context_field, parse_token_info, DOMAIN_CODE, OAUTH2_ALL_SCOPE, OAUTH2_APP_READ_SCOPE, OAUTH2_APP_ROLE_MEMBER_READ_SCOPE,
+        OAUTH2_TOKEN_META_KEY_PREFIX, OAUTH2_USERINFO_READ_SCOPE,
+    },
     dto::auth_kernel_dto::{AuthContext, AuthReq},
 };
 
@@ -76,7 +79,7 @@ async fn check_oauth2_scope(req: &AuthReq, ident: &AuthContext, config: &AuthCon
     let Some(token_info) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? else {
         return Err(oauth2_scope_denied());
     };
-    if token_info.split(',').next() != Some(OAUTH2_TOKEN_KIND) {
+    if parse_token_info(&token_info).token_kind != OAUTH2_TOKEN_KIND {
         return Ok(());
     }
 
@@ -256,7 +259,9 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
             cache_own_paths = format!("{cache_tenant_id}/{app_id}")
         }
         if own_paths.contains(&cache_own_paths) {
-            let context = self::get_account_context(&ak_authorization, owner, &app_id, config, cache_client).await?;
+            // webhook 以查询参数中的 own_paths 作为目标上下文，租户取该路径的首段
+            let context_tenant = own_paths.split('/').next().unwrap_or("");
+            let context = self::get_account_context(&ak_authorization, owner, &app_id, Some(context_tenant), config, cache_client).await?;
             let mut roles = context.roles.clone();
             for role in roles.clone() {
                 if role.contains(':') {
@@ -312,43 +317,58 @@ async fn ident(req: &mut AuthReq, config: &AuthConfig, cache_client: &TardisCach
 }
 
 pub async fn get_token_context(token: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<TardisContext> {
-    let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
-        trace!("Token info: {}", token_value);
-        let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
-        if account_info.first() == Some(&"TokenTask") {
-            let encoded =
-                cache_client.get(&format!("iam:task-token:{token}")).await?.ok_or_else(|| TardisError::unauthorized("task token expired", "401-auth-task-token-expired"))?;
-            let ctx: TardisContext = TardisFuns::json.str_to_obj(&encoded)?;
-            if account_info.get(1).copied() != Some(ctx.owner.as_str()) || ctx.own_paths.split('/').nth(1) != Some(app_id) || app_id.is_empty() {
-                return Err(TardisError::forbidden("task token application mismatch", "403-auth-task-token-scope"));
-            }
-            return Ok(ctx);
-        }
-        if account_info.len() > 2 {
-            cache_client
-                .set_ex(
-                    &format!("{}{}", config.cache_key_token_info, token),
-                    &token_value,
-                    account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), ""))?,
-                )
-                .await?;
-        }
-        account_info[1].to_string()
-    } else {
+    let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? else {
         return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal"), "401-auth-req-token-not-exist"));
     };
-    let context = self::get_account_context(token, &account_id, app_id, config, cache_client).await?;
+    trace!("Token info: {}", token_value);
+    let token_parts = parse_token_info(&token_value);
+    if token_parts.token_kind == "TokenTask" {
+        let encoded = cache_client.get(&format!("iam:task-token:{token}")).await?.ok_or_else(|| TardisError::unauthorized("task token expired", "401-auth-task-token-expired"))?;
+        let ctx: TardisContext = TardisFuns::json.str_to_obj(&encoded)?;
+        if token_parts.account_id != ctx.owner || ctx.own_paths.split('/').nth(1) != Some(app_id) || app_id.is_empty() {
+            return Err(TardisError::forbidden("task token application mismatch", "403-auth-task-token-scope"));
+        }
+        return Ok(ctx);
+    }
+    // expire 段存在时按原逻辑滑动续期，值本身不变
+    if let Some(ex_sec) = token_parts.renewal_expire_sec {
+        cache_client.set_ex(&format!("{}{}", config.cache_key_token_info, token), &token_value, ex_sec as u64).await?;
+    }
+    // 租户段：Some(空串) 表示平台上下文，None 表示旧 token 未绑定，回退到账号级共享上下文
+    let context = self::get_account_context(token, token_parts.account_id, app_id, token_parts.tenant_id, config, cache_client).await?;
     Ok(context)
 }
 
-async fn get_account_context(token: &str, account_id: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<TardisContext> {
-    let mut context: TardisContext = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), app_id).await? {
+async fn get_account_context(
+    token: &str,
+    account_id: &str,
+    app_id: &str,
+    tenant_id: Option<&str>,
+    config: &AuthConfig,
+    cache_client: &TardisCacheClient,
+) -> TardisResult<TardisContext> {
+    let account_key = format!("{}{}", config.cache_key_account_info, account_id);
+    let context_field = match tenant_id {
+        Some(tenant_id) if app_id.is_empty() => account_tenant_context_field(tenant_id),
+        Some(tenant_id) => account_app_context_field(tenant_id, app_id),
+        None => app_id.to_string(),
+    };
+    let mut context: TardisContext = if let Some(context) = cache_client.hget(&account_key, &context_field).await? {
         TardisFuns::json.str_to_obj::<TardisContext>(&context)?
     } else {
-        if let Some(global_context) = get_global_context_with_extra_roles(account_id, app_id, config, cache_client).await? {
+        if let Some(global_context) = get_global_context_with_extra_roles(account_id, app_id, tenant_id, config, cache_client).await? {
             return Ok(global_context);
         }
         if let Some(temp_context) = auth_temp_serv::minimal_context(account_id, app_id).await {
+            // 临时授权必须属于当前会话绑定的租户，不能跨租户放行
+            if let Some(tenant_id) = tenant_id {
+                if temp_context.own_paths.split('/').next().unwrap_or("") != tenant_id {
+                    return Err(TardisError::unauthorized(
+                        &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
+                        "401-auth-req-token-or-app-not-exist",
+                    ));
+                }
+            }
             return Ok(temp_context);
         }
         return Err(TardisError::unauthorized(
@@ -357,7 +377,11 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
         ));
     };
     if !app_id.is_empty() {
-        if let Some(tenant_context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), "").await? {
+        let tenant_field = match tenant_id {
+            Some(tenant_id) => account_tenant_context_field(tenant_id),
+            None => "".to_string(),
+        };
+        if let Some(tenant_context) = cache_client.hget(&account_key, &tenant_field).await? {
             let tenant_context = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_context)?;
             if !tenant_context.roles.is_empty() {
                 context.roles.extend(tenant_context.roles);
@@ -376,8 +400,18 @@ async fn get_account_context(token: &str, account_id: &str, app_id: &str, config
     Ok(context)
 }
 
-async fn get_global_context_with_extra_roles(account_id: &str, app_id: &str, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<Option<TardisContext>> {
-    if let Some(global_context_str) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), "").await? {
+async fn get_global_context_with_extra_roles(
+    account_id: &str,
+    app_id: &str,
+    tenant_id: Option<&str>,
+    config: &AuthConfig,
+    cache_client: &TardisCacheClient,
+) -> TardisResult<Option<TardisContext>> {
+    let tenant_field = match tenant_id {
+        Some(tenant_id) => account_tenant_context_field(tenant_id),
+        None => "".to_string(),
+    };
+    if let Some(global_context_str) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), &tenant_field).await? {
         let mut global_context = TardisFuns::json.str_to_obj::<TardisContext>(&global_context_str)?;
         if !global_context.roles.is_empty() {
             let mut extra_roles = vec![];

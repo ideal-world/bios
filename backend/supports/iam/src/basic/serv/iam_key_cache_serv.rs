@@ -42,16 +42,15 @@ impl IamIdentCacheServ {
         token: &str,
         token_kind: &IamCertTokenKind,
         rel_iam_item_id: &str,
+        tenant_id: Option<&str>,
         renewal_expire_sec: Option<i64>,
         expire_sec: i64,
         coexist_num: i16,
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
-        let token_value = if let Some(renewal_expire_sec) = renewal_expire_sec {
-            format!("{token_kind},{rel_iam_item_id},{}", renewal_expire_sec)
-        } else {
-            format!("{token_kind},{rel_iam_item_id}")
-        };
+        // 值为 `{token_kind},{account_id},{expire},{tenant_id}`，后两段允许为空。
+        // expire 为空表示不续期；tenant_id 段存在且为空表示绑定到平台上下文。
+        let token_value = iam_constants::build_token_info(&token_kind.to_string(), rel_iam_item_id, renewal_expire_sec, tenant_id);
         log::trace!("add token for account: {}", rel_iam_item_id);
         if expire_sec > 0 {
             funs.cache()
@@ -99,17 +98,45 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    /// 将 token 的租户绑定重新指向目标租户（切换租户时只影响当前 token 所属会话）。
+    ///
+    /// 直接改写 `token:info` 值的第 4 段，保持原 TTL 与 expire 不变。
+    pub async fn rebind_token_tenant(token: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        let token_key = format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token);
+        let Some(token_info) = funs.cache().get(&token_key).await? else {
+            // token 已失效，无需重绑
+            return Ok(());
+        };
+        let parts = iam_constants::parse_token_info(&token_info);
+        let new_value = iam_constants::build_token_info(parts.token_kind, parts.account_id, parts.renewal_expire_sec, Some(tenant_id));
+        let ttl = funs.cache().ttl(&token_key).await?;
+        // Redis TTL: 大于 0 表示剩余有效期；-1（无过期）/ -2（不存在）转成 usize 后为极大值
+        const MAX_REASONABLE_TTL_SEC: usize = 60 * 60 * 24 * 365 * 100;
+        if ttl > 0 && ttl < MAX_REASONABLE_TTL_SEC {
+            funs.cache().set_ex(&token_key, &new_value, ttl as u64).await?;
+        } else {
+            funs.cache().set(&token_key, &new_value).await?;
+        }
+        Ok(())
+    }
+
     pub async fn delete_token_by_token(token: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete token: token={}", token);
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
-            let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
+            let token_parts = iam_constants::parse_token_info(&token_info);
+            let iam_item_id = token_parts.account_id;
+            let token_tenant = token_parts.tenant_id;
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
             funs.cache().del(format!("{}{}", IAM_OAUTH2_TOKEN_META_CACHE_KEY_PREFIX, token).as_str()).await?;
             Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
             let mut mock_ctx = TardisContext::default();
-            if let Ok(account_context) = Self::get_account_context(iam_item_id, "", funs).await {
+            let account_context = match token_tenant {
+                Some(tenant_id) => Self::get_account_context_with_tenant(iam_item_id, tenant_id, "", funs).await,
+                None => Self::get_account_context(iam_item_id, "", funs).await,
+            };
+            if let Ok(account_context) = account_context {
                 mock_ctx = account_context;
             } else {
                 mock_ctx.owner = iam_item_id.to_string();
@@ -175,6 +202,11 @@ impl IamIdentCacheServ {
             tenant_or_app_id.clone()
         };
         let ctx_clone = ctx.clone();
+        let target_tenant_id = if is_app {
+            own_paths.split('/').next().unwrap_or("").to_string()
+        } else {
+            own_paths.clone()
+        };
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move |_task_id| async move {
@@ -195,12 +227,7 @@ impl IamIdentCacheServ {
                         ids = page.records;
                     }
                     for id in ids {
-                        let account_context = Self::get_account_context(&id, "", &funs).await;
-                        if let Ok(account_context) = account_context {
-                            if account_context.own_paths == ctx_clone.own_paths {
-                                Self::delete_tokens_and_contexts_by_account_id(&id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
-                            }
-                        }
+                        Self::delete_tokens_by_tenant(&id, &target_tenant_id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
                     }
                     page_number += 1;
                     count -= 100;
@@ -214,12 +241,7 @@ impl IamIdentCacheServ {
                             ids = page.records;
                         }
                         for id in ids {
-                            let account_context = Self::get_account_context(&id, "", &funs).await;
-                            if let Ok(account_context) = account_context {
-                                if account_context.own_paths == ctx_clone.own_paths {
-                                    Self::delete_tokens_and_contexts_by_account_id(&id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
-                                }
-                            }
+                            Self::delete_tokens_by_tenant(&id, &target_tenant_id, get_real_ip_from_ctx(&ctx_clone).await?, &funs).await?;
                         }
                         page_number += 1;
                         count -= 100;
@@ -257,6 +279,11 @@ impl IamIdentCacheServ {
             tenant_or_app_id.clone()
         };
         let ctx_clone = ctx.clone();
+        let target_tenant_id = if is_app {
+            own_paths.split('/').next().unwrap_or("").to_string()
+        } else {
+            own_paths.clone()
+        };
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move |_task_id| async move {
@@ -277,12 +304,7 @@ impl IamIdentCacheServ {
                         ids = page.records;
                     }
                     for id in ids {
-                        let account_context = Self::get_account_context(&id, "", &funs).await;
-                        if let Ok(account_context) = account_context {
-                            if account_context.own_paths == ctx_clone.own_paths {
-                                Self::refresh_account_info_by_account_id(&id, &funs).await?;
-                            }
-                        }
+                        Self::refresh_account_info_by_account_id(&id, &target_tenant_id, &funs).await?;
                     }
                     page_number += 1;
                     count -= 100;
@@ -296,12 +318,7 @@ impl IamIdentCacheServ {
                             ids = page.records;
                         }
                         for id in ids {
-                            let account_context = Self::get_account_context(&id, "", &funs).await;
-                            if let Ok(account_context) = account_context {
-                                if account_context.own_paths == ctx_clone.own_paths {
-                                    Self::refresh_account_info_by_account_id(&id, &funs).await?;
-                                }
-                            }
+                            Self::refresh_account_info_by_account_id(&id, &target_tenant_id, &funs).await?;
                         }
                         page_number += 1;
                         count -= 100;
@@ -346,6 +363,56 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    /// 只清理绑定到指定租户的会话，避免同账号其他租户的会话被误下线。
+    async fn delete_tokens_by_tenant(account_id: &str, tenant_id: &str, ip: Option<String>, funs: &TardisFunsInst) -> TardisResult<()> {
+        let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
+        for (token, _) in tokens.iter() {
+            let bound_tenant = funs
+                .cache()
+                .get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str())
+                .await?
+                .map(|token_info| iam_constants::parse_token_info(&token_info).tenant_id.map(str::to_string))
+                .unwrap_or_default();
+            let matched = match bound_tenant {
+                Some(bound_tenant) => bound_tenant == tenant_id,
+                // 旧 token 没有租户绑定，沿用旧的账号级上下文判断
+                None => Self::get_account_context(account_id, "", funs).await.map(|context| context.own_paths == tenant_id).unwrap_or(false),
+            };
+            if matched {
+                Self::delete_token_by_token(token, ip.clone(), funs).await?;
+            }
+        }
+        // token 已失效，同时清掉该租户的上下文缓存，避免下次登录前仍能读到旧权限
+        Self::delete_contexts_by_tenant(account_id, tenant_id, funs).await?;
+        Ok(())
+    }
+
+    /// 删除账号在指定租户下的上下文分片，其他租户的分片保持不变。
+    async fn delete_contexts_by_tenant(account_id: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        let cache_key = format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id);
+        if !funs.cache().exists(&cache_key).await? {
+            return Ok(());
+        }
+        funs.cache().hdel(&cache_key, &iam_constants::account_tenant_context_field(tenant_id)).await?;
+        let app_field_prefix = format!("app:{tenant_id}:");
+        for field in funs.cache().hkeys(&cache_key).await? {
+            if let Some(app_id) = field.strip_prefix(&app_field_prefix) {
+                funs.cache().hdel(&cache_key, &field).await?;
+                // 同步清理过渡期的旧应用字段
+                funs.cache().hdel(&cache_key, app_id).await?;
+            }
+        }
+        // 旧租户字段确实属于该租户时才清理，避免误删其他租户的兼容数据
+        if let Some(legacy_context) = funs.cache().hget(&cache_key, "").await? {
+            if TardisFuns::json.str_to_obj::<TardisContext>(&legacy_context).map(|context| context.own_paths == tenant_id).unwrap_or(false) {
+                funs.cache().hdel(&cache_key, "").await?;
+            }
+        }
+        // is_global 是纯缓存属性，随上下文一起清除，避免保留判断依据
+        funs.cache().hdel(&cache_key, "is_global").await?;
+        Ok(())
+    }
+
     pub async fn exist_token_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         log::trace!("exist tokens: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
@@ -357,19 +424,29 @@ impl IamIdentCacheServ {
         Ok(false)
     }
 
-    pub async fn refresh_account_info_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("refresh account info: account_id={}", account_id);
-        let tenant_info = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), "").await?;
-        if tenant_info.is_none() {
+    pub async fn refresh_account_info_by_account_id(account_id: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("refresh account info: account_id={}, tenant_id={}", account_id, tenant_id);
+        let cache_key = format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id);
+        let tenant_field = iam_constants::account_tenant_context_field(tenant_id);
+        let mut should_refresh = funs.cache().hget(&cache_key, &tenant_field).await?.is_some();
+        // 迁移期：旧版本只写了账号级字段，若其租户正好一致则顺带升级为租户字段
+        if !should_refresh {
+            should_refresh = funs
+                .cache()
+                .hget(&cache_key, "")
+                .await?
+                .and_then(|legacy| TardisFuns::json.str_to_obj::<TardisContext>(&legacy).ok())
+                .map(|legacy| legacy.own_paths == tenant_id)
+                .unwrap_or(false);
+        }
+        if !should_refresh {
             return Ok(());
         }
-
-        let tenant_id = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_info.unwrap())?.own_paths;
         let mock_ctx = TardisContext {
-            own_paths: tenant_id.clone(),
+            own_paths: tenant_id.to_string(),
             ..Default::default()
         };
-        let _ = IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_id, "".to_string(), None, funs, &mock_ctx).await;
+        let _ = IamCertServ::package_tardis_account_context_and_resp(account_id, tenant_id, "".to_string(), None, funs, &mock_ctx).await;
         Ok(())
     }
 
@@ -380,50 +457,77 @@ impl IamIdentCacheServ {
     }
 
     pub async fn add_contexts(account_info: &IamAccountInfoResp, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
-        log::trace!("add contexts: account_id={:?}", account_info);
-        funs.cache()
-            .hset(
-                format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
-                "",
-                &TardisFuns::json.obj_to_string(&TardisContext {
-                    own_paths: tenant_id.to_string(),
-                    owner: account_info.account_id.to_string(),
-                    roles: account_info.roles.keys().map(|id| id.to_string()).collect(),
-                    groups: account_info.groups.keys().map(|id| id.to_string()).collect(),
-                    ..Default::default()
-                })?,
-            )
-            .await?;
+        log::trace!("add contexts: account_id={:?}, tenant_id={}", account_info, tenant_id);
+        let cache_key = format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id);
+        let tenant_context = TardisFuns::json.obj_to_string(&TardisContext {
+            own_paths: tenant_id.to_string(),
+            owner: account_info.account_id.to_string(),
+            roles: account_info.roles.keys().map(|id| id.to_string()).collect(),
+            groups: account_info.groups.keys().map(|id| id.to_string()).collect(),
+            ..Default::default()
+        })?;
+        // 租户维度分片，token 通过绑定关系精确读取自己所属租户的上下文
+        funs.cache().hset(&cache_key, &iam_constants::account_tenant_context_field(tenant_id), &tenant_context).await?;
+        // 过渡期保留旧字段，兼容滚动发布期间的旧实例和旧 token
+        funs.cache().hset(&cache_key, "", &tenant_context).await?;
+
+        let mut current_app_fields = Vec::with_capacity(account_info.apps.len());
         for account_app_info in &account_info.apps {
-            funs.cache()
-                .hset(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
-                    &account_app_info.app_id,
-                    &TardisFuns::json.obj_to_string(&TardisContext {
-                        own_paths: if tenant_id.is_empty() {
-                            account_app_info.app_own_paths.clone()
-                        } else {
-                            format!("{}/{}", tenant_id, account_app_info.app_id).to_string()
-                        },
-                        owner: account_info.account_id.to_string(),
-                        roles: account_app_info.roles.keys().map(|id| id.to_string()).collect(),
-                        groups: account_app_info.groups.keys().map(|id| id.to_string()).collect(),
-                        ..Default::default()
-                    })?,
-                )
-                .await?;
+            let app_context = TardisFuns::json.obj_to_string(&TardisContext {
+                own_paths: if tenant_id.is_empty() {
+                    account_app_info.app_own_paths.clone()
+                } else {
+                    format!("{}/{}", tenant_id, account_app_info.app_id)
+                },
+                owner: account_info.account_id.to_string(),
+                roles: account_app_info.roles.keys().map(|id| id.to_string()).collect(),
+                groups: account_app_info.groups.keys().map(|id| id.to_string()).collect(),
+                ..Default::default()
+            })?;
+            let app_field = iam_constants::account_app_context_field(tenant_id, &account_app_info.app_id);
+            funs.cache().hset(&cache_key, &app_field, &app_context).await?;
+            // 旧字段只用于兼容旧 token
+            funs.cache().hset(&cache_key, &account_app_info.app_id, &app_context).await?;
+            current_app_fields.push(app_field);
+        }
+
+        // 清理本租户下已失效的应用上下文，避免取消应用授权后仍命中旧权限
+        let app_field_prefix = format!("app:{tenant_id}:");
+        for field in funs.cache().hkeys(&cache_key).await? {
+            if field.starts_with(&app_field_prefix) && !current_app_fields.contains(&field) {
+                funs.cache().hdel(&cache_key, &field).await?;
+            }
         }
         Ok(())
     }
 
     pub async fn get_account_context(account_id: &str, field: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
-        let mut context = if let Some(context) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), field).await? {
+        Self::get_account_context_inner(account_id, None, field, funs).await
+    }
+
+    /// 按 (account_id, tenant_id) 读取账号上下文。应用上下文由 `field` 指定应用 ID，传空串表示租户上下文。
+    pub async fn get_account_context_with_tenant(account_id: &str, tenant_id: &str, field: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
+        Self::get_account_context_inner(account_id, Some(tenant_id), field, funs).await
+    }
+
+    async fn get_account_context_inner(account_id: &str, tenant_id: Option<&str>, field: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
+        let cache_key = format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id);
+        let context_field = match tenant_id {
+            Some(tenant_id) if field.is_empty() => iam_constants::account_tenant_context_field(tenant_id),
+            Some(tenant_id) => iam_constants::account_app_context_field(tenant_id, field),
+            None => field.to_string(),
+        };
+        let mut context = if let Some(context) = funs.cache().hget(&cache_key, &context_field).await? {
             TardisFuns::json.str_to_obj::<TardisContext>(&context)?
         } else {
             return Err(funs.err().not_found("get_account_context", "get", "not found context", "404-iam-cache-context-not-exist"));
         };
         if !field.is_empty() {
-            if let Some(tenant_context) = funs.cache().hget(&format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id), "").await? {
+            let tenant_field = match tenant_id {
+                Some(tenant_id) => iam_constants::account_tenant_context_field(tenant_id),
+                None => "".to_string(),
+            };
+            if let Some(tenant_context) = funs.cache().hget(&cache_key, &tenant_field).await? {
                 let tenant_context = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_context)?;
                 if !tenant_context.roles.is_empty() {
                     context.roles.extend(tenant_context.roles);
@@ -438,8 +542,9 @@ impl IamIdentCacheServ {
 
     pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
-            let account_id = token_info.split(',').nth(1).unwrap_or("");
-            if token_info.split(',').next() == Some("TokenTask") {
+            let token_parts = iam_constants::parse_token_info(&token_info);
+            let account_id = token_parts.account_id;
+            if token_parts.token_kind == "TokenTask" {
                 let encoded = funs
                     .cache()
                     .get(&format!("iam:task-token:{}", fetch_req.token))
@@ -451,14 +556,13 @@ impl IamIdentCacheServ {
                 }
                 return Ok(ctx);
             }
-            if let Some(context) = funs
-                .cache()
-                .hget(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),
-                    fetch_req.app_id.as_ref().unwrap_or(&"".to_string()),
-                )
-                .await?
-            {
+            let app_id = fetch_req.app_id.as_deref().unwrap_or("");
+            let context_field = match token_parts.tenant_id {
+                Some(tenant_id) if app_id.is_empty() => iam_constants::account_tenant_context_field(tenant_id),
+                Some(tenant_id) => iam_constants::account_app_context_field(tenant_id, app_id),
+                None => app_id.to_string(),
+            };
+            if let Some(context) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), &context_field).await? {
                 return TardisFuns::json.str_to_obj(&context);
             }
         }

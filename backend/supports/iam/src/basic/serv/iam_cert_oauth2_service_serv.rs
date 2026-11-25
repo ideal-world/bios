@@ -165,6 +165,9 @@ pub struct IamOAuth2RefreshTokenInfo {
     pub client_id: String,
     pub scope: String,
     pub expires_at: i64,
+    /// 授权时绑定的租户，刷新令牌时用于生成同样租户作用域的访问令牌
+    #[serde(default)]
+    pub tenant_id: Option<String>,
 }
 
 impl IamCertOAuth2ServiceServ {
@@ -462,11 +465,17 @@ impl IamCertOAuth2ServiceServ {
         let access_token_expire_sec = conf.expire_sec;
 
         // 7. 存储访问令牌（复用现有的令牌缓存系统）
+        let token_tenant_id = if code_info.ctx.own_paths.is_empty() {
+            Some(String::new())
+        } else {
+            code_info.ctx.own_paths.split('/').next().map(str::to_string)
+        };
         Self::add_oauth2_token(
             &access_token,
             &req.client_id,
             &scopes,
             &code_info.ctx.owner,
+            token_tenant_id.as_deref(),
             access_token_expire_sec,
             conf.coexist_num,
             funs,
@@ -479,6 +488,7 @@ impl IamCertOAuth2ServiceServ {
             client_id: req.client_id.clone(),
             scope: scopes.join(" "),
             expires_at: Utc::now().timestamp() + iam_config.oauth2_refresh_token_expire_sec as i64,
+            tenant_id: token_tenant_id,
         };
         funs.cache()
             .set_ex(
@@ -550,6 +560,7 @@ impl IamCertOAuth2ServiceServ {
             &refresh_token_info.client_id,
             &scopes,
             &refresh_token_info.user_id,
+            refresh_token_info.tenant_id.as_deref(),
             access_token_expire_sec,
             conf.coexist_num,
             funs,
@@ -570,6 +581,7 @@ impl IamCertOAuth2ServiceServ {
         client_id: &str,
         scopes: &[String],
         account_id: &str,
+        tenant_id: Option<&str>,
         expire_sec: i64,
         coexist_num: i16,
         funs: &TardisFunsInst,
@@ -587,7 +599,7 @@ impl IamCertOAuth2ServiceServ {
             funs.cache().set(&key, &value).await?;
         }
 
-        if let Err(error) = IamIdentCacheServ::add_token(access_token, &IamCertTokenKind::TokenOauth2, account_id, None, expire_sec, coexist_num, funs).await {
+        if let Err(error) = IamIdentCacheServ::add_token(access_token, &IamCertTokenKind::TokenOauth2, account_id, tenant_id, None, expire_sec, coexist_num, funs).await {
             let _ = funs.cache().del(&key).await;
             return Err(error);
         }

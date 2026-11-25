@@ -1195,7 +1195,7 @@ impl IamCertServ {
 
         let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
 
-        IamCertTokenServ::add_cert(&account_info.token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
+        IamCertTokenServ::add_cert(&account_info.token, &token_kind, account_id, &rbum_cert_conf_id, &tenant_id, funs, &context).await?;
         context.execute_task().await?;
         Ok(account_info)
     }

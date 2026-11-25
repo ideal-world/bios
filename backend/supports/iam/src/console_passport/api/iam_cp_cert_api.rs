@@ -2,6 +2,7 @@ use bios_basic::helper::request_helper::try_get_real_ip_from_req;
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::log;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -579,11 +580,14 @@ impl IamCpCertApi {
     ///
     /// Refresh the Redis account context (`cache_key_account_info_`) to the target tenant scope
     /// **without** issuing a new token. The same token remains valid and is returned in the response.
+    /// Only the calling token is rebound to the target tenant; other sessions of the same account
+    /// keep their own tenant context.
     ///
     /// 通过现有 Token 刷新账号上下文至目标租户或平台
     ///
     /// 不生成新 token，仅将 Redis 中的账号上下文数据（`cache_key_account_info_`）
     /// 刷新为目标租户维度，原 token 保持不变并随响应返回。
+    /// 仅重绑当前请求的 token，同一账号的其他浏览器/设备会话不受影响。
     #[oai(path = "/token/switch", method = "put")]
     async fn switch_token(&self, switch_req: Json<IamCpTokenSwitchReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<IamAccountInfoResp> {
         try_set_real_ip_from_req_to_ctx(request, &ctx.0).await?;
@@ -602,6 +606,20 @@ impl IamCpCertApi {
         }
         let account_id = ctx.0.owner.clone();
         let target_tenant_id = switch_req.0.tenant_id.unwrap_or_default();
+        if !target_tenant_id.is_empty() && IamTenantServ::is_disabled(&target_tenant_id, &funs).await? {
+            return Err(funs
+                .err()
+                .conflict(
+                    "iam_cp_cert",
+                    "switch_token",
+                    &format!("tenant {target_tenant_id} is disabled"),
+                    "409-iam-tenant-is-disabled",
+                )
+                .into());
+        }
+        if !IamAccountServ::can_access_tenant(&account_id, &target_tenant_id, &funs, &ctx.0).await? {
+            return Err(tardis::basic::error::TardisError::forbidden("account has no access to target tenant", "403-iam-tenant-access-denied").into());
+        }
         let target_ctx = TardisContext {
             own_paths: target_tenant_id.clone(),
             owner: account_id.clone(),
@@ -611,6 +629,8 @@ impl IamCpCertApi {
         };
         // 以目标租户维度刷新 Redis 账号上下文，token 保持不变
         let resp = IamCertServ::package_tardis_account_context_and_resp(&account_id, &target_tenant_id, switch_req.0.token.clone(), None, &funs, &target_ctx).await?;
+        // 只重绑当前会话的 token，其他浏览器/设备的 token 保持各自租户
+        IamIdentCacheServ::rebind_token_tenant(&switch_req.0.token, &target_tenant_id, &funs).await?;
         target_ctx.execute_task().await?;
         TardisResp::ok(resp)
     }

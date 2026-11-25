@@ -1068,6 +1068,48 @@ impl IamAccountServ {
         }
     }
 
+    /// 账号是否可以切换到目标租户上下文。
+    ///
+    /// 全局账号可以进入任意租户或平台上下文；普通账号只能进入自己有成员关系的租户。
+    pub async fn can_access_tenant(account_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        if Self::is_global_account(account_id, funs, ctx).await? {
+            return Ok(true);
+        }
+        // 平台级上下文（own_paths = ""）等同于跨租户视角，仅全局账号可用
+        if tenant_id.is_empty() {
+            return Ok(false);
+        }
+        let account = Self::get_item(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if !account.own_paths.is_empty() && account.own_paths.split('/').next() == Some(tenant_id) {
+            return Ok(true);
+        }
+        // 账号可能在目标租户拥有角色关系，用全局作用域查询避免被当前 token 的租户限制
+        let global_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
+        let roles = IamRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole, true, account_id, None, None, funs, &global_ctx).await?;
+        if roles.iter().any(|rel| rel.rel_own_paths.split('/').next() == Some(tenant_id)) {
+            return Ok(true);
+        }
+        let sets = IamSetServ::find_sets_by_account_id_and_kind(account_id, &IamSetKind::Apps, funs, &global_ctx).await?;
+        Ok(sets.iter().any(|set| set.own_paths.is_empty() || set.own_paths == tenant_id))
+    }
+
     pub async fn is_global_account_context(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisContext> {
         if Self::is_global_account(account_id, funs, ctx).await? {
             let mut result = ctx.clone();
